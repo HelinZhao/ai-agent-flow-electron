@@ -1,0 +1,112 @@
+/* React Flow 自定义样式 */
+
+.react-flow__node {
+  border: 1px solid #ddd;
+  border-radius: 8px;
+  background: white;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+.react-flow__node:hover {
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.15);
+}
+
+.react-flow__node.selected {
+  border-color: #3b82f6;
+  box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.2);
+}
+
+/* 节点类型特定样式 */
+.react-flow__node.node-start {
+  background: #f0fdf4;
+  border-color: #16a34a;
+}
+
+.react-flow__node.node-skill {
+  background: #eff6ff;
+  border-color: #2563eb;
+}
+
+.react-flow__node.node-branch {
+  background: #fffbeb;
+  border-color: #d97706;
+}
+
+.react-flow__node.node-api {
+  background: #faf5ff;
+  border-color: #9333ea;
+}
+
+.react-flow__node.node-agent {
+  background: #fef2f2;
+  border-color: #dc2626;
+}
+
+.react-flow__node.node-end {
+  background: #f9fafb;
+  border-color: #6b7280;
+}
+
+/* 连接点样式 */
+.react-flow__handle {
+  width: 8px !important;
+  height: 8px !important;
+  border: 2px solid white;
+  background: #3b82f6;
+  z-index: 10;
+}
+
+.react-flow__handle:hover {
+  background: #1d4ed8;
+  width: 10px !important;
+  height: 10px !important;
+  box-shadow: 0 0 2px 2px #1d4ed8;
+}
+
+/* 边样式 */
+.react-flow__edge-path {
+  stroke: #6b7280;
+  stroke-width: 2;
+}
+
+.react-flow__edge.selected .react-flow__edge-path {
+  stroke: #3b82f6;
+  stroke-width: 3;
+}
+
+/* 控制面板样式 */
+.react-flow__panel {
+  margin: 10px;
+}
+
+.react-flow__controls {
+  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+  border-radius: 8px;
+}
+
+.react-flow__controls-button {
+  background: white;
+  border: 1px solid #e5e7eb;
+  color: #374151;
+}
+
+.react-flow__controls-button:hover {
+  background: #f9fafb;
+  border-color: #d1d5db;
+}
+
+/* 背景样式 */
+.react-flow__background {
+  background: #f8fafc;
+}
+
+/* 画布容器样式 */
+.react-flow {
+  width: 100% !important;
+  height: 100% !important;
+}
+
+.react-flow__renderer {
+  width: 100% !important;
+  height: 100% !important;
+}

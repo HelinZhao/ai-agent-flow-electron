@@ -1,0 +1,162 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  --foreground-rgb: 0, 0, 0;
+  --background-start-rgb: 214, 219, 220;
+  --background-end-rgb: 255, 255, 255;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --foreground-rgb: 255, 255, 255;
+    --background-start-rgb: 0, 0, 0;
+    --background-end-rgb: 0, 0, 0;
+  }
+}
+
+body {
+  color: rgb(var(--foreground-rgb));
+  background: linear-gradient(
+      to bottom,
+      transparent,
+      rgb(var(--background-end-rgb))
+    )
+    rgb(var(--background-start-rgb));
+}
+
+.react-flow__node {
+  border-radius: 8px;
+  font-weight: 500;
+  border: 1px solid #ddd;
+  background: white;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+.dark .react-flow__node {
+  border-color: #4b5563;
+  background: #374151;
+  color: white;
+}
+
+.react-flow__node.selected {
+  border-color: #3b82f6;
+  box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.2);
+}
+
+.react-flow__edge-path {
+  stroke: #64748b;
+  stroke-width: 2;
+}
+
+.dark .react-flow__edge-path {
+  stroke: #9ca3af;
+}
+
+.react-flow__edge.selected .react-flow__edge-path {
+  stroke: #3b82f6;
+}
+
+.node-start {
+  background: #dcfce7;
+  border-color: #16a34a;
+}
+
+.dark .node-start {
+  background: #14532d;
+  border-color: #22c55e;
+}
+
+.node-skill {
+  background: #dbeafe;
+  border-color: #2563eb;
+}
+
+.dark .node-skill {
+  background: #1e3a8a;
+  border-color: #3b82f6;
+}
+
+.node-branch {
+  background: #fef3c7;
+  border-color: #d97706;
+}
+
+.dark .node-branch {
+  background: #451a03;
+  border-color: #f59e0b;
+}
+
+.node-api {
+  background: #f3e8ff;
+  border-color: #9333ea;
+}
+
+.dark .node-api {
+  background: #581c87;
+  border-color: #a855f7;
+}
+
+.node-agent {
+  background: #fed7d7;
+  border-color: #dc2626;
+}
+
+.dark .node-agent {
+  background: #7f1d1d;
+  border-color: #ef4444;
+}
+
+.node-end {
+  background: #f1f5f9;
+  border-color: #64748b;
+}
+
+.dark .node-end {
+  background: #334155;
+  border-color: #94a3b8;
+}
+
+/* 自定义滚动条样式 */
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+::-webkit-scrollbar-track {
+  background: #f1f5f9;
+  border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb {
+  background: #cbd5e1;
+  border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: #94a3b8;
+}
+
+/* 深色模式滚动条 */
+.dark ::-webkit-scrollbar-track {
+  background: #374151;
+}
+
+.dark ::-webkit-scrollbar-thumb {
+  background: #6b7280;
+}
+
+.dark ::-webkit-scrollbar-thumb:hover {
+  background: #9ca3af;
+}
+
+/* Firefox滚动条 */
+* {
+  scrollbar-width: thin;
+  scrollbar-color: #cbd5e1 #f1f5f9;
+}
+
+.dark * {
+  scrollbar-color: #6b7280 #374151;
+}

@@ -1,0 +1,17 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(pnpm dev:*)",
+      "Bash(pnpm build:*)",
+      "Bash(npx tailwindcss:*)",
+      "Bash(pnpx tailwindcss:*)",
+      "Bash(pnpm list:*)",
+      "Bash(npx vite:*)",
+      "Bash(node test-tailwind.js)",
+      "Bash(npx electron-vite:*)",
+      "Bash(pnpm remove:*)",
+      "Bash(pkill -f electron-vite)",
+      "Bash(pkill -f \"electron-vite|node\")"
+    ]
+  }
+}

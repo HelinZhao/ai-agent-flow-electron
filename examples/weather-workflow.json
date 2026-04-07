@@ -1,0 +1,85 @@
+{
+  "id": "sample-weather-workflow",
+  "name": "天气查询工作流",
+  "description": "一个简单的天气查询AI工作流示例",
+  "nodes": [
+    {
+      "id": "start-node",
+      "type": "start",
+      "position": { "x": 100, "y": 100 },
+      "data": { "label": "开始" }
+    },
+    {
+      "id": "weather-skill",
+      "type": "skill",
+      "position": { "x": 300, "y": 100 },
+      "data": {
+        "label": "天气查询技能",
+        "config": {
+          "skillId": "weather-skill-id",
+          "skillName": "天气查询助手"
+        }
+      }
+    },
+    {
+      "id": "branch-node",
+      "type": "branch",
+      "position": { "x": 500, "y": 100 },
+      "data": {
+        "label": "是否需要建议",
+        "config": {
+          "condition": "如果用户询问天气相关信息并需要建议，则执行建议分支"
+        }
+      }
+    },
+    {
+      "id": "advice-skill",
+      "type": "skill",
+      "position": { "x": 700, "y": 50 },
+      "data": {
+        "label": "建议生成",
+        "config": {
+          "skillId": "advice-skill-id",
+          "skillName": "生活建议助手"
+        }
+      }
+    },
+    {
+      "id": "end-node",
+      "type": "end",
+      "position": { "x": 900, "y": 100 },
+      "data": { "label": "结束" }
+    }
+  ],
+  "edges": [
+    {
+      "id": "edge-1",
+      "source": "start-node",
+      "target": "weather-skill"
+    },
+    {
+      "id": "edge-2",
+      "source": "weather-skill",
+      "target": "branch-node"
+    },
+    {
+      "id": "edge-3",
+      "source": "branch-node",
+      "target": "advice-skill",
+      "condition": "true"
+    },
+    {
+      "id": "edge-4",
+      "source": "advice-skill",
+      "target": "end-node"
+    },
+    {
+      "id": "edge-5",
+      "source": "branch-node",
+      "target": "end-node",
+      "condition": "false"
+    }
+  ],
+  "createdAt": "2026-03-26T00:00:00.000Z",
+  "updatedAt": "2026-03-26T00:00:00.000Z"
+}
