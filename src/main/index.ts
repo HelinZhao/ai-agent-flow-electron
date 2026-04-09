@@ -2,6 +2,7 @@ import { app, shell, BrowserWindow, ipcMain } from 'electron'
 import { join } from 'path'
 import { electronApp, optimizer, is } from '@electron-toolkit/utils'
 import icon from '../../resources/icon.png?asset'
+import { LocalServer } from '../server/src'
 
 function createWindow(): void {
   // 创建浏览器窗口
@@ -51,6 +52,55 @@ app.whenReady().then(() => {
 
   // IPC测试
   ipcMain.on('ping', () => console.log('pong'))
+
+  // 本地服务器IPC处理
+  let localServer: LocalServer | null = null
+
+  ipcMain.handle('server:start', async (_, port?: number) => {
+    try {
+      if (!localServer) {
+        localServer = new LocalServer()
+      }
+      const actualPort = await localServer.start(port)
+      return { success: true, port: actualPort, url: localServer.getServerUrl() }
+    } catch (error) {
+      console.error('Failed to start server:', error)
+      return { success: false, error: (error as Error).message }
+    }
+  })
+
+  ipcMain.handle('server:stop', async () => {
+    try {
+      if (localServer) {
+        await localServer.stop()
+        localServer = null
+      }
+      return { success: true }
+    } catch (error) {
+      console.error('Failed to stop server:', error)
+      return { success: false, error: (error as Error).message }
+    }
+  })
+
+  ipcMain.handle('server:status', () => {
+    return {
+      running: localServer !== null,
+      port: localServer?.getPort() || null,
+      url: localServer?.getServerUrl() || null
+    }
+  })
+
+  // 自动启动服务器
+  const server = new LocalServer()
+  server
+    .start()
+    .then((port) => {
+      console.log(`Local server auto-started on port ${port}`)
+      localServer = server
+    })
+    .catch((error) => {
+      console.error('Failed to auto-start local server:', error)
+    })
 
   createWindow()
 

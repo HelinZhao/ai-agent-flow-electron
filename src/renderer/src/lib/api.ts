@@ -3,8 +3,11 @@ import { Workflow, Skill, Agent, LLMConfig } from '@renderer/types'
 
 // 创建axios实例
 const api = axios.create({
-  baseURL: '/api',
-  timeout: 10000
+  baseURL: 'http://localhost:3000/api',
+  timeout: 10000,
+  headers: {
+    'Content-Type': 'application/json'
+  }
 })
 
 // 请求拦截器
@@ -22,7 +25,12 @@ api.interceptors.request.use(
 api.interceptors.response.use(
   (response) => response.data,
   (error) => {
-    console.error('API请求失败:', error)
+    console.error('API请求失败:', {
+      status: error.response?.status,
+      statusText: error.response?.statusText,
+      data: error.response?.data,
+      message: error.message
+    })
     return Promise.reject(error)
   }
 )
@@ -37,11 +45,23 @@ export const workflowApi = {
 
   // 创建工作流
   create: (data: Omit<Workflow, 'id' | 'createdAt' | 'updatedAt'>): Promise<Workflow> =>
-    api.post('/workflows', data),
+    api.post('/workflows', {
+      ...data,
+      nodes: JSON.stringify(data.nodes || []),
+      edges: JSON.stringify(data.edges || [])
+    }),
 
   // 更新工作流
-  update: (id: string, data: Partial<Workflow>): Promise<Workflow> =>
-    api.put(`/workflows/${id}`, data),
+  update: (id: string, data: Partial<Workflow>): Promise<Workflow> => {
+    const requestData: any = { ...data }
+    if (data.nodes !== undefined) {
+      requestData.nodes = JSON.stringify(data.nodes)
+    }
+    if (data.edges !== undefined) {
+      requestData.edges = JSON.stringify(data.edges)
+    }
+    return api.put(`/workflows/${id}`, requestData)
+  },
 
   // 删除工作流
   delete: (id: string): Promise<void> => api.delete(`/workflows/${id}`)

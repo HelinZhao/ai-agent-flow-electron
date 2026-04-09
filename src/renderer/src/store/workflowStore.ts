@@ -56,7 +56,6 @@ export const useWorkflowStore = create<WorkflowState>((set, get) => ({
     try {
       state.setLoading(true)
       state.setError(null)
-
       // 并行加载所有数据
       const [workflowsRes, skillsRes, agentsRes] = await Promise.all([
         workflowApi.getAll().catch(() => [] as Workflow[]),
@@ -83,7 +82,6 @@ export const useWorkflowStore = create<WorkflowState>((set, get) => ({
   setWorkflows: (workflows: Workflow[]) => set({ workflows }),
   setSkills: (skills: Skill[]) => set({ skills }),
   setAgents: (agents: Agent[]) => set({ agents }),
-
   addWorkflow: async (workflow) => {
     const state = get()
     try {
