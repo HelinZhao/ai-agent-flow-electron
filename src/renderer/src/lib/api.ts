@@ -64,7 +64,19 @@ export const workflowApi = {
   },
 
   // 删除工作流
-  delete: (id: string): Promise<void> => api.delete(`/workflows/${id}`)
+  delete: (id: string): Promise<void> => api.delete(`/workflows/${id}`),
+
+  // 执行工作流
+  execute: (workflow: Workflow, input: string, llmConfig: LLMConfig): Promise<{ result: string }> =>
+    api.post(
+      '/execute-workflow',
+      {
+        workflow,
+        input,
+        llmConfig
+      },
+      { timeout: undefined }
+    )
 }
 
 // Skill API

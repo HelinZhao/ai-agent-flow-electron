@@ -18,15 +18,14 @@ export interface WorkflowCreationAttributes extends Omit<
 
 export class Workflow
   extends Model<WorkflowAttributes, WorkflowCreationAttributes>
-  implements WorkflowAttributes
-{
-  public id!: string
-  public name!: string
-  public description!: string
-  public nodes!: string
-  public edges!: string
-  public createdAt!: Date
-  public updatedAt!: Date
+  implements WorkflowAttributes {
+  declare id: string
+  declare name: string
+  declare description: string
+  declare nodes: string
+  declare edges: string
+  declare createdAt: Date
+  declare updatedAt: Date
 }
 
 Workflow.init(
