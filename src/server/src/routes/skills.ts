@@ -4,7 +4,7 @@ import { Skill } from '../models'
 const router = Router()
 
 // 获取所有技能
-router.get('/', async (req, res) => {
+router.get('/', async (_req, res) => {
   try {
     const skills = await Skill.findAll({
       order: [['updatedAt', 'DESC']]

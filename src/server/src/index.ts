@@ -52,12 +52,12 @@ export class LocalServer {
     this.app.use('/api/execute-workflow', executeWorkflowRouter)
 
     // 健康检查端点
-    this.app.get('/health', (req, res) => {
+    this.app.get('/health', (_req, res) => {
       res.status(200).json({ status: 'OK', timestamp: new Date().toISOString() })
     })
 
     // 根路径
-    this.app.get('/', (req, res) => {
+    this.app.get('/', (_req, res) => {
       res.json({
         message: 'AI Agent Flow Designer API Server',
         version: '1.0.0',
@@ -73,13 +73,13 @@ export class LocalServer {
     })
 
     // 错误处理中间件
-    this.app.use((err: any, req: express.Request, res: express.Response) => {
+    this.app.use((err: any, _req: express.Request, res: express.Response) => {
       console.error('Unhandled error:', err)
       res.status(500).json({ error: 'Internal server error' })
     })
 
     // 404处理
-    this.app.use((req, res) => {
+    this.app.use((_req, res) => {
       res.status(404).json({ error: 'Route not found' })
     })
   }

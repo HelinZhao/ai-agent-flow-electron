@@ -227,7 +227,7 @@ interface LLMConfig {
 
 ### 数据库迁移
 
-数据库使用 Sequelize 自动同步，无需手动迁移。数据库文件位于 `src/server/data/database.sqlite`。
+数据库使用 Sequelize 自动同步，无需手动迁移。调试开发的数据库文件位于 `/data/database.sqlite`。
 
 ### API 开发
 
@@ -279,8 +279,8 @@ interface LLMConfig {
 
 如有问题或建议，请提交 Issue 或通过以下方式联系：
 
-- 项目地址: [https://github.com/your-username/ai-agent-flow-electron](https://github.com/your-username/ai-agent-flow-electron)
-- 邮箱: <your-email@example.com>
+- 项目地址: [https://gitee.com/zhao_he_lin/ai-agent-flow-electron](https://gitee.com/zhao_he_lin/ai-agent-flow-electron)
+- 邮箱: <121292464@qq.com>
 
 ---
 

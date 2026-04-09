@@ -10,7 +10,6 @@ const getDataDir = (subPath?: string): string => {
     return path.join(`./data${subPath}`) // 开发时
   }
 }
-console.log(getDataDir('/database.sqlite'))
 // 创建Sequelize实例，使用SQLite数据库
 const sequelize = new Sequelize({
   dialect: 'sqlite',

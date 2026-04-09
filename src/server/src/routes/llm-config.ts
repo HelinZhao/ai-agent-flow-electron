@@ -4,7 +4,7 @@ import { LLMConfig } from '../models'
 const router = Router()
 
 // 获取LLM配置
-router.get('/', async (req, res) => {
+router.get('/', async (_req, res) => {
   try {
     const existingConfig = await LLMConfig.findOne({
       order: [['updatedAt', 'DESC']]

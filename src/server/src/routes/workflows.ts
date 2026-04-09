@@ -9,14 +9,13 @@ const safeJsonParse = (str: string, defaultValue: any): any => {
   try {
     return JSON.parse(str)
   } catch (error) {
-    console.log(str)
     console.error('JSON解析失败:', error)
     return defaultValue
   }
 }
 
 // 获取所有工作流
-router.get('/', async (req, res) => {
+router.get('/', async (_req, res) => {
   try {
     const workflows = await Workflow.findAll({
       order: [['updatedAt', 'DESC']]
@@ -31,7 +30,7 @@ router.get('/', async (req, res) => {
     })
 
     res.setHeader('Content-Type', 'application/json; charset=utf-8')
-    res.status(200).send(JSON.stringify(result, null, 2))
+    return res.status(200).send(JSON.stringify(result, null, 2))
   } catch (error) {
     console.error('获取工作流列表错误:', error)
     return res.status(500).json({ error: '服务器内部错误' })

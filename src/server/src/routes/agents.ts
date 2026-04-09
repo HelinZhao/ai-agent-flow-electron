@@ -4,7 +4,7 @@ import { Agent } from '../models'
 const router = Router()
 
 // 获取所有智能体
-router.get('/', async (req, res) => {
+router.get('/', async (_req, res) => {
   try {
     const agents = await Agent.findAll({
       order: [['updatedAt', 'DESC']]
