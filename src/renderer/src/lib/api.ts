@@ -4,7 +4,6 @@ import { Workflow, Skill, Agent, LLMConfig } from '@renderer/types'
 // 创建axios实例
 const api = axios.create({
   baseURL: 'http://localhost:3000/api',
-  timeout: 10000,
   headers: {
     'Content-Type': 'application/json'
   }
@@ -74,8 +73,7 @@ export const workflowApi = {
         workflow,
         input,
         llmConfig
-      },
-      { timeout: undefined }
+      }
     )
 }
 

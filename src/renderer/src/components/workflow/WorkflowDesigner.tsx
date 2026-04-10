@@ -211,7 +211,7 @@ function WorkflowDesigner({ workflow, onWorkflowChange, onSave, onRun }: Workflo
   }, [handleAddNodeAtPosition, screenToFlowPosition]);
 
   return (
-    <div className="flex h-screen w-screen">
+    <div className="flex h-full w-full">
       <div className="flex-1 h-full min-h-0">
         <ReactFlow
           nodes={nodes}

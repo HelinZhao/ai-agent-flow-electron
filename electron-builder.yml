@@ -13,6 +13,8 @@ asarUnpack:
   - resources/**
 win:
   executableName: ai-agent-flow-electron
+  # 完全禁用代码签名相关功能
+  signAndEditExecutable: false
 nsis:
   artifactName: ${name}-${version}-setup.${ext}
   shortcutName: ${productName}
@@ -37,7 +39,6 @@ linux:
   category: Utility
 appImage:
   artifactName: ${name}-${version}.${ext}
-npmRebuild: false
 publish:
   provider: generic
   url: https://example.com/auto-updates

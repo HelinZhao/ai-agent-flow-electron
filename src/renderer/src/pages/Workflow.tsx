@@ -167,13 +167,12 @@ export default function Workflow(): React.JSX.Element {
     }, []);
 
     return (
-        <div className="h-screen flex flex-col">
+        <div className="h-full flex flex-col">
             {/* 顶部工具栏 */}
             <div className="bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700 p-4">
                 <div className="flex justify-between items-center">
                     <div className="flex items-center space-x-4">
                         <h1 className="text-xl font-bold text-gray-900 dark:text-white">AI Agent 工作流设计器</h1>
-
                         <div className="relative">
                             <select
                                 value={currentWorkflow?.id || ''}

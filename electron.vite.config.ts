@@ -6,6 +6,7 @@ export default defineConfig({
   main: {},
   preload: {},
   renderer: {
+    base: './',
     resolve: {
       alias: {
         '@renderer': resolve('src/renderer/src') // 设置渲染器源码路径别名

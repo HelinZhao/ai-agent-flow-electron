@@ -1,5 +1,5 @@
 import { lazy, Suspense } from "react";
-import { createBrowserRouter, RouterProvider } from "react-router-dom";
+import { createHashRouter, RouterProvider } from "react-router-dom";
 const App = lazy(() => import('@renderer/pages/App'))
 const Workflow = lazy(() => import('@renderer/pages/Workflow'))
 const Skills = lazy(() => import('@renderer/pages/Skills'))
@@ -18,7 +18,7 @@ export interface RouteType {
         permission: string[],
     }
 }
-const router = createBrowserRouter([
+const router = createHashRouter([
     {
         path: "/",
         element: <App />,
