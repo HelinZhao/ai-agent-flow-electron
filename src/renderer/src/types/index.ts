@@ -80,3 +80,22 @@ export interface Agent {
   createdAt: Date
   updatedAt: Date
 }
+
+// 对话历史相关类型
+export interface ChatMessage {
+  id: string
+  content: string
+  sender: 'user' | 'agent'
+  timestamp: string // ISO string
+  agentId?: string
+}
+
+export interface ChatHistory {
+  id: string
+  agentId: string
+  agentName: string
+  title: string
+  messages: ChatMessage[]
+  createdAt: string
+  updatedAt: string
+}

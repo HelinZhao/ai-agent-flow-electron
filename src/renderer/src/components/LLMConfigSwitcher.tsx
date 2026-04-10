@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import { useState } from 'react';
 import { useWorkflowStore } from '@renderer/store/workflowStore';
 
 export default function LLMConfigSwitcher() {
@@ -58,11 +58,10 @@ export default function LLMConfigSwitcher() {
               <button
                 key={config.id}
                 onClick={() => handleConfigSwitch(config.id!)}
-                className={`w-full text-left px-4 py-2 text-sm hover:bg-gray-100 dark:hover:bg-gray-700 flex items-center justify-between ${
-                  config.id === activeLLMConfig.id
+                className={`w-full text-left px-4 py-2 text-sm hover:bg-gray-100 dark:hover:bg-gray-700 flex items-center justify-between ${config.id === activeLLMConfig.id
                     ? 'bg-blue-50 dark:bg-blue-900/20 text-blue-800 dark:text-blue-200'
                     : 'text-gray-700 dark:text-gray-300'
-                }`}
+                  }`}
               >
                 <div className="flex items-center space-x-2">
                   <span className="font-medium">{config.name}</span>

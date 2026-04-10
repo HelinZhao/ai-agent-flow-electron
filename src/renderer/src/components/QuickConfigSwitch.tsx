@@ -1,4 +1,3 @@
-import React from 'react';
 import { useWorkflowStore } from '@renderer/store/workflowStore';
 
 interface QuickConfigSwitchProps {

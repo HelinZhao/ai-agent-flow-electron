@@ -6,7 +6,6 @@ import { LLMConfig } from '@renderer/types';
 export default function Settings(): React.JSX.Element {
     const {
         llmConfigs,
-        activeLLMConfig,
         addLLMConfig,
         updateLLMConfig,
         deleteLLMConfig,
@@ -18,7 +17,7 @@ export default function Settings(): React.JSX.Element {
     const [editingConfig, setEditingConfig] = useState<string | null>(null);
     const [showForm, setShowForm] = useState(false);
 
-    const { register, handleSubmit, formState: { errors }, reset, watch, getValues, setValue } = useForm<LLMConfig>({
+    const { register, handleSubmit, formState: { errors }, reset, watch, getValues } = useForm<LLMConfig>({
         defaultValues: {
             name: '',
             provider: 'openai',

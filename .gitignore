@@ -2,6 +2,7 @@ node_modules
 dist
 out
 data
+chat_history
 .DS_Store
 .eslintcache
 *.log*

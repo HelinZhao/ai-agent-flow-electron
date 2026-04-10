@@ -1,22 +1,18 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { useWorkflowStore } from '@renderer/store/workflowStore';
-import { Agent } from '@renderer/types';
+import { Agent, ChatHistory, ChatMessage } from '@renderer/types';
 import { langGraphExecutor } from '@renderer/lib/langgraph';
+import { chatHistoryApi } from '@renderer/lib/chatHistory';
 
-interface Message {
-    id: string;
-    content: string;
-    sender: 'user' | 'agent';
-    timestamp: Date;
-    agentId?: string;
-}
+// 使用全局类型定义，不需要重复定义
 
 export default function Chat(): React.JSX.Element {
     const { agents, workflows, activeLLMConfig } = useWorkflowStore();
     const [selectedAgent, setSelectedAgent] = useState<Agent | null>(null);
-    const [messages, setMessages] = useState<Message[]>([]);
+    const [messages, setMessages] = useState<ChatMessage[]>([]);
     const [inputMessage, setInputMessage] = useState('');
     const [isLoading, setIsLoading] = useState(false);
+    const [isLoadingHistory, setIsLoadingHistory] = useState(false);
     const messagesEndRef = useRef<HTMLDivElement>(null);
 
     const scrollToBottom = (): void => {
@@ -27,6 +23,51 @@ export default function Chat(): React.JSX.Element {
         scrollToBottom();
     }, [messages]);
 
+    // 当选中Agent变化时，加载对应的对话历史
+    useEffect(() => {
+        if (selectedAgent) {
+            loadChatHistory(selectedAgent.id);
+        } else {
+            setMessages([]);
+        }
+    }, [selectedAgent?.id]);
+
+    // 保存对话历史到文件
+    const saveChatHistory = async (messagesToSave?: ChatMessage[]) => {
+        if (selectedAgent && (messagesToSave || messages).length > 0) {
+            try {
+                const messagesToStore = messagesToSave || messages;
+                await chatHistoryApi.saveHistory(
+                    selectedAgent.id,
+                    selectedAgent.name,
+                    messagesToStore
+                );
+            } catch (error) {
+                console.error('保存对话历史失败:', error);
+            }
+        }
+    };
+
+    // 加载对话历史
+    const loadChatHistory = async (agentId: string) => {
+        try {
+            setIsLoadingHistory(true);
+            const result = await chatHistoryApi.loadHistory(agentId);
+
+            if (result.success && result.history) {
+                const history: ChatHistory = result.history;
+                setMessages(history.messages);
+            } else {
+                setMessages([]);
+            }
+        } catch (error) {
+            console.error('加载对话历史失败:', error);
+            setMessages([]);
+        } finally {
+            setIsLoadingHistory(false);
+        }
+    };
+
     const handleSendMessage = async (): Promise<void> => {
         if (!inputMessage.trim() || !selectedAgent || !activeLLMConfig) {
             if (!activeLLMConfig) {
@@ -35,14 +76,15 @@ export default function Chat(): React.JSX.Element {
             return;
         }
 
-        const userMessage: Message = {
+        const userMessage: ChatMessage = {
             id: `msg-${Date.now()}`,
             content: inputMessage,
             sender: 'user',
-            timestamp: new Date(),
+            timestamp: new Date().toISOString(),
         };
 
-        setMessages(prev => [...prev, userMessage]);
+        const newMessages = [...messages, userMessage];
+        setMessages(newMessages);
         setInputMessage('');
         setIsLoading(true);
 
@@ -60,25 +102,53 @@ export default function Chat(): React.JSX.Element {
                 activeLLMConfig
             );
 
-            const agentMessage: Message = {
+            const agentMessage: ChatMessage = {
                 id: `msg-${Date.now() + 1}`,
                 content: result,
                 sender: 'agent',
-                timestamp: new Date(),
+                timestamp: new Date().toISOString(),
                 agentId: selectedAgent.id,
             };
 
-            setMessages(prev => [...prev, agentMessage]);
+            const finalMessages = [...newMessages, agentMessage];
+            setMessages(finalMessages);
+
+            // 自动保存对话历史（此时finalMessages已包含所有最新消息）
+            if (selectedAgent && finalMessages.length > 0) {
+                try {
+                    await chatHistoryApi.saveHistory(
+                        selectedAgent.id,
+                        selectedAgent.name,
+                        finalMessages
+                    );
+                } catch (error) {
+                    console.error('保存对话历史失败:', error);
+                }
+            }
         } catch (error) {
             console.error('消息发送失败:', error);
-            const errorMessage: Message = {
+            const errorMessage: ChatMessage = {
                 id: `msg-${Date.now() + 1}`,
                 content: `抱歉，处理您的消息时出现了错误: ${error instanceof Error ? error.message : '未知错误'}`,
                 sender: 'agent',
-                timestamp: new Date(),
+                timestamp: new Date().toISOString(),
                 agentId: selectedAgent.id,
             };
-            setMessages(prev => [...prev, errorMessage]);
+            const finalMessages = [...newMessages, errorMessage];
+            setMessages(finalMessages);
+
+            // 自动保存对话历史（此时finalMessages已包含所有最新消息）
+            if (selectedAgent && finalMessages.length > 0) {
+                try {
+                    await chatHistoryApi.saveHistory(
+                        selectedAgent.id,
+                        selectedAgent.name,
+                        finalMessages
+                    );
+                } catch (error) {
+                    console.error('保存对话历史失败:', error);
+                }
+            }
         } finally {
             setIsLoading(false);
         }
@@ -92,10 +162,15 @@ export default function Chat(): React.JSX.Element {
     };
 
     const startNewChat = (): void => {
+        // 先清除历史记录文件
+        if (selectedAgent) {
+            saveChatHistory([]);
+        }
         setMessages([]);
     };
 
-    const formatTime = (date: Date): string => {
+    const formatTime = (timestamp: string): string => {
+        const date = new Date(timestamp);
         return date.toLocaleTimeString('zh-CN', { hour: '2-digit', minute: '2-digit' });
     };
 
@@ -112,16 +187,6 @@ export default function Chat(): React.JSX.Element {
                             onChange={(e) => {
                                 const agent = agents.find(a => a.id === e.target.value);
                                 setSelectedAgent(agent || null);
-                                if (agent && messages.length === 0) {
-                                    const welcomeMessage: Message = {
-                                        id: `welcome-${Date.now()}`,
-                                        content: `你好！我是${agent.name}，${agent.description}。有什么我可以帮助你的吗？`,
-                                        sender: 'agent',
-                                        timestamp: new Date(),
-                                        agentId: agent.id,
-                                    };
-                                    setMessages([welcomeMessage]);
-                                }
                             }}
                             className="px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
                         >
@@ -134,12 +199,20 @@ export default function Chat(): React.JSX.Element {
                         </select>
 
                         {selectedAgent && (
-                            <button
-                                onClick={startNewChat}
-                                className="px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-md text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700"
-                            >
-                                新对话
-                            </button>
+                            <div className="flex items-center space-x-2">
+                                {isLoadingHistory && (
+                                    <div className="flex items-center space-x-1 text-sm text-gray-500 dark:text-gray-400">
+                                        <div className="animate-spin rounded-full h-3 w-3 border-b-2 border-gray-500"></div>
+                                        <span>加载历史...</span>
+                                    </div>
+                                )}
+                                <button
+                                    onClick={startNewChat}
+                                    className="px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-md text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700"
+                                >
+                                    新对话
+                                </button>
+                            </div>
                         )}
                     </div>
 

@@ -8,6 +8,21 @@ const api = {
     start: (port?: number) => ipcRenderer.invoke('server:start', port),
     stop: () => ipcRenderer.invoke('server:stop'),
     status: () => ipcRenderer.invoke('server:status')
+  },
+  // 对话历史API
+  chatHistory: {
+    saveHistory: (agentId: string, agentName: string, messages: any[]) =>
+      ipcRenderer.invoke('chat:saveHistory', agentId, agentName, messages),
+    loadHistory: (agentId: string) =>
+      ipcRenderer.invoke('chat:loadHistory', agentId),
+    getAllHistories: () =>
+      ipcRenderer.invoke('chat:getAllHistories'),
+    deleteHistory: (agentId: string) =>
+      ipcRenderer.invoke('chat:deleteHistory', agentId),
+    clearAllHistories: () =>
+      ipcRenderer.invoke('chat:clearAllHistories'),
+    getHistoryDirectory: () =>
+      ipcRenderer.invoke('chat:getHistoryDirectory')
   }
 }
 

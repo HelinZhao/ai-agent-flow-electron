@@ -1,8 +1,6 @@
 import express from 'express'
 import cors from 'cors'
 import { initDatabase } from './database'
-import migrateDatabase from './database/migrate'
-import initLLMConfigsTable from './database/init-llm-table'
 import workflowsRouter from './routes/workflows'
 import agentsRouter from './routes/agents'
 import skillsRouter from './routes/skills'
@@ -88,8 +86,6 @@ export class LocalServer {
 
   public async start(port?: number): Promise<number> {
     await initDatabase()
-    await migrateDatabase()
-    await initLLMConfigsTable()
     return new Promise((resolve, reject) => {
       if (port) {
         this.port = port
