@@ -169,6 +169,32 @@ export default function Chat(): React.JSX.Element {
         setMessages([]);
     };
 
+    // 清空当前对话历史（删除文件）
+    const clearCurrentChatHistory = async (): Promise<void> => {
+        if (!selectedAgent) return;
+
+        // 确认对话框
+        const confirmMessage = `确定要清空 ${selectedAgent.name} 的所有对话历史吗？此操作不可恢复。`;
+        if (!window.confirm(confirmMessage)) {
+            return;
+        }
+
+        try {
+            const result = await chatHistoryApi.deleteHistory(selectedAgent.id);
+            if (result.success) {
+                console.log(`已清空Agent ${selectedAgent.name} 的对话历史`);
+                // 清空当前消息显示
+                setMessages([]);
+            } else {
+                console.error('清空对话历史失败:', result.error);
+                alert('清空对话历史失败，请检查控制台了解详情');
+            }
+        } catch (error) {
+            console.error('清空对话历史时发生错误:', error);
+            alert('清空对话历史时发生错误，请检查控制台了解详情');
+        }
+    };
+
     const formatTime = (timestamp: string): string => {
         const date = new Date(timestamp);
         return date.toLocaleTimeString('zh-CN', { hour: '2-digit', minute: '2-digit' });
@@ -211,6 +237,12 @@ export default function Chat(): React.JSX.Element {
                                     className="px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-md text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700"
                                 >
                                     新对话
+                                </button>
+                                <button
+                                    onClick={clearCurrentChatHistory}
+                                    className="px-4 py-2 border border-red-300 dark:border-red-600 rounded-md text-red-700 dark:text-red-300 hover:bg-red-50 dark:hover:bg-red-900/20"
+                                >
+                                    清空历史
                                 </button>
                             </div>
                         )}
