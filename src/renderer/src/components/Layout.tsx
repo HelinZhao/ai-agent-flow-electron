@@ -1,5 +1,6 @@
 import { Link, useLocation } from 'react-router-dom'
 import ThemeToggle from './ThemeToggle'
+import LLMConfigSwitcher from './LLMConfigSwitcher'
 
 interface LayoutProps {
   children: React.ReactNode
@@ -35,7 +36,8 @@ const Layout: React.FC<LayoutProps> = ({ children }: LayoutProps) => {
                 </Link>
               ))}
             </div>
-            <div className="flex items-center">
+            <div className="flex items-center space-x-4">
+              <LLMConfigSwitcher />
               <ThemeToggle />
             </div>
           </div>

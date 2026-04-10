@@ -6,7 +6,8 @@ interface WorkflowState {
   workflows: Workflow[]
   skills: Skill[]
   agents: Agent[]
-  llmConfig: LLMConfig | null
+  llmConfigs: LLMConfig[]
+  activeLLMConfig: LLMConfig | null
   currentWorkflow: Workflow | null
   loading: boolean
   error: string | null
@@ -31,8 +32,12 @@ interface WorkflowState {
   deleteAgent: (id: string) => Promise<void>
 
   // LLM config actions
-  setLLMConfig: (config: LLMConfig) => Promise<void>
-  getLLMConfig: () => Promise<void>
+  addLLMConfig: (config: Omit<LLMConfig, 'id' | 'createdAt' | 'updatedAt'>) => Promise<void>
+  updateLLMConfig: (id: string, updates: Partial<LLMConfig>) => Promise<void>
+  deleteLLMConfig: (id: string) => Promise<void>
+  activateLLMConfig: (id: string) => Promise<void>
+  getLLMConfigs: () => Promise<void>
+  getActiveLLMConfig: () => Promise<void>
 
   // Internal helper methods
   setLoading: (loading: boolean) => void
@@ -40,13 +45,16 @@ interface WorkflowState {
   setWorkflows: (workflows: Workflow[]) => void
   setSkills: (skills: Skill[]) => void
   setAgents: (agents: Agent[]) => void
+  setLLMConfigs: (configs: LLMConfig[]) => void
+  setActiveLLMConfig: (config: LLMConfig | null) => void
 }
 
 export const useWorkflowStore = create<WorkflowState>((set, get) => ({
   workflows: [],
   skills: [],
   agents: [],
-  llmConfig: null,
+  llmConfigs: [],
+  activeLLMConfig: null,
   currentWorkflow: null,
   loading: false,
   error: null,
@@ -68,7 +76,7 @@ export const useWorkflowStore = create<WorkflowState>((set, get) => ({
       set({ agents: agentsRes || [] })
 
       // 加载LLM配置
-      await state.getLLMConfig()
+      await state.getLLMConfigs()
     } catch (error) {
       console.error('初始化数据失败:', error)
       state.setError('初始化数据失败')
@@ -82,6 +90,8 @@ export const useWorkflowStore = create<WorkflowState>((set, get) => ({
   setWorkflows: (workflows: Workflow[]) => set({ workflows }),
   setSkills: (skills: Skill[]) => set({ skills }),
   setAgents: (agents: Agent[]) => set({ agents }),
+  setLLMConfigs: (configs: LLMConfig[]) => set({ llmConfigs: configs }),
+  setActiveLLMConfig: (config: LLMConfig | null) => set({ activeLLMConfig: config }),
   addWorkflow: async (workflow) => {
     const state = get()
     try {
@@ -251,14 +261,43 @@ export const useWorkflowStore = create<WorkflowState>((set, get) => ({
     }
   },
 
-  setLLMConfig: async (config) => {
+  addLLMConfig: async (config) => {
     const state = get()
     try {
       state.setLoading(true)
       state.setError(null)
 
-      const updatedConfig = await llmConfigApi.update(config)
-      set({ llmConfig: updatedConfig })
+      const newConfig = await llmConfigApi.create(config)
+      set({ llmConfigs: [newConfig, ...state.llmConfigs] })
+
+      // 如果是第一个配置或者设置为活跃，则更新活跃配置
+      if (state.llmConfigs.length === 0 || config.isActive) {
+        state.setActiveLLMConfig(newConfig)
+      }
+    } catch (error) {
+      console.error('创建LLM配置失败:', error)
+      state.setError('创建LLM配置失败')
+      throw error
+    } finally {
+      state.setLoading(false)
+    }
+  },
+
+  updateLLMConfig: async (id, updates) => {
+    const state = get()
+    try {
+      state.setLoading(true)
+      state.setError(null)
+
+      const updatedConfig = await llmConfigApi.update(id, updates)
+      set({
+        llmConfigs: state.llmConfigs.map((c) => (c.id === id ? updatedConfig : c))
+      })
+
+      // 如果更新的是活跃配置，也更新活跃配置
+      if (state.activeLLMConfig?.id === id) {
+        state.setActiveLLMConfig(updatedConfig)
+      }
     } catch (error) {
       console.error('更新LLM配置失败:', error)
       state.setError('更新LLM配置失败')
@@ -268,19 +307,93 @@ export const useWorkflowStore = create<WorkflowState>((set, get) => ({
     }
   },
 
-  getLLMConfig: async () => {
+  deleteLLMConfig: async (id) => {
     const state = get()
     try {
       state.setLoading(true)
       state.setError(null)
 
-      const config = await llmConfigApi.get()
-      if (config && Object.keys(config).length > 0) {
-        set({ llmConfig: config })
+      await llmConfigApi.delete(id)
+
+      const newConfigs = state.llmConfigs.filter((c) => c.id !== id)
+      set({ llmConfigs: newConfigs })
+
+      // 如果删除的是活跃配置，需要重新获取活跃配置
+      if (state.activeLLMConfig?.id === id) {
+        const activeConfig = newConfigs.find(c => c.isActive) || newConfigs[0] || null
+        state.setActiveLLMConfig(activeConfig)
+      }
+    } catch (error) {
+      console.error('删除LLM配置失败:', error)
+      state.setError('删除LLM配置失败')
+      throw error
+    } finally {
+      state.setLoading(false)
+    }
+  },
+
+  activateLLMConfig: async (id) => {
+    const state = get()
+    try {
+      state.setLoading(true)
+      state.setError(null)
+
+      const result = await llmConfigApi.activate(id)
+
+      // 更新配置列表中的活跃状态
+      const updatedConfigs = state.llmConfigs.map(config => ({
+        ...config,
+        isActive: config.id === id
+      }))
+
+      set({
+        llmConfigs: updatedConfigs,
+        activeLLMConfig: result.config
+      })
+    } catch (error) {
+      console.error('切换LLM配置失败:', error)
+      state.setError('切换LLM配置失败')
+      throw error
+    } finally {
+      state.setLoading(false)
+    }
+  },
+
+  getLLMConfigs: async () => {
+    const state = get()
+    try {
+      state.setLoading(true)
+      state.setError(null)
+
+      const configs = await llmConfigApi.getAll()
+      set({ llmConfigs: configs })
+
+      // 设置活跃配置
+      const activeConfig = configs.find(c => c.isActive) || configs[0] || null
+      if (activeConfig) {
+        state.setActiveLLMConfig(activeConfig)
       }
     } catch (error) {
       console.error('获取LLM配置失败:', error)
       state.setError('获取LLM配置失败')
+    } finally {
+      state.setLoading(false)
+    }
+  },
+
+  getActiveLLMConfig: async () => {
+    const state = get()
+    try {
+      state.setLoading(true)
+      state.setError(null)
+
+      const config = await llmConfigApi.getActive()
+      if (config && Object.keys(config).length > 0) {
+        state.setActiveLLMConfig(config)
+      }
+    } catch (error) {
+      console.error('获取活跃LLM配置失败:', error)
+      state.setError('获取活跃LLM配置失败')
     } finally {
       state.setLoading(false)
     }

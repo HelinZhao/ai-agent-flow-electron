@@ -3,41 +3,167 @@ import { LLMConfig } from '../models'
 
 const router = Router()
 
-// 获取LLM配置
+// 获取所有LLM配置
 router.get('/', async (_req, res) => {
   try {
-    const existingConfig = await LLMConfig.findOne({
-      order: [['updatedAt', 'DESC']]
+    const configs = await LLMConfig.findAll({
+      order: [['isActive', 'DESC'], ['updatedAt', 'DESC']]
     })
-    return res.status(200).json(existingConfig || {})
+    return res.status(200).json(configs || [])
   } catch (error) {
     console.error('获取LLM配置错误:', error)
+
+    // 如果是列不存在的错误，返回空数组
+    if (error && typeof error === 'object' && 'message' in error && String(error.message).includes('no such column')) {
+      console.log('表结构不完整，返回空配置列表')
+      return res.status(200).json([])
+    }
+
     return res.status(500).json({ error: '服务器内部错误' })
   }
 })
 
-// 创建或更新LLM配置
+// 获取当前活跃的LLM配置
+router.get('/active', async (_req, res) => {
+  try {
+    const activeConfig = await LLMConfig.findOne({
+      where: { isActive: true }
+    })
+    return res.status(200).json(activeConfig || {})
+  } catch (error) {
+    console.error('获取活跃LLM配置错误:', error)
+
+    // 如果是列不存在的错误，返回空对象
+    if (error && typeof error === 'object' && 'message' in error && String(error.message).includes('no such column')) {
+      console.log('表结构不完整，返回空活跃配置')
+      return res.status(200).json({})
+    }
+
+    return res.status(500).json({ error: '服务器内部错误' })
+  }
+})
+
+// 创建新的LLM配置
 router.post('/', async (req, res) => {
   try {
-    const { provider, apiKey, model, baseUrl, temperature, maxTokens } = req.body
+    const { name, provider, apiKey, model, baseUrl, temperature, maxTokens, isActive } = req.body
 
-    if (!provider || !apiKey || !model) {
-      return res.status(400).json({ error: '提供商、API密钥和模型不能为空' })
+    if (!name || !provider || !apiKey || !model) {
+      return res.status(400).json({ error: '配置名称、提供商、API密钥和模型不能为空' })
+    }
+
+    // 如果要设置为活跃配置，先将其他配置设为非活跃
+    if (isActive) {
+      await LLMConfig.update({ isActive: false }, { where: {} })
     }
 
     // 创建新的配置记录
     const newConfig = await LLMConfig.create({
+      name,
       provider,
       apiKey,
       model,
       baseUrl,
       temperature: temperature || 0.7,
-      maxTokens: maxTokens || 2000
+      maxTokens: maxTokens || 2000,
+      isActive: isActive || false
     })
 
-    return res.status(200).json(newConfig)
+    return res.status(201).json(newConfig)
   } catch (error) {
     console.error('创建LLM配置错误:', error)
+    return res.status(500).json({ error: '服务器内部错误' })
+  }
+})
+
+// 更新LLM配置
+router.put('/:id', async (req, res) => {
+  try {
+    const { id } = req.params
+    const { name, provider, apiKey, model, baseUrl, temperature, maxTokens, isActive } = req.body
+
+    const config = await LLMConfig.findByPk(id)
+    if (!config) {
+      return res.status(404).json({ error: '配置不存在' })
+    }
+
+    // 如果要设置为活跃配置，先将其他配置设为非活跃
+    if (isActive) {
+      await LLMConfig.update({ isActive: false }, { where: {} })
+    }
+
+    await config.update({
+      name,
+      provider,
+      apiKey,
+      model,
+      baseUrl,
+      temperature,
+      maxTokens,
+      isActive
+    })
+
+    return res.status(200).json(config)
+  } catch (error) {
+    console.error('更新LLM配置错误:', error)
+    return res.status(500).json({ error: '服务器内部错误' })
+  }
+})
+
+// 删除LLM配置
+router.delete('/:id', async (req, res) => {
+  try {
+    const { id } = req.params
+
+    const config = await LLMConfig.findByPk(id)
+    if (!config) {
+      return res.status(404).json({ error: '配置不存在' })
+    }
+
+    // 不能删除最后一个配置
+    const configCount = await LLMConfig.count()
+    if (configCount <= 1) {
+      return res.status(400).json({ error: '不能删除最后一个配置' })
+    }
+
+    // 如果要删除的是活跃配置，自动激活最新的配置
+    if (config.isActive) {
+      const latestConfig = await LLMConfig.findOne({
+        where: { id: { [require('sequelize').Op.ne]: id } },
+        order: [['updatedAt', 'DESC']]
+      })
+      if (latestConfig) {
+        await latestConfig.update({ isActive: true })
+      }
+    }
+
+    await config.destroy()
+    return res.status(200).json({ message: '配置删除成功' })
+  } catch (error) {
+    console.error('删除LLM配置错误:', error)
+    return res.status(500).json({ error: '服务器内部错误' })
+  }
+})
+
+// 切换活跃配置
+router.post('/:id/activate', async (req, res) => {
+  try {
+    const { id } = req.params
+
+    const config = await LLMConfig.findByPk(id)
+    if (!config) {
+      return res.status(404).json({ error: '配置不存在' })
+    }
+
+    // 将所有配置设为非活跃
+    await LLMConfig.update({ isActive: false }, { where: {} })
+
+    // 将指定配置设为活跃
+    await config.update({ isActive: true })
+
+    return res.status(200).json({ message: '配置切换成功', config })
+  } catch (error) {
+    console.error('切换LLM配置错误:', error)
     return res.status(500).json({ error: '服务器内部错误' })
   }
 })

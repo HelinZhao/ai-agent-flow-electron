@@ -7,7 +7,7 @@ import { useMemoizedFn } from 'ahooks';
 import { ReactFlowProvider } from '@xyflow/react';
 
 export default function Workflow(): React.JSX.Element {
-    const { workflows, addWorkflow, updateWorkflow, deleteWorkflow, llmConfig } = useWorkflowStore();
+    const { workflows, addWorkflow, updateWorkflow, deleteWorkflow, activeLLMConfig } = useWorkflowStore();
     const [currentWorkflow, setCurrentWorkflow] = useState<Workflow | null>(null);
     const [isCreating, setIsCreating] = useState(false);
     const [newWorkflowName, setNewWorkflowName] = useState('');
@@ -65,7 +65,7 @@ export default function Workflow(): React.JSX.Element {
     });
 
     const handleRun = useCallback(async () => {
-        if (!currentWorkflow || !llmConfig) {
+        if (!currentWorkflow || !activeLLMConfig) {
             alert('请先配置LLM API并保存工作流');
             return;
         }
@@ -74,7 +74,7 @@ export default function Workflow(): React.JSX.Element {
         setExecutionResult(null);
 
         try {
-            const result = await langGraphExecutor.executeWorkflow(currentWorkflow, '请执行这个工作流', llmConfig);
+            const result = await langGraphExecutor.executeWorkflow(currentWorkflow, '请执行这个工作流', activeLLMConfig);
             setExecutionResult(result);
         } catch (error) {
             console.error('工作流执行失败:', error);
@@ -82,7 +82,7 @@ export default function Workflow(): React.JSX.Element {
         } finally {
             setIsExecuting(false);
         }
-    }, [currentWorkflow, llmConfig]);
+    }, [currentWorkflow, activeLLMConfig]);
 
     const handleDeleteWorkflow = useCallback((workflowId: string) => {
         setWorkflowToDelete(workflowId);

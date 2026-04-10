@@ -12,7 +12,7 @@ interface Message {
 }
 
 export default function Chat(): React.JSX.Element {
-    const { agents, workflows, llmConfig } = useWorkflowStore();
+    const { agents, workflows, activeLLMConfig } = useWorkflowStore();
     const [selectedAgent, setSelectedAgent] = useState<Agent | null>(null);
     const [messages, setMessages] = useState<Message[]>([]);
     const [inputMessage, setInputMessage] = useState('');
@@ -28,8 +28,8 @@ export default function Chat(): React.JSX.Element {
     }, [messages]);
 
     const handleSendMessage = async (): Promise<void> => {
-        if (!inputMessage.trim() || !selectedAgent || !llmConfig) {
-            if (!llmConfig) {
+        if (!inputMessage.trim() || !selectedAgent || !activeLLMConfig) {
+            if (!activeLLMConfig) {
                 alert('请先配置LLM API');
             }
             return;
@@ -57,7 +57,7 @@ export default function Chat(): React.JSX.Element {
             const result = await langGraphExecutor.executeWorkflow(
                 agentWorkflow,
                 inputMessage,
-                llmConfig
+                activeLLMConfig
             );
 
             const agentMessage: Message = {

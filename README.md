@@ -7,7 +7,7 @@ AI Agent Flow Designer 是一个基于 Electron + React + TypeScript 的可视�
 - 🎨 **可视化工作流设计** - 基于 ReactFlow 的拖拽式工作流编辑器
 - 🤖 **多 Agent 支持** - 创建和管理多个 AI Agent
 - 🛠️ **技能管理** - 自定义和管理 AI 技能
-- 🔧 **LLM 配置** - 支持多种 AI 模型提供商（OpenAI、Anthropic、Azure、Qwen、LongCat）
+- 🔧 **多LLM配置管理** - 支持创建和管理多个AI模型配置，一键切换不同提供商（OpenAI、Anthropic、Azure、Qwen、LongCat）
 - 💾 **本地数据存储** - 使用 SQLite 数据库进行本地数据持久化
 - 🌐 **RESTful API** - 内置 Express 服务器提供完整的 API 接口
 - 🎯 **实时执行** - 支持工作流的实时执行和调试
@@ -34,7 +34,7 @@ AI Agent Flow Designer 是一个基于 Electron + React + TypeScript 的可视�
 ## 📋 系统要求
 
 - Node.js 18+
-- pnpm 8+
+- npm 10+
 - Windows 10+ / macOS 10.15+ / Linux
 
 ## 🚀 快速开始
@@ -42,48 +42,48 @@ AI Agent Flow Designer 是一个基于 Electron + React + TypeScript 的可视�
 ### 安装依赖
 
 ```bash
-pnpm install
+npm install
 ```
 
 ### 开发模式
 
 ```bash
 # 启动开发服务器
-pnpm dev
+npm run dev
 ```
 
 ### 构建应用
 
 ```bash
 # 构建当前平台
-pnpm build
+npm run build
 
 # 构建 Windows 版本
-pnpm build:win
+npm run build:win
 
 # 构建 macOS 版本  
-pnpm build:mac
+npm run build:mac
 
 # 构建 Linux 版本
-pnpm build:linux
+npm run build:linux
 ```
 
 ### 代码检查
 
 ```bash
 # 格式化代码
-pnpm format
+npm run format
 
 # 代码检查
-pnpm lint
+npm run lint
 
 # 类型检查
-pnpm typecheck
+npm run typecheck
 ```
 
 ## 📁 项目结构
 
-```
+```text
 ai-agent-flow-electron/
 ├── src/
 │   ├── main/              # Electron 主进程代码
@@ -139,10 +139,14 @@ ai-agent-flow-electron/
 - `PUT /api/skills/:id` - 更新技能
 - `DELETE /api/skills/:id` - 删除技能
 
-### LLM 配置
+### LLM 配置管理
 
-- `GET /api/llm-config` - 获取 LLM 配置
-- `POST /api/llm-config` - 更新 LLM 配置
+- `GET /api/llm-config` - 获取所有 LLM 配置
+- `GET /api/llm-config/active` - 获取当前活跃配置
+- `POST /api/llm-config` - 创建新的 LLM 配置
+- `PUT /api/llm-config/:id` - 更新指定配置
+- `DELETE /api/llm-config/:id` - 删除配置
+- `POST /api/llm-config/:id/activate` - 切换为活跃配置
 
 ### 工作流执行
 
@@ -200,12 +204,17 @@ interface Skill {
 
 ```typescript
 interface LLMConfig {
+  id?: string                    // 配置ID
+  name: string                   // 配置名称
   provider: 'openai' | 'anthropic' | 'azure' | 'qwen' | 'longcat'
-  apiKey: string
-  model: string
-  baseUrl?: string
-  temperature?: number
-  maxTokens?: number
+  apiKey: string                 // API密钥
+  model: string                  // 模型名称
+  baseUrl?: string              // 自定义API地址（可选）
+  temperature?: number          // 温度参数
+  maxTokens?: number            // 最大Token数
+  isActive?: boolean            // 是否为当前活跃配置
+  createdAt?: Date
+  updatedAt?: Date
 }
 ```
 
@@ -247,11 +256,26 @@ interface LLMConfig {
 
 如果看到 "public class fields" 警告，这是正常的，我们使用 `declare` 关键字来避免属性冲突。
 
-### 3. 端口占用
+### 3. 多LLM配置管理
+
+- 支持创建多个不同提供商的AI配置
+- 可在顶部导航栏快速切换活跃配置
+- 每个配置可独立设置API参数
+- 配置数据自动保存到本地数据库
+
+### 4. 端口占用
 
 如果端口 3000 被占用，服务器会自动尝试下一个可用端口。
 
 ## 📝 更新日志
+
+### v1.1.0
+
+- 🚀 **多LLM配置管理** - 支持创建、编辑、删除多个AI模型配置
+- 🔄 **配置一键切换** - 类似CCswitch的快速配置切换功能
+- 🎯 **顶部切换器** - 在导航栏快速切换活跃配置
+- 💼 **配置持久化** - 所有配置自动保存到本地数据库
+- 🛡️ **数据迁移** - 自动处理数据库表结构升级
 
 ### v1.0.0
 
@@ -259,7 +283,7 @@ interface LLMConfig {
 - ✨ 实现基本的工作流设计功能
 - 🤖 支持 Agent 管理
 - 🛠️ 添加技能管理功能
-- 🔧 支持多种 LLM 配置
+- 🔧 支持多LLM配置管理和一键切换
 - 💾 集成 SQLite 数据库
 - 🎨 基于 ReactFlow 的可视化编辑器
 

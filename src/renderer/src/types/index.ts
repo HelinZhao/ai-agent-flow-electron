@@ -58,12 +58,17 @@ export interface ApiConfig {
 }
 
 export interface LLMConfig {
+  id?: string
+  name: string
   provider: 'openai' | 'anthropic' | 'azure' | 'qwen' | 'longcat'
   apiKey: string
   model: string
   baseUrl?: string
   temperature?: number
   maxTokens?: number
+  isActive?: boolean
+  createdAt?: Date
+  updatedAt?: Date
 }
 
 export interface Agent {

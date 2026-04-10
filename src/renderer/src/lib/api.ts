@@ -66,7 +66,7 @@ export const workflowApi = {
   delete: (id: string): Promise<void> => api.delete(`/workflows/${id}`),
 
   // 执行工作流
-  execute: (workflow: Workflow, input: string, llmConfig: LLMConfig): Promise<{ result: string }> =>
+  execute: (workflow: Workflow, input: string, llmConfig?: LLMConfig): Promise<{ result: string }> =>
     api.post(
       '/execute-workflow',
       {
@@ -117,11 +117,26 @@ export const agentApi = {
 
 // LLM配置API
 export const llmConfigApi = {
-  // 获取LLM配置
-  get: (): Promise<LLMConfig> => api.get('/llm-config'),
+  // 获取所有LLM配置
+  getAll: (): Promise<LLMConfig[]> => api.get('/llm-config'),
+
+  // 获取当前活跃的LLM配置
+  getActive: (): Promise<LLMConfig> => api.get('/llm-config/active'),
+
+  // 创建新的LLM配置
+  create: (data: Omit<LLMConfig, 'id' | 'createdAt' | 'updatedAt'>): Promise<LLMConfig> =>
+    api.post('/llm-config', data),
 
   // 更新LLM配置
-  update: (data: LLMConfig): Promise<LLMConfig> => api.post('/llm-config', data)
+  update: (id: string, data: Partial<LLMConfig>): Promise<LLMConfig> =>
+    api.put(`/llm-config/${id}`, data),
+
+  // 删除LLM配置
+  delete: (id: string): Promise<void> => api.delete(`/llm-config/${id}`),
+
+  // 切换活跃配置
+  activate: (id: string): Promise<{ message: string; config: LLMConfig }> =>
+    api.post(`/llm-config/${id}/activate`)
 }
 
 export default api

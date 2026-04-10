@@ -3,12 +3,14 @@ import sequelize from '../database'
 
 export interface LLMConfigAttributes {
   id: string
+  name: string
   provider: 'openai' | 'anthropic' | 'azure' | 'qwen' | 'longcat'
   apiKey: string
   model: string
   baseUrl?: string
   temperature?: number
   maxTokens?: number
+  isActive: boolean
   createdAt: Date
   updatedAt: Date
 }
@@ -23,12 +25,14 @@ export class LLMConfig
   implements LLMConfigAttributes
 {
   declare id: string
+  declare name: string
   declare provider: 'openai' | 'anthropic' | 'azure' | 'qwen' | 'longcat'
   declare apiKey: string
   declare model: string
   declare baseUrl?: string
   declare temperature?: number
   declare maxTokens?: number
+  declare isActive: boolean
   declare createdAt: Date
   declare updatedAt: Date
 }
@@ -39,6 +43,11 @@ LLMConfig.init(
       type: DataTypes.UUID,
       defaultValue: DataTypes.UUIDV4,
       primaryKey: true
+    },
+    name: {
+      type: DataTypes.STRING,
+      allowNull: false,
+      defaultValue: '默认配置'
     },
     provider: {
       type: DataTypes.STRING,
@@ -65,6 +74,11 @@ LLMConfig.init(
       type: DataTypes.INTEGER,
       allowNull: true,
       defaultValue: 2000
+    },
+    isActive: {
+      type: DataTypes.BOOLEAN,
+      allowNull: false,
+      defaultValue: false
     },
     createdAt: {
       type: DataTypes.DATE,
