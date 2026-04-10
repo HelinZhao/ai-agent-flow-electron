@@ -52,7 +52,7 @@ export default function LLMConfigSwitcher() {
       </button>
 
       {isOpen && (
-        <div className="absolute top-full left-0 mt-1 w-64 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-md shadow-lg z-50">
+        <div className="fixed right-0 mt-1 w-64 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-md shadow-lg z-50">
           <div className="py-1">
             {llmConfigs.map((config) => (
               <button
