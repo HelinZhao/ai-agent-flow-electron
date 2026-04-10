@@ -3,7 +3,6 @@ import { Workflow, LLMConfig, WorkflowBranch, WorkflowNode } from '../types'
 import { Skill } from '../models'
 import { StateGraph, Annotation, START, END } from '@langchain/langgraph'
 import { BaseMessage, HumanMessage, AIMessage } from '@langchain/core/messages'
-
 const router = Router()
 
 // 使用真正的LangGraph的执行器
@@ -365,6 +364,7 @@ class ServerLangGraphExecutor {
       const conditionText = branches.map((item) => `条件${item.id}:${item.condition}`).join('\n')
       const prompt = `请评估以下条件是否满足，只需回答条件的id其他文字不需返回,如条件1: a<0;\n条件2:a=0;若满足条件2，则回复2，如都不满足则回复null\n\n${conditionText}\n\n输入内容: ${input}`
       const result = await this.callLLM(prompt, llmConfig)
+
       return result
     } catch (error) {
       console.error('条件评估失败:', error)
@@ -563,16 +563,16 @@ class ServerLangGraphExecutor {
   private extractLLMResponse(data: any, provider: string): string {
     switch (provider) {
       case 'openai':
-        return data.choices?.[0]?.message?.content || '无响应内容'
+        return data.choices?.[0]?.message?.content ?? '无响应内容'
       case 'anthropic':
-        return data.content?.[0]?.text || '无响应内容'
+        return data.content?.[0]?.text ?? '无响应内容'
       case 'azure':
-        return data.choices?.[0]?.message?.content || '无响应内容'
+        return data.choices?.[0]?.message?.content ?? '无响应内容'
       case 'qwen':
-        return data.choices?.[0]?.message?.content || '无响应内容'
+        return data.choices?.[0]?.delta?.content ?? '无响应内容'
       case 'longcat':
         // LongCat 流式响应包含完整的当前内容在 content 字段中
-        return data.content || data.choices?.[0]?.delta?.content || '无响应内容'
+        return data.content ?? data.choices?.[0]?.delta?.content ?? '无响应内容'
       default:
         return '未知的响应格式'
     }
