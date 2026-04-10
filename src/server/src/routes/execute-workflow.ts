@@ -3,6 +3,7 @@ import { Workflow, LLMConfig, WorkflowBranch, WorkflowNode } from '../types'
 import { Skill } from '../models'
 import { StateGraph, Annotation, START, END } from '@langchain/langgraph'
 import { BaseMessage, HumanMessage, AIMessage } from '@langchain/core/messages'
+import { ChatOpenAI } from '@langchain/openai'
 const router = Router()
 
 // 使用真正的LangGraph的执行器
@@ -372,126 +373,23 @@ class ServerLangGraphExecutor {
     }
   }
 
-  private async processStreamingResponse(
-    stream: ReadableStream,
-    provider: string
-  ): Promise<string> {
-    const reader = stream.getReader()
-    const decoder = typeof TextDecoder !== 'undefined' ? new TextDecoder() : null
-    let buffer = ''
-    let lastContent = ''
-
-    try {
-      while (true) {
-        const { done, value } = await reader.read()
-        if (done) break
-
-        // 解码接收到的数据
-        const chunk = decoder
-          ? decoder.decode(value, { stream: true })
-          : new TextDecoder().decode(value)
-        buffer += chunk
-
-        // 处理SSE格式的数据
-        const lines = buffer.split('\n')
-        buffer = lines.pop() ?? '' // 保留最后一行不完整的数据
-
-        for (const line of lines) {
-          const trimmedLine = line.trim()
-
-          if (!trimmedLine || !trimmedLine.startsWith('data:')) continue
-
-          const data = trimmedLine.slice(5).trim()
-
-          if (data === '[DONE]') break
-
-          try {
-            const parsed = JSON.parse(data)
-            const currentContent = this.extractLLMResponse(parsed, provider)
-
-            // 对于 LongCat，需要处理完整内容重复的问题
-            if (provider === 'longcat' && currentContent && currentContent !== lastContent) {
-              // 只返回最新的完整内容，避免重复
-              lastContent = currentContent
-            } else if (provider !== 'longcat' && currentContent) {
-              // 对于其他提供商，按原来的增量方式处理
-              lastContent += currentContent
-            }
-          } catch (e) {
-            // 忽略解析错误，继续处理
-            console.warn('解析流式数据失败:', e)
-          }
-        }
-      }
-
-      // 处理剩余的buffer
-      if (buffer.trim()) {
-        const lines = buffer.split('\n')
-        for (const line of lines) {
-          const trimmedLine = line.trim()
-          if (!trimmedLine || !trimmedLine.startsWith('data:')) continue
-
-          const data = trimmedLine.slice(5).trim()
-          if (data === '[DONE]') break
-
-          try {
-            const parsed = JSON.parse(data)
-            const currentContent = this.extractLLMResponse(parsed, provider)
-
-            if (provider === 'longcat' && currentContent && currentContent !== lastContent) {
-              lastContent = currentContent
-            } else if (provider !== 'longcat' && currentContent) {
-              lastContent += currentContent
-            }
-          } catch (e) {
-            console.warn('解析流式数据失败:', e)
-          }
-        }
-      }
-
-      return lastContent || '无响应内容'
-    } catch (error) {
-      console.error('处理流式响应失败:', error)
-      throw new Error(`流式响应处理失败: ${error instanceof Error ? error.message : '未知错误'}`)
-    } finally {
-      try {
-        reader.releaseLock()
-      } catch (e) {
-        // 忽略释放锁的错误
-        console.warn('释放流读取器锁失败:', e)
-      }
-    }
-  }
-
   private async callLLM(prompt: string, llmConfig: LLMConfig): Promise<string> {
     try {
-      const response = await fetch(this.getLLMEndpoint(llmConfig), {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          ...(llmConfig.apiKey && { Authorization: `Bearer ${llmConfig.apiKey}` })
+      const llm = new ChatOpenAI({
+        model: llmConfig.model,
+        temperature: llmConfig.temperature || 0.7,
+        maxTokens: llmConfig.maxTokens || 2000,
+        maxRetries: 2,
+        apiKey: llmConfig.apiKey,
+        // 其他配置参数可以在这里添加
+        configuration: {
+          baseURL: this.getLLMEndpoint(llmConfig),
         },
-        body: JSON.stringify(this.buildLLMRequest(prompt, llmConfig))
       })
-
-      if (!response.ok) {
-        const errorData = await response.text()
-        throw new Error(`LLM调用失败: ${response.status} ${response.statusText} - ${errorData}`)
-      }
-
-      // 检查是否为流式响应
-      const isStream =
-        response.headers.get('content-type')?.includes('text/event-stream') ||
-        response.headers.get('transfer-encoding') === 'chunked'
-
-      if (isStream && response.body) {
-        // 处理流式响应
-        return await this.processStreamingResponse(response.body, llmConfig.provider)
-      } else {
-        // 处理普通响应
-        const data = await response.json()
-        return this.extractLLMResponse(data, llmConfig.provider)
-      }
+      // 调用大模型
+      const response = await llm.invoke(prompt)
+      // 提取响应内容
+      return response.content.toString()
     } catch (error) {
       throw new Error(`LLM调用错误: ${error instanceof Error ? error.message : '未知错误'}`)
     }
@@ -500,81 +398,19 @@ class ServerLangGraphExecutor {
   private getLLMEndpoint(llmConfig: LLMConfig): string {
     switch (llmConfig.provider) {
       case 'openai':
-        return 'https://api.openai.com/v1/chat/completions'
+        return 'https://api.openai.com/v1'
       case 'anthropic':
-        return 'https://api.anthropic.com/v1/messages'
+        return 'https://api.anthropic.com/v1'
       case 'azure':
         return llmConfig.baseUrl || ''
       case 'qwen':
         return (
-          llmConfig.baseUrl || 'https://dashscope.aliyuncs.com/compatible-mode/v1/chat/completions'
+          llmConfig.baseUrl || 'https://dashscope.aliyuncs.com/compatible-mode/v1'
         )
       case 'longcat':
-        return llmConfig.baseUrl || 'https://api.longcat.chat/openai/v1/chat/completions'
+        return llmConfig.baseUrl || 'https://api.longcat.chat/openai/v1'
       default:
         throw new Error(`不支持的LLM提供商: ${llmConfig.provider}`)
-    }
-  }
-
-  private buildLLMRequest(prompt: string, llmConfig: LLMConfig): any {
-    const baseConfig = {
-      max_tokens: llmConfig.maxTokens || 2000,
-      temperature: llmConfig.temperature || 0.7,
-      stream: true // 启用流式响应
-    }
-
-    switch (llmConfig.provider) {
-      case 'openai':
-        return {
-          ...baseConfig,
-          model: llmConfig.model || 'gpt-3.5-turbo',
-          messages: [{ role: 'user', content: prompt }]
-        }
-      case 'anthropic':
-        return {
-          ...baseConfig,
-          model: llmConfig.model || 'claude-3-haiku-20240307',
-          messages: [{ role: 'user', content: prompt }],
-          stream: true
-        }
-      case 'azure':
-        return {
-          ...baseConfig,
-          model: llmConfig.model || 'gpt-3.5-turbo',
-          messages: [{ role: 'user', content: prompt }]
-        }
-      case 'qwen':
-        return {
-          ...baseConfig,
-          model: llmConfig.model || 'qwen-turbo',
-          messages: [{ role: 'user', content: prompt }]
-        }
-      case 'longcat':
-        return {
-          ...baseConfig,
-          model: llmConfig.model || 'LongCat-Flash-Chat',
-          messages: [{ role: 'user', content: prompt }]
-        }
-      default:
-        throw new Error(`不支持的LLM提供商: ${llmConfig.provider}`)
-    }
-  }
-
-  private extractLLMResponse(data: any, provider: string): string {
-    switch (provider) {
-      case 'openai':
-        return data.choices?.[0]?.message?.content ?? '无响应内容'
-      case 'anthropic':
-        return data.content?.[0]?.text ?? '无响应内容'
-      case 'azure':
-        return data.choices?.[0]?.message?.content ?? '无响应内容'
-      case 'qwen':
-        return data.choices?.[0]?.delta?.content ?? '无响应内容'
-      case 'longcat':
-        // LongCat 流式响应包含完整的当前内容在 content 字段中
-        return data.content ?? data.choices?.[0]?.delta?.content ?? '无响应内容'
-      default:
-        return '未知的响应格式'
     }
   }
 
