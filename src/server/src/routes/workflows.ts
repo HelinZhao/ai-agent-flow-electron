@@ -4,7 +4,7 @@ import { Workflow } from '../models'
 const router = Router()
 
 // 安全JSON解析函数
-const safeJsonParse = (str: string, defaultValue: any): any => {
+const safeJsonParse = <T>(str: string, defaultValue: T): T => {
   if (!str) return defaultValue
   try {
     return JSON.parse(str)
@@ -50,10 +50,11 @@ router.post('/', async (req, res) => {
       nodes: JSON.stringify(nodes || []),
       edges: JSON.stringify(edges || [])
     })
+    const json = workflow.toJSON()
     return res.status(201).json({
-      ...workflow.toJSON(),
-      nodes: safeJsonParse(workflow.nodes, []),
-      edges: safeJsonParse(workflow.edges, [])
+      ...json,
+      nodes: safeJsonParse(json.nodes, []),
+      edges: safeJsonParse(json.edges, [])
     })
   } catch (error) {
     console.error('创建工作流错误:', error)

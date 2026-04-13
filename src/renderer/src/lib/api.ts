@@ -46,18 +46,18 @@ export const workflowApi = {
   create: (data: Omit<Workflow, 'id' | 'createdAt' | 'updatedAt'>): Promise<Workflow> =>
     api.post('/workflows', {
       ...data,
-      nodes: JSON.stringify(data.nodes || []),
-      edges: JSON.stringify(data.edges || [])
+      nodes: data.nodes ?? [],
+      edges: data.edges ?? []
     }),
 
   // 更新工作流
   update: (id: string, data: Partial<Workflow>): Promise<Workflow> => {
     const requestData: any = { ...data }
     if (data.nodes !== undefined) {
-      requestData.nodes = JSON.stringify(data.nodes)
+      requestData.nodes = data.nodes
     }
     if (data.edges !== undefined) {
-      requestData.edges = JSON.stringify(data.edges)
+      requestData.edges = data.edges
     }
     return api.put(`/workflows/${id}`, requestData)
   },
@@ -66,15 +66,16 @@ export const workflowApi = {
   delete: (id: string): Promise<void> => api.delete(`/workflows/${id}`),
 
   // 执行工作流
-  execute: (workflow: Workflow, input: string, llmConfig?: LLMConfig): Promise<{ result: string }> =>
-    api.post(
-      '/execute-workflow',
-      {
-        workflow,
-        input,
-        llmConfig
-      }
-    )
+  execute: (
+    workflow: Workflow,
+    input: string,
+    llmConfig?: LLMConfig
+  ): Promise<{ result: string }> =>
+    api.post('/execute-workflow', {
+      workflow,
+      input,
+      llmConfig
+    })
 }
 
 // Skill API
