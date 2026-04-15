@@ -261,6 +261,7 @@ export default function Workflow(): React.JSX.Element {
                 {currentWorkflow ? (
                     <ReactFlowProvider>
                         <WorkflowDesigner
+                            key={currentWorkflow.id}
                             workflow={currentWorkflow}
                             onWorkflowChange={handleWorkflowChange}
                             onSave={handleSave}

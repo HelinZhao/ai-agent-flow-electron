@@ -63,7 +63,7 @@ const NodeConfigPanel: React.FC<NodeConfigPanelProps> = ({ node, onClose }: Node
   if (!node) {
     return (
       <Panel>
-        <div className="w-80 bg-white dark:bg-gray-800 border-l border-gray-200 dark:border-gray-600 p-4">
+        <div className="w-80 bg-white dark:bg-gray-800 border-l border-gray-200 dark:border-gray-600 p-4 rounded">
           <div className="text-center text-gray-500 dark:text-gray-400">
             选择一个节点进行配置
           </div>
@@ -74,7 +74,7 @@ const NodeConfigPanel: React.FC<NodeConfigPanelProps> = ({ node, onClose }: Node
 
   return (
     <Panel>
-      <div className="w-80 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-600">
+      <div className="w-80 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-600 rounded">
         <div className="flex justify-between items-center p-4">
           <h3 className="text-lg font-medium text-gray-900 dark:text-white">
             配置 {node.type === 'start' ? '开始' : node.type === 'end' ? '结束' : node.type === 'skill' ? '技能' : node.type === 'branch' ? '分支' : node.type === 'api' ? 'API' : node.type === 'llm' ? 'LLM' : 'Agent'} 节点
