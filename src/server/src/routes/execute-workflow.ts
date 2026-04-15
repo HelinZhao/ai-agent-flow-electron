@@ -323,12 +323,18 @@ class ServerLangGraphExecutor {
     try {
       // 替换提示词模板中的变量
       let promptTemplate = node.data.config.prompt
-      const variables = node.data.config.variables || {}
+      const variables = node.data.config.variables || []
+
+      // 将变量数组转换为对象格式以便替换
+      const variablesMap: Record<string, any> = {}
+      variables.forEach((variable: any) => {
+        variablesMap[variable.name] = variable.defaultValue || ''
+      })
 
       // 替换模板中的变量，支持 {{variableName}} 格式
-      Object.keys(variables).forEach((key) => {
+      Object.keys(variablesMap).forEach((key) => {
         const placeholder = `{{${key}}}`
-        promptTemplate = promptTemplate.replace(new RegExp(placeholder, 'g'), variables[key])
+        promptTemplate = promptTemplate.replace(new RegExp(placeholder, 'g'), variablesMap[key])
       })
 
       // 将用户输入添加到提示词中
@@ -344,7 +350,7 @@ class ServerLangGraphExecutor {
           label: node.data?.label,
           type: 'llm',
           prompt: promptTemplate,
-          variables: variables
+          variables: variablesMap
         }
       }
     } catch (error) {

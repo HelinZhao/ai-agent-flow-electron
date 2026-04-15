@@ -99,3 +99,17 @@ export interface ChatHistory {
   createdAt: string
   updatedAt: string
 }
+
+export interface VariableConfig {
+  name: string
+  displayName: string
+  type: 'string' | 'number' | 'boolean' | 'array'
+  defaultValue?: any
+  required?: boolean
+  description?: string
+}
+
+export interface LLMNodeConfig {
+  prompt: string
+  variables: VariableConfig[]
+}
