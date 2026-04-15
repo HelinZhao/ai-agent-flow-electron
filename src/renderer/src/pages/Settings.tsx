@@ -139,14 +139,14 @@ export default function Settings(): React.JSX.Element {
                             <h2 className="text-lg font-medium text-gray-900 dark:text-white">大模型API配置管理</h2>
                             <button
                                 onClick={startNewConfig}
-                                className="bg-blue-600 text-white px-4 py-2 rounded-md hover:bg-blue-700 flex items-center space-x-2"
+                                className="bg-blue-600 text-white px-4 py-2 rounded-md hover:bg-blue-700 dark:bg-blue-600 dark:hover:bg-blue-700 flex items-center space-x-2"
                             >
                                 <span>+ 新建配置</span>
                             </button>
                         </div>
 
                         {message && (
-                            <div className={`mb-4 p-4 rounded-md ${message.type === 'success' ? 'bg-green-50 text-green-800' : 'bg-red-50 text-red-800'
+                            <div className={`mb-4 p-4 rounded-md ${message.type === 'success' ? 'bg-green-50 text-green-800 dark:bg-green-900/20 dark:text-green-400' : 'bg-red-50 text-red-800 dark:bg-red-900/20 dark:text-red-400'
                                 }`}>
                                 {message.text}
                             </div>
@@ -155,12 +155,12 @@ export default function Settings(): React.JSX.Element {
                         {/* 配置列表 */}
                         <div className="space-y-3 mb-6">
                             {llmConfigs.map((config) => (
-                                <div key={config.id} className={`border rounded-lg p-4 ${config.isActive ? 'border-blue-500 bg-blue-50 dark:bg-blue-900/20' : 'border-gray-200 dark:border-gray-700'}`}>
+                                <div key={config.id} className={`border rounded-lg p-4 ${config.isActive ? 'border-blue-500 bg-blue-50 dark:bg-blue-900/20' : 'border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800'}`}>
                                     <div className="flex items-center justify-between">
                                         <div className="flex-1">
                                             <div className="flex items-center space-x-3">
                                                 {config.isActive && (
-                                                    <span className="bg-blue-100 text-blue-800 text-xs px-2 py-1 rounded">当前使用</span>
+                                                    <span className="bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-300 text-xs px-2 py-1 rounded">当前使用</span>
                                                 )}
                                                 <h3 className="font-medium text-gray-900 dark:text-white">{config.name}</h3>
                                                 <span className="text-sm text-gray-500 dark:text-gray-400">{config.provider}</span>
@@ -172,21 +172,21 @@ export default function Settings(): React.JSX.Element {
                                                 <button
                                                     onClick={() => handleActivate(config.id!)}
                                                     disabled={isLoading}
-                                                    className="text-green-600 hover:text-green-800 px-3 py-1 text-sm border border-green-300 rounded hover:bg-green-50"
+                                                    className="text-green-600 dark:text-green-400 hover:text-green-800 dark:hover:text-green-300 px-3 py-1 text-sm border border-green-300 dark:border-green-600 rounded hover:bg-green-50 dark:hover:bg-green-900/20"
                                                 >
                                                     启用
                                                 </button>
                                             )}
                                             <button
                                                 onClick={() => handleEdit(config)}
-                                                className="text-blue-600 hover:text-blue-800 px-3 py-1 text-sm border border-blue-300 rounded hover:bg-blue-50"
+                                                className="text-blue-600 dark:text-blue-400 hover:text-blue-800 dark:hover:text-blue-300 px-3 py-1 text-sm border border-blue-300 dark:border-blue-600 rounded hover:bg-blue-50 dark:hover:bg-blue-900/20"
                                             >
                                                 编辑
                                             </button>
                                             <button
                                                 onClick={() => handleDelete(config.id!)}
                                                 disabled={llmConfigs.length <= 1}
-                                                className="text-red-600 hover:text-red-800 px-3 py-1 text-sm border border-red-300 rounded hover:bg-red-50 disabled:opacity-50 disabled:cursor-not-allowed"
+                                                className="text-red-600 dark:text-red-400 hover:text-red-800 dark:hover:text-red-300 px-3 py-1 text-sm border border-red-300 dark:border-red-600 rounded hover:bg-red-50 dark:hover:bg-red-900/20 disabled:opacity-50 disabled:cursor-not-allowed"
                                             >
                                                 删除
                                             </button>
@@ -316,7 +316,7 @@ export default function Settings(): React.JSX.Element {
                                     <button
                                         type="submit"
                                         disabled={isLoading}
-                                        className="flex-1 bg-blue-600 text-white py-2 px-4 rounded-md hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed"
+                                        className="flex-1 bg-blue-600 text-white py-2 px-4 rounded-md hover:bg-blue-700 dark:bg-blue-600 dark:hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed"
                                     >
                                         {isLoading ? '保存中...' : editingConfig ? '更新配置' : '创建配置'}
                                     </button>
@@ -325,7 +325,7 @@ export default function Settings(): React.JSX.Element {
                                         type="button"
                                         onClick={testConnection}
                                         disabled={isLoading || !watch('apiKey')}
-                                        className="flex-1 bg-gray-600 text-white py-2 px-4 rounded-md hover:bg-gray-700 disabled:opacity-50 disabled:cursor-not-allowed"
+                                        className="flex-1 bg-gray-600 text-white py-2 px-4 rounded-md hover:bg-gray-700 dark:bg-gray-600 dark:hover:bg-gray-700 disabled:opacity-50 disabled:cursor-not-allowed"
                                     >
                                         测试连接
                                     </button>
@@ -337,7 +337,7 @@ export default function Settings(): React.JSX.Element {
                                             setEditingConfig(null);
                                             reset();
                                         }}
-                                        className="px-4 py-2 border border-gray-300 text-gray-700 rounded-md hover:bg-gray-50"
+                                        className="px-4 py-2 border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 rounded-md hover:bg-gray-50 dark:hover:bg-gray-700"
                                     >
                                         取消
                                     </button>
