@@ -1,5 +1,6 @@
 import { Router } from 'express'
 import { LLMConfig } from '../models'
+import { Op } from 'sequelize'
 
 const router = Router()
 
@@ -7,14 +8,22 @@ const router = Router()
 router.get('/', async (_req, res) => {
   try {
     const configs = await LLMConfig.findAll({
-      order: [['isActive', 'DESC'], ['updatedAt', 'DESC']]
+      order: [
+        ['isActive', 'DESC'],
+        ['updatedAt', 'DESC']
+      ]
     })
     return res.status(200).json(configs || [])
   } catch (error) {
     console.error('获取LLM配置错误:', error)
 
     // 如果是列不存在的错误，返回空数组
-    if (error && typeof error === 'object' && 'message' in error && String(error.message).includes('no such column')) {
+    if (
+      error &&
+      typeof error === 'object' &&
+      'message' in error &&
+      String(error.message).includes('no such column')
+    ) {
       console.log('表结构不完整，返回空配置列表')
       return res.status(200).json([])
     }
@@ -34,7 +43,12 @@ router.get('/active', async (_req, res) => {
     console.error('获取活跃LLM配置错误:', error)
 
     // 如果是列不存在的错误，返回空对象
-    if (error && typeof error === 'object' && 'message' in error && String(error.message).includes('no such column')) {
+    if (
+      error &&
+      typeof error === 'object' &&
+      'message' in error &&
+      String(error.message).includes('no such column')
+    ) {
       console.log('表结构不完整，返回空活跃配置')
       return res.status(200).json({})
     }
@@ -129,7 +143,7 @@ router.delete('/:id', async (req, res) => {
     // 如果要删除的是活跃配置，自动激活最新的配置
     if (config.isActive) {
       const latestConfig = await LLMConfig.findOne({
-        where: { id: { [require('sequelize').Op.ne]: id } },
+        where: { id: { [Op.ne]: id } },
         order: [['updatedAt', 'DESC']]
       })
       if (latestConfig) {

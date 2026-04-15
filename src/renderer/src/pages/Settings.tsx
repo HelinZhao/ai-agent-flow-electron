@@ -83,6 +83,7 @@ export default function Settings(): React.JSX.Element {
             await deleteLLMConfig(id);
             setMessage({ type: 'success', text: '配置删除成功！' });
         } catch (error) {
+            console.error(error)
             setMessage({ type: 'error', text: '删除失败' });
         } finally {
             setIsLoading(false);
@@ -95,6 +96,7 @@ export default function Settings(): React.JSX.Element {
             await activateLLMConfig(id);
             setMessage({ type: 'success', text: '配置切换成功！' });
         } catch (error) {
+            console.error(error)
             setMessage({ type: 'error', text: '切换失败' });
         } finally {
             setIsLoading(false);
@@ -109,6 +111,7 @@ export default function Settings(): React.JSX.Element {
             await new Promise(resolve => setTimeout(resolve, 1000));
             setMessage({ type: 'success', text: '连接测试成功！' });
         } catch (error) {
+            console.error(error)
             setMessage({ type: 'error', text: '连接测试失败，请检查API Key和网络连接' });
         } finally {
             setIsLoading(false);
