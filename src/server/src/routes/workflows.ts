@@ -1,5 +1,5 @@
 import { Router } from 'express'
-import { Workflow } from '../models'
+import { WorkflowModel } from '../models'
 
 const router = Router()
 
@@ -17,7 +17,7 @@ const safeJsonParse = <T>(str: string, defaultValue: T): T => {
 // 获取所有工作流
 router.get('/', async (_req, res) => {
   try {
-    const workflows = await Workflow.findAll({
+    const workflows = await WorkflowModel.findAll({
       order: [['updatedAt', 'DESC']]
     })
     const result = workflows.map((item) => {
@@ -44,7 +44,7 @@ router.post('/', async (req, res) => {
     if (!name) {
       return res.status(400).json({ error: '名称为空' })
     }
-    const workflow = await Workflow.create({
+    const workflow = await WorkflowModel.create({
       name,
       description,
       nodes: JSON.stringify(nodes || []),
@@ -66,7 +66,7 @@ router.post('/', async (req, res) => {
 router.get('/:id', async (req, res) => {
   try {
     const { id } = req.params
-    const workflow = await Workflow.findByPk(id)
+    const workflow = await WorkflowModel.findByPk(id)
 
     if (!workflow) {
       return res.status(404).json({ error: '工作流不存在' })
@@ -89,7 +89,7 @@ router.put('/:id', async (req, res) => {
     const { id } = req.params
     const { name, description, nodes, edges } = req.body
 
-    const workflow = await Workflow.findByPk(id)
+    const workflow = await WorkflowModel.findByPk(id)
     if (!workflow) {
       return res.status(404).json({ error: '工作流不存在' })
     }
@@ -116,7 +116,7 @@ router.put('/:id', async (req, res) => {
 router.delete('/:id', async (req, res) => {
   try {
     const { id } = req.params
-    const workflow = await Workflow.findByPk(id)
+    const workflow = await WorkflowModel.findByPk(id)
 
     if (!workflow) {
       return res.status(404).json({ error: '工作流不存在' })

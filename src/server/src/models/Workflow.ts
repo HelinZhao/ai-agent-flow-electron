@@ -16,7 +16,7 @@ export interface WorkflowCreationAttributes extends Omit<
   'id' | 'createdAt' | 'updatedAt'
 > {}
 
-export class Workflow
+export class WorkflowModel
   extends Model<WorkflowAttributes, WorkflowCreationAttributes>
   implements WorkflowAttributes {
   declare id: string
@@ -28,7 +28,7 @@ export class Workflow
   declare updatedAt: Date
 }
 
-Workflow.init(
+WorkflowModel.init(
   {
     id: {
       type: DataTypes.UUID,

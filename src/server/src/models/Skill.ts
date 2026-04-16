@@ -15,7 +15,7 @@ export interface SkillCreationAttributes extends Omit<
   'id' | 'createdAt' | 'updatedAt'
 > {}
 
-export class Skill
+export class SkillModel
   extends Model<SkillAttributes, SkillCreationAttributes>
   implements SkillAttributes
 {
@@ -27,7 +27,7 @@ export class Skill
   declare updatedAt: Date
 }
 
-Skill.init(
+SkillModel.init(
   {
     id: {
       type: DataTypes.UUID,

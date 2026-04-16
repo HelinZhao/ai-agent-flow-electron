@@ -1,13 +1,15 @@
 import { Router } from 'express'
-import { LLMConfig } from '../models'
+import { LLMConfigModel } from '../models'
+import { LLMConfig } from '../types'
 import { Op } from 'sequelize'
+import { callLLM } from '../utils'
 
 const router = Router()
 
 // 获取所有LLM配置
 router.get('/', async (_req, res) => {
   try {
-    const configs = await LLMConfig.findAll({
+    const configs = await LLMConfigModel.findAll({
       order: [
         ['isActive', 'DESC'],
         ['updatedAt', 'DESC']
@@ -35,7 +37,7 @@ router.get('/', async (_req, res) => {
 // 获取当前活跃的LLM配置
 router.get('/active', async (_req, res) => {
   try {
-    const activeConfig = await LLMConfig.findOne({
+    const activeConfig = await LLMConfigModel.findOne({
       where: { isActive: true }
     })
     return res.status(200).json(activeConfig || {})
@@ -68,11 +70,11 @@ router.post('/', async (req, res) => {
 
     // 如果要设置为活跃配置，先将其他配置设为非活跃
     if (isActive) {
-      await LLMConfig.update({ isActive: false }, { where: {} })
+      await LLMConfigModel.update({ isActive: false }, { where: {} })
     }
 
     // 创建新的配置记录
-    const newConfig = await LLMConfig.create({
+    const newConfig = await LLMConfigModel.create({
       name,
       provider,
       apiKey,
@@ -96,14 +98,14 @@ router.put('/:id', async (req, res) => {
     const { id } = req.params
     const { name, provider, apiKey, model, baseUrl, temperature, maxTokens, isActive } = req.body
 
-    const config = await LLMConfig.findByPk(id)
+    const config = await LLMConfigModel.findByPk(id)
     if (!config) {
       return res.status(404).json({ error: '配置不存在' })
     }
 
     // 如果要设置为活跃配置，先将其他配置设为非活跃
     if (isActive) {
-      await LLMConfig.update({ isActive: false }, { where: {} })
+      await LLMConfigModel.update({ isActive: false }, { where: {} })
     }
 
     await config.update({
@@ -129,20 +131,20 @@ router.delete('/:id', async (req, res) => {
   try {
     const { id } = req.params
 
-    const config = await LLMConfig.findByPk(id)
+    const config = await LLMConfigModel.findByPk(id)
     if (!config) {
       return res.status(404).json({ error: '配置不存在' })
     }
 
     // 不能删除最后一个配置
-    const configCount = await LLMConfig.count()
+    const configCount = await LLMConfigModel.count()
     if (configCount <= 1) {
       return res.status(400).json({ error: '不能删除最后一个配置' })
     }
 
     // 如果要删除的是活跃配置，自动激活最新的配置
     if (config.isActive) {
-      const latestConfig = await LLMConfig.findOne({
+      const latestConfig = await LLMConfigModel.findOne({
         where: { id: { [Op.ne]: id } },
         order: [['updatedAt', 'DESC']]
       })
@@ -164,13 +166,13 @@ router.post('/:id/activate', async (req, res) => {
   try {
     const { id } = req.params
 
-    const config = await LLMConfig.findByPk(id)
+    const config = await LLMConfigModel.findByPk(id)
     if (!config) {
       return res.status(404).json({ error: '配置不存在' })
     }
 
     // 将所有配置设为非活跃
-    await LLMConfig.update({ isActive: false }, { where: {} })
+    await LLMConfigModel.update({ isActive: false }, { where: {} })
 
     // 将指定配置设为活跃
     await config.update({ isActive: true })
@@ -179,6 +181,56 @@ router.post('/:id/activate', async (req, res) => {
   } catch (error) {
     console.error('切换LLM配置错误:', error)
     return res.status(500).json({ error: '服务器内部错误' })
+  }
+})
+
+// 测试LLM连接
+router.post('/test-connection', async (req, res) => {
+  try {
+    const { provider, apiKey, model } = req.body
+
+    if (!apiKey || !model) {
+      return res.status(400).json({ error: 'API Key和模型名称不能为空' })
+    }
+
+    // 验证API Key格式
+    const validationRules = {
+      openai: { prefix: 'sk-', message: 'OpenAI API Key必须以sk-开头' },
+      anthropic: { prefix: 'sk-ant-', message: 'Anthropic API Key必须以sk-ant-开头' },
+      azure: { prefix: '', message: '' },
+      qwen: { prefix: 'sk-', message: 'Qwen API Key必须以sk-开头' },
+      longcat: { prefix: 'ak_', message: 'LongCat API Key必须以ak_开头' }
+    }
+
+    const rule = validationRules[provider as keyof typeof validationRules]
+    if (rule && rule.prefix && !apiKey.startsWith(rule.prefix)) {
+      return res.status(400).json({ error: rule.message })
+    }
+
+    // 构建测试请求
+    const llmConfig: LLMConfig = {
+      model: model,
+      temperature: 0.1,
+      maxTokens: 10,
+      provider,
+      apiKey
+    }
+
+    const result = await callLLM('请回复"测试成功', llmConfig)
+    if (result) {
+      return res.status(200).json({
+        success: true,
+        message: '连接测试成功！API响应正常。',
+        response: result
+      })
+    } else {
+      return res.status(400).json({ error: 'API响应格式异常' })
+    }
+  } catch (error) {
+    console.error('连接测试失败:', error)
+    return res.status(500).json({
+      error: `连接测试失败: ${error instanceof Error ? error.message : '未知错误'}`
+    })
   }
 })
 

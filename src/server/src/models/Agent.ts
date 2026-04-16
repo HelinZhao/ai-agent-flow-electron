@@ -16,7 +16,7 @@ export interface AgentCreationAttributes extends Omit<
   'id' | 'createdAt' | 'updatedAt'
 > {}
 
-export class Agent
+export class AgentModel
   extends Model<AgentAttributes, AgentCreationAttributes>
   implements AgentAttributes
 {
@@ -29,7 +29,7 @@ export class Agent
   declare updatedAt: Date
 }
 
-Agent.init(
+AgentModel.init(
   {
     id: {
       type: DataTypes.UUID,

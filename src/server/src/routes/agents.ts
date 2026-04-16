@@ -1,12 +1,12 @@
 import { Router } from 'express'
-import { Agent } from '../models'
+import { AgentModel } from '../models'
 
 const router = Router()
 
 // 获取所有智能体
 router.get('/', async (_req, res) => {
   try {
-    const agents = await Agent.findAll({
+    const agents = await AgentModel.findAll({
       order: [['updatedAt', 'DESC']]
     })
     return res.status(200).json(agents)
@@ -25,7 +25,7 @@ router.post('/', async (req, res) => {
       return res.status(400).json({ error: '名称、描述和指令不能为空' })
     }
 
-    const agent = await Agent.create({
+    const agent = await AgentModel.create({
       name,
       description,
       instructions,
@@ -43,7 +43,7 @@ router.post('/', async (req, res) => {
 router.get('/:id', async (req, res) => {
   try {
     const { id } = req.params
-    const agent = await Agent.findByPk(id)
+    const agent = await AgentModel.findByPk(id)
 
     if (!agent) {
       return res.status(404).json({ error: '智能体不存在' })
@@ -62,7 +62,7 @@ router.put('/:id', async (req, res) => {
     const { id } = req.params
     const { name, description, instructions, workflowId } = req.body
 
-    const agent = await Agent.findByPk(id)
+    const agent = await AgentModel.findByPk(id)
     if (!agent) {
       return res.status(404).json({ error: '智能体不存在' })
     }
@@ -85,7 +85,7 @@ router.put('/:id', async (req, res) => {
 router.delete('/:id', async (req, res) => {
   try {
     const { id } = req.params
-    const agent = await Agent.findByPk(id)
+    const agent = await AgentModel.findByPk(id)
 
     if (!agent) {
       return res.status(404).json({ error: '智能体不存在' })

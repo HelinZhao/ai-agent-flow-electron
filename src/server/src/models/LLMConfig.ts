@@ -20,7 +20,7 @@ export interface LLMConfigCreationAttributes extends Omit<
   'id' | 'createdAt' | 'updatedAt'
 > {}
 
-export class LLMConfig
+export class LLMConfigModel
   extends Model<LLMConfigAttributes, LLMConfigCreationAttributes>
   implements LLMConfigAttributes
 {
@@ -37,7 +37,7 @@ export class LLMConfig
   declare updatedAt: Date
 }
 
-LLMConfig.init(
+LLMConfigModel.init(
   {
     id: {
       type: DataTypes.UUID,

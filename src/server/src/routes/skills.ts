@@ -1,12 +1,12 @@
 import { Router } from 'express'
-import { Skill } from '../models'
+import { SkillModel } from '../models'
 
 const router = Router()
 
 // 获取所有技能
 router.get('/', async (_req, res) => {
   try {
-    const skills = await Skill.findAll({
+    const skills = await SkillModel.findAll({
       order: [['updatedAt', 'DESC']]
     })
     return res.status(200).json(skills)
@@ -24,7 +24,7 @@ router.post('/', async (req, res) => {
       return res.status(400).json({ error: '名称、描述和内容不能为空' })
     }
 
-    const skill = await Skill.create({
+    const skill = await SkillModel.create({
       name,
       description,
       content
@@ -41,7 +41,7 @@ router.post('/', async (req, res) => {
 router.get('/:id', async (req, res) => {
   try {
     const { id } = req.params
-    const skill = await Skill.findByPk(id)
+    const skill = await SkillModel.findByPk(id)
 
     if (!skill) {
       return res.status(404).json({ error: '技能不存在' })
@@ -60,7 +60,7 @@ router.put('/:id', async (req, res) => {
     const { id } = req.params
     const { name, description, content } = req.body
 
-    const skill = await Skill.findByPk(id)
+    const skill = await SkillModel.findByPk(id)
     if (!skill) {
       return res.status(404).json({ error: '技能不存在' })
     }
@@ -82,7 +82,7 @@ router.put('/:id', async (req, res) => {
 router.delete('/:id', async (req, res) => {
   try {
     const { id } = req.params
-    const skill = await Skill.findByPk(id)
+    const skill = await SkillModel.findByPk(id)
 
     if (!skill) {
       return res.status(404).json({ error: '技能不存在' })

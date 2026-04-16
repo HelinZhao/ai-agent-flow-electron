@@ -157,7 +157,16 @@ export const llmConfigApi = {
 
   // 切换活跃配置
   activate: (id: string): Promise<{ message: string; config: LLMConfig }> =>
-    api.post(`/llm-config/${id}/activate`)
+    api.post(`/llm-config/${id}/activate`),
+
+  // 测试连接
+  testConnection: (
+    data: Omit<LLMConfig, 'id' | 'createdAt' | 'updatedAt' | 'name'>
+  ): Promise<{
+    success: boolean
+    message: string
+    response: string
+  }> => api.post(`/llm-config/test-connection`, data)
 }
 
 export default api

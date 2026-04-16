@@ -1,10 +1,10 @@
 import { Router } from 'express'
 import { Workflow, LLMConfig, WorkflowBranch, WorkflowNode } from '../types'
-import { Skill, Agent, Workflow as WorkflowModel, LLMConfig as LLMConfigModel } from '../models'
+import { SkillModel, AgentModel, WorkflowModel, LLMConfigModel } from '../models'
 import { StateGraph, Annotation, START, END } from '@langchain/langgraph'
 import { MemorySaver } from '@langchain/langgraph'
 import { BaseMessage, HumanMessage, AIMessage } from '@langchain/core/messages'
-import { ChatOpenAI } from '@langchain/openai'
+import { callLLM } from '../utils'
 const router = Router()
 const memory = new MemorySaver()
 
@@ -193,7 +193,7 @@ class ServerLangGraphExecutor {
 
     try {
       // 从数据库中获取技能内容
-      const skill = await Skill.findByPk(node.data.config.skillId)
+      const skill = await SkillModel.findByPk(node.data.config.skillId)
 
       if (!skill) {
         return {
@@ -212,7 +212,7 @@ class ServerLangGraphExecutor {
 
       // 使用LLM执行技能，明确要求只返回处理结果，不要重复输入内容
       const prompt = `${skillContent}\n\n当前用户输入: ${input}\n\n请根据以上技能内容处理用户输入，只返回处理后的结果，不要重复用户输入的内容。如果只是传递信息，请简洁地总结或转换，避免重复。`
-      const result = await this.callLLM(prompt, llmConfig, conversationHistory)
+      const result = await callLLM(prompt, llmConfig, conversationHistory)
 
       return {
         output: result,
@@ -285,7 +285,7 @@ class ServerLangGraphExecutor {
 
       // 使用LLM处理API结果
       const processPrompt = `请处理以下API调用结果，并结合原始输入给出最终答案:\n\n原始输入: ${input}\n\nAPI结果: ${JSON.stringify(apiResult, null, 2)}`
-      const result = await this.callLLM(processPrompt, llmConfig)
+      const result = await callLLM(processPrompt, llmConfig)
 
       return {
         output: result,
@@ -335,7 +335,7 @@ class ServerLangGraphExecutor {
 
       // 使用Agent的指令和LLM处理输入
       const prompt = `${agentInstructions}\n\n当前用户输入: ${input}\n\n请根据以上指令处理用户输入，只返回处理后的结果，不要重复用户输入的内容。`
-      const result = await this.callLLM(prompt, llmConfig, conversationHistory)
+      const result = await callLLM(prompt, llmConfig, conversationHistory)
 
       return {
         output: result,
@@ -386,7 +386,7 @@ class ServerLangGraphExecutor {
       const finalPrompt = promptTemplate ? `${promptTemplate}\n\n当前用户输入: ${input}` : input
 
       // 调用LLM
-      const result = await this.callLLM(finalPrompt, llmConfig, conversationHistory)
+      const result = await callLLM(finalPrompt, llmConfig, conversationHistory)
 
       return {
         output: result,
@@ -431,7 +431,7 @@ ${conditionText}
 5. 返回格式必须严格：要么是条件ID，要么是"null"
 
 请严格按照以上规则进行评估，只输出结果：`
-      const result = await this.callLLM(prompt, llmConfig)
+      const result = await callLLM(prompt, llmConfig)
 
       // 清理结果，只保留ID或null
       const cleanResult = result.trim().replace(/[\s\n\r.,，。!！?？;；]/g, '')
@@ -443,49 +443,6 @@ ${conditionText}
     } catch (error) {
       console.error('条件评估失败:', error)
       return 'null'
-    }
-  }
-
-  private async callLLM(
-    prompt: string,
-    llmConfig: LLMConfig,
-    conversationHistory: BaseMessage[] = []
-  ): Promise<string> {
-    try {
-      const llm = new ChatOpenAI({
-        model: llmConfig.model,
-        temperature: llmConfig.temperature || 0.7,
-        maxTokens: llmConfig.maxTokens || 2000,
-        maxRetries: 2,
-        apiKey: llmConfig.apiKey,
-        // 其他配置参数可以在这里添加
-        configuration: {
-          baseURL: this.getLLMEndpoint(llmConfig)
-        }
-      })
-      // 调用大模型
-      const response = await llm.invoke([...conversationHistory, new HumanMessage(prompt)])
-      // 提取响应内容
-      return response.content.toString()
-    } catch (error) {
-      throw new Error(`LLM调用错误: ${error instanceof Error ? error.message : '未知错误'}`)
-    }
-  }
-
-  private getLLMEndpoint(llmConfig: LLMConfig): string {
-    switch (llmConfig.provider) {
-      case 'openai':
-        return 'https://api.openai.com/v1'
-      case 'anthropic':
-        return 'https://api.anthropic.com/v1'
-      case 'azure':
-        return llmConfig.baseUrl || ''
-      case 'qwen':
-        return llmConfig.baseUrl || 'https://dashscope.aliyuncs.com/compatible-mode/v1'
-      case 'longcat':
-        return llmConfig.baseUrl || 'https://api.longcat.chat/openai/v1'
-      default:
-        throw new Error(`不支持的LLM提供商: ${llmConfig.provider}`)
     }
   }
 
@@ -571,7 +528,7 @@ router.post('/agent-chat', async (req, res) => {
     }
 
     // 查找 Agent
-    const agent = await Agent.findByPk(agentId)
+    const agent = await AgentModel.findByPk(agentId)
     if (!agent) {
       return res.status(404).json({
         error: 'Agent 不存在',
