@@ -247,6 +247,7 @@ class ServerLangGraphExecutor {
 
     try {
       const branchId = await this.evaluateBranches(node.data.config.branches, input, llmConfig)
+
       return {
         output: `条件评估成功，满足条件id: ${branchId}`,
         metadata: {
@@ -412,11 +413,33 @@ class ServerLangGraphExecutor {
 
   private async evaluateBranches(branches: WorkflowBranch[], input: string, llmConfig: LLMConfig) {
     try {
-      const conditionText = branches.map((item) => `条件${item.id}:${item.condition}`).join('\n')
-      const prompt = `请评估以下条件是否满足，只需回答条件的id其他文字不需返回,如条件1: a<0;\n条件2:a=0;若满足条件2，则回复2，如都不满足则回复null\n\n${conditionText}\n\n输入内容: ${input}`
+      const conditionText = branches
+        .map((item, index) => `条件${index + 1} [ID: ${item.id}]: ${item.condition}`)
+        .join('\n')
+      const prompt = `你是一个条件评估引擎，请根据输入内容判断满足哪个条件。
+
+可用条件:
+${conditionText}
+
+输入内容: ${input}
+
+评估规则:
+1. 仔细分析输入内容，判断其满足哪个条件
+2. 只返回满足条件的ID值，不要包含任何其他文字、标点符号或解释
+3. 如果多个条件都满足，返回第一个满足条件的ID
+4. 如果没有任何条件满足，只返回字符串"null"
+5. 返回格式必须严格：要么是条件ID，要么是"null"
+
+请严格按照以上规则进行评估，只输出结果：`
       const result = await this.callLLM(prompt, llmConfig)
 
-      return result
+      // 清理结果，只保留ID或null
+      const cleanResult = result.trim().replace(/[\s\n\r.,，。!！?？;；]/g, '')
+
+      // 验证结果格式
+      const isValidResult =
+        branches.some((branch) => branch.id === cleanResult) || cleanResult === 'null'
+      return isValidResult ? cleanResult : 'null'
     } catch (error) {
       console.error('条件评估失败:', error)
       return 'null'
