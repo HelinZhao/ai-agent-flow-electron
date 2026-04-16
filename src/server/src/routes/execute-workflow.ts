@@ -1,6 +1,6 @@
 import { Router } from 'express'
 import { Workflow, LLMConfig, WorkflowBranch, WorkflowNode } from '../types'
-import { Skill } from '../models'
+import { Skill, Agent, Workflow as WorkflowModel, LLMConfig as LLMConfigModel } from '../models'
 import { StateGraph, Annotation, START, END } from '@langchain/langgraph'
 import { MemorySaver } from '@langchain/langgraph'
 import { BaseMessage, HumanMessage, AIMessage } from '@langchain/core/messages'
@@ -489,27 +489,145 @@ class ServerLangGraphExecutor {
 // 执行工作流的路由
 router.post('/', async (req, res) => {
   try {
-    const { workflow, input, llmConfig, agentId, threadId } = req.body
+    const { workflow, input, agentId, threadId } = req.body
 
     // 验证必要参数
-    if (!workflow || !input || !llmConfig) {
-      return res.status(400).json({ error: 'Missing required parameters' })
+    if (!workflow || !input) {
+      return res.status(400).json({ error: 'Missing required parameters (workflow and input)' })
     }
 
-    // 验证LLM配置
-    if (!llmConfig.provider || !llmConfig.apiKey) {
-      return res.status(400).json({ error: 'LLM configuration is required' })
+    // 查找启用的 LLM 配置
+    const activeLLMConfig = await LLMConfigModel.findOne({
+      where: { isActive: true }
+    })
+
+    if (!activeLLMConfig) {
+      return res.status(400).json({
+        error: 'No active LLM configuration found',
+        message: 'Please configure and activate an LLM configuration first'
+      })
+    }
+
+    // 将数据库中的 LLM 配置转换为 LLM 配置对象
+    const llmConfig: LLMConfig = {
+      provider: activeLLMConfig.provider,
+      apiKey: activeLLMConfig.apiKey,
+      model: activeLLMConfig.model,
+      baseUrl: activeLLMConfig.baseUrl,
+      temperature: activeLLMConfig.temperature,
+      maxTokens: activeLLMConfig.maxTokens
     }
 
     // 执行工作流
     const executor = new ServerLangGraphExecutor()
     const result = await executor.executeWorkflow(workflow, input, llmConfig, agentId, threadId)
 
-    return res.status(200).json({ result })
+    return res.status(200).json({
+      result,
+      llmConfigName: activeLLMConfig.name
+    })
   } catch (error) {
     console.error('工作流执行错误:', error)
     return res.status(500).json({
       error: error instanceof Error ? error.message : '工作流执行失败'
+    })
+  }
+})
+
+// AI Agent 对话 API
+router.post('/agent-chat', async (req, res) => {
+  try {
+    const { agentId, input, threadId } = req.body
+
+    // 验证必要参数
+    if (!agentId || !input) {
+      return res.status(400).json({
+        error: '缺少必要参数',
+        message: '请提供 agentId 和 input 参数'
+      })
+    }
+
+    // 查找 Agent
+    const agent = await Agent.findByPk(agentId)
+    if (!agent) {
+      return res.status(404).json({
+        error: 'Agent 不存在',
+        message: `找不到 ID 为 ${agentId} 的 Agent，请检查 Agent ID 是否正确`
+      })
+    }
+
+    // 检查 Agent 是否绑定了工作流
+    if (!agent.workflowId) {
+      return res.status(400).json({
+        error: 'Agent 未绑定工作流',
+        message: `Agent「${agent.name}」尚未绑定工作流，请先为该 Agent 配置工作流后再进行对话`
+      })
+    }
+
+    // 查找绑定的工作流
+    const workflow = await WorkflowModel.findByPk(agent.workflowId)
+    if (!workflow) {
+      return res.status(404).json({
+        error: '工作流不存在',
+        message: `Agent「${agent.name}」绑定的工作流不存在，请联系管理员检查配置`
+      })
+    }
+
+    // 查找启用的 LLM 配置
+    const activeLLMConfig = await LLMConfigModel.findOne({
+      where: { isActive: true }
+    })
+
+    if (!activeLLMConfig) {
+      return res.status(400).json({
+        error: '未配置大模型',
+        message: '请先配置并启用一个大模型配置，然后重试'
+      })
+    }
+
+    // 将数据库中的工作流数据转换为工作流对象
+    const workflowObj: Workflow = {
+      id: workflow.id,
+      name: workflow.name,
+      description: workflow.description,
+      nodes: JSON.parse(workflow.nodes),
+      edges: JSON.parse(workflow.edges),
+      createdAt: workflow.createdAt,
+      updatedAt: workflow.updatedAt
+    }
+
+    // 将数据库中的 LLM 配置转换为 LLM 配置对象
+    const llmConfig: LLMConfig = {
+      provider: activeLLMConfig.provider,
+      apiKey: activeLLMConfig.apiKey,
+      model: activeLLMConfig.model,
+      baseUrl: activeLLMConfig.baseUrl,
+      temperature: activeLLMConfig.temperature,
+      maxTokens: activeLLMConfig.maxTokens
+    }
+
+    // 执行工作流
+    const executor = new ServerLangGraphExecutor()
+    const result = await executor.executeWorkflow(
+      workflowObj,
+      input,
+      llmConfig,
+      agentId,
+      threadId || agentId // 使用 agentId 作为默认 threadId
+    )
+
+    return res.status(200).json({
+      success: true,
+      result,
+      agentName: agent.name,
+      workflowName: workflow.name,
+      llmConfigName: activeLLMConfig.name
+    })
+  } catch (error) {
+    console.error('AI Agent 对话执行错误:', error)
+    return res.status(500).json({
+      error: '对话执行失败',
+      message: error instanceof Error ? error.message : '未知错误，请稍后重试'
     })
   }
 })

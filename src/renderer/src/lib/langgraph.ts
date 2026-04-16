@@ -1,14 +1,35 @@
-import { Workflow, LLMConfig, ApiConfig } from '@renderer/types'
+import { Workflow, ApiConfig } from '@renderer/types'
 import { workflowApi } from './api'
 
 class LangGraphExecutor {
-  async executeWorkflow(workflow: Workflow, input: string, llmConfig: LLMConfig, agentId?: string, threadId?: string): Promise<string> {
+  async executeWorkflow(
+    workflow: Workflow,
+    input: string,
+    agentId?: string,
+    threadId?: string
+  ): Promise<string> {
     try {
       // 调用服务端的API来执行工作流（避免跨域问题）
-      const response = await workflowApi.execute(workflow, input, llmConfig, agentId, threadId)
+      const response = await workflowApi.execute(workflow, input, agentId, threadId)
       return response.result
     } catch (error) {
       throw new Error(`工作流执行失败: ${error instanceof Error ? error.message : '未知错误'}`)
+    }
+  }
+
+  // AI Agent 对话方法
+  async agentChat(agentId: string, input: string, threadId?: string): Promise<string> {
+    try {
+      // 调用服务端的 AI Agent 对话 API
+      const response = await workflowApi.agentChat(agentId, input, threadId)
+
+      if (!response.success) {
+        throw new Error(`对话执行失败: ${response.result}`)
+      }
+
+      return response.result
+    } catch (error) {
+      throw new Error(`AI Agent 对话失败: ${error instanceof Error ? error.message : '未知错误'}`)
     }
   }
 

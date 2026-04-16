@@ -74,7 +74,7 @@ export default function Workflow(): React.JSX.Element {
         setExecutionResult(null);
 
         try {
-            const result = await langGraphExecutor.executeWorkflow(currentWorkflow, '请执行这个工作流', activeLLMConfig);
+            const result = await langGraphExecutor.executeWorkflow(currentWorkflow, '执行测试，你好');
             setExecutionResult(result);
         } catch (error) {
             console.error('工作流执行失败:', error);
@@ -239,7 +239,7 @@ export default function Workflow(): React.JSX.Element {
                                         e.stopPropagation();
                                         handleDeleteWorkflow(currentWorkflow.id);
                                     }}
-                                    className="px-4 py-2 bg-blue-600 bg-red-100 text-red-700 rounded hover:bg-red-200"
+                                    className="px-4 py-2 bg-red-100 text-red-700 rounded hover:bg-red-200"
                                     title="删除工作流"
                                 >
                                     删除

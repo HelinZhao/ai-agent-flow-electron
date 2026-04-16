@@ -69,15 +69,31 @@ export const workflowApi = {
   execute: (
     workflow: Workflow,
     input: string,
-    llmConfig?: LLMConfig,
     agentId?: string,
     threadId?: string
-  ): Promise<{ result: string }> =>
+  ): Promise<{ result: string; llmConfigName: string }> =>
     api.post('/execute-workflow', {
       workflow,
       input,
-      llmConfig,
       agentId,
+      threadId
+    }),
+
+  // AI Agent 对话
+  agentChat: (
+    agentId: string,
+    input: string,
+    threadId?: string
+  ): Promise<{
+    success: boolean
+    result: string
+    agentName: string
+    workflowName: string
+    llmConfigName: string
+  }> =>
+    api.post('/execute-workflow/agent-chat', {
+      agentId,
+      input,
       threadId
     })
 }

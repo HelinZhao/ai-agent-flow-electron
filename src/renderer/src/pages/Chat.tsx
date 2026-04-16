@@ -95,12 +95,10 @@ export default function Chat(): React.JSX.Element {
                 throw new Error('Agent未绑定有效的工作流');
             }
 
-            // 执行Agent的工作流
-            const result = await langGraphExecutor.executeWorkflow(
-                agentWorkflow,
-                inputMessage,
-                activeLLMConfig,
+            // 执行AI Agent对话
+            const result = await langGraphExecutor.agentChat(
                 selectedAgent.id,
+                inputMessage,
                 selectedAgent.id // 使用agent ID作为thread ID来维持对话记忆
             );
 
