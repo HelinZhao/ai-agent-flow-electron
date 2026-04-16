@@ -18,7 +18,8 @@ export interface WorkflowCreationAttributes extends Omit<
 
 export class WorkflowModel
   extends Model<WorkflowAttributes, WorkflowCreationAttributes>
-  implements WorkflowAttributes {
+  implements WorkflowAttributes
+{
   declare id: string
   declare name: string
   declare description: string

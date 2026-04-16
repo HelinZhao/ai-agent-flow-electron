@@ -4,7 +4,7 @@ import { SkillModel, AgentModel, WorkflowModel, LLMConfigModel } from '../models
 import { StateGraph, Annotation, START, END } from '@langchain/langgraph'
 import { MemorySaver } from '@langchain/langgraph'
 import { BaseMessage, HumanMessage, AIMessage } from '@langchain/core/messages'
-import { callLLM } from '../utils'
+import { callLLM, executeApiCall } from '../utils'
 const router = Router()
 const memory = new MemorySaver()
 
@@ -281,7 +281,7 @@ class ServerLangGraphExecutor {
 
     try {
       // 执行API调用
-      const apiResult = await this.executeApiCall(node.data.config.apiConfig)
+      const apiResult = await executeApiCall(node.data.config.apiConfig)
 
       // 使用LLM处理API结果
       const processPrompt = `请处理以下API调用结果，并结合原始输入给出最终答案:\n\n原始输入: ${input}\n\nAPI结果: ${JSON.stringify(apiResult, null, 2)}`
@@ -443,25 +443,6 @@ ${conditionText}
     } catch (error) {
       console.error('条件评估失败:', error)
       return 'null'
-    }
-  }
-
-  private async executeApiCall(apiConfig: any): Promise<any> {
-    try {
-      const response = await fetch(apiConfig.url, {
-        method: apiConfig.method,
-        headers: apiConfig.headers || {},
-        body: apiConfig.body ? JSON.stringify(apiConfig.body) : undefined,
-        signal: apiConfig.timeout ? AbortSignal.timeout(apiConfig.timeout) : undefined
-      })
-
-      if (!response.ok) {
-        throw new Error(`API调用失败: ${response.status} ${response.statusText}`)
-      }
-
-      return await response.json()
-    } catch (error) {
-      throw new Error(`API调用错误: ${error instanceof Error ? error.message : '未知错误'}`)
     }
   }
 }

@@ -1,8 +1,8 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { useWorkflowStore } from '@renderer/store/workflowStore';
 import { Agent, ChatHistory, ChatMessage } from '@renderer/types';
-import { langGraphExecutor } from '@renderer/lib/langgraph';
 import { chatHistoryApi } from '@renderer/lib/chatHistory';
+import { workflowApi } from '@renderer/lib/api';
 
 // 使用全局类型定义，不需要重复定义
 
@@ -96,11 +96,14 @@ export default function Chat(): React.JSX.Element {
             }
 
             // 执行AI Agent对话
-            const result = await langGraphExecutor.agentChat(
+            const { result, success } = await workflowApi.agentChat(
                 selectedAgent.id,
                 inputMessage,
                 selectedAgent.id // 使用agent ID作为thread ID来维持对话记忆
-            );
+            )
+            if (!success) {
+                throw new Error(`AI Agent 对话失败: ${result}`)
+            }
 
             const agentMessage: ChatMessage = {
                 id: `msg-${Date.now() + 1}`,

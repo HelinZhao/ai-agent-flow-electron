@@ -2,9 +2,9 @@ import React, { useState, useCallback } from 'react';
 import WorkflowDesigner from '@renderer/components/workflow/WorkflowDesigner';
 import { useWorkflowStore } from '@renderer/store/workflowStore';
 import { type Workflow, WorkflowNode } from '@renderer/types';
-import { langGraphExecutor } from '@renderer/lib/langgraph';
 import { useMemoizedFn } from 'ahooks';
 import { ReactFlowProvider } from '@xyflow/react';
+import { workflowApi } from '@renderer/lib/api';
 
 export default function Workflow(): React.JSX.Element {
     const { workflows, addWorkflow, updateWorkflow, deleteWorkflow, activeLLMConfig } = useWorkflowStore();
@@ -99,7 +99,7 @@ export default function Workflow(): React.JSX.Element {
         setExecutionResult(null);
 
         try {
-            const result = await langGraphExecutor.executeWorkflow(currentWorkflow, '执行测试，你好');
+            const { result } = await workflowApi.execute(currentWorkflow, '执行测试，你好')
             setExecutionResult(result);
         } catch (error) {
             console.error('工作流执行失败:', error);

@@ -1,5 +1,5 @@
 import { BaseMessage, HumanMessage } from '@langchain/core/messages'
-import { LLMConfig } from './types'
+import { ApiConfig, LLMConfig } from './types'
 import { ChatOpenAI } from '@langchain/openai'
 
 export const getLLMEndpoint = (llmConfig: LLMConfig): string => {
@@ -42,5 +42,24 @@ export const callLLM = async (
     return response.content.toString()
   } catch (error) {
     throw new Error(`LLM调用错误: ${error instanceof Error ? error.message : '未知错误'}`)
+  }
+}
+
+export const executeApiCall = async (apiConfig: ApiConfig): Promise<any> => {
+  try {
+    const response = await fetch(apiConfig.url, {
+      method: apiConfig.method,
+      headers: apiConfig.headers || {},
+      body: apiConfig.body ? JSON.stringify(apiConfig.body) : undefined,
+      signal: apiConfig.timeout ? AbortSignal.timeout(apiConfig.timeout) : undefined
+    })
+
+    if (!response.ok) {
+      throw new Error(`API调用失败: ${response.status} ${response.statusText}`)
+    }
+
+    return await response.json()
+  } catch (error) {
+    throw new Error(`API调用错误: ${error instanceof Error ? error.message : '未知错误'}`)
   }
 }
