@@ -58,8 +58,33 @@ export default function Workflow(): React.JSX.Element {
         setCurrentWorkflow({ ...currentWorkflow!, ...updatedWorkflow });
     });
 
+    const validateWorkflow = useMemoizedFn((workflow: Workflow): string | null => {
+        if (!workflow.nodes || workflow.nodes.length === 0) {
+            return '工作流不能为空，请添加节点';
+        }
+
+        const startNodes = workflow.nodes.filter(node => node.type === 'start');
+
+        if (startNodes.length === 0) {
+            return '工作流必须包含一个开始节点';
+        }
+
+        if (startNodes.length > 1) {
+            return '工作流只能包含一个开始节点';
+        }
+
+        return null; // 验证通过
+    });
+
     const handleSave = useMemoizedFn(() => {
         if (!currentWorkflow) return;
+
+        const validationError = validateWorkflow(currentWorkflow);
+        if (validationError) {
+            alert(validationError);
+            return;
+        }
+
         updateWorkflow(currentWorkflow.id, currentWorkflow);
         alert('工作流保存成功！');
     });
