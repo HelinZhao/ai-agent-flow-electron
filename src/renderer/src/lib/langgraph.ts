@@ -2,10 +2,10 @@ import { Workflow, LLMConfig, ApiConfig } from '@renderer/types'
 import { workflowApi } from './api'
 
 class LangGraphExecutor {
-  async executeWorkflow(workflow: Workflow, input: string, llmConfig: LLMConfig): Promise<string> {
+  async executeWorkflow(workflow: Workflow, input: string, llmConfig: LLMConfig, agentId?: string, threadId?: string): Promise<string> {
     try {
       // 调用服务端的API来执行工作流（避免跨域问题）
-      const response = await workflowApi.execute(workflow, input, llmConfig)
+      const response = await workflowApi.execute(workflow, input, llmConfig, agentId, threadId)
       return response.result
     } catch (error) {
       throw new Error(`工作流执行失败: ${error instanceof Error ? error.message : '未知错误'}`)

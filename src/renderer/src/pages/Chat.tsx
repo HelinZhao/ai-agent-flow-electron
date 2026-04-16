@@ -99,7 +99,9 @@ export default function Chat(): React.JSX.Element {
             const result = await langGraphExecutor.executeWorkflow(
                 agentWorkflow,
                 inputMessage,
-                activeLLMConfig
+                activeLLMConfig,
+                selectedAgent.id,
+                selectedAgent.id // 使用agent ID作为thread ID来维持对话记忆
             );
 
             const agentMessage: ChatMessage = {

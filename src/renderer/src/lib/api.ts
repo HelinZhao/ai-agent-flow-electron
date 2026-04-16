@@ -69,12 +69,16 @@ export const workflowApi = {
   execute: (
     workflow: Workflow,
     input: string,
-    llmConfig?: LLMConfig
+    llmConfig?: LLMConfig,
+    agentId?: string,
+    threadId?: string
   ): Promise<{ result: string }> =>
     api.post('/execute-workflow', {
       workflow,
       input,
-      llmConfig
+      llmConfig,
+      agentId,
+      threadId
     })
 }
 

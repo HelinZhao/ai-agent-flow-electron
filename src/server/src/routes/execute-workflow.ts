@@ -2,13 +2,15 @@ import { Router } from 'express'
 import { Workflow, LLMConfig, WorkflowBranch, WorkflowNode } from '../types'
 import { Skill } from '../models'
 import { StateGraph, Annotation, START, END } from '@langchain/langgraph'
+import { MemorySaver } from '@langchain/langgraph'
 import { BaseMessage, HumanMessage, AIMessage } from '@langchain/core/messages'
 import { ChatOpenAI } from '@langchain/openai'
 const router = Router()
+const memory = new MemorySaver()
 
 // 使用真正的LangGraph的执行器
 class ServerLangGraphExecutor {
-  nodeResultMap = new Map<string, any>()
+  private nodeResultMap = new Map<string, any>()
   // 定义工作流状态注解
   private WorkflowState = Annotation.Root({
     messages: Annotation<BaseMessage[]>({
@@ -16,12 +18,18 @@ class ServerLangGraphExecutor {
     })
   })
 
-  async executeWorkflow(workflow: Workflow, input: string, llmConfig: LLMConfig): Promise<string> {
+  async executeWorkflow(
+    workflow: Workflow,
+    input: string,
+    llmConfig: LLMConfig,
+    agentId?: string,
+    threadId?: string
+  ): Promise<string> {
     try {
       // 构建LangGraph图结构
       const compiledGraph = await this.buildLangGraph(workflow, llmConfig)
       // 执行工作流
-      const result = await this.executeLangGraph(compiledGraph, input)
+      const result = await this.executeLangGraph(compiledGraph, input, agentId, threadId)
 
       return result
     } catch (error) {
@@ -30,7 +38,6 @@ class ServerLangGraphExecutor {
   }
 
   private async buildLangGraph(workflow: Workflow, llmConfig: LLMConfig) {
-    this.nodeResultMap.clear()
     const nodes = workflow.nodes
     const edges = workflow.edges
     const branchMap: Record<string, WorkflowBranch> = {}
@@ -46,8 +53,12 @@ class ServerLangGraphExecutor {
         node.id,
         async (state: any) => {
           const input = state.messages[state.messages.length - 1]?.content || ''
-          const nodeResult = await this.executeNode(node, input, llmConfig)
+          const conversationHistory = state.messages || []
+          const nodeResult = await this.executeNode(node, input, llmConfig, conversationHistory)
           this.nodeResultMap.set(node.id, nodeResult)
+          if (node.type === 'end' || node.type === 'start' || node.type === 'branch') {
+            return { messages: [] }
+          }
           const aiMessage = new AIMessage(nodeResult.output)
           return {
             messages: [aiMessage]
@@ -89,16 +100,29 @@ class ServerLangGraphExecutor {
       graph.addEdge(endNode.id as any, END)
     }
 
-    return graph.compile()
+    return graph.compile({
+      checkpointer: memory // 设置记忆（上下文）
+    })
   }
 
-  private async executeLangGraph(compiledGraph: any, input: string) {
-    const initialState = {
-      messages: [new HumanMessage(input)]
+  private async executeLangGraph(
+    compiledGraph: any,
+    input: string,
+    agentId?: string,
+    threadId?: string
+  ) {
+    const config = {
+      configurable: {
+        thread_id: threadId || agentId || 'default-thread'
+      }
     }
 
     try {
-      const finalState = await compiledGraph.invoke(initialState)
+      // 构建包含历史消息的初始状态
+      const initialState = {
+        messages: [new HumanMessage(input)]
+      }
+      const finalState = await compiledGraph.invoke(initialState, config)
       // 返回最后一条消息的内容
       const lastMessage = finalState.messages[finalState.messages.length - 1]
       const executionPaths: string[] = []
@@ -112,7 +136,12 @@ class ServerLangGraphExecutor {
     }
   }
 
-  private async executeNode(node: WorkflowNode, input: string, llmConfig: LLMConfig) {
+  private async executeNode(
+    node: WorkflowNode,
+    input: string,
+    llmConfig: LLMConfig,
+    conversationHistory?: BaseMessage[]
+  ) {
     switch (node.type) {
       case 'start':
         return {
@@ -121,7 +150,7 @@ class ServerLangGraphExecutor {
         }
 
       case 'skill':
-        return await this.executeSkill(node, input, llmConfig)
+        return await this.executeSkill(node, input, llmConfig, conversationHistory)
 
       case 'branch':
         return await this.executeBranch(node, input, llmConfig)
@@ -130,10 +159,10 @@ class ServerLangGraphExecutor {
         return await this.executeApi(node, input, llmConfig)
 
       case 'llm':
-        return await this.executeLLM(node, input, llmConfig)
+        return await this.executeLLM(node, input, llmConfig, conversationHistory)
 
       case 'agent':
-        return await this.executeAgent(node, input, llmConfig)
+        return await this.executeAgent(node, input, llmConfig, conversationHistory)
 
       case 'end':
         return {
@@ -149,7 +178,12 @@ class ServerLangGraphExecutor {
     }
   }
 
-  private async executeSkill(node: WorkflowNode, input: string, llmConfig: LLMConfig) {
+  private async executeSkill(
+    node: WorkflowNode,
+    input: string,
+    llmConfig: LLMConfig,
+    conversationHistory?: BaseMessage[]
+  ) {
     if (!node.data.config?.skillId) {
       return {
         output: input,
@@ -177,8 +211,8 @@ class ServerLangGraphExecutor {
       const skillContent = `${skill.name}\n\n描述: ${skill.description}\n\n内容: ${skill.content}`
 
       // 使用LLM执行技能，明确要求只返回处理结果，不要重复输入内容
-      const prompt = `${skillContent}\n\n用户输入: ${input}\n\n请根据以上技能内容处理用户输入，只返回处理后的结果，不要重复用户输入的内容。如果只是传递信息，请简洁地总结或转换，避免重复。`
-      const result = await this.callLLM(prompt, llmConfig)
+      const prompt = `${skillContent}\n\n当前用户输入: ${input}\n\n请根据以上技能内容处理用户输入，只返回处理后的结果，不要重复用户输入的内容。如果只是传递信息，请简洁地总结或转换，避免重复。`
+      const result = await this.callLLM(prompt, llmConfig, conversationHistory)
 
       return {
         output: result,
@@ -214,7 +248,7 @@ class ServerLangGraphExecutor {
     try {
       const branchId = await this.evaluateBranches(node.data.config.branches, input, llmConfig)
       return {
-        output: input,
+        output: `条件评估成功，满足条件id: ${branchId}`,
         metadata: {
           nodeId: node.id,
           label: node.data?.label,
@@ -224,7 +258,7 @@ class ServerLangGraphExecutor {
       }
     } catch (error) {
       return {
-        output: input,
+        output: `条件评估失败`,
         metadata: {
           nodeId: node.id,
           label: node.data?.label,
@@ -275,7 +309,12 @@ class ServerLangGraphExecutor {
     }
   }
 
-  private async executeAgent(node: WorkflowNode, input: string, llmConfig: LLMConfig) {
+  private async executeAgent(
+    node: WorkflowNode,
+    input: string,
+    llmConfig: LLMConfig,
+    conversationHistory?: BaseMessage[]
+  ) {
     if (!node.data.config?.agentId) {
       return {
         output: input,
@@ -294,8 +333,8 @@ class ServerLangGraphExecutor {
       const agentInstructions = `Agent ID: ${node.data.config.agentId}\n这是一个Agent节点`
 
       // 使用Agent的指令和LLM处理输入
-      const prompt = `${agentInstructions}\n\n用户输入: ${input}\n\n请根据以上指令处理用户输入，只返回处理后的结果，不要重复用户输入的内容。`
-      const result = await this.callLLM(prompt, llmConfig)
+      const prompt = `${agentInstructions}\n\n当前用户输入: ${input}\n\n请根据以上指令处理用户输入，只返回处理后的结果，不要重复用户输入的内容。`
+      const result = await this.callLLM(prompt, llmConfig, conversationHistory)
 
       return {
         output: result,
@@ -319,7 +358,12 @@ class ServerLangGraphExecutor {
     }
   }
 
-  private async executeLLM(node: WorkflowNode, input: string, llmConfig: LLMConfig) {
+  private async executeLLM(
+    node: WorkflowNode,
+    input: string,
+    llmConfig: LLMConfig,
+    conversationHistory?: BaseMessage[]
+  ) {
     try {
       // 替换提示词模板中的变量
       let promptTemplate = node.data.config.prompt
@@ -338,10 +382,10 @@ class ServerLangGraphExecutor {
       })
 
       // 将用户输入添加到提示词中
-      const finalPrompt = promptTemplate ? `${promptTemplate}\n\n用户输入: ${input} ` : input
+      const finalPrompt = promptTemplate ? `${promptTemplate}\n\n当前用户输入: ${input}` : input
 
       // 调用LLM
-      const result = await this.callLLM(finalPrompt, llmConfig)
+      const result = await this.callLLM(finalPrompt, llmConfig, conversationHistory)
 
       return {
         output: result,
@@ -379,7 +423,11 @@ class ServerLangGraphExecutor {
     }
   }
 
-  private async callLLM(prompt: string, llmConfig: LLMConfig): Promise<string> {
+  private async callLLM(
+    prompt: string,
+    llmConfig: LLMConfig,
+    conversationHistory: BaseMessage[] = []
+  ): Promise<string> {
     try {
       const llm = new ChatOpenAI({
         model: llmConfig.model,
@@ -389,11 +437,11 @@ class ServerLangGraphExecutor {
         apiKey: llmConfig.apiKey,
         // 其他配置参数可以在这里添加
         configuration: {
-          baseURL: this.getLLMEndpoint(llmConfig),
-        },
+          baseURL: this.getLLMEndpoint(llmConfig)
+        }
       })
       // 调用大模型
-      const response = await llm.invoke(prompt)
+      const response = await llm.invoke([...conversationHistory, new HumanMessage(prompt)])
       // 提取响应内容
       return response.content.toString()
     } catch (error) {
@@ -410,9 +458,7 @@ class ServerLangGraphExecutor {
       case 'azure':
         return llmConfig.baseUrl || ''
       case 'qwen':
-        return (
-          llmConfig.baseUrl || 'https://dashscope.aliyuncs.com/compatible-mode/v1'
-        )
+        return llmConfig.baseUrl || 'https://dashscope.aliyuncs.com/compatible-mode/v1'
       case 'longcat':
         return llmConfig.baseUrl || 'https://api.longcat.chat/openai/v1'
       default:
@@ -440,12 +486,10 @@ class ServerLangGraphExecutor {
   }
 }
 
-const executor = new ServerLangGraphExecutor()
-
 // 执行工作流的路由
 router.post('/', async (req, res) => {
   try {
-    const { workflow, input, llmConfig } = req.body
+    const { workflow, input, llmConfig, agentId, threadId } = req.body
 
     // 验证必要参数
     if (!workflow || !input || !llmConfig) {
@@ -458,7 +502,8 @@ router.post('/', async (req, res) => {
     }
 
     // 执行工作流
-    const result = await executor.executeWorkflow(workflow, input, llmConfig)
+    const executor = new ServerLangGraphExecutor()
+    const result = await executor.executeWorkflow(workflow, input, llmConfig, agentId, threadId)
 
     return res.status(200).json({ result })
   } catch (error) {
