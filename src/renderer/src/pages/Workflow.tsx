@@ -517,7 +517,10 @@ export default function Workflow(): React.JSX.Element {
                         onResume={resumeExecution}
                     />
                     <button
-                        onClick={() => setShowProgressPanel(false)}
+                        onClick={() => {
+                            stopExecution();
+                            setShowProgressPanel(false);
+                        }}
                         className="absolute top-2 right-2 text-gray-400 hover:text-gray-600"
                     >
                         ✕

@@ -120,7 +120,7 @@ export interface WorkflowExecutionMetrics {
   startTime: Date
   endTime?: Date
   duration?: number
-  status: 'running' | 'completed' | 'failed'
+  status: 'running' | 'completed' | 'failed' | 'paused'
   totalNodes: number
   completedNodes: number
   failedNodes: number
@@ -135,8 +135,8 @@ export interface NodeExecutionResult {
   startTime?: Date
   endTime?: Date
   duration?: number
-  input?: any
-  output?: any
+  input?: string
+  output?: string
   error?: string
   metadata?: Record<string, any>
 }

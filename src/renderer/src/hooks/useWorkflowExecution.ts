@@ -71,8 +71,10 @@ export function useWorkflowExecution({
         setIsRunning(false)
         cleanup()
         onComplete?.(progressData)
+        setExecutionId(null)
+      } else if (progressData.metrics.status === 'paused') {
+        cleanup()
       }
-
       setError(null)
     } catch (err) {
       if (!abortControllerRef.current?.signal.aborted) {
@@ -81,6 +83,7 @@ export function useWorkflowExecution({
         onError?.(errorMessage)
         setIsRunning(false)
         cleanup()
+        setExecutionId(null)
       }
     }
   }
@@ -160,6 +163,7 @@ export function useWorkflowExecution({
       await workflowExecutionApi.stopExecution(executionId)
       setIsRunning(false)
       cleanup()
+      setExecutionId(null)
     } catch (err) {
       const errorMessage = err instanceof Error ? err.message : '停止执行失败'
       setError(errorMessage)

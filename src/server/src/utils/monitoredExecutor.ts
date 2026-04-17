@@ -1,6 +1,14 @@
 import { Workflow, LLMConfig, WorkflowNode } from '../types'
 import { SkillModel } from '../models'
-import { StateGraph, Annotation, START, END } from '@langchain/langgraph'
+import {
+  StateGraph,
+  Annotation,
+  START,
+  END,
+  CompiledStateGraph,
+  interrupt,
+  Command
+} from '@langchain/langgraph'
 import { MemorySaver } from '@langchain/langgraph'
 import { BaseMessage, HumanMessage, AIMessage } from '@langchain/core/messages'
 import { callLLM, executeApiCall } from '../utils'
@@ -22,12 +30,14 @@ interface ExecutionState {
     message: string
     nodeId?: string
   }>
+  agentId?: string
+  threadId?: string
+  compiledGraph?: CompiledStateGraph<any, any>
 }
 const menory = new MemorySaver()
 
 // 带监控的LangGraph执行器
 export class MonitoredLangGraphExecutor {
-  private nodeResultMap = new Map<string, any>()
   private executionStates = new Map<string, ExecutionState>()
   private sseClients = new Map<string, any[]>() // executionId -> SSE clients
   private WorkflowState = Annotation.Root({
@@ -60,11 +70,12 @@ export class MonitoredLangGraphExecutor {
           level: 'info',
           message: `开始执行工作流: ${workflow.name}`
         }
-      ]
+      ],
+      agentId,
+      threadId
     }
 
     this.executionStates.set(executionId, executionState)
-
     // 在后台执行工作流
     this.executeWorkflowAsync(executionId, workflow, input, llmConfig, agentId, threadId)
 
@@ -81,12 +92,16 @@ export class MonitoredLangGraphExecutor {
     threadId?: string
   ): Promise<void> {
     try {
-      const compiledGraph = await this.buildMonitoredLangGraph(executionId, workflow, llmConfig)
-      await this.executeMonitoredLangGraph(compiledGraph, input, executionId, agentId, threadId)
-
-      // 更新执行状态为完成
       const state = this.executionStates.get(executionId)
-      if (state) {
+      if (!state) {
+        throw new Error('无效executionId')
+      }
+      const compiledGraph = await this.buildMonitoredLangGraph(executionId, workflow, llmConfig)
+      state.compiledGraph = compiledGraph
+      await this.executeMonitoredLangGraph(compiledGraph, input, executionId, agentId, threadId)
+      // 检查是否被暂停，如果是则不更新为完成状态
+      if (state.status === 'running') {
+        // 更新执行状态为完成
         state.status = 'completed'
         state.endTime = new Date()
         state.progress = 100
@@ -106,9 +121,10 @@ export class MonitoredLangGraphExecutor {
         })
       }
     } catch (error) {
-      // 更新执行状态为失败
+      // 检查是否被暂停，如果是则不更新为失败状态
       const state = this.executionStates.get(executionId)
-      if (state) {
+      if (state && state.status === 'running') {
+        // 更新执行状态为失败
         state.status = 'failed'
         state.endTime = new Date()
         state.logs.push({
@@ -140,22 +156,23 @@ export class MonitoredLangGraphExecutor {
     const edges = workflow.edges
     const branchMap: Record<string, any> = {}
     const branch2NodeMap: Map<string, string[]> = new Map()
-
+    const nodeResults = new Map<string, any>()
     const graph = new StateGraph(this.WorkflowState)
 
     // 为每个工作流节点添加LangGraph节点
     for (const node of nodes) {
       const ends = edges.filter((edge) => edge.source === node.id).map((edge) => edge.target)
-
       graph.addNode(
         node.id,
         async (state: any) => {
           const input = state.messages[state.messages.length - 1]?.content || ''
           const conversationHistory = state.messages || []
-
-          // 更新当前执行节点
           const execState = this.executionStates.get(executionId)
+          // 更新当前执行节点
           if (execState) {
+            if (execState.status === 'paused') {
+              await interrupt('用户手动暂停')
+            }
             execState.currentNodeId = node.id
             execState.logs.push({
               timestamp: new Date(),
@@ -172,11 +189,10 @@ export class MonitoredLangGraphExecutor {
             llmConfig,
             conversationHistory
           )
-          this.nodeResultMap.set(node.id, nodeResult)
+          nodeResults.set(node.id, nodeResult)
 
           if (execState) {
-            execState.nodeResults.set(node.id, nodeResult)
-
+            execState.nodeResults = nodeResults
             // 计算进度
             const completedNodes = Array.from(execState.nodeResults.values()).filter(
               (result) => result.status === 'completed'
@@ -206,8 +222,12 @@ export class MonitoredLangGraphExecutor {
                 endTime: execState.endTime,
                 status: execState.status,
                 totalNodes: nodes.length,
-                completedNodes: Array.from(execState.nodeResults.values()).filter((n) => n.status === 'completed').length,
-                failedNodes: Array.from(execState.nodeResults.values()).filter((n) => n.status === 'failed').length,
+                completedNodes: Array.from(execState.nodeResults.values()).filter(
+                  (n) => n.status === 'completed'
+                ).length,
+                failedNodes: Array.from(execState.nodeResults.values()).filter(
+                  (n) => n.status === 'failed'
+                ).length,
                 progress: execState.progress
               }
             })
@@ -232,7 +252,7 @@ export class MonitoredLangGraphExecutor {
         })
 
         graph.addConditionalEdges(node.id as any, () => {
-          const nodeResult = this.nodeResultMap.get(node.id)
+          const nodeResult = nodeResults.get(node.id)
           const nodeIds = branch2NodeMap.get(nodeResult?.metadata?.branch) ?? []
           return nodeIds
         })
@@ -265,7 +285,7 @@ export class MonitoredLangGraphExecutor {
 
   // 执行带监控的LangGraph
   private async executeMonitoredLangGraph(
-    compiledGraph: any,
+    compiledGraph: CompiledStateGraph<any, any>,
     input: string,
     executionId: string,
     agentId?: string,
@@ -291,11 +311,13 @@ export class MonitoredLangGraphExecutor {
         })
       }
 
-      const finalState = await compiledGraph.invoke(initialState, config)
+      const finalState = (await compiledGraph.invoke(initialState, config)) as {
+        messages: BaseMessage[]
+      }
       const lastMessage = finalState.messages[finalState.messages.length - 1]
 
       const executionPaths: string[] = []
-      this.nodeResultMap.forEach((item) => {
+      state?.nodeResults.forEach((item) => {
         executionPaths.push(item.metadata?.label ?? item.metadata?.id)
       })
 
@@ -688,18 +710,73 @@ ${conditionText}
   }
 
   // 恢复执行
-  resumeExecution(executionId: string): void {
-    const state = this.executionStates.get(executionId)
-    if (state && state.status === 'paused') {
-      state.status = 'running'
-      state.logs.push({
-        timestamp: new Date(),
-        level: 'info',
-        message: '执行已恢复'
-      })
+  async resumeExecution(executionId: string): Promise<void> {
+    try {
+      const state = this.executionStates.get(executionId)
+      if (!state) {
+        throw new Error('无效executionId')
+      }
+      if (state && state.status === 'paused') {
+        state.status = 'running'
+        const config = {
+          configurable: {
+            thread_id: state.threadId || state.agentId || 'default-thread'
+          }
+        }
+        state.logs.push({
+          timestamp: new Date(),
+          level: 'info',
+          message: '执行已恢复'
+        })
+        await state.compiledGraph?.invoke(new Command({ resume: true }), config)
+        state.compiledGraph?.store?.stop()
+        // 检查是否被暂停，如果是则不更新为完成状态
+        if (state.status === 'running') {
+          // 更新执行状态为完成
+          state.status = 'completed'
+          state.endTime = new Date()
+          state.progress = 100
+          state.logs.push({
+            timestamp: new Date(),
+            level: 'info',
+            message: '工作流执行完成'
+          })
+
+          // 广播执行完成
+          this.broadcastToSSEClients(executionId, {
+            type: 'execution_complete',
+            executionId,
+            status: 'completed',
+            progress: 100,
+            endTime: state.endTime
+          })
+        }
+      }
+    } catch (error) {
+      // 检查是否被暂停，如果是则不更新为失败状态
+      const state = this.executionStates.get(executionId)
+      if (state && state.status === 'running') {
+        // 更新执行状态为失败
+        state.status = 'failed'
+        state.endTime = new Date()
+        state.logs.push({
+          timestamp: new Date(),
+          level: 'error',
+          message: `工作流执行失败: ${error instanceof Error ? error.message : '未知错误'}`
+        })
+
+        // 广播执行失败
+        this.broadcastToSSEClients(executionId, {
+          type: 'execution_complete',
+          executionId,
+          status: 'failed',
+          progress: state.progress,
+          endTime: state.endTime,
+          error: error instanceof Error ? error.message : '未知错误'
+        })
+      }
     }
   }
-
   // SSE相关方法
   // 添加SSE客户端
   addSSEClient(executionId: string, client: any): void {
@@ -745,7 +822,7 @@ ${conditionText}
 
     // 如果执行完成，清理客户端
     if (executionState.status === 'completed' || executionState.status === 'failed') {
-      clients.forEach(client => {
+      clients.forEach((client) => {
         try {
           client.res.end()
         } catch (error) {

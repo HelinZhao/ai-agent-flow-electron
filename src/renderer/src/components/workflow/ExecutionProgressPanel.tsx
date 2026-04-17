@@ -52,12 +52,23 @@ const ExecutionProgressPanel: React.FC<ExecutionProgressPanelProps> = ({
           <div className="flex space-x-2">
             {isRunning && (
               <>
-                <button
-                  onClick={onPause}
-                  className="px-3 py-1 text-sm bg-yellow-100 text-yellow-800 rounded hover:bg-yellow-200"
-                >
-                  暂停
-                </button>
+                {metrics?.status === 'paused' && (
+                  <button
+                    onClick={onResume}
+                    className="px-3 py-1 text-sm bg-green-100 text-green-800 rounded hover:bg-green-200"
+                  >
+                    恢复
+                  </button>
+                )
+                }
+                {metrics?.status === "running" &&
+                  <button
+                    onClick={onPause}
+                    className="px-3 py-1 text-sm bg-yellow-100 text-yellow-800 rounded hover:bg-yellow-200"
+                  >
+                    暂停
+                  </button>
+                }
                 <button
                   onClick={onStop}
                   className="px-3 py-1 text-sm bg-red-100 text-red-800 rounded hover:bg-red-200"
@@ -65,14 +76,6 @@ const ExecutionProgressPanel: React.FC<ExecutionProgressPanelProps> = ({
                   停止
                 </button>
               </>
-            )}
-            {!isRunning && metrics?.status === 'running' && (
-              <button
-                onClick={onResume}
-                className="px-3 py-1 text-sm bg-green-100 text-green-800 rounded hover:bg-green-200"
-              >
-                恢复
-              </button>
             )}
           </div>
         </div>
