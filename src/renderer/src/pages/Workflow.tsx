@@ -4,19 +4,45 @@ import { useWorkflowStore } from '@renderer/store/workflowStore';
 import { type Workflow, WorkflowNode } from '@renderer/types';
 import { useMemoizedFn } from 'ahooks';
 import { ReactFlowProvider } from '@xyflow/react';
-import { workflowExecutionApi } from '@renderer/lib/api';
+import { useWorkflowExecution } from '@renderer/hooks/useWorkflowExecution';
+import ExecutionProgressPanel from '@renderer/components/workflow/ExecutionProgressPanel';
 
 export default function Workflow(): React.JSX.Element {
     const { workflows, addWorkflow, updateWorkflow, deleteWorkflow, activeLLMConfig } = useWorkflowStore();
     const [currentWorkflow, setCurrentWorkflow] = useState<Workflow | null>(null);
     const [isCreating, setIsCreating] = useState(false);
     const [newWorkflowName, setNewWorkflowName] = useState('');
-    const [, setIsExecuting] = useState(false); // 工作流是否执行中
-    const [executionResult, setExecutionResult] = useState<string | null>(null);
     const [workflowToDelete, setWorkflowToDelete] = useState<string | null>(null);
     const [showImportModal, setShowImportModal] = useState(false);
     const [importJsonText, setImportJsonText] = useState('');
     const [importError, setImportError] = useState<string | null>(null);
+    const [showInputDialog, setShowInputDialog] = useState(false);
+    const [workflowInput, setWorkflowInput] = useState('');
+    const [pendingExecution, setPendingExecution] = useState(false);
+    const [showProgressPanel, setShowProgressPanel] = useState(false);
+
+    // 工作流执行监控
+    const {
+        progress,
+        isRunning,
+        error: executionError,
+        executeWorkflow,
+        stopExecution,
+        pauseExecution,
+        resumeExecution
+    } = useWorkflowExecution({
+        onProgress: () => {
+            if (!showProgressPanel) {
+                setShowProgressPanel(true);
+            }
+        },
+        onComplete: () => {
+            // 执行完成后的处理
+        },
+        onError: (errorMsg) => {
+            console.error('工作流执行错误:', errorMsg);
+        }
+    });
 
     const handleCreateWorkflow = useCallback(async () => {
         if (!newWorkflowName.trim()) return;
@@ -89,26 +115,35 @@ export default function Workflow(): React.JSX.Element {
         alert('工作流保存成功！');
     });
 
-    const handleRun = useCallback(async () => {
+    const handleRun = useCallback(() => {
         if (!currentWorkflow || !activeLLMConfig) {
             alert('请先配置LLM API并保存工作流');
             return;
         }
+        // 显示输入对话框
+        setWorkflowInput('');
+        setShowInputDialog(true);
+    }, [currentWorkflow, activeLLMConfig]);
 
-        setIsExecuting(true);
-        setExecutionResult(null);
+    const handleExecuteWorkflow = useCallback(async (input: string) => {
+        if (!currentWorkflow) return;
+
+        setShowInputDialog(false);
+        setPendingExecution(false);
 
         try {
             // 使用新的监控API开始执行
-            const { executionId } = await workflowExecutionApi.execute(currentWorkflow, '执行测试，你好')
-            setExecutionResult(`执行已开始，执行ID: ${executionId}\n请查看设计器中的进度面板了解实时状态`);
+           await executeWorkflow(currentWorkflow, input)
         } catch (error) {
             console.error('工作流执行失败:', error);
-            setExecutionResult(`执行失败: ${error instanceof Error ? error.message : '未知错误'}`);
-        } finally {
-            setIsExecuting(false);
         }
-    }, [currentWorkflow, activeLLMConfig]);
+    }, [currentWorkflow, executeWorkflow]);
+
+    const handleCancelExecution = useCallback(() => {
+        setShowInputDialog(false);
+        setPendingExecution(false);
+        setWorkflowInput('');
+    }, []);
 
     const handleDeleteWorkflow = useCallback((workflowId: string) => {
         setWorkflowToDelete(workflowId);
@@ -292,6 +327,7 @@ export default function Workflow(): React.JSX.Element {
                             onWorkflowChange={handleWorkflowChange}
                             onSave={handleSave}
                             onRun={handleRun}
+                            isRunning={isRunning}
                         />
                     </ReactFlowProvider>
                 ) : (
@@ -427,21 +463,78 @@ export default function Workflow(): React.JSX.Element {
                 </div>
             )}
 
-            {/* 执行结果面板 */}
-            {executionResult && (
-                <div className="bg-white border-t border-gray-200 p-4">
-                    <div className="max-w-4xl mx-auto">
-                        <h3 className="font-medium text-gray-900 mb-2">执行结果</h3>
-                        <div className="bg-gray-50 p-4 rounded-md max-h-40 overflow-y-auto">
-                            <pre className="text-sm text-gray-700 whitespace-pre-wrap">
-                                {executionResult}
-                            </pre>
+            {/* 工作流输入对话框 */}
+            {showInputDialog && (
+                <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+                    <div className="bg-white dark:bg-gray-800 rounded-lg p-6 max-w-md w-full mx-4">
+                        <h3 className="text-lg font-medium text-gray-900 dark:text-white mb-4">
+                            输入工作流执行内容
+                        </h3>
+                        <div className="mb-4">
+                            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                                请输入要处理的内容:
+                            </label>
+                            <textarea
+                                value={workflowInput}
+                                onChange={(e) => setWorkflowInput(e.target.value)}
+                                placeholder="请输入要传递给工作流的输入内容..."
+                                rows={4}
+                                className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
+                                autoFocus
+                            />
                         </div>
+                        <div className="flex justify-end space-x-3">
+                            <button
+                                onClick={handleCancelExecution}
+                                className="px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-md text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700"
+                                disabled={pendingExecution}
+                            >
+                                取消
+                            </button>
+                            <button
+                                onClick={() => handleExecuteWorkflow(workflowInput)}
+                                disabled={!workflowInput.trim() || pendingExecution}
+                                className="px-4 py-2 bg-green-600 text-white rounded-md hover:bg-green-700 disabled:opacity-50 disabled:cursor-not-allowed"
+                            >
+                                {pendingExecution ? '执行中...' : '执行'}
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            )}
+
+            {/* 执行进度面板 */}
+            {showProgressPanel && progress && (
+                <div className="fixed bottom-4 right-4 w-96 z-50">
+                    <ExecutionProgressPanel
+                        progress={progress}
+                        isRunning={isRunning}
+                        onStop={() => {
+                            stopExecution();
+                            setShowProgressPanel(false);
+                        }}
+                        onPause={pauseExecution}
+                        onResume={resumeExecution}
+                    />
+                    <button
+                        onClick={() => setShowProgressPanel(false)}
+                        className="absolute top-2 right-2 text-gray-400 hover:text-gray-600"
+                    >
+                        ✕
+                    </button>
+                </div>
+            )}
+
+            {/* 执行错误提示 */}
+            {executionError && (
+                <div className="fixed top-4 right-4 bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded z-50">
+                    <div className="flex items-center justify-between">
+                        <span>执行错误: {executionError}</span>
                         <button
-                            onClick={() => setExecutionResult(null)}
-                            className="mt-2 text-sm text-gray-500 hover:text-gray-700"
+                            onClick={() => { /* 清除错误状态 */ }}
+                            className="text-red-700 hover:text-red-900 ml-4"
                         >
-                            关闭结果面板
+                            ✕
                         </button>
                     </div>
                 </div>

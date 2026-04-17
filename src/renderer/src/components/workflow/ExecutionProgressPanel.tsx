@@ -1,6 +1,7 @@
 import React, { useState } from 'react'
 import { WorkflowExecutionProgress, NodeExecutionResult } from '@renderer/types'
 import { memo } from 'react'
+import { getNodeDefaultLabel } from './nodes'
 
 interface ExecutionProgressPanelProps {
   progress: WorkflowExecutionProgress | null
@@ -97,8 +98,8 @@ const ExecutionProgressPanel: React.FC<ExecutionProgressPanelProps> = ({
           <button
             onClick={() => setActiveTab('overview')}
             className={`py-2 px-1 border-b-2 text-sm font-medium ${activeTab === 'overview'
-                ? 'border-blue-500 text-blue-600 dark:text-blue-400'
-                : 'border-transparent text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300'
+              ? 'border-blue-500 text-blue-600 dark:text-blue-400'
+              : 'border-transparent text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300'
               }`}
           >
             概览
@@ -106,8 +107,8 @@ const ExecutionProgressPanel: React.FC<ExecutionProgressPanelProps> = ({
           <button
             onClick={() => setActiveTab('nodes')}
             className={`py-2 px-1 border-b-2 text-sm font-medium ${activeTab === 'nodes'
-                ? 'border-blue-500 text-blue-600 dark:text-blue-400'
-                : 'border-transparent text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300'
+              ? 'border-blue-500 text-blue-600 dark:text-blue-400'
+              : 'border-transparent text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300'
               }`}
           >
             节点详情
@@ -115,8 +116,8 @@ const ExecutionProgressPanel: React.FC<ExecutionProgressPanelProps> = ({
           <button
             onClick={() => setActiveTab('logs')}
             className={`py-2 px-1 border-b-2 text-sm font-medium ${activeTab === 'logs'
-                ? 'border-blue-500 text-blue-600 dark:text-blue-400'
-                : 'border-transparent text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300'
+              ? 'border-blue-500 text-blue-600 dark:text-blue-400'
+              : 'border-transparent text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300'
               }`}
           >
             执行日志
@@ -171,12 +172,12 @@ const ExecutionProgressPanel: React.FC<ExecutionProgressPanelProps> = ({
                       <div
                         key={nodeId}
                         className={`px-2 py-1 rounded text-xs font-medium ${isCurrentNode
-                            ? 'bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200'
-                            : nodeResult?.status === 'completed'
-                              ? 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200'
-                              : nodeResult?.status === 'failed'
-                                ? 'bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200'
-                                : 'bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-gray-200'
+                          ? 'bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200'
+                          : nodeResult?.status === 'completed'
+                            ? 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200'
+                            : nodeResult?.status === 'failed'
+                              ? 'bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200'
+                              : 'bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-gray-200'
                           }`}
                       >
                         {nodeResult?.nodeLabel || nodeId}
@@ -249,8 +250,8 @@ const NodeResultItem: React.FC<{ node: NodeExecutionResult }> = ({ node }) => {
 
       <div className="text-sm text-gray-600 dark:text-gray-400 space-y-1">
         <div>节点ID: {node.nodeId}</div>
-        <div>类型: {node.nodeType}</div>
-        {node.duration && <div>耗时: {Math.round(node.duration / 1000)}秒</div>}
+        <div>类型: {getNodeDefaultLabel(node.metadata?.type)}</div>
+        {node.duration ? <div>耗时: {Math.round(node.duration / 1000)}秒</div> : null}
         {node.error && (
           <div className="text-red-600 dark:text-red-400">错误: {node.error}</div>
         )}
@@ -258,8 +259,8 @@ const NodeResultItem: React.FC<{ node: NodeExecutionResult }> = ({ node }) => {
 
       {node.output && (
         <div className="mt-2 p-2 bg-gray-50 dark:bg-gray-800 rounded text-xs">
-          <div className="font-medium mb-1">输出:</div>
-          <pre className="whitespace-pre-wrap break-words">
+          <div className="font-medium mb-1 text-gray-700 dark:text-gray-300">输出:</div>
+          <pre className="whitespace-pre-wrap break-words text-gray-600 dark:text-gray-400">
             {typeof node.output === 'string' ? node.output : JSON.stringify(node.output, null, 2)}
           </pre>
         </div>

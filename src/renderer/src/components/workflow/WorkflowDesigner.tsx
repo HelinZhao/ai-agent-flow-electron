@@ -19,8 +19,6 @@ import NodeListPanel from './NodeListPanel';
 import { getNodeDefaultLabel } from './nodes';
 import ContextMenu from './ContextMenu';
 import ControlPanel from './ControlPanel';
-import ExecutionProgressPanel from './ExecutionProgressPanel';
-import { useWorkflowExecution } from '@renderer/hooks/useWorkflowExecution';
 import { v4 as uuidv4 } from 'uuid';
 
 const nodeTypes = {
@@ -37,10 +35,12 @@ interface WorkflowDesignerProps {
   workflow: Workflow;
   onWorkflowChange: (workflow: Partial<Workflow>) => void;
   onSave: () => void;
-  onRun: () => Promise<void>;
+  onRun: () => void;
+  isRunning: boolean
 }
 
-function WorkflowDesigner({ workflow, onWorkflowChange, onSave, onRun }: WorkflowDesignerProps):  React.JSX.Element {
+function WorkflowDesigner(props: WorkflowDesignerProps): React.JSX.Element {
+  const { workflow, onWorkflowChange, onSave, onRun, isRunning } = props
   const [selectedNode, setSelectedNode] = useState<WorkflowNode | null>(null);
   const [contextMenu, setContextMenu] = useState<{ x: number; y: number } | null>(null);
   const [branchSelection, setBranchSelection] = useState<{
@@ -54,31 +54,7 @@ function WorkflowDesigner({ workflow, onWorkflowChange, onSave, onRun }: Workflo
     connection: null,
     selectedBranch: ''
   });
-  const [showProgressPanel, setShowProgressPanel] = useState(false);
   const { screenToFlowPosition } = useReactFlow();
-
-  // 工作流执行监控
-  const {
-    progress,
-    isRunning,
-    error: executionError,
-    executeWorkflow,
-    stopExecution,
-    pauseExecution,
-    resumeExecution
-  } = useWorkflowExecution({
-    onProgress: () => {
-      if (!showProgressPanel) {
-        setShowProgressPanel(true);
-      }
-    },
-    onComplete: () => {
-      // 执行完成后的处理
-    },
-    onError: (errorMsg) => {
-      console.error('工作流执行错误:', errorMsg);
-    }
-  });
 
   const initialNodes: WorkflowNode[] = useMemo(() => {
     return workflow?.nodes?.map((node: WorkflowNode) => ({
@@ -202,17 +178,6 @@ function WorkflowDesigner({ workflow, onWorkflowChange, onSave, onRun }: Workflo
     onUnselectNode();
   }, [onUnselectNode]);
 
-  // 执行工作流
-  const handleRun = useCallback(async () => {
-    try {
-      await executeWorkflow(workflow, '执行测试，你好');
-      // 调用外部传入的onRun回调
-      onRun();
-    } catch (error) {
-      console.error('工作流执行失败:', error);
-    }
-  }, [workflow, executeWorkflow, onRun]);
-
   const handleAddNodeAtPosition = useCallback((type: WorkflowNode['type'], position: { x: number; y: number }) => {
     const newNode: WorkflowNode = {
       id: `node-${uuidv4()}`,
@@ -278,7 +243,7 @@ function WorkflowDesigner({ workflow, onWorkflowChange, onSave, onRun }: Workflo
           <Background />
           <Controls />
           <NodeListPanel />
-          <ControlPanel onSave={onSave} onRun={handleRun} />
+          <ControlPanel onSave={onSave} onRun={onRun} isRunning={isRunning} />
           {selectedNode && (
             <NodeConfigPanel
               node={selectedNode}
@@ -357,43 +322,6 @@ function WorkflowDesigner({ workflow, onWorkflowChange, onSave, onRun }: Workflo
           </div>
         )}
       </div>
-
-      {/* 执行进度面板 */}
-      {showProgressPanel && progress && (
-        <div className="fixed bottom-4 right-4 w-96 z-50">
-          <ExecutionProgressPanel
-            progress={progress}
-            isRunning={isRunning}
-            onStop={() => {
-              stopExecution();
-              setShowProgressPanel(false);
-            }}
-            onPause={pauseExecution}
-            onResume={resumeExecution}
-          />
-          <button
-            onClick={() => setShowProgressPanel(false)}
-            className="absolute top-2 right-2 text-gray-400 hover:text-gray-600"
-          >
-            ✕
-          </button>
-        </div>
-      )}
-
-      {/* 执行错误提示 */}
-      {executionError && (
-        <div className="fixed top-4 right-4 bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded z-50">
-          <div className="flex items-center justify-between">
-            <span>执行错误: {executionError}</span>
-            <button
-              onClick={() => { /* 清除错误状态 */ }}
-              className="text-red-700 hover:text-red-900 ml-4"
-            >
-              ✕
-            </button>
-          </div>
-        </div>
-      )}
     </div>
   );
 }

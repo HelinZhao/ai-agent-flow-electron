@@ -103,33 +103,30 @@ export function useWorkflowExecution({
   })
 
   // 执行工作流
-  const executeWorkflow = async (
-    workflow: Workflow,
-    input: string,
-    agentId?: string,
-    threadId?: string
-  ) => {
-    try {
-      setIsRunning(true)
-      setError(null)
-      setProgress(null)
-      setNodeResults([])
+  const executeWorkflow = useMemoizedFn(
+    async (workflow: Workflow, input: string, agentId?: string, threadId?: string) => {
+      try {
+        setIsRunning(true)
+        setError(null)
+        setProgress(null)
+        setNodeResults([])
 
-      const response = await workflowExecutionApi.execute(workflow, input, agentId, threadId)
-      setExecutionId(response.executionId)
+        const response = await workflowExecutionApi.execute(workflow, input, agentId, threadId)
+        setExecutionId(response.executionId)
 
-      // 开始轮询进度
-      startPolling(response.executionId)
+        // 开始轮询进度
+        startPolling(response.executionId)
 
-      return response.executionId
-    } catch (err) {
-      const errorMessage = err instanceof Error ? err.message : '工作流执行失败'
-      setError(errorMessage)
-      setIsRunning(false)
-      onError?.(errorMessage)
-      throw err
+        return response.executionId
+      } catch (err) {
+        const errorMessage = err instanceof Error ? err.message : '工作流执行失败'
+        setError(errorMessage)
+        setIsRunning(false)
+        onError?.(errorMessage)
+        throw err
+      }
     }
-  }
+  )
 
   // AI Agent 对话（带监控）
   const executeAgentChat = async (agentId: string, input: string, threadId?: string) => {
