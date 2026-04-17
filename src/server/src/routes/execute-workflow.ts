@@ -141,6 +141,88 @@ router.get('/node-results/:executionId', async (req, res) => {
   }
 })
 
+// SSE进度推送接口
+router.get('/progress-sse/:executionId', (req, res) => {
+  const { executionId } = req.params
+
+  // 设置SSE响应头
+  res.setHeader('Content-Type', 'text/event-stream')
+  res.setHeader('Cache-Control', 'no-cache')
+  res.setHeader('Connection', 'keep-alive')
+  res.setHeader('X-Accel-Buffering', 'no') // 禁用Nginx缓冲
+  res.setHeader('Access-Control-Allow-Origin', '*') // 允许跨域
+  res.setHeader('Access-Control-Allow-Credentials', 'true')
+
+  // 检查执行是否存在
+  const executionState = monitoredExecutor.getExecutionState(executionId)
+  if (!executionState) {
+    res.write(`data: ${JSON.stringify({ type: 'error', message: '执行记录不存在' })}\n\n`)
+    res.end()
+    return
+  }
+
+  // 添加客户端到SSE列表
+  const client = { res }
+  monitoredExecutor.addSSEClient(executionId, client)
+
+  // 发送初始状态
+  const workflow = executionState.workflow
+  const nodeResults = Array.from(executionState.nodeResults.values())
+  const executionPath = nodeResults
+    .filter((result) => result.status === 'completed')
+    .map((result) => result.metadata?.label || result.metadata?.nodeId)
+
+  const initialData = {
+    type: 'initial_state',
+    executionId: executionState.executionId,
+    workflowId: workflow.id,
+    workflowName: workflow.name,
+    currentNodeId: executionState.currentNodeId,
+    currentNodeLabel: executionState.currentNodeId
+      ? nodeResults.find((n) => n.nodeId === executionState.currentNodeId)?.metadata?.label
+      : undefined,
+    metrics: {
+      executionId: executionState.executionId,
+      startTime: executionState.startTime,
+      endTime: executionState.endTime,
+      duration: executionState.endTime
+        ? executionState.endTime.getTime() - executionState.startTime.getTime()
+        : undefined,
+      status: executionState.status,
+      totalNodes: workflow.nodes.length,
+      completedNodes: nodeResults.filter((n) => n.status === 'completed').length,
+      failedNodes: nodeResults.filter((n) => n.status === 'failed').length,
+      progress: executionState.progress
+    },
+    nodeResults,
+    executionPath,
+    logs: executionState.logs
+  }
+
+  res.write(`data: ${JSON.stringify(initialData)}\n\n`)
+
+  // 如果执行已经完成，立即发送完成消息并关闭连接
+  if (executionState.status === 'completed' || executionState.status === 'failed') {
+    res.write(
+      `data: ${JSON.stringify({
+        type: 'execution_complete',
+        executionId,
+        status: executionState.status,
+        progress: executionState.progress,
+        endTime: executionState.endTime
+      })}\n\n`
+    )
+    res.end()
+    monitoredExecutor.removeSSEClient(executionId, client)
+    return
+  }
+
+  // 监听客户端断开连接
+  req.on('close', () => {
+    monitoredExecutor.removeSSEClient(executionId, client)
+  })
+})
+
 // 停止执行
 router.post('/stop/:executionId', async (req, res) => {
   try {

@@ -29,6 +29,7 @@ const menory = new MemorySaver()
 export class MonitoredLangGraphExecutor {
   private nodeResultMap = new Map<string, any>()
   private executionStates = new Map<string, ExecutionState>()
+  private sseClients = new Map<string, any[]>() // executionId -> SSE clients
   private WorkflowState = Annotation.Root({
     messages: Annotation<BaseMessage[]>({
       reducer: (x, y) => x.concat(y)
@@ -94,6 +95,15 @@ export class MonitoredLangGraphExecutor {
           level: 'info',
           message: '工作流执行完成'
         })
+
+        // 广播执行完成
+        this.broadcastToSSEClients(executionId, {
+          type: 'execution_complete',
+          executionId,
+          status: 'completed',
+          progress: 100,
+          endTime: state.endTime
+        })
       }
     } catch (error) {
       // 更新执行状态为失败
@@ -105,6 +115,16 @@ export class MonitoredLangGraphExecutor {
           timestamp: new Date(),
           level: 'error',
           message: `工作流执行失败: ${error instanceof Error ? error.message : '未知错误'}`
+        })
+
+        // 广播执行失败
+        this.broadcastToSSEClients(executionId, {
+          type: 'execution_complete',
+          executionId,
+          status: 'failed',
+          progress: state.progress,
+          endTime: state.endTime,
+          error: error instanceof Error ? error.message : '未知错误'
         })
       }
     }
@@ -170,6 +190,26 @@ export class MonitoredLangGraphExecutor {
                 ? `节点执行失败: ${nodeResult.error}`
                 : `节点执行完成: ${node.data?.label || node.id}`,
               nodeId: node.id
+            })
+
+            // 广播SSE更新
+            this.broadcastToSSEClients(executionId, {
+              type: 'node_update',
+              executionId,
+              nodeId: node.id,
+              nodeLabel: node.data?.label || node.id,
+              status: nodeResult.error ? 'failed' : 'completed',
+              progress: execState.progress,
+              metrics: {
+                executionId: execState.executionId,
+                startTime: execState.startTime,
+                endTime: execState.endTime,
+                status: execState.status,
+                totalNodes: nodes.length,
+                completedNodes: Array.from(execState.nodeResults.values()).filter((n) => n.status === 'completed').length,
+                failedNodes: Array.from(execState.nodeResults.values()).filter((n) => n.status === 'failed').length,
+                progress: execState.progress
+              }
             })
           }
 
@@ -658,5 +698,69 @@ ${conditionText}
         message: '执行已恢复'
       })
     }
+  }
+
+  // SSE相关方法
+  // 添加SSE客户端
+  addSSEClient(executionId: string, client: any): void {
+    if (!this.sseClients.has(executionId)) {
+      this.sseClients.set(executionId, [])
+    }
+    this.sseClients.get(executionId)!.push(client)
+  }
+
+  // 移除SSE客户端
+  removeSSEClient(executionId: string, client: any): void {
+    const clients = this.sseClients.get(executionId)
+    if (clients) {
+      const index = clients.indexOf(client)
+      if (index > -1) {
+        clients.splice(index, 1)
+      }
+      if (clients.length === 0) {
+        this.sseClients.delete(executionId)
+      }
+    }
+  }
+
+  // 向指定执行的所有SSE客户端发送更新
+  broadcastToSSEClients(executionId: string, data: any): void {
+    const clients = this.sseClients.get(executionId)
+    if (!clients) return
+
+    const executionState = this.executionStates.get(executionId)
+    if (!executionState) return
+
+    const message = `data: ${JSON.stringify(data)}\n\n`
+
+    clients.forEach((client, index) => {
+      try {
+        client.res.write(message)
+      } catch (error) {
+        // 如果发送失败，移除该客户端
+        console.error('SSE发送失败，移除客户端:', error)
+        clients.splice(index, 1)
+      }
+    })
+
+    // 如果执行完成，清理客户端
+    if (executionState.status === 'completed' || executionState.status === 'failed') {
+      clients.forEach(client => {
+        try {
+          client.res.end()
+        } catch (error) {
+          console.error('SSE连接关闭失败:', error)
+        }
+      })
+      this.sseClients.delete(executionId)
+    }
+  }
+
+  // 获取所有活跃的SSE客户端（用于调试）
+  getActiveSSEClients(): { executionId: string; clientCount: number }[] {
+    return Array.from(this.sseClients.entries()).map(([executionId, clients]) => ({
+      executionId,
+      clientCount: clients.length
+    }))
   }
 }

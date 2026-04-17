@@ -9,14 +9,15 @@ import {
   NodeExecutionResult
 } from '@renderer/types'
 
+const baseURL = 'http://localhost:3000/api'
+
 // 创建axios实例
 const api = axios.create({
-  baseURL: 'http://localhost:3000/api',
+  baseURL,
   headers: {
     'Content-Type': 'application/json'
   }
 })
-
 // 请求拦截器
 api.interceptors.request.use(
   (config) => {
@@ -247,7 +248,93 @@ export const workflowExecutionApi = {
       threadId
     }),
 
-  // 等待AI Agent对话完成并获取结果
+  // 等待AI Agent对话完成并获取结果（使用SSE）
+  waitForAgentChatResultSSE: (
+    executionId: string,
+    onProgress?: (progress: any) => void
+  ): Promise<{
+    success: boolean
+    message: string
+    executionId: string
+  }> => {
+    return new Promise((resolve, reject) => {
+      const eventSource = new EventSource(`${baseURL}/execute-workflow/progress-sse/${executionId}`)
+      const timeout = setTimeout(() => {
+        eventSource.close()
+        reject(new Error('执行超时，请稍后查看执行状态'))
+      }, 100000)
+
+      eventSource.onopen = () => {
+        console.log('SSE连接已建立')
+      }
+
+      eventSource.onmessage = async (event) => {
+        try {
+          const data = JSON.parse(event.data)
+
+          // 调用进度回调
+          if (onProgress) {
+            onProgress(data)
+          }
+
+          // 处理不同类型的消息
+          if (data.type === 'execution_complete') {
+            clearTimeout(timeout)
+            eventSource.close()
+
+            if (data.status === 'completed') {
+              // 获取最终的执行结果
+              const nodeResults = await workflowExecutionApi.getNodeResults(executionId)
+
+              // 尝试从节点结果中获取AI回复
+              let aiResponse = '工作流执行完成'
+
+              // 查找最后一个非分支节点的输出
+              for (let i = nodeResults.length - 1; i >= 0; i--) {
+                const result = nodeResults[i]
+                if (
+                  result.status === 'completed' &&
+                  result.output &&
+                  (!result.metadata?.type ||
+                    !['start', 'end', 'branch'].includes(result.metadata?.type))
+                ) {
+                  aiResponse = result.output
+                  break
+                }
+              }
+
+              resolve({
+                success: true,
+                message: aiResponse,
+                executionId
+              })
+            } else {
+              resolve({
+                success: false,
+                message: data.error || '执行失败',
+                executionId
+              })
+            }
+          } else if (data.type === 'error') {
+            clearTimeout(timeout)
+            eventSource.close()
+            reject(new Error(data.message || 'SSE连接错误'))
+          }
+        } catch (error) {
+          console.error('解析SSE消息失败:', error)
+        }
+      }
+
+      eventSource.onerror = (error) => {
+        console.error('SSE连接错误:', error)
+        clearTimeout(timeout)
+        eventSource.close()
+        reject(new Error('SSE连接失败'))
+      }
+    })
+  },
+
+  // 等待AI Agent对话完成并获取结果（轮询版本，保持向后兼容）
   waitForAgentChatResult: (
     executionId: string,
     onProgress?: (progress: any) => void

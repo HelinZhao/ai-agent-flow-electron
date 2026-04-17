@@ -105,12 +105,16 @@ export default function Chat(): React.JSX.Element {
                 throw new Error(`AI Agent 对话启动失败`)
             }
 
-            // 等待执行完成并获取结果
-            const { message, success: finalSuccess } = await workflowExecutionApi.waitForAgentChatResult(
+            // 等待执行完成并获取结果（使用SSE）
+            const { message, success: finalSuccess } = await workflowExecutionApi.waitForAgentChatResultSSE(
                 executionId,
                 (progress) => {
                   // 可以在这里更新UI显示执行进度
-                  console.log('执行进度:', progress.metrics)
+                  console.log('执行进度:', progress)
+                  // 如果收到节点更新，可以显示进度信息
+                  if (progress.type === 'node_update') {
+                    console.log(`节点 ${progress.nodeLabel} 已完成`)
+                  }
                 }
             )
 
