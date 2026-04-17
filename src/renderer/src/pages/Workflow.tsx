@@ -4,7 +4,7 @@ import { useWorkflowStore } from '@renderer/store/workflowStore';
 import { type Workflow, WorkflowNode } from '@renderer/types';
 import { useMemoizedFn } from 'ahooks';
 import { ReactFlowProvider } from '@xyflow/react';
-import { workflowApi } from '@renderer/lib/api';
+import { workflowExecutionApi } from '@renderer/lib/api';
 
 export default function Workflow(): React.JSX.Element {
     const { workflows, addWorkflow, updateWorkflow, deleteWorkflow, activeLLMConfig } = useWorkflowStore();
@@ -99,8 +99,9 @@ export default function Workflow(): React.JSX.Element {
         setExecutionResult(null);
 
         try {
-            const { result } = await workflowApi.execute(currentWorkflow, '执行测试，你好')
-            setExecutionResult(result);
+            // 使用新的监控API开始执行
+            const { executionId } = await workflowExecutionApi.execute(currentWorkflow, '执行测试，你好')
+            setExecutionResult(`执行已开始，执行ID: ${executionId}\n请查看设计器中的进度面板了解实时状态`);
         } catch (error) {
             console.error('工作流执行失败:', error);
             setExecutionResult(`执行失败: ${error instanceof Error ? error.message : '未知错误'}`);

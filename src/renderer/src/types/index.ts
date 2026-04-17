@@ -113,3 +113,51 @@ export interface LLMNodeConfig {
   prompt: string
   variables: VariableConfig[]
 }
+
+// 工作流执行监控相关类型
+export interface WorkflowExecutionMetrics {
+  executionId: string
+  startTime: Date
+  endTime?: Date
+  duration?: number
+  status: 'running' | 'completed' | 'failed'
+  totalNodes: number
+  completedNodes: number
+  failedNodes: number
+  progress: number // 0-100
+}
+
+export interface NodeExecutionResult {
+  nodeId: string
+  nodeType: string
+  nodeLabel: string
+  status: 'pending' | 'running' | 'completed' | 'failed'
+  startTime?: Date
+  endTime?: Date
+  duration?: number
+  input?: any
+  output?: any
+  error?: string
+  metadata?: Record<string, any>
+}
+
+export interface WorkflowExecutionProgress {
+  executionId: string
+  workflowId: string
+  workflowName: string
+  currentNodeId?: string
+  currentNodeLabel?: string
+  metrics: WorkflowExecutionMetrics
+  nodeResults: NodeExecutionResult[]
+  executionPath: string[]
+  estimatedTimeRemaining?: number
+  logs: ExecutionLog[]
+}
+
+export interface ExecutionLog {
+  timestamp: Date
+  level: 'info' | 'warn' | 'error'
+  message: string
+  nodeId?: string
+  details?: any
+}

@@ -2,7 +2,7 @@ import React, { useState, useRef, useEffect } from 'react';
 import { useWorkflowStore } from '@renderer/store/workflowStore';
 import { Agent, ChatHistory, ChatMessage } from '@renderer/types';
 import { chatHistoryApi } from '@renderer/lib/chatHistory';
-import { workflowApi } from '@renderer/lib/api';
+import { workflowExecutionApi } from '@renderer/lib/api';
 
 // 使用全局类型定义，不需要重复定义
 
@@ -96,18 +96,31 @@ export default function Chat(): React.JSX.Element {
             }
 
             // 执行AI Agent对话
-            const { result, success } = await workflowApi.agentChat(
+            const { executionId, success } = await workflowExecutionApi.agentChatMonitor(
                 selectedAgent.id,
                 inputMessage,
                 selectedAgent.id // 使用agent ID作为thread ID来维持对话记忆
             )
             if (!success) {
-                throw new Error(`AI Agent 对话失败: ${result}`)
+                throw new Error(`AI Agent 对话启动失败`)
+            }
+
+            // 等待执行完成并获取结果
+            const { message, success: finalSuccess } = await workflowExecutionApi.waitForAgentChatResult(
+                executionId,
+                (progress) => {
+                  // 可以在这里更新UI显示执行进度
+                  console.log('执行进度:', progress.metrics)
+                }
+            )
+
+            if (!finalSuccess) {
+                throw new Error(`AI Agent 对话执行失败: ${message}`)
             }
 
             const agentMessage: ChatMessage = {
                 id: `msg-${Date.now() + 1}`,
-                content: result,
+                content: message,
                 sender: 'agent',
                 timestamp: new Date().toISOString(),
                 agentId: selectedAgent.id,
@@ -148,8 +161,8 @@ export default function Chat(): React.JSX.Element {
                         selectedAgent.name,
                         finalMessages
                     );
-                } catch (error) {
-                    console.error('保存对话历史失败:', error);
+                } catch (saveError) {
+                    console.error('保存对话历史失败:', saveError);
                 }
             }
         } finally {

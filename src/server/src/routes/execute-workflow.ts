@@ -1,453 +1,201 @@
 import { Router } from 'express'
-import { Workflow, LLMConfig, WorkflowBranch, WorkflowNode } from '../types'
-import { SkillModel, AgentModel, WorkflowModel, LLMConfigModel } from '../models'
-import { StateGraph, Annotation, START, END } from '@langchain/langgraph'
-import { MemorySaver } from '@langchain/langgraph'
-import { BaseMessage, HumanMessage, AIMessage } from '@langchain/core/messages'
-import { callLLM, executeApiCall } from '../utils'
+import { Workflow, LLMConfig } from '../types'
+import { AgentModel, WorkflowModel, LLMConfigModel } from '../models'
+import { MonitoredLangGraphExecutor } from '../utils/monitoredExecutor'
+
 const router = Router()
-const memory = new MemorySaver()
 
-// 使用真正的LangGraph的执行器
-class ServerLangGraphExecutor {
-  private nodeResultMap = new Map<string, any>()
-  // 定义工作流状态注解
-  private WorkflowState = Annotation.Root({
-    messages: Annotation<BaseMessage[]>({
-      reducer: (x, y) => x.concat(y)
+// 创建监控执行器实例
+const monitoredExecutor = new MonitoredLangGraphExecutor()
+
+// 执行工作流的路由（带监控）
+router.post('/monitor', async (req, res) => {
+  try {
+    const { workflow, input, agentId, threadId } = req.body
+
+    // 验证必要参数
+    if (!workflow || !input) {
+      return res.status(400).json({ error: 'Missing required parameters (workflow and input)' })
+    }
+
+    // 查找启用的 LLM 配置
+    const activeLLMConfig = await LLMConfigModel.findOne({
+      where: { isActive: true }
     })
-  })
 
-  async executeWorkflow(
-    workflow: Workflow,
-    input: string,
-    llmConfig: LLMConfig,
-    agentId?: string,
-    threadId?: string
-  ): Promise<string> {
-    try {
-      // 构建LangGraph图结构
-      const compiledGraph = await this.buildLangGraph(workflow, llmConfig)
-      // 执行工作流
-      const result = await this.executeLangGraph(compiledGraph, input, agentId, threadId)
-
-      return result
-    } catch (error) {
-      throw new Error(`工作流执行失败: ${error instanceof Error ? error.message : '未知错误'}`)
-    }
-  }
-
-  private async buildLangGraph(workflow: Workflow, llmConfig: LLMConfig) {
-    const nodes = workflow.nodes
-    const edges = workflow.edges
-    const branchMap: Record<string, WorkflowBranch> = {}
-    const branch2NodeMap: Map<string, string[]> = new Map() // key 为分支id，value为可能执行的后置节点id
-    // 创建状态图
-    const graph = new StateGraph(this.WorkflowState)
-
-    // 为每个工作流节点添加LangGraph节点
-    for (const node of nodes) {
-      // 普通节点
-      const ends = edges.filter((edge) => edge.source === node.id).map((edge) => edge.target)
-      graph.addNode(
-        node.id,
-        async (state: any) => {
-          const input = state.messages[state.messages.length - 1]?.content || ''
-          const conversationHistory = state.messages || []
-          const nodeResult = await this.executeNode(node, input, llmConfig, conversationHistory)
-          this.nodeResultMap.set(node.id, nodeResult)
-          if (node.type === 'end' || node.type === 'start' || node.type === 'branch') {
-            return { messages: [] }
-          }
-          const aiMessage = new AIMessage(nodeResult.output)
-          return {
-            messages: [aiMessage]
-          }
-        },
-        { ends }
-      )
-      if (node.type === 'branch') {
-        node.data.config.branches.forEach((branche: WorkflowBranch) => {
-          branchMap[branche.id] = branche
-          branchMap[branche.id] = branche
-          branch2NodeMap.set(branche.id, [])
-        })
-        graph.addConditionalEdges(node.id as any, () => {
-          const nodeResult = this.nodeResultMap.get(node.id)
-          const nodeIds = branch2NodeMap.get(nodeResult.metadata.branch) ?? []
-          return nodeIds
-        })
-      }
+    if (!activeLLMConfig) {
+      return res.status(400).json({
+        error: 'No active LLM configuration found',
+        message: 'Please configure and activate an LLM configuration first'
+      })
     }
 
-    for (const edge of edges) {
-      if (edge.condition) {
-        const value = branch2NodeMap.get(edge.condition)
-        value?.push(edge.target)
-      } else {
-        graph.addEdge(edge.source as any, edge.target as any)
-      }
-    }
-    // 设置入口点
-    const startNode = nodes.find((n) => n.type === 'start')
-    if (startNode) {
-      graph.addEdge(START, startNode.id as any)
+    // 将数据库中的 LLM 配置转换为 LLM 配置对象
+    const llmConfig: LLMConfig = {
+      provider: activeLLMConfig.provider,
+      apiKey: activeLLMConfig.apiKey,
+      model: activeLLMConfig.model,
+      baseUrl: activeLLMConfig.baseUrl,
+      temperature: activeLLMConfig.temperature,
+      maxTokens: activeLLMConfig.maxTokens
     }
 
-    // 设置出口点
-    const endNode = nodes.find((n) => n.type === 'end')
-    if (endNode) {
-      graph.addEdge(endNode.id as any, END)
-    }
+    // 开始执行工作流（异步）
+    const executionId = await monitoredExecutor.startExecution(
+      workflow,
+      input,
+      llmConfig,
+      agentId,
+      threadId
+    )
 
-    return graph.compile({
-      checkpointer: memory // 设置记忆（上下文）
+    return res.status(200).json({
+      executionId,
+      message: '工作流执行已开始'
+    })
+  } catch (error) {
+    console.error('工作流执行错误:', error)
+    return res.status(500).json({
+      error: error instanceof Error ? error.message : '工作流执行失败'
     })
   }
+})
 
-  private async executeLangGraph(
-    compiledGraph: any,
-    input: string,
-    agentId?: string,
-    threadId?: string
-  ) {
-    const config = {
-      configurable: {
-        thread_id: threadId || agentId || 'default-thread'
-      }
-    }
+// 获取执行进度
+router.get('/progress/:executionId', async (req, res) => {
+  try {
+    const { executionId } = req.params
 
-    try {
-      // 构建包含历史消息的初始状态
-      const initialState = {
-        messages: [new HumanMessage(input)]
-      }
-      const finalState = await compiledGraph.invoke(initialState, config)
-      // 返回最后一条消息的内容
-      const lastMessage = finalState.messages[finalState.messages.length - 1]
-      const executionPaths: string[] = []
-      this.nodeResultMap.forEach((item) => {
-        executionPaths.push(item.metadata.label ?? item.metadata.id)
+    const executionState = monitoredExecutor.getExecutionState(executionId)
+
+    if (!executionState) {
+      return res.status(404).json({
+        error: '执行记录不存在',
+        message: `找不到 executionId 为 ${executionId} 的执行记录`
       })
-      return `工作流执行顺序：${executionPaths.join(' → ')}\n\n${lastMessage.content || '工作流执行完成'}`
-    } catch (error) {
-      console.error('LangGraph执行错误:', error)
-      throw new Error(`LangGraph执行失败: ${error instanceof Error ? error.message : '未知错误'}`)
     }
+
+    const workflow = executionState.workflow
+    const nodeResults = Array.from(executionState.nodeResults.values())
+    const executionPath = nodeResults
+      .filter((result) => result.status === 'completed')
+      .map((result) => result.metadata?.label || result.metadata?.nodeId)
+
+    const response = {
+      executionId: executionState.executionId,
+      workflowId: workflow.id,
+      workflowName: workflow.name,
+      currentNodeId: executionState.currentNodeId,
+      currentNodeLabel: executionState.currentNodeId
+        ? nodeResults.find((n) => n.nodeId === executionState.currentNodeId)?.metadata?.label
+        : undefined,
+      metrics: {
+        executionId: executionState.executionId,
+        startTime: executionState.startTime,
+        endTime: executionState.endTime,
+        duration: executionState.endTime
+          ? executionState.endTime.getTime() - executionState.startTime.getTime()
+          : undefined,
+        status: executionState.status,
+        totalNodes: workflow.nodes.length,
+        completedNodes: nodeResults.filter((n) => n.status === 'completed').length,
+        failedNodes: nodeResults.filter((n) => n.status === 'failed').length,
+        progress: executionState.progress
+      },
+      nodeResults,
+      executionPath,
+      logs: executionState.logs
+    }
+
+    return res.status(200).json(response)
+  } catch (error) {
+    console.error('获取执行进度错误:', error)
+    return res.status(500).json({
+      error: error instanceof Error ? error.message : '获取执行进度失败'
+    })
   }
+})
 
-  private async executeNode(
-    node: WorkflowNode,
-    input: string,
-    llmConfig: LLMConfig,
-    conversationHistory?: BaseMessage[]
-  ) {
-    switch (node.type) {
-      case 'start':
-        return {
-          output: input,
-          metadata: { nodeId: node.id, type: 'start', label: node.data?.label }
-        }
+// 获取节点执行结果
+router.get('/node-results/:executionId', async (req, res) => {
+  try {
+    const { executionId } = req.params
 
-      case 'skill':
-        return await this.executeSkill(node, input, llmConfig, conversationHistory)
+    const executionState = monitoredExecutor.getExecutionState(executionId)
 
-      case 'branch':
-        return await this.executeBranch(node, input, llmConfig)
-
-      case 'api':
-        return await this.executeApi(node, input, llmConfig)
-
-      case 'llm':
-        return await this.executeLLM(node, input, llmConfig, conversationHistory)
-
-      case 'agent':
-        return await this.executeAgent(node, input, llmConfig, conversationHistory)
-
-      case 'end':
-        return {
-          output: input,
-          metadata: { nodeId: node.id, type: 'end', label: node.data?.label }
-        }
-
-      default:
-        return {
-          output: input,
-          metadata: { nodeId: node.id, type: 'unknown', label: node.data?.label }
-        }
-    }
-  }
-
-  private async executeSkill(
-    node: WorkflowNode,
-    input: string,
-    llmConfig: LLMConfig,
-    conversationHistory?: BaseMessage[]
-  ) {
-    if (!node.data.config?.skillId) {
-      return {
-        output: input,
-        metadata: { nodeId: node.id, type: 'skill', error: '未配置技能ID' }
-      }
-    }
-
-    try {
-      // 从数据库中获取技能内容
-      const skill = await SkillModel.findByPk(node.data.config.skillId)
-
-      if (!skill) {
-        return {
-          output: input,
-          metadata: {
-            nodeId: node.id,
-            label: node.data?.label,
-            type: 'skill',
-            error: `技能不存在: ${node.data.config.skillId}`
-          }
-        }
-      }
-
-      // 使用技能的实际内容
-      const skillContent = `${skill.name}\n\n描述: ${skill.description}\n\n内容: ${skill.content}`
-
-      // 使用LLM执行技能，明确要求只返回处理结果，不要重复输入内容
-      const prompt = `${skillContent}\n\n当前用户输入: ${input}\n\n请根据以上技能内容处理用户输入，只返回处理后的结果，不要重复用户输入的内容。如果只是传递信息，请简洁地总结或转换，避免重复。`
-      const result = await callLLM(prompt, llmConfig, conversationHistory)
-
-      return {
-        output: result,
-        metadata: {
-          nodeId: node.id,
-          label: node.data?.label,
-          type: 'skill',
-          skillId: node.data.config.skillId,
-          skillName: skill.name
-        }
-      }
-    } catch (error) {
-      return {
-        output: input,
-        metadata: {
-          nodeId: node.id,
-          label: node.data?.label,
-          type: 'skill',
-          error: error instanceof Error ? error.message : '技能执行失败'
-        }
-      }
-    }
-  }
-
-  private async executeBranch(node: WorkflowNode, input: string, llmConfig: LLMConfig) {
-    if (!node.data.config?.branches?.length) {
-      return {
-        output: input,
-        metadata: { nodeId: node.id, type: 'branch', branch: null }
-      }
-    }
-
-    try {
-      const branchId = await this.evaluateBranches(node.data.config.branches, input, llmConfig)
-
-      return {
-        output: `条件评估成功，满足条件id: ${branchId}`,
-        metadata: {
-          nodeId: node.id,
-          label: node.data?.label,
-          type: 'branch',
-          branch: branchId === 'null' ? null : branchId
-        }
-      }
-    } catch (error) {
-      return {
-        output: `条件评估失败`,
-        metadata: {
-          nodeId: node.id,
-          label: node.data?.label,
-          type: 'branch',
-          branch: null,
-          error: error instanceof Error ? error.message : '条件评估失败'
-        }
-      }
-    }
-  }
-
-  private async executeApi(node: WorkflowNode, input: string, llmConfig: LLMConfig) {
-    if (!node.data.config?.apiConfig?.url) {
-      return {
-        output: input,
-        metadata: { nodeId: node.id, type: 'api', error: '未配置API URL' }
-      }
-    }
-
-    try {
-      // 执行API调用
-      const apiResult = await executeApiCall(node.data.config.apiConfig)
-
-      // 使用LLM处理API结果
-      const processPrompt = `请处理以下API调用结果，并结合原始输入给出最终答案:\n\n原始输入: ${input}\n\nAPI结果: ${JSON.stringify(apiResult, null, 2)}`
-      const result = await callLLM(processPrompt, llmConfig)
-
-      return {
-        output: result,
-        metadata: {
-          nodeId: node.id,
-          label: node.data?.label,
-          type: 'api',
-          apiUrl: node.data.config.apiConfig.url,
-          apiResult
-        }
-      }
-    } catch (error) {
-      return {
-        output: input,
-        metadata: {
-          nodeId: node.id,
-          label: node.data?.label,
-          type: 'api',
-          error: error instanceof Error ? error.message : 'API调用失败'
-        }
-      }
-    }
-  }
-
-  private async executeAgent(
-    node: WorkflowNode,
-    input: string,
-    llmConfig: LLMConfig,
-    conversationHistory?: BaseMessage[]
-  ) {
-    if (!node.data.config?.agentId) {
-      return {
-        output: input,
-        metadata: {
-          nodeId: node.id,
-          type: 'agent',
-          error: '未配置Agent ID',
-          label: node.data?.label
-        }
-      }
-    }
-
-    try {
-      // 在实际应用中，这里应该从数据库或store中获取Agent信息
-      // 为了演示，我们使用一个简单的提示
-      const agentInstructions = `Agent ID: ${node.data.config.agentId}\n这是一个Agent节点`
-
-      // 使用Agent的指令和LLM处理输入
-      const prompt = `${agentInstructions}\n\n当前用户输入: ${input}\n\n请根据以上指令处理用户输入，只返回处理后的结果，不要重复用户输入的内容。`
-      const result = await callLLM(prompt, llmConfig, conversationHistory)
-
-      return {
-        output: result,
-        metadata: {
-          nodeId: node.id,
-          label: node.data?.label,
-          type: 'agent',
-          agentId: node.data.config.agentId
-        }
-      }
-    } catch (error) {
-      return {
-        output: input,
-        metadata: {
-          nodeId: node.id,
-          label: node.data?.label,
-          type: 'agent',
-          error: error instanceof Error ? error.message : 'Agent执行失败'
-        }
-      }
-    }
-  }
-
-  private async executeLLM(
-    node: WorkflowNode,
-    input: string,
-    llmConfig: LLMConfig,
-    conversationHistory?: BaseMessage[]
-  ) {
-    try {
-      // 替换提示词模板中的变量
-      let promptTemplate = node.data.config.prompt
-      const variables = node.data.config.variables || []
-
-      // 将变量数组转换为对象格式以便替换
-      const variablesMap: Record<string, any> = {}
-      variables.forEach((variable: any) => {
-        variablesMap[variable.name] = variable.defaultValue || ''
+    if (!executionState) {
+      return res.status(404).json({
+        error: '执行记录不存在',
+        message: `找不到 executionId 为 ${executionId} 的执行记录`
       })
-
-      // 替换模板中的变量，支持 {{variableName}} 格式
-      Object.keys(variablesMap).forEach((key) => {
-        const placeholder = `{{${key}}}`
-        promptTemplate = promptTemplate.replace(new RegExp(placeholder, 'g'), variablesMap[key])
-      })
-
-      // 将用户输入添加到提示词中
-      const finalPrompt = promptTemplate ? `${promptTemplate}\n\n当前用户输入: ${input}` : input
-
-      // 调用LLM
-      const result = await callLLM(finalPrompt, llmConfig, conversationHistory)
-
-      return {
-        output: result,
-        metadata: {
-          nodeId: node.id,
-          label: node.data?.label,
-          type: 'llm',
-          prompt: promptTemplate,
-          variables: variablesMap
-        }
-      }
-    } catch (error) {
-      return {
-        output: input,
-        metadata: {
-          nodeId: node.id,
-          label: node.data?.label,
-          type: 'llm',
-          error: error instanceof Error ? error.message : 'LLM调用失败'
-        }
-      }
     }
+
+    const nodeResults = Array.from(executionState.nodeResults.values())
+
+    return res.status(200).json(nodeResults)
+  } catch (error) {
+    console.error('获取节点执行结果错误:', error)
+    return res.status(500).json({
+      error: error instanceof Error ? error.message : '获取节点执行结果失败'
+    })
   }
+})
 
-  private async evaluateBranches(branches: WorkflowBranch[], input: string, llmConfig: LLMConfig) {
-    try {
-      const conditionText = branches
-        .map((item, index) => `条件${index + 1} [ID: ${item.id}]: ${item.condition}`)
-        .join('\n')
-      const prompt = `你是一个条件评估引擎，请根据输入内容判断满足哪个条件。
+// 停止执行
+router.post('/stop/:executionId', async (req, res) => {
+  try {
+    const { executionId } = req.params
 
-可用条件:
-${conditionText}
+    monitoredExecutor.stopExecution(executionId)
 
-输入内容: ${input}
-
-评估规则:
-1. 仔细分析输入内容，判断其满足哪个条件
-2. 只返回满足条件的ID值，不要包含任何其他文字、标点符号或解释
-3. 如果多个条件都满足，返回第一个满足条件的ID
-4. 如果没有任何条件满足，只返回字符串"null"
-5. 返回格式必须严格：要么是条件ID，要么是"null"
-
-请严格按照以上规则进行评估，只输出结果：`
-      const result = await callLLM(prompt, llmConfig)
-
-      // 清理结果，只保留ID或null
-      const cleanResult = result.trim().replace(/[\s\n\r.,，。!！?？;；]/g, '')
-
-      // 验证结果格式
-      const isValidResult =
-        branches.some((branch) => branch.id === cleanResult) || cleanResult === 'null'
-      return isValidResult ? cleanResult : 'null'
-    } catch (error) {
-      console.error('条件评估失败:', error)
-      return 'null'
-    }
+    return res.status(200).json({
+      message: '执行已停止'
+    })
+  } catch (error) {
+    console.error('停止执行错误:', error)
+    return res.status(500).json({
+      error: error instanceof Error ? error.message : '停止执行失败'
+    })
   }
-}
+})
 
-// 执行工作流的路由
+// 暂停执行
+router.post('/pause/:executionId', async (req, res) => {
+  try {
+    const { executionId } = req.params
+
+    monitoredExecutor.pauseExecution(executionId)
+
+    return res.status(200).json({
+      message: '执行已暂停'
+    })
+  } catch (error) {
+    console.error('暂停执行错误:', error)
+    return res.status(500).json({
+      error: error instanceof Error ? error.message : '暂停执行失败'
+    })
+  }
+})
+
+// 恢复执行
+router.post('/resume/:executionId', async (req, res) => {
+  try {
+    const { executionId } = req.params
+
+    monitoredExecutor.resumeExecution(executionId)
+
+    return res.status(200).json({
+      message: '执行已恢复'
+    })
+  } catch (error) {
+    console.error('恢复执行错误:', error)
+    return res.status(500).json({
+      error: error instanceof Error ? error.message : '恢复执行失败'
+    })
+  }
+})
+
+// 原有的同步执行接口（保持向后兼容）
 router.post('/', async (req, res) => {
   try {
     const { workflow, input, agentId, threadId } = req.body
@@ -480,12 +228,41 @@ router.post('/', async (req, res) => {
     }
 
     // 执行工作流
-    const executor = new ServerLangGraphExecutor()
-    const result = await executor.executeWorkflow(workflow, input, llmConfig, agentId, threadId)
+    const result = await monitoredExecutor.startExecution(
+      workflow,
+      input,
+      llmConfig,
+      agentId,
+      threadId
+    )
 
-    return res.status(200).json({
-      result,
-      llmConfigName: activeLLMConfig.name
+    // 等待执行完成（简化处理）
+    let attempts = 0
+    const maxAttempts = 100 // 最多等待50秒（100 * 500ms）
+
+    while (attempts < maxAttempts) {
+      const state = monitoredExecutor.getExecutionState(result)
+      if (state && (state.status === 'completed' || state.status === 'failed')) {
+        const nodeResults = Array.from(state.nodeResults.values())
+        const executionPath = nodeResults
+          .filter((r) => r.status === 'completed')
+          .map((r) => r.metadata?.label || r.metadata?.nodeId)
+
+        const finalResult = `工作流执行顺序：${executionPath.join(' → ')}\n\n工作流执行完成`
+
+        return res.status(200).json({
+          result: finalResult,
+          llmConfigName: activeLLMConfig.name
+        })
+      }
+
+      await new Promise((resolve) => setTimeout(resolve, 500))
+      attempts++
+    }
+
+    return res.status(408).json({
+      error: '执行超时',
+      message: '工作流执行时间过长，请稍后查看执行状态'
     })
   } catch (error) {
     console.error('工作流执行错误:', error)
@@ -495,8 +272,8 @@ router.post('/', async (req, res) => {
   }
 })
 
-// AI Agent 对话 API
-router.post('/agent-chat', async (req, res) => {
+// AI Agent 对话 API（带监控）
+router.post('/agent-chat-monitor', async (req, res) => {
   try {
     const { agentId, input, threadId } = req.body
 
@@ -567,9 +344,8 @@ router.post('/agent-chat', async (req, res) => {
       maxTokens: activeLLMConfig.maxTokens
     }
 
-    // 执行工作流
-    const executor = new ServerLangGraphExecutor()
-    const result = await executor.executeWorkflow(
+    // 开始执行工作流
+    const executionId = await monitoredExecutor.startExecution(
       workflowObj,
       input,
       llmConfig,
@@ -578,11 +354,11 @@ router.post('/agent-chat', async (req, res) => {
     )
 
     return res.status(200).json({
+      executionId,
       success: true,
-      result,
+      message: 'Agent对话执行已开始',
       agentName: agent.name,
-      workflowName: workflow.name,
-      llmConfigName: activeLLMConfig.name
+      workflowName: workflow.name
     })
   } catch (error) {
     console.error('AI Agent 对话执行错误:', error)
