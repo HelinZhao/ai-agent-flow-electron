@@ -1,5 +1,6 @@
 import React from 'react';
 import { useWorkflowStore } from '@renderer/store/workflowStore';
+import CustomSelect from '../../CustomSelect';
 
 interface SkillConfigProps {
   config: Record<string, any>;
@@ -14,22 +15,22 @@ const SkillConfig: React.FC<SkillConfigProps> = ({ config, onConfigChange }) => 
         <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
           选择技能
         </label>
-        <select
+        <CustomSelect
           value={config.skillId || ''}
-          onChange={(e) => onConfigChange({
+          onChange={(value) => onConfigChange({
             ...config,
-            skillId: e.target.value,
-            skillName: skills.find(s => s.id === e.target.value)?.name
+            skillId: value,
+            skillName: skills.find(s => s.id === value)?.name
           })}
-          className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
-        >
-          <option value="">请选择技能</option>
-          {skills.map(skill => (
-            <option key={skill.id} value={skill.id}>
-              {skill.name}
-            </option>
-          ))}
-        </select>
+          options={[
+            { value: '', label: '请选择技能' },
+            ...skills.map(skill => ({
+              value: skill.id,
+              label: skill.name
+            }))
+          ]}
+          placeholder="请选择技能"
+        />
       </div>
       {config.skillId && (
         <div>

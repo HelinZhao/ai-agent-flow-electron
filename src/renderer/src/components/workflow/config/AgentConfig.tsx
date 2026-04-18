@@ -1,5 +1,6 @@
 import React from 'react';
 import { useWorkflowStore } from '@renderer/store/workflowStore';
+import CustomSelect from '../../CustomSelect';
 
 interface AgentConfigProps {
   config: Record<string, any>;
@@ -15,22 +16,22 @@ const AgentConfig: React.FC<AgentConfigProps> = ({ config, onConfigChange }) => 
         <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
           选择Agent
         </label>
-        <select
+        <CustomSelect
           value={config.agentId || ''}
-          onChange={(e) => onConfigChange({
+          onChange={(value) => onConfigChange({
             ...config,
-            agentId: e.target.value,
-            agentName: agents.find(a => a.id === e.target.value)?.name
+            agentId: value,
+            agentName: agents.find(a => a.id === value)?.name
           })}
-          className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
-        >
-          <option value="">请选择Agent</option>
-          {agents.map(agent => (
-            <option key={agent.id} value={agent.id}>
-              {agent.name}
-            </option>
-          ))}
-        </select>
+          options={[
+            { value: '', label: '请选择Agent' },
+            ...agents.map(agent => ({
+              value: agent.id,
+              label: agent.name
+            }))
+          ]}
+          placeholder="请选择Agent"
+        />
       </div>
       {config.agentId && (
         <div>

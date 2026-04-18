@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { VariableConfig } from '@renderer/types';
+import CustomSelect from '../CustomSelect';
 
 interface VariableConfigModalProps {
   isOpen: boolean;
@@ -170,16 +171,17 @@ const VariableConfigModal: React.FC<VariableConfigModalProps> = ({
             <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
               变量类型
             </label>
-            <select
+            <CustomSelect
               value={formData.type}
-              onChange={(e) => handleInputChange('type', e.target.value)}
-              className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
-            >
-              <option value="string">字符串</option>
-              <option value="number">数字</option>
-              <option value="boolean">布尔值</option>
-              <option value="array">数组</option>
-            </select>
+              onChange={(value) => handleInputChange('type', value)}
+              options={[
+                { value: 'string', label: '字符串' },
+                { value: 'number', label: '数字' },
+                { value: 'boolean', label: '布尔值' },
+                { value: 'array', label: '数组' }
+              ]}
+              placeholder="选择变量类型"
+            />
           </div>
 
           <div>

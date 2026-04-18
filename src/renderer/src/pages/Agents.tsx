@@ -4,6 +4,7 @@ import { Agent } from '@renderer/types';
 import MarkdownIt from 'markdown-it';
 import MdEditor from 'react-markdown-editor-lite';
 import 'react-markdown-editor-lite/lib/index.css';
+import CustomSelect from '@renderer/components/CustomSelect';
 
 const mdParser = new MarkdownIt(/* Markdown-it options */);
 export default function Agents(): React.JSX.Element {
@@ -207,18 +208,18 @@ export default function Agents(): React.JSX.Element {
                                         <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
                                             绑定工作流
                                         </label>
-                                        <select
+                                        <CustomSelect
                                             value={formData.workflowId}
-                                            onChange={(e) => setFormData({ ...formData, workflowId: e.target.value })}
-                                            className="w-full px-4 py-3 border border-gray-200/50 dark:border-gray-600/50 rounded-xl bg-white/70 dark:bg-gray-700/70 backdrop-blur-sm text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500/50 focus:border-blue-500/50 transition-all duration-200"
-                                        >
-                                            <option value="">选择工作流（可选）</option>
-                                            {workflows.map(workflow => (
-                                                <option key={workflow.id} value={workflow.id}>
-                                                    {workflow.name}
-                                                </option>
-                                            ))}
-                                        </select>
+                                            onChange={(value) => setFormData({ ...formData, workflowId: value })}
+                                            options={[
+                                                { value: '', label: '选择工作流（可选）' },
+                                                ...workflows.map(workflow => ({
+                                                    value: workflow.id,
+                                                    label: workflow.name
+                                                }))
+                                            ]}
+                                            placeholder="选择工作流（可选）"
+                                        />
                                         <p className="text-xs text-gray-500 dark:text-gray-400 mt-2">
                                             可选：将此Agent绑定到一个现有的工作流
                                         </p>

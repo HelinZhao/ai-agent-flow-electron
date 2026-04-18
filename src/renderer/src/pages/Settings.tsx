@@ -3,6 +3,7 @@ import { useForm } from 'react-hook-form';
 import { useWorkflowStore } from '@renderer/store/workflowStore';
 import { LLMConfig } from '@renderer/types';
 import { llmConfigApi } from '@renderer/lib/api';
+import CustomSelect from '@renderer/components/CustomSelect';
 
 export default function Settings(): React.JSX.Element {
     const {
@@ -252,16 +253,26 @@ export default function Settings(): React.JSX.Element {
                                     <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
                                         提供商
                                     </label>
-                                    <select
+                                    <input
+                                        type="hidden"
                                         {...register('provider', { required: '请选择提供商' })}
-                                        className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
-                                    >
-                                        <option value="openai">OpenAI</option>
-                                        <option value="anthropic">Anthropic</option>
-                                        <option value="azure">Azure OpenAI</option>
-                                        <option value="qwen">Qwen (通义千问)</option>
-                                        <option value="longcat">Longcat (LongCat)</option>
-                                    </select>
+                                    />
+                                    <CustomSelect
+                                        value={watch('provider')}
+                                        onChange={(value) => {
+                                            const event = { target: { value } } as any;
+                                            register('provider').onChange(event);
+                                        }}
+                                        options={[
+                                            { value: 'openai', label: 'OpenAI' },
+                                            { value: 'anthropic', label: 'Anthropic' },
+                                            { value: 'azure', label: 'Azure OpenAI' },
+                                            { value: 'qwen', label: 'Qwen (通义千问)' },
+                                            { value: 'longcat', label: 'Longcat (LongCat)' }
+                                        ]}
+                                        placeholder="选择提供商"
+                                        error={!!errors.provider}
+                                    />
                                     {errors.provider && (
                                         <p className="mt-1 text-sm text-red-600">{errors.provider.message}</p>
                                     )}

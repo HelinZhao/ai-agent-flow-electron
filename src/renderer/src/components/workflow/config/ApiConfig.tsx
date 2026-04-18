@@ -1,4 +1,5 @@
 import React from 'react';
+import CustomSelect from '../../CustomSelect';
 
 interface ApiConfigProps {
   config: Record<string, any>;
@@ -32,16 +33,17 @@ const ApiConfig: React.FC<ApiConfigProps> = ({ config, onConfigChange }) => {
         <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
           HTTP 方法
         </label>
-        <select
+        <CustomSelect
           value={config.apiConfig?.method || 'GET'}
-          onChange={(e) => updateApiConfig('method', e.target.value)}
-          className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
-        >
-          <option value="GET">GET</option>
-          <option value="POST">POST</option>
-          <option value="PUT">PUT</option>
-          <option value="DELETE">DELETE</option>
-        </select>
+          onChange={(value) => updateApiConfig('method', value)}
+          options={[
+            { value: 'GET', label: 'GET' },
+            { value: 'POST', label: 'POST' },
+            { value: 'PUT', label: 'PUT' },
+            { value: 'DELETE', label: 'DELETE' }
+          ]}
+          placeholder="选择HTTP方法"
+        />
       </div>
 
       <div>

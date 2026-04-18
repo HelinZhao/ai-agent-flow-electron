@@ -6,6 +6,7 @@ import { useMemoizedFn } from 'ahooks';
 import { ReactFlowProvider } from '@xyflow/react';
 import { useWorkflowExecution } from '@renderer/hooks/useWorkflowExecution';
 import ExecutionProgressPanel from '@renderer/components/workflow/ExecutionProgressPanel';
+import CustomSelect from '@renderer/components/CustomSelect';
 
 export default function Workflow(): React.JSX.Element {
     const { workflows, addWorkflow, updateWorkflow, deleteWorkflow, activeLLMConfig } = useWorkflowStore();
@@ -241,27 +242,22 @@ export default function Workflow(): React.JSX.Element {
                                 AI Agent 工作流设计器
                             </h1>
                         </div>
-                        <div className="relative">
-                            <select
+                        <div className="min-w-[200px]">
+                            <CustomSelect
                                 value={currentWorkflow?.id || ''}
-                                onChange={(e) => {
-                                    const workflow = workflows.find(w => w.id === e.target.value);
+                                onChange={(value) => {
+                                    const workflow = workflows.find(w => w.id === value);
                                     setCurrentWorkflow(workflow || null);
                                 }}
-                                className="px-4 py-2.5 border border-gray-200/50 dark:border-gray-600/50 rounded-xl bg-white/70 dark:bg-gray-700/70 backdrop-blur-sm text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500/50 focus:border-blue-500/50 transition-all duration-200 pr-10 min-w-[200px]"
-                            >
-                                <option value="">选择工作流</option>
-                                {workflows.map(workflow => (
-                                    <option key={workflow.id} value={workflow.id}>
-                                        {workflow.name}
-                                    </option>
-                                ))}
-                            </select>
-                            <div className="absolute right-3 top-1/2 transform -translate-y-1/2 pointer-events-none">
-                                <svg className="w-4 h-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
-                                </svg>
-                            </div>
+                                options={[
+                                    { value: '', label: '选择工作流' },
+                                    ...workflows.map(workflow => ({
+                                        value: workflow.id,
+                                        label: workflow.name
+                                    }))
+                                ]}
+                                placeholder="选择工作流"
+                            />
                         </div>
 
                         {isCreating ? (
@@ -349,7 +345,7 @@ export default function Workflow(): React.JSX.Element {
                         <div className="text-center relative z-10 max-w-4xl mx-auto px-6">
                             <div className="mb-8">
                                 <div className="text-8xl mb-6 animate-bounce">🤖</div>
-                                <h2 className="text-4xl font-bold bg-gradient-to-r from-blue-600 via-purple-600 to-pink-600 bg-clip-text text-transparent mb-4">
+                                <h2 className="text-4xl leading-normal font-bold bg-gradient-to-r from-blue-600 via-purple-600 to-pink-600 bg-clip-text text-transparent mb-4">
                                     欢迎使用 AI Agent 工作流设计器
                                 </h2>
                                 <p className="text-xl text-gray-600 dark:text-gray-300 mb-8">

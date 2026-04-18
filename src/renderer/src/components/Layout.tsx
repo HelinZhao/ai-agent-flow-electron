@@ -43,7 +43,7 @@ const Layout: React.FC<LayoutProps> = ({ children }: LayoutProps) => {
                   <Link
                     key={item.path}
                     to={item.path}
-                    className={`group relative px-4 py-2 rounded-xl text-sm font-medium transition-all duration-200 ${
+                    className={`group px-4 py-2 rounded-xl text-sm font-medium transition-all duration-200 ${
                       location.pathname === item.path
                         ? 'bg-gradient-to-r from-blue-500 to-purple-600 text-white shadow-lg'
                         : 'text-gray-600 dark:text-gray-300 hover:text-blue-600 dark:hover:text-blue-400 hover:bg-white/50 dark:hover:bg-gray-700/50'
@@ -53,9 +53,6 @@ const Layout: React.FC<LayoutProps> = ({ children }: LayoutProps) => {
                       <span className="text-base">{item.icon}</span>
                       <span>{item.label}</span>
                     </span>
-                    {location.pathname === item.path && (
-                      <div className="absolute bottom-0 left-1/2 transform -translate-x-1/2 w-1 h-1 bg-white rounded-full"></div>
-                    )}
                   </Link>
                 ))}
               </div>

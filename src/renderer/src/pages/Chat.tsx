@@ -3,6 +3,7 @@ import { useWorkflowStore } from '@renderer/store/workflowStore';
 import { Agent, ChatHistory, ChatMessage } from '@renderer/types';
 import { chatHistoryApi } from '@renderer/lib/chatHistory';
 import { workflowExecutionApi } from '@renderer/lib/api';
+import CustomSelect from '@renderer/components/CustomSelect';
 
 // 使用全局类型定义，不需要重复定义
 
@@ -228,21 +229,21 @@ export default function Chat(): React.JSX.Element {
                     <div className="flex items-center space-x-4">
                         <h1 className="text-xl font-bold text-gray-900 dark:text-white">AI 对话</h1>
 
-                        <select
+                        <CustomSelect
                             value={selectedAgent?.id || ''}
-                            onChange={(e) => {
-                                const agent = agents.find(a => a.id === e.target.value);
+                            onChange={(value) => {
+                                const agent = agents.find(a => a.id === value);
                                 setSelectedAgent(agent || null);
                             }}
-                            className="px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
-                        >
-                            <option value="">选择Agent</option>
-                            {agents.map(agent => (
-                                <option key={agent.id} value={agent.id}>
-                                    {agent.name}
-                                </option>
-                            ))}
-                        </select>
+                            options={[
+                                { value: '', label: '选择Agent' },
+                                ...agents.map(agent => ({
+                                    value: agent.id,
+                                    label: agent.name
+                                }))
+                            ]}
+                            placeholder="选择Agent"
+                        />
 
                         {selectedAgent && (
                             <div className="flex items-center space-x-2">
