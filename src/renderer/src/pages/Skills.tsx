@@ -112,12 +112,14 @@ export default function Skills(): React.JSX.Element {
                 </div>
             </div>
 
-            <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+            <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 h-[calc(100vh-200px)]">
                 {/* 技能列表 */}
-                <div className="lg:col-span-1">
-                    <div className="bg-white dark:bg-gray-800 shadow rounded-lg">
-                        <div className="px-4 py-5 sm:p-6">
-                            <h3 className="text-lg font-medium text-gray-900 dark:text-white mb-4">技能列表</h3>
+                <div className="lg:col-span-1 flex flex-col">
+                    <div className="bg-white dark:bg-gray-800 shadow rounded-lg flex-1 flex flex-col">
+                        <div className="px-4 py-5 sm:p-6 border-b border-gray-200 dark:border-gray-700">
+                            <h3 className="text-lg font-medium text-gray-900 dark:text-white">技能列表</h3>
+                        </div>
+                        <div className="flex-1 overflow-y-auto px-4 py-5 sm:p-6">
                             <div className="space-y-2">
                                 {skills.map((skill) => (
                                     <div
@@ -176,9 +178,9 @@ export default function Skills(): React.JSX.Element {
                 </div>
 
                 {/* 技能编辑/预览 */}
-                <div className="lg:col-span-2">
-                    <div className="bg-white dark:bg-gray-800 shadow rounded-lg">
-                        <div className="px-4 py-5 sm:p-6">
+                <div className="lg:col-span-2 flex flex-col">
+                    <div className="bg-white dark:bg-gray-800 shadow rounded-lg flex-1 flex flex-col">
+                        <div className="flex-1 overflow-y-auto px-4 py-5 sm:p-6">
                             {isEditing ? (
                                 <div className="space-y-4">
                                     <h3 className="text-lg font-medium text-gray-900 dark:text-white">

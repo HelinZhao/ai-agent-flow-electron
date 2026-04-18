@@ -89,16 +89,18 @@ export default function Agents(): React.JSX.Element {
                 </button>
             </div>
 
-            <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+            <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 h-[calc(100vh-200px)]">
                 {/* Agent列表 */}
-                <div className="lg:col-span-1">
-                    <div className="bg-white/80 dark:bg-gray-800/80 backdrop-blur-md shadow-lg rounded-2xl border border-gray-200/50 dark:border-gray-700/50">
-                        <div className="px-6 py-6">
-                            <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-6 flex items-center space-x-2">
+                <div className="lg:col-span-1 flex flex-col">
+                    <div className="bg-white/80 dark:bg-gray-800/80 backdrop-blur-md shadow-lg rounded-2xl border border-gray-200/50 dark:border-gray-700/50 flex-1 flex flex-col">
+                        <div className="px-6 py-6 border-b border-gray-200/50 dark:border-gray-700/50">
+                            <h3 className="text-lg font-semibold text-gray-900 dark:text-white flex items-center space-x-2">
                                 <span>📋</span>
                                 <span>Agent列表</span>
                                 <span className="text-sm text-gray-500 dark:text-gray-400 font-normal">({agents.length})</span>
                             </h3>
+                        </div>
+                        <div className="flex-1 overflow-y-auto p-6">
                             <div className="space-y-3">
                                 {agents.map((agent) => (
                                     <div
@@ -164,9 +166,9 @@ export default function Agents(): React.JSX.Element {
                 </div>
 
                 {/* Agent编辑/预览 */}
-                <div className="lg:col-span-2">
-                    <div className="bg-white/80 dark:bg-gray-800/80 backdrop-blur-md shadow-lg rounded-2xl border border-gray-200/50 dark:border-gray-700/50">
-                        <div className="px-6 py-6">
+                <div className="lg:col-span-2 flex flex-col">
+                    <div className="bg-white/80 dark:bg-gray-800/80 backdrop-blur-md shadow-lg rounded-2xl border border-gray-200/50 dark:border-gray-700/50 flex-1 flex flex-col">
+                        <div className="flex-1 overflow-y-auto px-6 py-6">
                             {isEditing ? (
                                 <div className="space-y-6">
                                     <div className="flex items-center space-x-3 mb-6">
