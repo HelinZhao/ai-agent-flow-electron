@@ -1,5 +1,7 @@
 import React from 'react';
 import CustomSelect from '../../CustomSelect';
+import CustomInput from '../../CustomInput';
+import CustomTextarea from '../../CustomTextarea';
 
 interface ApiConfigProps {
   config: Record<string, any>;
@@ -20,11 +22,10 @@ const ApiConfig: React.FC<ApiConfigProps> = ({ config, onConfigChange }) => {
         <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
           API URL *
         </label>
-        <input
+        <CustomInput
           type="url"
           value={config.apiConfig?.url || ''}
           onChange={(e) => updateApiConfig('url', e.target.value)}
-          className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
           placeholder="https://api.example.com/endpoint"
         />
       </div>
@@ -50,10 +51,9 @@ const ApiConfig: React.FC<ApiConfigProps> = ({ config, onConfigChange }) => {
         <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
           请求头 (JSON格式)
         </label>
-        <textarea
+        <CustomTextarea
           value={config.apiConfig?.headers || ''}
           onChange={(e) => updateApiConfig('headers', e.target.value)}
-          className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
           rows={3}
           placeholder='{"Content-Type": "application/json"}'
         />
@@ -64,10 +64,9 @@ const ApiConfig: React.FC<ApiConfigProps> = ({ config, onConfigChange }) => {
           <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
             请求体 (JSON格式)
           </label>
-          <textarea
+          <CustomTextarea
             value={config.apiConfig?.body || ''}
             onChange={(e) => updateApiConfig('body', e.target.value)}
-            className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
             rows={3}
           />
         </div>

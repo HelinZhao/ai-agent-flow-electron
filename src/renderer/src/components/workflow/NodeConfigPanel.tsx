@@ -6,6 +6,8 @@ import BranchConfig from './config/BranchConfig';
 import LLMConfig from './config/LLMConfig';
 import ApiConfig from './config/ApiConfig';
 import AgentConfig from './config/AgentConfig';
+import CustomInput from '../CustomInput';
+import CustomButton from '../CustomButton';
 
 interface NodeConfigPanelProps {
   node: WorkflowNode | null;
@@ -92,29 +94,30 @@ const NodeConfigPanel: React.FC<NodeConfigPanelProps> = ({ node, onClose }: Node
             <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
               节点标签
             </label>
-            <input
+            <CustomInput
               type="text"
               value={label}
               onChange={(e) => setLabel(e.target.value)}
-              className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
               placeholder="输入节点标签"
             />
           </div>
           {renderConfigFields()}
         </div>
         <div className="flex justify-end space-x-2 pt-4 border-t border-gray-200 dark:border-gray-600 p-4">
-          <button
+          <CustomButton
             onClick={onClose}
-            className="px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-md text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700"
+            variant="secondary"
+            size="sm"
           >
             取消
-          </button>
-          <button
+          </CustomButton>
+          <CustomButton
             onClick={handleSave}
-            className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700"
+            variant="primary"
+            size="sm"
           >
             保存
-          </button>
+          </CustomButton>
         </div>
       </div>
     </Panel>

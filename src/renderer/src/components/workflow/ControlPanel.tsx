@@ -1,5 +1,7 @@
 import { Panel } from "@xyflow/react";
 import { memo } from "react";
+import CustomButton from '../CustomButton';
+
 interface ControlPanelProps {
     onRun: () => void
     onSave: () => void
@@ -11,19 +13,21 @@ const ControlPanel: React.FC<ControlPanelProps> = (props: ControlPanelProps) => 
     return (
         <Panel position="top-right">
             <div className="flex space-x-2">
-                <button
+                <CustomButton
                     onClick={props.onSave}
-                    className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700"
+                    variant="primary"
+                    size="sm"
                 >
                     保存
-                </button>
-                <button
+                </CustomButton>
+                <CustomButton
                     onClick={props.onRun}
+                    variant="success"
+                    size="sm"
                     disabled={props.isRunning}
-                    className="px-4 py-2 bg-green-600 text-white rounded-md hover:bg-green-700 disabled:opacity-50"
                 >
                     {props.isRunning ? '运行中...' : '运行'}
-                </button>
+                </CustomButton>
             </div>
         </Panel>
     )

@@ -4,6 +4,8 @@ import { useWorkflowStore } from '@renderer/store/workflowStore';
 import { LLMConfig } from '@renderer/types';
 import { llmConfigApi } from '@renderer/lib/api';
 import CustomSelect from '@renderer/components/CustomSelect';
+import CustomInput from '@renderer/components/CustomInput';
+import CustomButton from '@renderer/components/CustomButton';
 
 export default function Settings(): React.JSX.Element {
     const {
@@ -169,12 +171,12 @@ export default function Settings(): React.JSX.Element {
                     <div className="px-4 py-5 sm:p-6">
                         <div className="flex justify-between items-center mb-6">
                             <h2 className="text-lg font-medium text-gray-900 dark:text-white">大模型API配置管理</h2>
-                            <button
+                            <CustomButton
                                 onClick={startNewConfig}
-                                className="bg-blue-600 text-white px-4 py-2 rounded-md hover:bg-blue-700 dark:bg-blue-600 dark:hover:bg-blue-700 flex items-center space-x-2"
+                                variant="primary"
                             >
                                 <span>+ 新建配置</span>
-                            </button>
+                            </CustomButton>
                         </div>
 
                         {message && (
@@ -201,28 +203,31 @@ export default function Settings(): React.JSX.Element {
                                         </div>
                                         <div className="flex items-center space-x-2">
                                             {!config.isActive && (
-                                                <button
+                                                <CustomButton
                                                     onClick={() => handleActivate(config.id!)}
+                                                    variant="success"
+                                                    size="sm"
                                                     disabled={isLoading}
-                                                    className="text-green-600 dark:text-green-400 hover:text-green-800 dark:hover:text-green-300 px-3 py-1 text-sm border border-green-300 dark:border-green-600 rounded hover:bg-green-50 dark:hover:bg-green-900/20"
                                                 >
                                                     启用
-                                                </button>
+                                                </CustomButton>
                                             )}
-                                            <button
+                                            <CustomButton
                                                 onClick={() => handleEdit(config)}
-                                                className="text-blue-600 dark:text-blue-400 hover:text-blue-800 dark:hover:text-blue-300 px-3 py-1 text-sm border border-blue-300 dark:border-blue-600 rounded hover:bg-blue-50 dark:hover:bg-blue-900/20"
+                                                variant="primary"
+                                                size="sm"
                                             >
-                                                编辑
-                                            </button>
-                                            <button
-                                                onClick={() => handleDelete(config.id!)}
-                                                disabled={llmConfigs.length <= 1}
-                                                className="text-red-600 dark:text-red-400 hover:text-red-800 dark:hover:text-red-300 px-3 py-1 text-sm border border-red-300 dark:border-red-600 rounded hover:bg-red-50 dark:hover:bg-red-900/20 disabled:opacity-50 disabled:cursor-not-allowed"
-                                            >
-                                                删除
-                                            </button>
-                                        </div>
+                        编辑
+                    </CustomButton>
+                    <CustomButton
+                        onClick={() => handleDelete(config.id!)}
+                        variant="danger"
+                        size="sm"
+                        disabled={llmConfigs.length <= 1}
+                    >
+                        删除
+                    </CustomButton>
+                </div>
                                     </div>
                                 </div>
                             ))}
@@ -239,10 +244,10 @@ export default function Settings(): React.JSX.Element {
                                     <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
                                         配置名称 *
                                     </label>
-                                    <input
+                                    <CustomInput
                                         {...register('name', { required: '请输入配置名称' })}
-                                        className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
                                         placeholder="例如：OpenAI 主配置"
+                                        error={errors.name?.message}
                                     />
                                     {errors.name && (
                                         <p className="mt-1 text-sm text-red-600">{errors.name.message}</p>
@@ -282,11 +287,11 @@ export default function Settings(): React.JSX.Element {
                                     <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
                                         API Key *
                                     </label>
-                                    <input
+                                    <CustomInput
                                         type="password"
                                         {...register('apiKey', { required: '请输入API Key' })}
-                                        className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
                                         placeholder="sk-..."
+                                        error={errors.apiKey?.message}
                                     />
                                     {errors.apiKey && (
                                         <p className="mt-1 text-sm text-red-600">{errors.apiKey.message}</p>
@@ -297,9 +302,8 @@ export default function Settings(): React.JSX.Element {
                                     <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
                                         模型名称
                                     </label>
-                                    <input
+                                    <CustomInput
                                         {...register('model')}
-                                        className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
                                         placeholder="gpt-3.5-turbo"
                                     />
                                 </div>
@@ -308,9 +312,8 @@ export default function Settings(): React.JSX.Element {
                                     <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
                                         API Base URL (可选)
                                     </label>
-                                    <input
+                                    <CustomInput
                                         {...register('baseUrl')}
-                                        className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
                                         placeholder={
                                             getValues('provider') === 'openai' ? 'https://api.openai.com/v1' :
                                                 getValues('provider') === 'anthropic' ? 'https://api.anthropic.com' :
@@ -319,10 +322,8 @@ export default function Settings(): React.JSX.Element {
                                                             getValues('provider') === 'longcat' ? 'https://api.longcat.ai' :
                                                                 'https://api.openai.com/v1'
                                         }
+                                        helper="留空使用默认地址，或使用自定义代理地址"
                                     />
-                                    <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">
-                                        留空使用默认地址，或使用自定义代理地址
-                                    </p>
                                 </div>
 
                                 <div className="grid grid-cols-2 gap-4">
@@ -344,12 +345,11 @@ export default function Settings(): React.JSX.Element {
                                         <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
                                             最大Token数
                                         </label>
-                                        <input
+                                        <CustomInput
                                             type="number"
                                             min="1"
                                             max="4000"
                                             {...register('maxTokens', { valueAsNumber: true })}
-                                            className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
                                         />
                                     </div>
                                 </div>
@@ -379,34 +379,36 @@ export default function Settings(): React.JSX.Element {
                                 </div>
 
                                 <div className="flex space-x-4">
-                                    <button
+                                    <CustomButton
                                         type="submit"
                                         disabled={isLoading}
-                                        className="flex-1 bg-blue-600 text-white py-2 px-4 rounded-md hover:bg-blue-700 dark:bg-blue-600 dark:hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed"
+                                        variant="primary"
+                                        className="flex-1"
                                     >
                                         {isLoading ? '保存中...' : editingConfig ? '更新配置' : '创建配置'}
-                                    </button>
+                                    </CustomButton>
 
-                                    <button
+                                    <CustomButton
                                         type="button"
                                         onClick={testConnection}
                                         disabled={isLoading || !watch('apiKey')}
-                                        className="flex-1 bg-gray-600 text-white py-2 px-4 rounded-md hover:bg-gray-700 dark:bg-gray-600 dark:hover:bg-gray-700 disabled:opacity-50 disabled:cursor-not-allowed"
+                                        variant="secondary"
+                                        className="flex-1"
                                     >
                                         测试连接
-                                    </button>
+                                    </CustomButton>
 
-                                    <button
+                                    <CustomButton
                                         type="button"
                                         onClick={() => {
                                             setShowForm(false);
                                             setEditingConfig(null);
                                             reset();
                                         }}
-                                        className="px-4 py-2 border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 rounded-md hover:bg-gray-50 dark:hover:bg-gray-700"
+                                        variant="secondary"
                                     >
                                         取消
-                                    </button>
+                                    </CustomButton>
                                 </div>
                             </form>
                         )}

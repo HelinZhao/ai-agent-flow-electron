@@ -1,4 +1,5 @@
 import React, { useState, useRef, useEffect } from 'react';
+import { formClasses } from '@renderer/styles/form-colors';
 
 interface SelectOption {
   value: string;
@@ -114,17 +115,16 @@ const CustomSelect: React.FC<CustomSelectProps> = ({
       <div
         className={`
           relative flex items-center justify-between w-full
-          border border-gray-300 dark:border-gray-600 rounded-md cursor-pointer transition-all duration-200
-          bg-white/70 dark:bg-gray-700/70 backdrop-blur-sm
+          ${formClasses.select.base}
+          ${formClasses.select.background}
+          ${!disabled ? formClasses.select.normal : formClasses.select.disabled}
+          ${disabled ? formClasses.select.disabledOpacity : ''}
+          ${error ? formClasses.select.error : ''}
+          ${error ? formClasses.select.errorFocus : formClasses.select.focus}
           ${sizeClasses[size]}
-          ${disabled
-            ? 'border-gray-300 dark:border-gray-600 bg-gray-50 dark:bg-gray-800 cursor-not-allowed opacity-60'
-            : error
-              ? 'border-red-300 dark:border-red-600 focus:ring-2 focus:ring-red-500/50 focus:border-red-500/50'
-              : 'border-gray-200/50 dark:border-gray-600/50 hover:border-gray-300/50 dark:hover:border-gray-500/50 focus:ring-2 focus:ring-blue-500/50 focus:border-blue-500/50'
-          }
-          ${isFocused ? 'ring-2 ring-blue-500/50 border-blue-500/50' : ''}
-          ${isOpen ? 'ring-2 ring-blue-500/50 border-blue-500/50' : ''}
+          ${isFocused && !error ? 'ring-2 ring-blue-500/50 border-blue-500/50' : ''}
+          ${isOpen && !error ? 'ring-2 ring-blue-500/50 border-blue-500/50' : ''}
+          cursor-pointer
         `}
         onClick={handleToggle}
         onKeyDown={handleKeyDown}
@@ -136,8 +136,8 @@ const CustomSelect: React.FC<CustomSelectProps> = ({
       >
         <span className={`flex-1 text-left ${
           selectedOption
-            ? 'text-gray-900 dark:text-white'
-            : 'text-gray-400 dark:text-gray-500'
+            ? formClasses.select.text
+            : formClasses.select.placeholder
         }`}>
           {selectedOption ? selectedOption.label : placeholder}
         </span>

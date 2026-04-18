@@ -4,6 +4,7 @@ import { Agent, ChatHistory, ChatMessage } from '@renderer/types';
 import { chatHistoryApi } from '@renderer/lib/chatHistory';
 import { workflowExecutionApi } from '@renderer/lib/api';
 import CustomSelect from '@renderer/components/CustomSelect';
+import CustomButton from '@renderer/components/CustomButton';
 
 // 使用全局类型定义，不需要重复定义
 
@@ -110,12 +111,12 @@ export default function Chat(): React.JSX.Element {
             const { message, success: finalSuccess } = await workflowExecutionApi.waitForAgentChatResultSSE(
                 executionId,
                 (progress) => {
-                  // 可以在这里更新UI显示执行进度
-                  console.log('执行进度:', progress)
-                  // 如果收到节点更新，可以显示进度信息
-                  if (progress.type === 'node_update') {
-                    console.log(`节点 ${progress.nodeLabel} 已完成`)
-                  }
+                    // 可以在这里更新UI显示执行进度
+                    console.log('执行进度:', progress)
+                    // 如果收到节点更新，可以显示进度信息
+                    if (progress.type === 'node_update') {
+                        console.log(`节点 ${progress.nodeLabel} 已完成`)
+                    }
                 }
             )
 
@@ -243,6 +244,7 @@ export default function Chat(): React.JSX.Element {
                                 }))
                             ]}
                             placeholder="选择Agent"
+                            className='min-w-[150px]'
                         />
 
                         {selectedAgent && (
@@ -253,18 +255,18 @@ export default function Chat(): React.JSX.Element {
                                         <span>加载历史...</span>
                                     </div>
                                 )}
-                                <button
+                                <CustomButton
                                     onClick={startNewChat}
-                                    className="px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-md text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700"
+                                    variant="secondary"
                                 >
                                     新对话
-                                </button>
-                                <button
+                                </CustomButton>
+                                <CustomButton
                                     onClick={clearCurrentChatHistory}
-                                    className="px-4 py-2 border border-red-300 dark:border-red-600 rounded-md text-red-700 dark:text-red-300 hover:bg-red-50 dark:hover:bg-red-900/20"
+                                    variant="danger"
                                 >
                                     清空历史
-                                </button>
+                                </CustomButton>
                             </div>
                         )}
                     </div>
@@ -357,27 +359,42 @@ export default function Chat(): React.JSX.Element {
                             </div>
 
                             {/* 输入区域 */}
-                            <div className="border-t border-gray-200 dark:border-gray-700 p-4 bg-white dark:bg-gray-800">
-                                <div className="flex space-x-2">
+                            <div className="border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 rounded-xl overflow-hidden mx-3 mb-3">
+                                {/* 文本输入区域 - 无边框设计 */}
+                                <div className="p-4 pb-2">
                                     <textarea
                                         value={inputMessage}
                                         onChange={(e) => setInputMessage(e.target.value)}
-                                        onKeyPress={handleKeyPress}
+                                        onKeyDown={handleKeyPress}
                                         placeholder="输入您的消息..."
-                                        className="flex-1 px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 resize-none bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
+                                        className="w-full resize-none bg-transparent border-none outline-none text-gray-900 dark:text-white placeholder-gray-400 dark:placeholder-gray-500 min-h-[44px] max-h-[120px] text-base leading-relaxed"
                                         rows={1}
                                         disabled={isLoading}
+                                        style={{
+                                            overflow: 'hidden',
+                                            fontFamily: 'inherit'
+                                        }}
                                     />
-                                    <button
-                                        onClick={handleSendMessage}
-                                        disabled={!inputMessage.trim() || isLoading}
-                                        className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed"
-                                    >
-                                        发送
-                                    </button>
                                 </div>
-                                <div className="text-xs text-gray-500 dark:text-gray-400 mt-1">
-                                    按 Enter 发送，Shift + Enter 换行
+
+                                {/* 底部工具栏 */}
+                                <div className="flex items-center justify-between px-4 py-2 bg-white dark:bg-gray-800">
+                                    <div className="flex items-center space-x-2 text-xs text-gray-500 dark:text-gray-400">
+                                        <span>按 Enter 发送</span>
+                                        <span>•</span>
+                                        <span>Shift + Enter 换行</span>
+                                    </div>
+
+                                    <div className="flex items-center space-x-2">
+                                        <CustomButton
+                                            onClick={handleSendMessage}
+                                            disabled={!inputMessage.trim() || isLoading}
+                                            variant="primary"
+                                            size="sm"
+                                        >
+                                            {isLoading ? '发送中...' : '发送'}
+                                        </CustomButton>
+                                    </div>
                                 </div>
                             </div>
                         </>

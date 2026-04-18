@@ -7,6 +7,10 @@ import { ReactFlowProvider } from '@xyflow/react';
 import { useWorkflowExecution } from '@renderer/hooks/useWorkflowExecution';
 import ExecutionProgressPanel from '@renderer/components/workflow/ExecutionProgressPanel';
 import CustomSelect from '@renderer/components/CustomSelect';
+import CustomInput from '@renderer/components/CustomInput';
+import CustomButton from '@renderer/components/CustomButton';
+import CustomTextarea from '@renderer/components/CustomTextarea';
+import CustomFileUpload from '@renderer/components/CustomFileUpload';
 
 export default function Workflow(): React.JSX.Element {
     const { workflows, addWorkflow, updateWorkflow, deleteWorkflow, activeLLMConfig } = useWorkflowStore();
@@ -262,58 +266,58 @@ export default function Workflow(): React.JSX.Element {
 
                         {isCreating ? (
                             <div className="flex items-center space-x-3">
-                                <input
+                                <CustomInput
                                     type="text"
                                     value={newWorkflowName}
                                     onChange={(e) => setNewWorkflowName(e.target.value)}
                                     placeholder="输入工作流名称"
-                                    className="px-4 py-2.5 border border-gray-200/50 dark:border-gray-600/50 rounded-xl bg-white/70 dark:bg-gray-700/70 backdrop-blur-sm text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500/50 focus:border-blue-500/50 transition-all duration-200 w-48"
+                                    className="w-48"
                                     onKeyDown={(e) => e.key === 'Enter' && handleCreateWorkflow()}
                                 />
-                                <button
+                                <CustomButton
                                     onClick={handleCreateWorkflow}
-                                    className="px-5 py-2.5 bg-gradient-to-r from-blue-500 to-blue-600 text-white rounded-xl hover:from-blue-600 hover:to-blue-700 transition-all duration-200 shadow-lg hover:shadow-xl font-medium"
+                                    variant="primary"
                                 >
                                     创建
-                                </button>
-                                <button
+                                </CustomButton>
+                                <CustomButton
                                     onClick={() => {
                                         setIsCreating(false);
                                         setNewWorkflowName('');
                                     }}
-                                    className="px-5 py-2.5 border border-gray-200/50 dark:border-gray-600/50 rounded-xl text-gray-700 dark:text-gray-300 hover:bg-white/50 dark:hover:bg-gray-700/50 transition-all duration-200 font-medium"
+                                    variant="secondary"
                                 >
                                     取消
-                                </button>
+                                </CustomButton>
                             </div>
                         ) : (
-                            <button
+                            <CustomButton
                                 onClick={() => setIsCreating(true)}
-                                className="px-5 py-2.5 bg-gradient-to-r from-green-500 to-green-600 text-white rounded-xl hover:from-green-600 hover:to-green-700 transition-all duration-200 shadow-lg hover:shadow-xl font-medium flex items-center space-x-2"
+                                variant="success"
                             >
                                 <span>✨</span>
                                 <span>新建工作流</span>
-                            </button>
+                            </CustomButton>
                         )}
-                        <button
+                        <CustomButton
                             onClick={() => setShowImportModal(true)}
-                            className="px-5 py-2.5 bg-gradient-to-r from-purple-500 to-purple-600 text-white rounded-xl hover:from-purple-600 hover:to-purple-700 transition-all duration-200 shadow-lg hover:shadow-xl font-medium flex items-center space-x-2"
+                            variant="primary"
                         >
                             <span>📥</span>
                             <span>导入JSON</span>
-                        </button>
+                        </CustomButton>
                         {currentWorkflow && (
-                            <button
+                            <CustomButton
                                 onClick={(e) => {
                                     e.stopPropagation();
                                     handleDeleteWorkflow(currentWorkflow.id);
                                 }}
-                                className="px-5 py-2.5 bg-gradient-to-r from-red-500 to-red-600 text-white rounded-xl hover:from-red-600 hover:to-red-700 transition-all duration-200 shadow-lg hover:shadow-xl font-medium flex items-center space-x-2"
+                                variant="danger"
                                 title="删除工作流"
                             >
                                 <span>🗑️</span>
                                 <span>删除</span>
-                            </button>
+                            </CustomButton>
                         )}
                     </div>
 
@@ -385,21 +389,25 @@ export default function Workflow(): React.JSX.Element {
                                 </div>
 
                                 <div className="flex flex-col sm:flex-row gap-4 justify-center">
-                                    <button
+                                    <CustomButton
                                         onClick={() => setIsCreating(true)}
-                                        className="px-8 py-4 bg-gradient-to-r from-blue-500 to-purple-600 text-white rounded-2xl hover:from-blue-600 hover:to-purple-700 transition-all duration-300 shadow-xl hover:shadow-2xl font-semibold text-lg flex items-center space-x-3 group"
+                                        variant="primary"
+                                        size="xl"
+                                        className="flex items-center space-x-3 group"
                                     >
                                         <span className="text-xl">✨</span>
                                         <span>创建第一个工作流</span>
                                         <span className="group-hover:translate-x-1 transition-transform duration-300">→</span>
-                                    </button>
-                                    <button
+                                    </CustomButton>
+                                    <CustomButton
                                         onClick={() => setShowImportModal(true)}
-                                        className="px-8 py-4 bg-white/80 dark:bg-gray-800/80 backdrop-blur-md text-gray-700 dark:text-gray-300 rounded-2xl hover:bg-white dark:hover:bg-gray-700/80 transition-all duration-300 shadow-lg hover:shadow-xl font-semibold text-lg flex items-center space-x-3 border border-gray-200/50 dark:border-gray-700/50"
+                                        variant="secondary"
+                                        size="xl"
+                                        className="flex items-center space-x-3"
                                     >
                                         <span className="text-xl">📥</span>
                                         <span>导入现有工作流</span>
-                                    </button>
+                                    </CustomButton>
                                 </div>
                             </div>
                         </div>
@@ -421,18 +429,18 @@ export default function Workflow(): React.JSX.Element {
                             </p>
                         </div>
                         <div className="flex justify-end space-x-3">
-                            <button
+                            <CustomButton
                                 onClick={cancelDeleteWorkflow}
-                                className="px-6 py-3 border border-gray-200/50 dark:border-gray-600/50 rounded-xl text-gray-700 dark:text-gray-300 hover:bg-gray-50/50 dark:hover:bg-gray-700/50 transition-all duration-200 font-medium"
+                                variant="secondary"
                             >
                                 取消
-                            </button>
-                            <button
+                            </CustomButton>
+                            <CustomButton
                                 onClick={confirmDeleteWorkflow}
-                                className="px-6 py-3 bg-gradient-to-r from-red-500 to-red-600 text-white rounded-xl hover:from-red-600 hover:to-red-700 transition-all duration-200 shadow-lg font-medium"
+                                variant="danger"
                             >
                                 删除
-                            </button>
+                            </CustomButton>
                         </div>
                     </div>
                 </div>
@@ -454,12 +462,12 @@ export default function Workflow(): React.JSX.Element {
                                 <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-3">
                                     选择JSON文件
                                 </label>
-                                <input
-                                    type="file"
+                                <CustomFileUpload
                                     accept=".json"
                                     onChange={handleFileUpload}
-                                    className="block w-full text-sm text-gray-500 dark:text-gray-400 file:mr-4 file:py-3 file:px-4 file:rounded-xl file:border-0 file:text-sm file:font-medium file:bg-gradient-to-r file:from-purple-50 file:to-blue-50 file:text-purple-700 hover:file:from-purple-100 hover:file:to-blue-100 transition-all"
-                                />
+                                >
+                                    选择JSON文件
+                                </CustomFileUpload>
                             </div>
 
                             <div className="relative">
@@ -475,12 +483,12 @@ export default function Workflow(): React.JSX.Element {
                                 <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-3">
                                     粘贴JSON内容
                                 </label>
-                                <textarea
+                                <CustomTextarea
                                     value={importJsonText}
                                     onChange={(e) => setImportJsonText(e.target.value)}
                                     placeholder="在此粘贴工作流JSON内容..."
                                     rows={12}
-                                    className="w-full px-4 py-3 border border-gray-200/50 dark:border-gray-600/50 rounded-xl shadow-sm focus:outline-none focus:ring-2 focus:ring-purple-500/50 focus:border-purple-500/50 font-mono text-sm bg-white/70 dark:bg-gray-700/70 text-gray-900 dark:text-white transition-all duration-200"
+                                    className="font-mono"
                                 />
                             </div>
 
@@ -494,18 +502,18 @@ export default function Workflow(): React.JSX.Element {
                             )}
 
                             <div className="flex justify-end space-x-3 pt-4">
-                                <button
+                                <CustomButton
                                     onClick={closeImportModal}
-                                    className="px-6 py-3 border border-gray-200/50 dark:border-gray-600/50 rounded-xl text-gray-700 dark:text-gray-300 hover:bg-gray-50/50 dark:hover:bg-gray-700/50 transition-all duration-200 font-medium"
+                                    variant="secondary"
                                 >
                                     取消
-                                </button>
-                                <button
+                                </CustomButton>
+                                <CustomButton
                                     onClick={validateAndImportWorkflow}
-                                    className="px-6 py-3 bg-gradient-to-r from-purple-500 to-purple-600 text-white rounded-xl hover:from-purple-600 hover:to-purple-700 transition-all duration-200 shadow-lg font-medium"
+                                    variant="primary"
                                 >
                                     导入工作流
-                                </button>
+                                </CustomButton>
                             </div>
                         </div>
                     </div>
@@ -528,27 +536,26 @@ export default function Workflow(): React.JSX.Element {
                             <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-3">
                                 请输入要处理的内容:
                             </label>
-                            <textarea
+                            <CustomTextarea
                                 value={workflowInput}
                                 onChange={(e) => setWorkflowInput(e.target.value)}
                                 placeholder="请输入要传递给工作流的输入内容..."
                                 rows={6}
-                                className="w-full px-4 py-3 border border-gray-200/50 dark:border-gray-600/50 rounded-xl shadow-sm focus:outline-none focus:ring-2 focus:ring-green-500/50 focus:border-green-500/50 bg-white/70 dark:bg-gray-700/70 text-gray-900 dark:text-white transition-all duration-200"
                                 autoFocus
                             />
                         </div>
                         <div className="flex justify-end space-x-3">
-                            <button
+                            <CustomButton
                                 onClick={handleCancelExecution}
-                                className="px-6 py-3 border border-gray-200/50 dark:border-gray-600/50 rounded-xl text-gray-700 dark:text-gray-300 hover:bg-gray-50/50 dark:hover:bg-gray-700/50 transition-all duration-200 font-medium"
+                                variant="secondary"
                                 disabled={pendingExecution}
                             >
                                 取消
-                            </button>
-                            <button
+                            </CustomButton>
+                            <CustomButton
                                 onClick={() => handleExecuteWorkflow(workflowInput)}
+                                variant="success"
                                 disabled={!workflowInput.trim() || pendingExecution}
-                                className="px-6 py-3 bg-gradient-to-r from-green-500 to-green-600 text-white rounded-xl hover:from-green-600 hover:to-green-700 transition-all duration-200 shadow-lg font-medium disabled:opacity-50 disabled:cursor-not-allowed flex items-center space-x-2"
                             >
                                 {pendingExecution ? (
                                     <>
@@ -561,7 +568,7 @@ export default function Workflow(): React.JSX.Element {
                                         <span>执行工作流</span>
                                     </>
                                 )}
-                            </button>
+                            </CustomButton>
                         </div>
                     </div>
                 </div>

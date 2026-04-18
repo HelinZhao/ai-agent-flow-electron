@@ -5,6 +5,8 @@ import MarkdownIt from 'markdown-it';
 import MdEditor from 'react-markdown-editor-lite';
 import 'react-markdown-editor-lite/lib/index.css';
 import CustomSelect from '@renderer/components/CustomSelect';
+import CustomInput from '@renderer/components/CustomInput';
+import CustomButton from '@renderer/components/CustomButton';
 
 const mdParser = new MarkdownIt(/* Markdown-it options */);
 export default function Agents(): React.JSX.Element {
@@ -181,11 +183,10 @@ export default function Agents(): React.JSX.Element {
                                             <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
                                                 Agent名称 *
                                             </label>
-                                            <input
+                                            <CustomInput
                                                 type="text"
                                                 value={formData.name}
                                                 onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-                                                className="w-full px-4 py-3 border border-gray-200/50 dark:border-gray-600/50 rounded-xl bg-white/70 dark:bg-gray-700/70 backdrop-blur-sm text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500/50 focus:border-blue-500/50 transition-all duration-200"
                                                 placeholder="输入Agent名称"
                                             />
                                         </div>
@@ -194,11 +195,10 @@ export default function Agents(): React.JSX.Element {
                                             <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
                                                 描述
                                             </label>
-                                            <input
+                                            <CustomInput
                                                 type="text"
                                                 value={formData.description}
                                                 onChange={(e) => setFormData({ ...formData, description: e.target.value })}
-                                                className="w-full px-4 py-3 border border-gray-200/50 dark:border-gray-600/50 rounded-xl bg-white/70 dark:bg-gray-700/70 backdrop-blur-sm text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500/50 focus:border-blue-500/50 transition-all duration-200"
                                                 placeholder="输入Agent描述"
                                             />
                                         </div>
@@ -243,17 +243,17 @@ export default function Agents(): React.JSX.Element {
                                     </div>
 
                                     <div className="flex justify-end space-x-4 pt-4">
-                                        <button
+                                        <CustomButton
                                             onClick={() => {
                                                 setIsEditing(false);
                                                 setSelectedAgent(null);
                                                 setFormData({ name: '', description: '', instructions: '', workflowId: '' });
                                             }}
-                                            className="px-6 py-3 border border-gray-200/50 dark:border-gray-600/50 rounded-xl text-gray-700 dark:text-gray-300 hover:bg-gray-50/50 dark:hover:bg-gray-700/50 transition-all duration-200 font-medium"
+                                            variant="secondary"
                                         >
                                             取消
-                                        </button>
-                                        <button
+                                        </CustomButton>
+                                        <CustomButton
                                             onClick={handleSave}
                                             disabled={isLoading || !formData.name.trim() || !formData.instructions.trim()}
                     className="px-6 py-3 bg-gradient-to-r from-blue-500 to-blue-600 text-white rounded-xl hover:from-blue-600 hover:to-blue-700 transition-all duration-200 shadow-lg font-medium disabled:opacity-50 disabled:cursor-not-allowed flex items-center space-x-2"
@@ -269,7 +269,7 @@ export default function Agents(): React.JSX.Element {
                                                     <span>保存Agent</span>
                                                 </>
                                             )}
-                                        </button>
+                                        </CustomButton>
                                     </div>
                                 </div>
                             ) : selectedAgent ? (

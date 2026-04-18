@@ -320,7 +320,7 @@ export const useWorkflowStore = create<WorkflowState>((set, get) => ({
 
       // 如果删除的是活跃配置，需要重新获取活跃配置
       if (state.activeLLMConfig?.id === id) {
-        const activeConfig = newConfigs.find(c => c.isActive) || newConfigs[0] || null
+        const activeConfig = newConfigs.find((c) => c.isActive) || newConfigs[0] || null
         state.setActiveLLMConfig(activeConfig)
       }
     } catch (error) {
@@ -341,7 +341,7 @@ export const useWorkflowStore = create<WorkflowState>((set, get) => ({
       const result = await llmConfigApi.activate(id)
 
       // 更新配置列表中的活跃状态
-      const updatedConfigs = state.llmConfigs.map(config => ({
+      const updatedConfigs = state.llmConfigs.map((config) => ({
         ...config,
         isActive: config.id === id
       }))
@@ -369,7 +369,7 @@ export const useWorkflowStore = create<WorkflowState>((set, get) => ({
       set({ llmConfigs: configs })
 
       // 设置活跃配置
-      const activeConfig = configs.find(c => c.isActive) || configs[0] || null
+      const activeConfig = configs.find((c) => c.isActive) || configs[0] || null
       if (activeConfig) {
         state.setActiveLLMConfig(activeConfig)
       }

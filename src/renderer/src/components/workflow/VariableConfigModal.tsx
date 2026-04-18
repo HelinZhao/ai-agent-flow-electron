@@ -1,6 +1,9 @@
 import React, { useState } from 'react';
 import { VariableConfig } from '@renderer/types';
 import CustomSelect from '../CustomSelect';
+import CustomInput from '../CustomInput';
+import CustomButton from '../CustomButton';
+import CustomTextarea from '../CustomTextarea';
 
 interface VariableConfigModalProps {
   isOpen: boolean;
@@ -136,14 +139,12 @@ const VariableConfigModal: React.FC<VariableConfigModalProps> = ({
             <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
               变量名称 *
             </label>
-            <input
+            <CustomInput
               type="text"
               value={formData.name}
               onChange={(e) => handleInputChange('name', e.target.value)}
-              className={`w-full px-3 py-2 border rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 bg-white dark:bg-gray-700 text-gray-900 dark:text-white ${
-                errors.name ? 'border-red-500' : 'border-gray-300 dark:border-gray-600'
-              }`}
               placeholder="variableName"
+              error={errors.name}
             />
             {errors.name && <p className="text-red-500 text-xs mt-1">{errors.name}</p>}
             <p className="text-xs text-gray-500 mt-1">
@@ -155,14 +156,12 @@ const VariableConfigModal: React.FC<VariableConfigModalProps> = ({
             <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
               显示名称 *
             </label>
-            <input
+            <CustomInput
               type="text"
               value={formData.displayName}
               onChange={(e) => handleInputChange('displayName', e.target.value)}
-              className={`w-full px-3 py-2 border rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 bg-white dark:bg-gray-700 text-gray-900 dark:text-white ${
-                errors.displayName ? 'border-red-500' : 'border-gray-300 dark:border-gray-600'
-              }`}
               placeholder="变量显示名称"
+              error={errors.displayName}
             />
             {errors.displayName && <p className="text-red-500 text-xs mt-1">{errors.displayName}</p>}
           </div>
@@ -188,11 +187,10 @@ const VariableConfigModal: React.FC<VariableConfigModalProps> = ({
             <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
               默认值
             </label>
-            <input
+            <CustomInput
               type={formData.type === 'number' ? 'number' : 'text'}
               value={formData.defaultValue || ''}
               onChange={(e) => handleInputChange('defaultValue', e.target.value)}
-              className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
               placeholder="默认值"
             />
           </div>
@@ -201,10 +199,9 @@ const VariableConfigModal: React.FC<VariableConfigModalProps> = ({
             <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
               描述
             </label>
-            <textarea
+            <CustomTextarea
               value={formData.description || ''}
               onChange={(e) => handleInputChange('description', e.target.value)}
-              className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
               rows={2}
               placeholder="变量描述"
             />
@@ -225,18 +222,20 @@ const VariableConfigModal: React.FC<VariableConfigModalProps> = ({
         </div>
 
         <div className="flex justify-end space-x-2 p-4 border-t border-gray-200 dark:border-gray-600">
-          <button
+          <CustomButton
             onClick={handleClose}
-            className="px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-md text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700"
+            variant="secondary"
+            size="sm"
           >
             取消
-          </button>
-          <button
+          </CustomButton>
+          <CustomButton
             onClick={handleSubmit}
-            className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700"
+            variant="primary"
+            size="sm"
           >
             保存
-          </button>
+          </CustomButton>
         </div>
       </div>
     </div>

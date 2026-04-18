@@ -1,6 +1,8 @@
 import React, { useState } from 'react';
 import { VariableConfig } from '@renderer/types';
 import VariableConfigModal from '../VariableConfigModal';
+import CustomTextarea from '../../CustomTextarea';
+import CustomButton from '../../CustomButton';
 
 interface LLMConfigProps {
   config: Record<string, any>;
@@ -58,10 +60,9 @@ const LLMConfig: React.FC<LLMConfigProps> = ({ config, onConfigChange }) => {
         <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
           提示词模板 *
         </label>
-        <textarea
+        <CustomTextarea
           value={config.prompt || ''}
           onChange={(e) => onConfigChange({ ...config, prompt: e.target.value })}
-          className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
           rows={4}
           placeholder="输入提示词模板，可以使用 {{variableName}} 格式的变量"
         />
@@ -72,12 +73,13 @@ const LLMConfig: React.FC<LLMConfigProps> = ({ config, onConfigChange }) => {
           <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
             变量配置
           </label>
-          <button
+          <CustomButton
             onClick={handleAddVariable}
-            className="px-3 py-1 text-sm bg-blue-600 text-white rounded hover:bg-blue-700"
+            variant="primary"
+            size="sm"
           >
             + 添加变量
-          </button>
+          </CustomButton>
         </div>
 
         {variables.length === 0 ? (

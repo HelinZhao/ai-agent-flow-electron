@@ -10,11 +10,11 @@ function createWindow(): void {
   const mainWindow = new BrowserWindow({
     width: 1000,
     height: 600,
-    minWidth: 800,      // 最小宽度
-    minHeight: 600,     // 最小高度
+    minWidth: 800, // 最小宽度
+    minHeight: 600, // 最小高度
     show: false,
     autoHideMenuBar: true,
-    resizable: true,    // 允许用户调整窗口大小
+    resizable: true, // 允许用户调整窗口大小
     ...(process.platform === 'linux' ? { icon } : {}),
     webPreferences: {
       preload: join(__dirname, '../preload/index.mjs'),

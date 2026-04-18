@@ -4,6 +4,9 @@ import { Skill } from '@renderer/types';
 import MdEditor from 'react-markdown-editor-lite';
 import 'react-markdown-editor-lite/lib/index.css';
 import MarkdownIt from 'markdown-it';
+import CustomButton from '@renderer/components/CustomButton';
+import CustomInput from '@renderer/components/CustomInput';
+import CustomFileUpload from '@renderer/components/CustomFileUpload';
 
 const mdParser = new MarkdownIt(/* Markdown-it options */);
 
@@ -94,25 +97,18 @@ export default function Skills(): React.JSX.Element {
             <div className="flex justify-between items-center mb-6">
                 <h1 className="text-2xl font-bold text-gray-900 dark:text-white">技能管理</h1>
                 <div className="flex space-x-2">
-                    <input
-                        type="file"
+                    <CustomFileUpload
                         accept=".md,.txt"
                         onChange={handleImportFromFile}
-                        className="hidden"
-                        id="file-upload"
-                    />
-                    <label
-                        htmlFor="file-upload"
-                        className="bg-green-600 text-white px-4 py-2 rounded-md hover:bg-green-700 cursor-pointer"
                     >
                         从文件导入
-                    </label>
-                    <button
+                    </CustomFileUpload>
+                    <CustomButton
                         onClick={handleCreate}
-                        className="bg-blue-600 text-white px-4 py-2 rounded-md hover:bg-blue-700"
+                        variant="primary"
                     >
                         创建新技能
-                    </button>
+                    </CustomButton>
                 </div>
             </div>
 
@@ -145,24 +141,26 @@ export default function Skills(): React.JSX.Element {
                                                 </p>
                                             </div>
                                             <div className="flex space-x-1 ml-2">
-                                                <button
+                                                <CustomButton
                                                     onClick={(e) => {
                                                         e.stopPropagation();
                                                         handleEdit(skill);
                                                     }}
-                                                    className="text-blue-600 dark:text-blue-400 hover:text-blue-800 dark:hover:text-blue-300"
+                                                    variant="primary"
+                                                    size="sm"
                                                 >
                                                     编辑
-                                                </button>
-                                                <button
+                                                </CustomButton>
+                                                <CustomButton
                                                     onClick={(e) => {
                                                         e.stopPropagation();
                                                         handleDelete(skill);
                                                     }}
-                                                    className="text-red-600 dark:text-red-400 hover:text-red-800 dark:hover:text-red-300"
+                                                    variant="danger"
+                                                    size="sm"
                                                 >
                                                     删除
-                                                </button>
+                                                </CustomButton>
                                             </div>
                                         </div>
                                     </div>
@@ -191,11 +189,10 @@ export default function Skills(): React.JSX.Element {
                                         <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
                                             技能名称 *
                                         </label>
-                                        <input
+                                        <CustomInput
                                             type="text"
                                             value={formData.name}
                                             onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-                                            className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
                                             placeholder="输入技能名称"
                                         />
                                     </div>
@@ -204,11 +201,10 @@ export default function Skills(): React.JSX.Element {
                                         <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
                                             描述
                                         </label>
-                                        <input
+                                        <CustomInput
                                             type="text"
                                             value={formData.description}
                                             onChange={(e) => setFormData({ ...formData, description: e.target.value })}
-                                            className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
                                             placeholder="输入技能描述"
                                         />
                                     </div>
@@ -226,23 +222,23 @@ export default function Skills(): React.JSX.Element {
                                     </div>
 
                                     <div className="flex justify-end space-x-3">
-                                        <button
+                                        <CustomButton
                                             onClick={() => {
                                                 setIsEditing(false);
                                                 setSelectedSkill(null);
                                                 setFormData({ name: '', description: '', content: '' });
                                             }}
-                                            className="px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-md text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700"
+                                            variant="secondary"
                                         >
                                             取消
-                                        </button>
-                                        <button
+                                        </CustomButton>
+                                        <CustomButton
                                             onClick={handleSave}
                                             disabled={isLoading || !formData.name.trim() || !formData.content.trim()}
-                                            className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed"
+                                            variant="primary"
                                         >
                                             {isLoading ? '保存中...' : '保存'}
-                                        </button>
+                                        </CustomButton>
                                     </div>
                                 </div>
                             ) : selectedSkill ? (

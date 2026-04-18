@@ -1,5 +1,8 @@
 import React from 'react';
 import { v4 as uuidv4 } from 'uuid';
+import CustomButton from '../../CustomButton';
+import CustomInput from '../../CustomInput';
+import CustomTextarea from '../../CustomTextarea';
 
 interface BranchCondition {
   id: string;
@@ -48,12 +51,13 @@ const BranchConfig: React.FC<BranchConfigProps> = ({ config, onConfigChange }) =
         <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
           分支条件配置
         </label>
-        <button
+        <CustomButton
           onClick={addBranch}
-          className="px-3 py-1 text-sm bg-blue-600 text-white rounded hover:bg-blue-700"
+          variant="primary"
+          size="sm"
         >
           + 添加分支
-        </button>
+        </CustomButton>
       </div>
 
       {branches.map((branch: any, index: number) => (
@@ -76,12 +80,12 @@ const BranchConfig: React.FC<BranchConfigProps> = ({ config, onConfigChange }) =
             <label className="block text-xs font-medium text-gray-600 dark:text-gray-400 mb-1">
               分支标签
             </label>
-            <input
+            <CustomInput
               type="text"
               value={branch.label}
               onChange={(e) => updateBranch(branch.id, 'label', e.target.value)}
-              className="w-full px-2 py-1 text-sm border border-gray-300 dark:border-gray-600 rounded focus:outline-none focus:ring-blue-500 focus:border-blue-500 bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
               placeholder="分支名称"
+              size="sm"
             />
           </div>
 
@@ -89,12 +93,12 @@ const BranchConfig: React.FC<BranchConfigProps> = ({ config, onConfigChange }) =
             <label className="block text-xs font-medium text-gray-600 dark:text-gray-400 mb-1">
               条件描述
             </label>
-            <textarea
+            <CustomTextarea
               value={branch.condition}
               onChange={(e) => updateBranch(branch.id, 'condition', e.target.value)}
-              className="w-full px-2 py-1 text-sm border border-gray-300 dark:border-gray-600 rounded focus:outline-none focus:ring-blue-500 focus:border-blue-500 bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
               rows={2}
               placeholder="描述此分支的执行条件"
+              className="text-sm"
             />
           </div>
         </div>
