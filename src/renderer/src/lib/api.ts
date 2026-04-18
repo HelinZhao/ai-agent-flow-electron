@@ -9,7 +9,7 @@ import {
   NodeExecutionResult
 } from '@renderer/types'
 
-const baseURL = 'http://localhost:3000/api'
+const baseURL = 'http://localhost:3100/api'
 
 // 创建axios实例
 const api = axios.create({

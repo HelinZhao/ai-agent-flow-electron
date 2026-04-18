@@ -11,7 +11,7 @@ import { app } from 'electron'
 export class LocalServer {
   private app: express.Application
   private server: any = null
-  private port: number = 3000
+  private port: number = 3100
 
   constructor() {
     this.app = express()
@@ -58,7 +58,7 @@ export class LocalServer {
 
     // 根路径
     this.app.get('/', (_req, res) => {
-      res.json({
+      res.status(200).json({
         message: 'AI Agent Flow Designer API Server',
         version: '1.0.0',
         endpoints: {

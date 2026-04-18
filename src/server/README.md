@@ -40,7 +40,7 @@ npm install
 npm run dev
 ```
 
-服务器将在 http://localhost:3001 启动
+服务器将在 http://localhost:3100 启动
 
 ### 构建生产版本
 
@@ -152,7 +152,7 @@ interface LLMConfig {
 
 | 变量名 | 描述 | 默认值 |
 |--------|------|--------|
-| PORT | 服务器端口 | 3001 |
+| PORT | 服务器端口 | 3100 |
 
 ## 开发指南
 
@@ -198,7 +198,7 @@ RUN npm install --production
 
 COPY dist/ ./dist/
 
-EXPOSE 3001
+EXPOSE 3100
 
 CMD ["node", "dist/index.js"]
 ```
