@@ -30,5 +30,10 @@ export default defineConfig(
       '@typescript-eslint/explicit-function-return-type': 'off'
     }
   },
+  {
+    rules: {
+      'prettier/prettier': ['error', { endOfLine: 'crlf' }]
+    }
+  },
   eslintConfigPrettier
 )
