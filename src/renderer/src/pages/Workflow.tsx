@@ -1,12 +1,11 @@
 import React, { useState, useCallback } from 'react';
 import WorkflowDesigner from '@renderer/components/workflow/WorkflowDesigner';
 import { useWorkflowStore } from '@renderer/store/workflowStore';
-import { type Workflow, WorkflowNode } from '@renderer/types';
+import { WorkflowNode, type Workflow } from '@renderer/types';
 import { useMemoizedFn } from 'ahooks';
 import { ReactFlowProvider } from '@xyflow/react';
 import { useWorkflowExecution } from '@renderer/hooks/useWorkflowExecution';
 import ExecutionProgressPanel from '@renderer/components/workflow/ExecutionProgressPanel';
-import CustomSelect from '@renderer/components/CustomSelect';
 import CustomInput from '@renderer/components/CustomInput';
 import CustomButton from '@renderer/components/CustomButton';
 import CustomTextarea from '@renderer/components/CustomTextarea';
@@ -49,7 +48,7 @@ export default function Workflow(): React.JSX.Element {
         }
     });
 
-    const handleCreateWorkflow = useCallback(async () => {
+    const handleCreateWorkflow = useMemoizedFn(async () => {
         if (!newWorkflowName.trim()) return;
 
         const startNode: WorkflowNode = {
@@ -83,95 +82,73 @@ export default function Workflow(): React.JSX.Element {
 
         setNewWorkflowName('');
         setIsCreating(false);
-    }, [newWorkflowName, addWorkflow]);
-
-    const handleWorkflowChange = useMemoizedFn((updatedWorkflow: Partial<Workflow>) => {
-        setCurrentWorkflow({ ...currentWorkflow!, ...updatedWorkflow });
     });
 
-    const validateWorkflow = useMemoizedFn((workflow: Workflow): string | null => {
-        if (!workflow.nodes || workflow.nodes.length === 0) {
-            return '工作流不能为空，请添加节点';
+    const handleWorkflowChange = useCallback((updatedWorkflow: Partial<Workflow>) => {
+        if (!currentWorkflow?.id) return
+        updateWorkflow(currentWorkflow.id, updatedWorkflow);
+        setCurrentWorkflow(prev => ({ ...prev, ...updatedWorkflow as Workflow }));
+    }, [updateWorkflow, currentWorkflow?.id]);
+
+    const handleSave = useCallback(() => {
+        if (currentWorkflow) {
+            updateWorkflow(currentWorkflow.id, currentWorkflow);
         }
+    }, [currentWorkflow, updateWorkflow]);
 
-        const startNodes = workflow.nodes.filter(node => node.type === 'start');
-
-        if (startNodes.length === 0) {
-            return '工作流必须包含一个开始节点';
-        }
-
-        if (startNodes.length > 1) {
-            return '工作流只能包含一个开始节点';
-        }
-
-        return null; // 验证通过
-    });
-
-    const handleSave = useMemoizedFn(() => {
-        if (!currentWorkflow) return;
-
-        const validationError = validateWorkflow(currentWorkflow);
-        if (validationError) {
-            alert(validationError);
-            return;
-        }
-
-        updateWorkflow(currentWorkflow.id, currentWorkflow);
-        alert('工作流保存成功！');
-    });
-
-    const handleRun = useCallback(() => {
+    const handleRun = useCallback(async () => {
         if (!currentWorkflow || !activeLLMConfig) {
-            alert('请先配置LLM API并保存工作流');
+            if (!activeLLMConfig) {
+                alert('请先配置LLM API');
+            }
             return;
         }
-        // 显示输入对话框
-        setWorkflowInput('');
+
         setShowInputDialog(true);
     }, [currentWorkflow, activeLLMConfig]);
 
-    const handleExecuteWorkflow = useCallback(async (input: string) => {
-        if (!currentWorkflow) return;
+    const handleExecute = useCallback(async () => {
+        if (!currentWorkflow || !workflowInput.trim()) return;
 
+        setPendingExecution(true);
         setShowInputDialog(false);
-        setPendingExecution(false);
+        setShowProgressPanel(true);
 
         try {
-            // 使用新的监控API开始执行
-            await executeWorkflow(currentWorkflow, input)
+            await executeWorkflow(currentWorkflow, workflowInput);
         } catch (error) {
             console.error('工作流执行失败:', error);
+        } finally {
+            setPendingExecution(false);
+            setWorkflowInput('');
         }
-    }, [currentWorkflow, executeWorkflow]);
+    }, [currentWorkflow, workflowInput, executeWorkflow]);
 
-    const handleCancelExecution = useCallback(() => {
-        setShowInputDialog(false);
-        setPendingExecution(false);
-        setWorkflowInput('');
-    }, []);
+    const handleImport = useCallback(() => {
+        try {
+            const importedWorkflow = JSON.parse(importJsonText) as Workflow;
+            if (!importedWorkflow.name || !Array.isArray(importedWorkflow.nodes)) {
+                throw new Error('无效的工作流格式');
+            }
 
-    const handleDeleteWorkflow = useCallback((workflowId: string) => {
-        setWorkflowToDelete(workflowId);
-    }, []);
+            const newWorkflow: Workflow = {
+                ...importedWorkflow,
+                id: `workflow-${Date.now()}`,
+                createdAt: new Date(),
+                updatedAt: new Date()
+            };
 
-    const confirmDeleteWorkflow = useCallback(() => {
-        if (!workflowToDelete) return;
-
-        deleteWorkflow(workflowToDelete);
-
-        // If we deleted the current workflow, clear it
-        if (currentWorkflow?.id === workflowToDelete) {
-            setCurrentWorkflow(null);
+            addWorkflow(newWorkflow);
+            setCurrentWorkflow(newWorkflow);
+            setShowImportModal(false);
+            setImportJsonText('');
+            setImportError(null);
+        } catch (error) {
+            setImportError(error instanceof Error ? error.message : '导入失败');
         }
+    }, [importJsonText, addWorkflow]);
 
-        setWorkflowToDelete(null);
-    }, [workflowToDelete, deleteWorkflow, currentWorkflow]);
-
-    const cancelDeleteWorkflow = useCallback(() => {
-        setWorkflowToDelete(null);
-    }, []);
-
-    const handleFileUpload = useCallback((event: React.ChangeEvent<HTMLInputElement>) => {
+    const handleImportFromFile = useCallback((event: React.ChangeEvent<HTMLInputElement>) => {
         const file = event.target.files?.[0];
         if (!file) return;
 
@@ -180,103 +157,243 @@ export default function Workflow(): React.JSX.Element {
             try {
                 const content = e.target?.result as string;
                 setImportJsonText(content);
-                setImportError(null);
+                setShowImportModal(true);
             } catch (error) {
-                console.error(error)
-                setImportError('文件读取失败');
+                console.error('文件读取失败:', error);
             }
         };
         reader.readAsText(file);
+
+        // 清空input
+        event.target.value = '';
     }, []);
 
-    const validateAndImportWorkflow = useCallback(async () => {
-        if (!importJsonText.trim()) {
-            setImportError('请输入JSON内容');
-            return;
-        }
-
-        try {
-            const parsedWorkflow = JSON.parse(importJsonText);
-
-            // Basic validation
-            if (!parsedWorkflow.name || !parsedWorkflow.nodes || !parsedWorkflow.edges) {
-                setImportError('JSON格式不正确，缺少必要字段');
-                return;
-            }
-
-            // Create new workflow with generated ID and current timestamp
-            const workflowToImport: Workflow = {
-                ...parsedWorkflow,
-                id: '', // Will be generated by addWorkflow
-                createdAt: new Date(),
-                updatedAt: new Date()
-            };
-
-            const createdWorkflow = await addWorkflow(workflowToImport);
-            if (createdWorkflow) {
-                setCurrentWorkflow(createdWorkflow);
-                setShowImportModal(false);
-                setImportJsonText('');
-                setImportError(null);
-                alert('工作流导入成功！');
-            }
-        } catch (error) {
-            console.error(error)
-            setImportError('JSON解析失败，请检查格式');
-        }
-    }, [importJsonText, addWorkflow]);
-
-    const closeImportModal = useCallback(() => {
+    const resetImportModal = useCallback(() => {
         setShowImportModal(false);
         setImportJsonText('');
         setImportError(null);
     }, []);
 
     return (
-        <div className="h-full flex flex-col">
-            {/* 顶部工具栏 */}
-            <div className="bg-white/80 dark:bg-gray-800/80 backdrop-blur-md border-b border-gray-200/50 dark:border-gray-700/50 p-4 sticky top-0 z-30">
-                <div className="flex justify-between items-center">
-                    <div className="flex items-center space-x-4">
-                        <div className="flex items-center space-x-3">
-                            <div className="w-10 h-10 bg-gradient-to-r from-blue-500 to-purple-600 rounded-xl flex items-center justify-center">
-                                <span className="text-white font-bold text-lg">🔄</span>
-                            </div>
-                            <h1 className="text-xl font-bold bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent">
-                                工作流设计器
-                            </h1>
-                        </div>
-                        <div className="min-w-[200px]">
-                            <CustomSelect
-                                value={currentWorkflow?.id || ''}
-                                onChange={(value) => {
-                                    const workflow = workflows.find(w => w.id === value);
-                                    setCurrentWorkflow(workflow || null);
-                                }}
-                                options={[
-                                    { value: '', label: '选择工作流' },
-                                    ...workflows.map(workflow => ({
-                                        value: workflow.id,
-                                        label: workflow.name
-                                    }))
-                                ]}
-                                placeholder="选择工作流"
-                            />
+        <div className="mx-auto py-6 px-4 sm:px-6 lg:px-8">
+            <div className="flex justify-between items-center mb-6">
+                <div className="flex items-center space-x-3">
+                    <div className="w-10 h-10 bg-gradient-to-r from-blue-500 to-purple-600 rounded-xl flex items-center justify-center">
+                        <span className="text-white font-bold text-lg">🔄</span>
+                    </div>
+                    <h1 className="text-xl font-bold bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent">
+                        工作流设计器
+                    </h1>
+                </div>
+                <div className="flex space-x-2">
+                    <CustomButton
+                        onClick={() => setShowImportModal(true)}
+                        variant="secondary"
+                    >
+                        <span>📁</span>
+                        <span>导入</span>
+                    </CustomButton>
+                    <CustomFileUpload
+                        accept=".json"
+                        onChange={handleImportFromFile}
+                    >
+                        从文件导入
+                    </CustomFileUpload>
+                    <CustomButton
+                        onClick={() => setIsCreating(true)}
+                        variant="primary"
+                    >
+                        创建工作流
+                    </CustomButton>
+                </div>
+            </div>
+
+            {workflows.length === 0
+                ? <div className="flex-1 flex items-center justify-center relative pb-4 pt-4 h-[calc(100vh-200px)]">
+                    <div className="absolute inset-0 bg-gradient-to-br from-blue-50/50 via-purple-50/30 to-pink-50/50 dark:from-gray-800/50 dark:via-gray-700/30 dark:to-gray-600/50"></div>
+                    <div className="text-center relative z-10 max-w-4xl mx-auto px-6">
+                        <div className="mb-8">
+                            <div className="text-8xl mb-6 animate-bounce">🤖</div>
+                            <h2 className="text-4xl leading-normal font-bold bg-gradient-to-r from-blue-600 via-purple-600 to-pink-600 bg-clip-text text-transparent mb-4">
+                                欢迎使用 AI Agent 工作流设计器
+                            </h2>
+                            <p className="text-xl text-gray-600 dark:text-gray-300 mb-8">
+                                创建您的工作流，让AI按照您的设计执行复杂的任务
+                            </p>
                         </div>
 
-                        {isCreating ? (
-                            <div className="flex items-center space-x-3">
-                                <CustomInput
-                                    type="text"
-                                    value={newWorkflowName}
-                                    onChange={(e) => setNewWorkflowName(e.target.value)}
-                                    placeholder="输入工作流名称"
-                                    className="w-48"
-                                    onKeyDown={(e) => e.key === 'Enter' && handleCreateWorkflow()}
-                                />
+                        <div className="space-y-8">
+                            <div className="bg-white/80 dark:bg-gray-800/80 backdrop-blur-md p-8 rounded-2xl shadow-xl border border-gray-200/50 dark:border-gray-700/50 max-w-4xl mx-auto">
+                                <h3 className="text-2xl font-semibold text-gray-900 dark:text-white mb-6 flex items-center justify-center space-x-2">
+                                    <span>🚀</span>
+                                    <span>快速开始</span>
+                                </h3>
+                                <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
+                                    <div className="group text-center p-6 rounded-xl hover:bg-blue-50/50 dark:hover:bg-gray-700/50 transition-all duration-300">
+                                        <div className="w-16 h-16 bg-gradient-to-r from-blue-500 to-blue-600 rounded-2xl flex items-center justify-center mx-auto mb-4 group-hover:scale-110 transition-transform duration-300">
+                                            <span className="text-2xl">⚙️</span>
+                                        </div>
+                                        <div className="text-lg font-semibold text-blue-600 mb-3">1. 配置API</div>
+                                        <p className="text-gray-600 dark:text-gray-300 leading-relaxed">在API设置页面配置您的大模型API密钥，为您的AI代理提供强大的动力</p>
+                                    </div>
+                                    <div className="group text-center p-6 rounded-xl hover:bg-green-50/50 dark:hover:bg-gray-700/50 transition-all duration-300">
+                                        <div className="w-16 h-16 bg-gradient-to-r from-green-500 to-green-600 rounded-2xl flex items-center justify-center mx-auto mb-4 group-hover:scale-110 transition-transform duration-300">
+                                            <span className="text-2xl">⚡</span>
+                                        </div>
+                                        <div className="text-lg font-semibold text-green-600 mb-3">2. 创建技能</div>
+                                        <p className="text-gray-600 dark:text-gray-300 leading-relaxed">在技能管理页面创建和导入AI技能，扩展您代理的能力边界</p>
+                                    </div>
+                                    <div className="group text-center p-6 rounded-xl hover:bg-purple-50/50 dark:hover:bg-gray-700/50 transition-all duration-300">
+                                        <div className="w-16 h-16 bg-gradient-to-r from-purple-500 to-purple-600 rounded-2xl flex items-center justify-center mx-auto mb-4 group-hover:scale-110 transition-transform duration-300">
+                                            <span className="text-2xl">🔄</span>
+                                        </div>
+                                        <div className="text-lg font-semibold text-purple-600 mb-3">3. 设计工作流</div>
+                                        <p className="text-gray-600 dark:text-gray-300 leading-relaxed">使用可视化工具设计AI执行流程，构建复杂而优雅的自动化方案</p>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div className="flex flex-col sm:flex-row gap-4 justify-center">
+                                <CustomButton
+                                    onClick={() => setIsCreating(true)}
+                                    variant="primary"
+                                    size="xl"
+                                    className="flex items-center space-x-3 group"
+                                >
+                                    <span className="text-xl">✨</span>
+                                    <span>创建第一个工作流</span>
+                                </CustomButton>
+                                <CustomButton
+                                    onClick={() => setShowImportModal(true)}
+                                    variant="secondary"
+                                    size="xl"
+                                    className="flex items-center space-x-3"
+                                >
+                                    <span className="text-xl">📥</span>
+                                    <span>导入现有工作流</span>
+                                </CustomButton>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                : <div className="grid grid-cols-1 lg:grid-cols-4 gap-6 h-[calc(100vh-200px)]">
+                    {/* 工作流设计器 */}
+                    <div className="lg:col-span-3 flex flex-col min-h-[400px]">
+                        <div className="bg-white/80 dark:bg-gray-800/80 backdrop-blur-md shadow-lg rounded-2xl border border-gray-200/50 dark:border-gray-700/50 flex-1 flex flex-col overflow-auto">
+                            {currentWorkflow ? (
+                                <ReactFlowProvider>
+                                    <WorkflowDesigner
+                                        key={currentWorkflow.id}
+                                        workflow={currentWorkflow}
+                                        onWorkflowChange={handleWorkflowChange}
+                                        onSave={handleSave}
+                                        onRun={handleRun}
+                                        isRunning={isRunning}
+                                    />
+                                </ReactFlowProvider>
+                            ) : (
+                                <div className="flex-1 flex items-center justify-center">
+                                    <div className="text-center">
+                                        <div className="text-6xl mb-4">🔄</div>
+                                        <h3 className="text-xl font-semibold text-gray-900 dark:text-white mb-2">
+                                            请选择一个工作流
+                                        </h3>
+                                        <p className="text-gray-600 dark:text-gray-400">
+                                            从右侧列表中选择一个工作流开始编辑
+                                        </p>
+                                    </div>
+                                </div>
+                            )}
+                        </div>
+                    </div>
+
+                    {/* 工作流列表侧边栏 */}
+                    <div className="lg:col-span-1 flex flex-col">
+                        <div className="bg-white/80 dark:bg-gray-800/80 backdrop-blur-md shadow-lg rounded-2xl border border-gray-200/50 dark:border-gray-700/50 flex-1 flex flex-col">
+                            <div className="px-4 py-4 border-b border-gray-200/50 dark:border-gray-700/50">
+                                <h3 className="text-base font-semibold text-gray-900 dark:text-white flex items-center space-x-2">
+                                    <span>📋</span>
+                                    <span>工作流列表</span>
+                                    <span className="text-xs text-gray-500 dark:text-gray-400 font-normal">({workflows.length})</span>
+                                </h3>
+                            </div>
+                            <div className="flex-1 overflow-y-auto p-4">
+                                <div className="space-y-2">
+                                    {workflows.map((workflow) => (
+                                        <div
+                                            key={workflow.id}
+                                            className={`p-3 border rounded-lg cursor-pointer transition-all duration-200 ${currentWorkflow?.id === workflow.id
+                                                    ? 'border-blue-500 bg-blue-50 dark:bg-blue-900/20'
+                                                    : 'border-gray-200 dark:border-gray-600 hover:border-gray-300 dark:hover:border-gray-500'
+                                                }`}
+                                            onClick={() => setCurrentWorkflow(workflow)}
+                                        >
+                                            <div className="flex justify-between items-start">
+                                                <div className="flex-1 min-w-0">
+                                                    <h4 className="text-xs font-medium text-gray-900 dark:text-white truncate">
+                                                        {workflow.name}
+                                                    </h4>
+                                                    <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
+                                                        {new Date(workflow.updatedAt).toLocaleDateString()}
+                                                    </p>
+                                                </div>
+                                                <div className="flex flex-col space-y-1 ml-2">
+                                                    <CustomButton
+                                                        onClick={(e) => {
+                                                            e.stopPropagation();
+                                                            setCurrentWorkflow(workflow);
+                                                        }}
+                                                        variant="primary"
+                                                        size="sm"
+                                                    >
+                                                        编辑
+                                                    </CustomButton>
+                                                    <CustomButton
+                                                        onClick={(e) => {
+                                                            e.stopPropagation();
+                                                            setWorkflowToDelete(workflow.id);
+                                                        }}
+                                                        variant="danger"
+                                                        size="sm"
+                                                    >
+                                                        删除
+                                                    </CustomButton>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    ))}
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            }
+
+
+            {/* 创建工作流对话框 */}
+            {isCreating && (
+                <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+                    <div className="bg-white/95 dark:bg-gray-800/95 backdrop-blur-md rounded-2xl p-8 max-w-md w-full shadow-2xl border border-gray-200/50 dark:border-gray-700/50">
+                        <div className="text-center mb-6">
+                            <div className="w-16 h-16 bg-blue-100 dark:bg-blue-900/30 rounded-full flex items-center justify-center mx-auto mb-4">
+                                <span className="text-2xl text-blue-600">✨</span>
+                            </div>
+                            <h3 className="text-xl font-semibold text-gray-900 dark:text-white mb-2">创建新工作流</h3>
+                            <p className="text-gray-600 dark:text-gray-400">输入工作流名称开始设计</p>
+                        </div>
+                        <div className="space-y-4">
+                            <CustomInput
+                                value={newWorkflowName}
+                                onChange={(e) => setNewWorkflowName(e.target.value)}
+                                placeholder="工作流名称"
+                                autoFocus
+                            />
+                            <div className="flex space-x-3">
                                 <CustomButton
                                     onClick={handleCreateWorkflow}
                                     variant="primary"
+                                    className="flex-1"
+                                    disabled={!newWorkflowName.trim()}
                                 >
                                     创建
                                 </CustomButton>
@@ -286,134 +403,15 @@ export default function Workflow(): React.JSX.Element {
                                         setNewWorkflowName('');
                                     }}
                                     variant="secondary"
+                                    className="flex-1"
                                 >
                                     取消
                                 </CustomButton>
                             </div>
-                        ) : (
-                            <CustomButton
-                                onClick={() => setIsCreating(true)}
-                                variant="success"
-                            >
-                                <span>✨</span>
-                                <span>新建</span>
-                            </CustomButton>
-                        )}
-                        <CustomButton
-                            onClick={() => setShowImportModal(true)}
-                            variant="primary"
-                        >
-                            <span>📥</span>
-                            <span>导入</span>
-                        </CustomButton>
-                        {currentWorkflow && (
-                            <CustomButton
-                                onClick={(e) => {
-                                    e.stopPropagation();
-                                    handleDeleteWorkflow(currentWorkflow.id);
-                                }}
-                                variant="danger"
-                                title="删除工作流"
-                            >
-                                <span>🗑️</span>
-                                <span>删除</span>
-                            </CustomButton>
-                        )}
-                    </div>
-
-                    {currentWorkflow && (
-                        <div className="hidden lg:flex items-center space-x-2 px-4 py-2 bg-white/50 dark:bg-gray-700/50 rounded-xl backdrop-blur-sm">
-                            <span className="text-sm text-gray-600 dark:text-gray-300">当前工作流:</span>
-                            <span className="text-sm font-medium text-gray-900 dark:text-white">{currentWorkflow.name}</span>
                         </div>
-                    )}
+                    </div>
                 </div>
-            </div>
-
-            {/* 主要内容区域 */}
-            <div className="flex-1 flex">
-                {currentWorkflow ? (
-                    <ReactFlowProvider>
-                        <WorkflowDesigner
-                            key={currentWorkflow.id}
-                            workflow={currentWorkflow}
-                            onWorkflowChange={handleWorkflowChange}
-                            onSave={handleSave}
-                            onRun={handleRun}
-                            isRunning={isRunning}
-                        />
-                    </ReactFlowProvider>
-                ) : (
-                    <div className="flex-1 flex items-center justify-center relative pb-4 pt-4">
-                        <div className="absolute inset-0 bg-gradient-to-br from-blue-50/50 via-purple-50/30 to-pink-50/50 dark:from-gray-800/50 dark:via-gray-700/30 dark:to-gray-600/50"></div>
-                        <div className="text-center relative z-10 max-w-4xl mx-auto px-6">
-                            <div className="mb-8">
-                                <div className="text-8xl mb-6 animate-bounce">🤖</div>
-                                <h2 className="text-4xl leading-normal font-bold bg-gradient-to-r from-blue-600 via-purple-600 to-pink-600 bg-clip-text text-transparent mb-4">
-                                    欢迎使用 AI Agent 工作流设计器
-                                </h2>
-                                <p className="text-xl text-gray-600 dark:text-gray-300 mb-8">
-                                    创建您的工作流，让AI按照您的设计执行复杂的任务
-                                </p>
-                            </div>
-
-                            <div className="space-y-8">
-                                <div className="bg-white/80 dark:bg-gray-800/80 backdrop-blur-md p-8 rounded-2xl shadow-xl border border-gray-200/50 dark:border-gray-700/50 max-w-4xl mx-auto">
-                                    <h3 className="text-2xl font-semibold text-gray-900 dark:text-white mb-6 flex items-center justify-center space-x-2">
-                                        <span>🚀</span>
-                                        <span>快速开始</span>
-                                    </h3>
-                                    <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
-                                        <div className="group text-center p-6 rounded-xl hover:bg-blue-50/50 dark:hover:bg-gray-700/50 transition-all duration-300">
-                                            <div className="w-16 h-16 bg-gradient-to-r from-blue-500 to-blue-600 rounded-2xl flex items-center justify-center mx-auto mb-4 group-hover:scale-110 transition-transform duration-300">
-                                                <span className="text-2xl">⚙️</span>
-                                            </div>
-                                            <div className="text-lg font-semibold text-blue-600 mb-3">1. 配置API</div>
-                                            <p className="text-gray-600 dark:text-gray-300 leading-relaxed">在API设置页面配置您的大模型API密钥，为您的AI代理提供强大的动力</p>
-                                        </div>
-                                        <div className="group text-center p-6 rounded-xl hover:bg-green-50/50 dark:hover:bg-gray-700/50 transition-all duration-300">
-                                            <div className="w-16 h-16 bg-gradient-to-r from-green-500 to-green-600 rounded-2xl flex items-center justify-center mx-auto mb-4 group-hover:scale-110 transition-transform duration-300">
-                                                <span className="text-2xl">⚡</span>
-                                            </div>
-                                            <div className="text-lg font-semibold text-green-600 mb-3">2. 创建技能</div>
-                                            <p className="text-gray-600 dark:text-gray-300 leading-relaxed">在技能管理页面创建和导入AI技能，扩展您代理的能力边界</p>
-                                        </div>
-                                        <div className="group text-center p-6 rounded-xl hover:bg-purple-50/50 dark:hover:bg-gray-700/50 transition-all duration-300">
-                                            <div className="w-16 h-16 bg-gradient-to-r from-purple-500 to-purple-600 rounded-2xl flex items-center justify-center mx-auto mb-4 group-hover:scale-110 transition-transform duration-300">
-                                                <span className="text-2xl">🔄</span>
-                                            </div>
-                                            <div className="text-lg font-semibold text-purple-600 mb-3">3. 设计工作流</div>
-                                            <p className="text-gray-600 dark:text-gray-300 leading-relaxed">使用可视化工具设计AI执行流程，构建复杂而优雅的自动化方案</p>
-                                        </div>
-                                    </div>
-                                </div>
-
-                                <div className="flex flex-col sm:flex-row gap-4 justify-center">
-                                    <CustomButton
-                                        onClick={() => setIsCreating(true)}
-                                        variant="primary"
-                                        size="xl"
-                                        className="flex items-center space-x-3 group"
-                                    >
-                                        <span className="text-xl">✨</span>
-                                        <span>创建第一个工作流</span>
-                                        <span className="group-hover:translate-x-1 transition-transform duration-300">→</span>
-                                    </CustomButton>
-                                    <CustomButton
-                                        onClick={() => setShowImportModal(true)}
-                                        variant="secondary"
-                                        size="xl"
-                                        className="flex items-center space-x-3"
-                                    >
-                                        <span className="text-xl">📥</span>
-                                        <span>导入现有工作流</span>
-                                    </CustomButton>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                )}
-            </div>
+            )}
 
             {/* 删除确认对话框 */}
             {workflowToDelete && (
@@ -424,95 +422,78 @@ export default function Workflow(): React.JSX.Element {
                                 <span className="text-2xl text-red-600">⚠️</span>
                             </div>
                             <h3 className="text-xl font-semibold text-gray-900 dark:text-white mb-2">确认删除</h3>
-                            <p className="text-gray-600 dark:text-gray-300">
-                                您确定要删除这个工作流吗？此操作无法撤销。
-                            </p>
+                            <p className="text-gray-600 dark:text-gray-400">此操作无法撤销，请确认是否删除该工作流？</p>
                         </div>
-                        <div className="flex justify-end space-x-3">
+                        <div className="flex space-x-3">
                             <CustomButton
-                                onClick={cancelDeleteWorkflow}
-                                variant="secondary"
-                            >
-                                取消
-                            </CustomButton>
-                            <CustomButton
-                                onClick={confirmDeleteWorkflow}
+                                onClick={() => {
+                                    deleteWorkflow(workflowToDelete);
+                                    if (currentWorkflow?.id === workflowToDelete) {
+                                        setCurrentWorkflow(null);
+                                    }
+                                    setWorkflowToDelete(null);
+                                }}
                                 variant="danger"
+                                className="flex-1"
                             >
                                 删除
+                            </CustomButton>
+                            <CustomButton
+                                onClick={() => setWorkflowToDelete(null)}
+                                variant="secondary"
+                                className="flex-1"
+                            >
+                                取消
                             </CustomButton>
                         </div>
                     </div>
                 </div>
             )}
 
-            {/* 导入JSON对话框 */}
+            {/* 导入工作流对话框 */}
             {showImportModal && (
                 <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50 p-4">
-                    <div className="bg-white/95 dark:bg-gray-800/95 backdrop-blur-md rounded-2xl p-8 max-w-2xl w-full max-h-[90vh] overflow-y-auto shadow-2xl border border-gray-200/50 dark:border-gray-700/50">
-                        <div className="flex items-center space-x-3 mb-6">
-                            <div className="w-10 h-10 bg-gradient-to-r from-purple-500 to-purple-600 rounded-xl flex items-center justify-center">
-                                <span className="text-white text-lg">📥</span>
-                            </div>
+                    <div className="bg-white/95 dark:bg-gray-800/95 backdrop-blur-md rounded-2xl p-8 max-w-2xl w-full max-h-[80vh] overflow-hidden shadow-2xl border border-gray-200/50 dark:border-gray-700/50">
+                        <div className="flex justify-between items-center mb-6">
                             <h3 className="text-xl font-semibold text-gray-900 dark:text-white">导入工作流JSON</h3>
+                            <button
+                                onClick={resetImportModal}
+                                className="text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 transition-colors"
+                            >
+                                <span className="text-2xl">×</span>
+                            </button>
                         </div>
 
-                        <div className="space-y-6">
-                            <div>
-                                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-3">
-                                    选择JSON文件
-                                </label>
-                                <CustomFileUpload
-                                    accept=".json"
-                                    onChange={handleFileUpload}
-                                >
-                                    选择JSON文件
-                                </CustomFileUpload>
+                        {importError && (
+                            <div className="mb-4 p-4 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg">
+                                <p className="text-red-600 dark:text-red-400 text-sm">{importError}</p>
                             </div>
+                        )}
 
-                            <div className="relative">
-                                <div className="absolute inset-0 flex items-center">
-                                    <div className="w-full border-t border-gray-200/50 dark:border-gray-600/50" />
-                                </div>
-                                <div className="relative flex justify-center text-sm">
-                                    <span className="px-4 bg-white/95 dark:bg-gray-800/95 text-gray-500 dark:text-gray-400 font-medium">或者直接粘贴</span>
-                                </div>
-                            </div>
-
-                            <div>
-                                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-3">
-                                    粘贴JSON内容
-                                </label>
+                        <div className="space-y-4">
+                            <div className="flex-1">
                                 <CustomTextarea
                                     value={importJsonText}
                                     onChange={(e) => setImportJsonText(e.target.value)}
-                                    placeholder="在此粘贴工作流JSON内容..."
-                                    rows={12}
-                                    className="font-mono"
+                                    placeholder="粘贴工作流JSON内容..."
+                                    className="min-h-[300px] font-mono text-sm"
                                 />
                             </div>
-
-                            {importError && (
-                                <div className="bg-red-50/80 dark:bg-red-900/20 border border-red-200/50 dark:border-red-800/50 rounded-xl p-4">
-                                    <div className="flex items-center space-x-2">
-                                        <span className="text-red-500">⚠️</span>
-                                        <p className="text-sm text-red-600 dark:text-red-400">{importError}</p>
-                                    </div>
-                                </div>
-                            )}
-
-                            <div className="flex justify-end space-x-3 pt-4">
+                            <div className="flex space-x-3">
                                 <CustomButton
-                                    onClick={closeImportModal}
-                                    variant="secondary"
+                                    onClick={handleImport}
+                                    variant="primary"
+                                    className="flex-1"
+                                    disabled={!importJsonText.trim()}
                                 >
-                                    取消
+                                    导入
                                 </CustomButton>
                                 <CustomButton
-                                    onClick={validateAndImportWorkflow}
-                                    variant="primary"
+                                    onClick={resetImportModal}
+                                    variant="secondary"
+                                    className="flex-1"
                                 >
-                                    导入工作流
+                                    取消
                                 </CustomButton>
                             </div>
                         </div>
@@ -523,52 +504,43 @@ export default function Workflow(): React.JSX.Element {
             {/* 工作流输入对话框 */}
             {showInputDialog && (
                 <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50 p-4">
-                    <div className="bg-white/95 dark:bg-gray-800/95 backdrop-blur-md rounded-2xl p-8 max-w-lg w-full shadow-2xl border border-gray-200/50 dark:border-gray-700/50">
-                        <div className="flex items-center space-x-3 mb-6">
-                            <div className="w-10 h-10 bg-gradient-to-r from-green-500 to-green-600 rounded-xl flex items-center justify-center">
-                                <span className="text-white text-lg">⚡</span>
+                    <div className="bg-white/95 dark:bg-gray-800/95 backdrop-blur-md rounded-2xl p-8 max-w-2xl w-full shadow-2xl border border-gray-200/50 dark:border-gray-700/50">
+                        <div className="text-center mb-6">
+                            <div className="w-16 h-16 bg-green-100 dark:bg-green-900/30 rounded-full flex items-center justify-center mx-auto mb-4">
+                                <span className="text-2xl text-green-600">🚀</span>
                             </div>
-                            <h3 className="text-xl font-semibold text-gray-900 dark:text-white">
-                                输入工作流执行内容
-                            </h3>
+                            <h3 className="text-xl font-semibold text-gray-900 dark:text-white mb-2">输入工作流参数</h3>
+                            <p className="text-gray-600 dark:text-gray-400">请输入要传递给工作流的初始参数</p>
                         </div>
-                        <div className="mb-6">
-                            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-3">
-                                请输入要处理的内容:
-                            </label>
+                        <div className="space-y-4">
                             <CustomTextarea
                                 value={workflowInput}
                                 onChange={(e) => setWorkflowInput(e.target.value)}
-                                placeholder="请输入要传递给工作流的输入内容..."
-                                rows={6}
+                                placeholder="输入工作流参数..."
+                                className="min-h-[150px]"
                                 autoFocus
                             />
-                        </div>
-                        <div className="flex justify-end space-x-3">
-                            <CustomButton
-                                onClick={handleCancelExecution}
-                                variant="secondary"
-                                disabled={pendingExecution}
-                            >
-                                取消
-                            </CustomButton>
-                            <CustomButton
-                                onClick={() => handleExecuteWorkflow(workflowInput)}
-                                variant="success"
-                                disabled={!workflowInput.trim() || pendingExecution}
-                            >
-                                {pendingExecution ? (
-                                    <>
-                                        <span className="animate-spin">⚡</span>
-                                        <span>执行中...</span>
-                                    </>
-                                ) : (
-                                    <>
-                                        <span>🚀</span>
-                                        <span>执行工作流</span>
-                                    </>
-                                )}
-                            </CustomButton>
+                            <div className="flex space-x-3">
+                                <CustomButton
+                                    onClick={handleExecute}
+                                    variant="primary"
+                                    className="flex-1"
+                                    disabled={!workflowInput.trim() || pendingExecution}
+                                    loading={pendingExecution}
+                                >
+                                    开始执行
+                                </CustomButton>
+                                <CustomButton
+                                    onClick={() => {
+                                        setShowInputDialog(false);
+                                        setWorkflowInput('');
+                                    }}
+                                    variant="secondary"
+                                    className="flex-1"
+                                >
+                                    取消
+                                </CustomButton>
+                            </div>
                         </div>
                     </div>
                 </div>
@@ -619,6 +591,6 @@ export default function Workflow(): React.JSX.Element {
                     </div>
                 </div>
             )}
-        </div>
+        </div >
     );
 }
