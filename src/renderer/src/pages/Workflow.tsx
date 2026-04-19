@@ -138,7 +138,7 @@ export default function Workflow(): React.JSX.Element {
 
         try {
             // 使用新的监控API开始执行
-           await executeWorkflow(currentWorkflow, input)
+            await executeWorkflow(currentWorkflow, input)
         } catch (error) {
             console.error('工作流执行失败:', error);
         }
@@ -239,11 +239,11 @@ export default function Workflow(): React.JSX.Element {
                 <div className="flex justify-between items-center">
                     <div className="flex items-center space-x-4">
                         <div className="flex items-center space-x-3">
-                            <div className="w-8 h-8 bg-gradient-to-r from-blue-500 to-purple-600 rounded-lg flex items-center justify-center">
-                                <span className="text-white font-bold text-sm">🔄</span>
+                            <div className="w-10 h-10 bg-gradient-to-r from-blue-500 to-purple-600 rounded-xl flex items-center justify-center">
+                                <span className="text-white font-bold text-lg">🔄</span>
                             </div>
                             <h1 className="text-xl font-bold bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent">
-                                AI Agent 工作流设计器
+                                工作流设计器
                             </h1>
                         </div>
                         <div className="min-w-[200px]">
@@ -296,7 +296,7 @@ export default function Workflow(): React.JSX.Element {
                                 variant="success"
                             >
                                 <span>✨</span>
-                                <span>新建工作流</span>
+                                <span>新建</span>
                             </CustomButton>
                         )}
                         <CustomButton
@@ -304,7 +304,7 @@ export default function Workflow(): React.JSX.Element {
                             variant="primary"
                         >
                             <span>📥</span>
-                            <span>导入JSON</span>
+                            <span>导入</span>
                         </CustomButton>
                         {currentWorkflow && (
                             <CustomButton
@@ -344,7 +344,7 @@ export default function Workflow(): React.JSX.Element {
                         />
                     </ReactFlowProvider>
                 ) : (
-                    <div className="flex-1 flex items-center justify-center relative">
+                    <div className="flex-1 flex items-center justify-center relative pb-4 pt-4">
                         <div className="absolute inset-0 bg-gradient-to-br from-blue-50/50 via-purple-50/30 to-pink-50/50 dark:from-gray-800/50 dark:via-gray-700/30 dark:to-gray-600/50"></div>
                         <div className="text-center relative z-10 max-w-4xl mx-auto px-6">
                             <div className="mb-8">
