@@ -366,7 +366,7 @@ export default function Chat(): React.JSX.Element {
                             </div>
 
                             {/* 输入区域 */}
-                            <div className="border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 rounded-xl overflow-hidden mx-3 mb-3">
+                            <div className="border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 rounded-lg overflow-hidden mx-3 mb-3">
                                 {/* 文本输入区域 - 无边框设计 */}
                                 <div className="p-4 pb-2">
                                     <textarea
