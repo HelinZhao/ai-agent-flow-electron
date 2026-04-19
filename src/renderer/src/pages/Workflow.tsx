@@ -209,7 +209,7 @@ export default function Workflow(): React.JSX.Element {
             </div>
 
             {workflows.length === 0
-                ? <div className="flex-1 flex items-center justify-center relative pb-4 pt-4 h-[calc(100vh-200px)] rounded-2xl overflow-auto">
+                ? <div className="flex-1 flex items-center justify-center relative pb-4 pt-4 h-[calc(100vh-200px)] min-h-[820px] rounded-2xl overflow-auto">
                     <div className="absolute inset-0 bg-gradient-to-br from-blue-50/50 via-purple-50/30 to-pink-50/50 dark:from-gray-800/50 dark:via-gray-700/30 dark:to-gray-600/50"></div>
                     <div className="text-center relative z-10 max-w-4xl mx-auto px-6">
                         <div className="mb-8">
