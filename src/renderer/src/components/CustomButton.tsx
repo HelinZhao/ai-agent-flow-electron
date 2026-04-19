@@ -27,7 +27,7 @@ const CustomButton: React.FC<CustomButtonProps> = ({
 
   const variantClasses = {
     primary: 'bg-gradient-to-r from-blue-500 to-blue-600 text-white hover:from-blue-600 hover:to-blue-700 shadow-lg hover:shadow-xl',
-    secondary: 'border border-gray-200/50 dark:border-gray-600/50 text-gray-700 dark:text-gray-300 hover:bg-gray-50/50 dark:hover:bg-gray-700/50',
+    secondary: 'border border-gray-300/70 dark:border-gray-600/50 text-gray-700 dark:text-gray-300 bg-white/70 dark:bg-gray-700/70 hover:bg-gray-50/50 dark:hover:bg-gray-700/50',
     success: 'bg-gradient-to-r from-green-500 to-green-600 text-white hover:from-green-600 hover:to-green-700 shadow-lg hover:shadow-xl',
     danger: 'bg-gradient-to-r from-red-500 to-red-600 text-white hover:from-red-600 hover:to-red-700 shadow-lg hover:shadow-xl',
     warning: 'bg-gradient-to-r from-yellow-500 to-yellow-600 text-white hover:from-yellow-600 hover:to-yellow-700 shadow-lg hover:shadow-xl',

@@ -8,8 +8,8 @@ import { setupChatHistoryIPC } from './ipc/chatHistory'
 function createWindow(): void {
   // 创建浏览器窗口
   const mainWindow = new BrowserWindow({
-    width: 1000,
-    height: 600,
+    width: 1200,
+    height: 800,
     minWidth: 800, // 最小宽度
     minHeight: 600, // 最小高度
     show: false,
