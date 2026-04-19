@@ -209,7 +209,7 @@ export default function Workflow(): React.JSX.Element {
             </div>
 
             {workflows.length === 0
-                ? <div className="flex-1 flex items-center justify-center relative pb-4 pt-4 h-[calc(100vh-200px)]">
+                ? <div className="flex-1 flex items-center justify-center relative pb-4 pt-4 h-[calc(100vh-200px)] rounded-2xl overflow-auto">
                     <div className="absolute inset-0 bg-gradient-to-br from-blue-50/50 via-purple-50/30 to-pink-50/50 dark:from-gray-800/50 dark:via-gray-700/30 dark:to-gray-600/50"></div>
                     <div className="text-center relative z-10 max-w-4xl mx-auto px-6">
                         <div className="mb-8">
@@ -309,7 +309,7 @@ export default function Workflow(): React.JSX.Element {
 
                     {/* 工作流列表侧边栏 */}
                     <div className="lg:col-span-1 flex flex-col">
-                        <div className="bg-white/80 dark:bg-gray-800/80 backdrop-blur-md shadow-lg rounded-2xl border border-gray-200/50 dark:border-gray-700/50 flex-1 flex flex-col">
+                        <div className="bg-white/80 dark:bg-gray-800/80 backdrop-blur-md shadow-lg border border-gray-200/50 dark:border-gray-700/50 flex-1 flex flex-col">
                             <div className="px-4 py-4 border-b border-gray-200/50 dark:border-gray-700/50">
                                 <h3 className="text-base font-semibold text-gray-900 dark:text-white flex items-center space-x-2">
                                     <span>📋</span>
@@ -323,8 +323,8 @@ export default function Workflow(): React.JSX.Element {
                                         <div
                                             key={workflow.id}
                                             className={`p-3 border rounded-lg cursor-pointer transition-all duration-200 ${currentWorkflow?.id === workflow.id
-                                                    ? 'border-blue-500 bg-blue-50 dark:bg-blue-900/20'
-                                                    : 'border-gray-200 dark:border-gray-600 hover:border-gray-300 dark:hover:border-gray-500'
+                                                ? 'border-blue-500 bg-blue-50 dark:bg-blue-900/20'
+                                                : 'border-gray-200 dark:border-gray-600 hover:border-gray-300 dark:hover:border-gray-500'
                                                 }`}
                                             onClick={() => setCurrentWorkflow(workflow)}
                                         >
