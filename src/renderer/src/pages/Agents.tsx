@@ -12,6 +12,13 @@ const mdParser = new MarkdownIt(/* Markdown-it options */);
 export default function Agents(): React.JSX.Element {
     const { agents, addAgent, updateAgent, deleteAgent, workflows } = useWorkflowStore();
     const [selectedAgent, setSelectedAgent] = useState<Agent | null>(null);
+    const [searchTerm, setSearchTerm] = useState('');
+
+    // 过滤agents基于搜索词
+    const filteredAgents = agents.filter(agent =>
+        agent.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        (agent.description && agent.description.toLowerCase().includes(searchTerm.toLowerCase()))
+    );
 
     const [isEditing, setIsEditing] = useState(false);
     const [formData, setFormData] = useState({
@@ -71,7 +78,7 @@ export default function Agents(): React.JSX.Element {
 
     return (
         <div className="mx-auto py-6 px-4 sm:px-6 lg:px-8">
-            <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-4 mb-8">
+            <div className="flex justify-between items-center mb-6">
                 <div className="flex items-center space-x-3">
                     <div className="w-10 h-10 bg-gradient-to-r from-blue-500 to-purple-600 rounded-xl flex items-center justify-center">
                         <span className="text-white font-bold text-lg">🤖</span>
@@ -80,36 +87,54 @@ export default function Agents(): React.JSX.Element {
                         Agent管理
                     </h1>
                 </div>
-                <button
-                    onClick={handleCreate}
-                    className="px-6 py-3 bg-gradient-to-r from-blue-500 to-blue-600 text-white rounded-xl hover:from-blue-600 hover:to-blue-700 transition-all duration-200 shadow-lg hover:shadow-xl font-medium flex items-center space-x-2"
-                >
-                    <span>✨</span>
-                    <span>创建新Agent</span>
-                </button>
+                <div className="flex space-x-2">
+                    <CustomButton
+                        onClick={handleCreate}
+                        variant="primary"
+                        style={{ height: 46 }}
+                    >
+                        <span>✨</span>
+                        <span>创建新Agent</span>
+                    </CustomButton>
+                </div>
             </div>
 
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 h-[calc(100vh-200px)]">
                 {/* Agent列表 */}
                 <div className="lg:col-span-1 flex flex-col">
                     <div className="bg-white/80 dark:bg-gray-800/80 backdrop-blur-md shadow-lg rounded-lg border border-gray-200/50 dark:border-gray-700/50 flex-1 flex flex-col">
-                        <div className="px-6 py-6 border-b border-gray-200/50 dark:border-gray-700/50">
-                            <h3 className="text-lg font-semibold text-gray-900 dark:text-white flex items-center space-x-2">
-                                <span>📋</span>
+                        <div className="p-4 pb-2">
+                            <h3 className="text-lg font-semibold text-gray-900 dark:text-white flex items-center space-x-2 mb-4">
+                                <span className="text-white font-bold text-lg">📋</span>
                                 <span>Agent列表</span>
-                                <span className="text-sm text-gray-500 dark:text-gray-400 font-normal">({agents.length})</span>
+                                <span className="text-xs bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300 px-2 py-0.5 rounded-full">
+                                    {filteredAgents.length}
+                                </span>
                             </h3>
+
+                            {/* 搜索框 */}
+                            <div className="relative">
+                                <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                                    <span className="text-gray-400">🔍</span>
+                                </div>
+                                <input
+                                    type="text"
+                                    placeholder="搜索Agent..."
+                                    value={searchTerm}
+                                    onChange={(e) => setSearchTerm(e.target.value)}
+                                    className="w-full pl-10 pr-4 py-2 bg-white/80 dark:bg-gray-700/80 border border-gray-200/50 dark:border-gray-600/50 rounded-lg text-sm text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500/50 focus:border-blue-500/50 transition-all duration-200"
+                                />
+                            </div>
                         </div>
-                        <div className="flex-1 overflow-y-auto p-6">
-                            <div className="space-y-3">
-                                {agents.map((agent) => (
+                        <div className="flex-1 overflow-y-auto p-4 pt-0">
+                            <div className="space-y-2">
+                                {filteredAgents.map((agent) => (
                                     <div
                                         key={agent.id}
-                                        className={`p-4 border rounded-xl cursor-pointer transition-all duration-200 ${
-                                            selectedAgent?.id === agent.id
-                                                ? 'border-blue-500/50 bg-gradient-to-r from-blue-50 to-purple-50 dark:from-blue-900/20 dark:to-purple-900/20 shadow-md'
-                                                : 'border-gray-200/50 dark:border-gray-600/50 hover:border-gray-300/50 dark:hover:border-gray-500/50 hover:shadow-sm bg-white/50 dark:bg-gray-700/30'
-                                        }`}
+                                        className={`p-3 border rounded-lg cursor-pointer transition-all duration-200 ${selectedAgent?.id === agent.id
+                                            ? 'border-blue-500/50 bg-gradient-to-r from-blue-50 to-purple-50 dark:from-blue-900/20 dark:to-purple-900/20'
+                                            : 'border-gray-200/50 dark:border-gray-600/50 hover:border-gray-300/50 dark:hover:border-gray-500/50 hover:shadow-sm bg-white/50 dark:bg-gray-700/30'
+                                            }`}
                                         onClick={() => {
                                             setSelectedAgent(agent);
                                             setIsEditing(false);
@@ -124,7 +149,7 @@ export default function Agents(): React.JSX.Element {
                                                     {agent.description || '暂无描述'}
                                                 </p>
                                             </div>
-                                            <div className="flex space-x-2 ml-3">
+                                            <div className="flex space-x-1 ml-3">
                                                 <button
                                                     onClick={(e) => {
                                                         e.stopPropagation();
@@ -153,11 +178,21 @@ export default function Agents(): React.JSX.Element {
                                         </div>
                                     </div>
                                 ))}
-                                {agents.length === 0 && (
+                                {filteredAgents.length === 0 && (
                                     <div className="text-center py-12">
-                                        <div className="text-6xl mb-4">🤖</div>
-                                        <p className="text-gray-500 dark:text-gray-400 mb-4">还没有Agent</p>
-                                        <p className="text-sm text-gray-400 dark:text-gray-500">点击上方按钮创建您的第一个AI Agent</p>
+                                        {searchTerm ? (
+                                            <>
+                                                <div className="text-4xl mb-3">🔍</div>
+                                                <p className="text-gray-500 dark:text-gray-400 text-sm  mb-1">未找到匹配的Agent</p>
+                                                <p className="text-sm text-gray-400 dark:text-gray-500">尝试使用其他关键词搜索</p>
+                                            </>
+                                        ) : (
+                                            <>
+                                                <div className="text-4xl mb-3">🤖</div>
+                                                <p className="text-gray-500 dark:text-gray-400 text-sm mb-1">还没有Agent</p>
+                                                <p className="text-sm text-gray-400 dark:text-gray-500">点击上方按钮创建您的第一个AI Agent</p>
+                                            </>
+                                        )}
                                     </div>
                                 )}
                             </div>
@@ -258,8 +293,8 @@ export default function Agents(): React.JSX.Element {
                                         <CustomButton
                                             onClick={handleSave}
                                             disabled={isLoading || !formData.name.trim() || !formData.instructions.trim()}
-                    className="px-6 py-3 bg-gradient-to-r from-blue-500 to-blue-600 text-white rounded-xl hover:from-blue-600 hover:to-blue-700 transition-all duration-200 shadow-lg font-medium disabled:opacity-50 disabled:cursor-not-allowed flex items-center space-x-2"
-                >
+                                            className="px-6 py-3 bg-gradient-to-r from-blue-500 to-blue-600 text-white rounded-xl hover:from-blue-600 hover:to-blue-700 transition-all duration-200 shadow-lg font-medium disabled:opacity-50 disabled:cursor-not-allowed flex items-center space-x-2"
+                                        >
                                             {isLoading ? (
                                                 <>
                                                     <span className="animate-spin">⚡</span>
@@ -268,7 +303,7 @@ export default function Agents(): React.JSX.Element {
                                             ) : (
                                                 <>
                                                     <span>💾</span>
-                                                    <span>保存Agent</span>
+                                                    <span>保存</span>
                                                 </>
                                             )}
                                         </CustomButton>
@@ -283,12 +318,15 @@ export default function Agents(): React.JSX.Element {
                                             </h3>
                                             <p className="text-gray-600 dark:text-gray-300">{selectedAgent.description || '暂无描述'}</p>
                                         </div>
+
                                         <button
                                             onClick={() => handleEdit(selectedAgent)}
-                                            className="px-4 py-2 bg-gradient-to-r from-blue-500 to-blue-600 text-white rounded-xl hover:from-blue-600 hover:to-blue-700 transition-all duration-200 shadow-lg font-medium flex items-center space-x-2"
+                                            className="text-blue-500 hover:text-blue-700 dark:text-blue-400 dark:hover:text-blue-300 p-1 hover:bg-blue-50 dark:hover:bg-blue-900/30 rounded transition-all"
+                                            title="编辑"
                                         >
-                                            <span>✏️</span>
-                                            <span>编辑</span>
+                                            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+                                            </svg>
                                         </button>
                                     </div>
 
