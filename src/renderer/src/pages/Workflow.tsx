@@ -24,6 +24,9 @@ export default function Workflow(): React.JSX.Element {
     const [workflowInput, setWorkflowInput] = useState('');
     const [pendingExecution, setPendingExecution] = useState(false);
     const [showProgressPanel, setShowProgressPanel] = useState(false);
+    const [editingWorkflow, setEditingWorkflow] = useState<Workflow | null>(null);
+    const [editName, setEditName] = useState('');
+    const [editDescription, setEditDescription] = useState('');
 
     // 工作流执行监控
     const {
@@ -167,6 +170,35 @@ export default function Workflow(): React.JSX.Element {
         // 清空input
         event.target.value = '';
     }, []);
+
+    const handleEditWorkflow = useCallback((workflow: Workflow) => {
+        setEditingWorkflow(workflow);
+        setEditName(workflow.name);
+        setEditDescription(workflow.description || '');
+    }, []);
+
+    const handleSaveEdit = useCallback(() => {
+        if (!editingWorkflow || !editName.trim()) return;
+
+        updateWorkflow(editingWorkflow.id, {
+            name: editName.trim(),
+            description: editDescription.trim(),
+            updatedAt: new Date()
+        });
+
+        if (currentWorkflow?.id === editingWorkflow.id) {
+            setCurrentWorkflow(prev => prev ? {
+                ...prev,
+                name: editName.trim(),
+                description: editDescription.trim(),
+                updatedAt: new Date()
+            } : null);
+        }
+
+        setEditingWorkflow(null);
+        setEditName('');
+        setEditDescription('');
+    }, [editingWorkflow, editName, editDescription, updateWorkflow, currentWorkflow]);
 
     const resetImportModal = useCallback(() => {
         setShowImportModal(false);
@@ -341,7 +373,7 @@ export default function Workflow(): React.JSX.Element {
                                                     <CustomButton
                                                         onClick={(e) => {
                                                             e.stopPropagation();
-                                                            setCurrentWorkflow(workflow);
+                                                            handleEditWorkflow(workflow);
                                                         }}
                                                         variant="primary"
                                                         size="sm"
@@ -401,6 +433,66 @@ export default function Workflow(): React.JSX.Element {
                                     onClick={() => {
                                         setIsCreating(false);
                                         setNewWorkflowName('');
+                                    }}
+                                    variant="secondary"
+                                    className="flex-1"
+                                >
+                                    取消
+                                </CustomButton>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            )}
+
+            {/* 编辑工作流对话框 */}
+            {editingWorkflow && (
+                <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+                    <div className="bg-white/95 dark:bg-gray-800/95 backdrop-blur-md rounded-2xl p-8 max-w-md w-full shadow-2xl border border-gray-200/50 dark:border-gray-700/50">
+                        <div className="text-center mb-6">
+                            <div className="w-16 h-16 bg-blue-100 dark:bg-blue-900/30 rounded-full flex items-center justify-center mx-auto mb-4">
+                                <span className="text-2xl text-blue-600">✏️</span>
+                            </div>
+                            <h3 className="text-xl font-semibold text-gray-900 dark:text-white mb-2">编辑工作流</h3>
+                            <p className="text-gray-600 dark:text-gray-400">修改工作流的基本信息</p>
+                        </div>
+                        <div className="space-y-4">
+                            <div>
+                                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                                    工作流名称
+                                </label>
+                                <CustomInput
+                                    value={editName}
+                                    onChange={(e) => setEditName(e.target.value)}
+                                    placeholder="输入工作流名称"
+                                    autoFocus
+                                />
+                            </div>
+                            <div>
+                                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                                    描述（可选）
+                                </label>
+                                <CustomTextarea
+                                    value={editDescription}
+                                    onChange={(e) => setEditDescription(e.target.value)}
+                                    placeholder="输入工作流描述"
+                                    className="min-h-[80px]"
+                                />
+                            </div>
+                            <div className="flex space-x-3">
+                                <CustomButton
+                                    onClick={handleSaveEdit}
+                                    variant="primary"
+                                    className="flex-1"
+                                    disabled={!editName.trim()}
+                                >
+                                    保存
+                                </CustomButton>
+                                <CustomButton
+                                    onClick={() => {
+                                        setEditingWorkflow(null);
+                                        setEditName('');
+                                        setEditDescription('');
                                     }}
                                     variant="secondary"
                                     className="flex-1"
