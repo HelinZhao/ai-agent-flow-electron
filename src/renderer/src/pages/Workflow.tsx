@@ -103,7 +103,12 @@ export default function Workflow(): React.JSX.Element {
 
     const handleSave = useCallback(() => {
         if (currentWorkflow) {
-            updateWorkflow(currentWorkflow.id, currentWorkflow);
+            try {
+                updateWorkflow(currentWorkflow.id, currentWorkflow);
+                alert('保存成功');
+            } catch {
+                alert('保存失败');
+            }
         }
     }, [currentWorkflow, updateWorkflow]);
 

@@ -21,7 +21,7 @@ export default function Settings(): React.JSX.Element {
     const [editingConfig, setEditingConfig] = useState<string | null>(null);
     const [showForm, setShowForm] = useState(false);
 
-    const { register, handleSubmit, formState: { errors }, reset, watch, getValues } = useForm<LLMConfig>({
+    const { register, handleSubmit, formState: { errors }, reset, watch, getValues, setValue } = useForm<LLMConfig>({
         defaultValues: {
             name: '',
             provider: 'openai',
@@ -265,15 +265,10 @@ export default function Settings(): React.JSX.Element {
                                     <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
                                         提供商
                                     </label>
-                                    <input
-                                        type="hidden"
-                                        {...register('provider', { required: '请选择提供商' })}
-                                    />
                                     <CustomSelect
                                         value={watch('provider')}
                                         onChange={(value) => {
-                                            const event = { target: { value } } as any;
-                                            register('provider').onChange(event);
+                                            setValue('provider', value as LLMConfig['provider'], { shouldValidate: true });
                                         }}
                                         options={[
                                             { value: 'openai', label: 'OpenAI' },
