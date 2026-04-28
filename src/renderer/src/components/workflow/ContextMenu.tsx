@@ -32,7 +32,8 @@ const ContextMenu: React.FC<ContextMenuProps> = (props: ContextMenuProps) => {
       label: '集成节点',
       nodes: [
         { type: 'api' as const, label: 'API', color: 'bg-purple-100 text-purple-800' },
-        { type: 'agent' as const, label: 'Agent', color: 'bg-red-100 text-red-800' }
+        { type: 'agent' as const, label: 'Agent', color: 'bg-red-100 text-red-800' },
+        { type: 'cli' as const, label: 'CLI', color: 'bg-orange-100 text-orange-800' }
       ]
     }
   }

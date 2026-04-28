@@ -11,7 +11,7 @@ import {
 } from '@langchain/langgraph'
 import { MemorySaver } from '@langchain/langgraph'
 import { BaseMessage, HumanMessage, AIMessage } from '@langchain/core/messages'
-import { callLLM, executeApiCall } from '../utils'
+import { callLLM, executeApiCall, executeCliCommand, executeCliTemplate } from '../utils'
 import { v4 as uuidv4 } from 'uuid'
 
 // 执行状态存储
@@ -411,6 +411,9 @@ export class MonitoredLangGraphExecutor {
       case 'agent':
         return await this.executeAgent(node, input, llmConfig, conversationHistory)
 
+      case 'cli':
+        return await this.executeCli(node, input, llmConfig)
+
       case 'end':
         return {
           output: input,
@@ -637,6 +640,110 @@ export class MonitoredLangGraphExecutor {
           label: node.data?.label,
           type: 'llm',
           error: error instanceof Error ? error.message : 'LLM调用失败'
+        }
+      }
+    }
+  }
+
+  private async executeCli(node: WorkflowNode, input: string, llmConfig: LLMConfig) {
+    const cliConfig = node.data.config?.cliConfig
+    const templateId = cliConfig?.templateId || 'custom'
+
+    try {
+      // 预设模板走 Node.js 函数实现，自定义命令走 shell
+      let result: { stdout: string; stderr: string; exitCode: number | null }
+      let executedCommand: string
+
+      if (templateId !== 'custom') {
+        const variables = cliConfig?.templateVariables || {}
+        // 对于 fs 类模板，把 {{input}} 也加入变量替换
+        if (variables.content === '{{input}}') {
+          variables.content = input
+        }
+        result = await executeCliTemplate(templateId, variables, {
+          workingDirectory: cliConfig?.workingDirectory,
+          timeout: cliConfig?.timeout,
+        })
+        executedCommand = `[预设模板: ${templateId}]`
+      } else {
+        if (!cliConfig?.command) {
+          return {
+            output: input,
+            metadata: { nodeId: node.id, type: 'cli', error: '未配置命令', label: node.data?.label }
+          }
+        }
+        let resolvedCommand = cliConfig.command
+        const variables = cliConfig.templateVariables || {}
+        Object.entries(variables).forEach(([key, value]) => {
+          resolvedCommand = resolvedCommand.replace(new RegExp(`\\{\\{${key}\\}\\}`, 'g'), value || '')
+        })
+        resolvedCommand = resolvedCommand.replace(/\{\{input\}\}/g, input)
+        result = await executeCliCommand({
+          command: resolvedCommand,
+          workingDirectory: cliConfig.workingDirectory,
+          timeout: cliConfig.timeout,
+        })
+        executedCommand = resolvedCommand
+      }
+
+      const rawOutput = result.stderr
+        ? `${result.stdout}\n[stderr]: ${result.stderr}`
+        : result.stdout
+
+      if (result.exitCode !== 0) {
+        return {
+          output: rawOutput,
+          metadata: {
+            nodeId: node.id,
+            label: node.data?.label,
+            type: 'cli',
+            command: executedCommand,
+            exitCode: result.exitCode,
+            error: `命令退出码: ${result.exitCode}`,
+            outputMode: cliConfig?.outputMode,
+          }
+        }
+      }
+
+      if (cliConfig?.outputMode === 'llm_process') {
+        const processPrompt = cliConfig.llmProcessPrompt
+          ? cliConfig.llmProcessPrompt.replace(/\{\{output\}\}/g, rawOutput)
+          : `请分析以下命令输出并提取关键信息:\n\n${rawOutput}`
+
+        const llmResult = await callLLM(processPrompt, llmConfig)
+        return {
+          output: llmResult,
+          metadata: {
+            nodeId: node.id,
+            label: node.data?.label,
+            type: 'cli',
+            command: executedCommand,
+            rawOutput,
+            exitCode: result.exitCode,
+            outputMode: 'llm_process',
+          }
+        }
+      }
+
+      return {
+        output: rawOutput,
+        metadata: {
+          nodeId: node.id,
+          label: node.data?.label,
+          type: 'cli',
+          command: executedCommand,
+          exitCode: result.exitCode,
+          outputMode: 'raw',
+        }
+      }
+    } catch (error) {
+      return {
+        output: input,
+        metadata: {
+          nodeId: node.id,
+          label: node.data?.label,
+          type: 'cli',
+          error: error instanceof Error ? error.message : 'CLI命令执行失败',
         }
       }
     }

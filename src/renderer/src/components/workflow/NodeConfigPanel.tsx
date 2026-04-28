@@ -6,8 +6,10 @@ import BranchConfig from './config/BranchConfig';
 import LLMConfig from './config/LLMConfig';
 import ApiConfig from './config/ApiConfig';
 import AgentConfig from './config/AgentConfig';
+import CLIConfig from './config/CliConfig';
 import CustomInput from '../CustomInput';
 import CustomButton from '../CustomButton';
+import { getNodeDefaultLabel } from './nodes';
 
 interface NodeConfigPanelProps {
   node: WorkflowNode | null;
@@ -57,6 +59,9 @@ const NodeConfigPanel: React.FC<NodeConfigPanelProps> = ({ node, onClose }: Node
       case 'agent':
         return <AgentConfig config={config} onConfigChange={setConfig} />;
 
+      case 'cli':
+        return <CLIConfig config={config} onConfigChange={setConfig} />;
+
       default:
         return null;
     }
@@ -79,7 +84,7 @@ const NodeConfigPanel: React.FC<NodeConfigPanelProps> = ({ node, onClose }: Node
       <div className="w-80 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-600 rounded">
         <div className="flex justify-between items-center p-4">
           <h3 className="text-lg font-medium text-gray-900 dark:text-white">
-            配置 {node.type === 'start' ? '开始' : node.type === 'end' ? '结束' : node.type === 'skill' ? '技能' : node.type === 'branch' ? '分支' : node.type === 'api' ? 'API' : node.type === 'llm' ? 'LLM' : 'Agent'} 节点
+            配置 {getNodeDefaultLabel(node.type)}
           </h3>
           <button
             onClick={onClose}

@@ -79,6 +79,14 @@ const NodeListPanel = ():  React.JSX.Element => {
           </div>
           <div
             draggable
+            onDragStart={(e) => handleDragStart(e, 'cli')}
+            onClick={() => handleAddNode('cli')}
+            className="px-3 py-2 text-xs bg-orange-100 text-orange-800 rounded hover:bg-orange-200 cursor-move"
+          >
+            CLI
+          </div>
+          <div
+            draggable
             onDragStart={(e) => handleDragStart(e, 'end')}
             onClick={() => handleAddNode('end')}
             className="px-3 py-2 text-xs bg-gray-100 text-gray-800 rounded hover:bg-gray-200 cursor-move"

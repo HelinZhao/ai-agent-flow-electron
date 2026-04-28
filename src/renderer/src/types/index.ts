@@ -10,7 +10,7 @@ export interface BranchNodeConfig {
 
 export interface WorkflowNode {
   id: string
-  type: 'start' | 'skill' | 'branch' | 'api' | 'llm' | 'agent' | 'end'
+  type: 'start' | 'skill' | 'branch' | 'api' | 'llm' | 'agent' | 'cli' | 'end'
   position: { x: number; y: number }
   data: {
     label: string
@@ -160,4 +160,14 @@ export interface ExecutionLog {
   message: string
   nodeId?: string
   details?: any
+}
+
+export interface CliNodeConfig {
+  command: string
+  templateId?: string
+  templateVariables?: Record<string, string>
+  workingDirectory?: string
+  timeout?: number
+  outputMode: 'raw' | 'llm_process'
+  llmProcessPrompt?: string
 }

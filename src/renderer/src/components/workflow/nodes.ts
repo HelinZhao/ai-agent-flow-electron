@@ -1,7 +1,7 @@
 export const getNodeDefaultLabel = (type: string): string => {
   switch (type) {
     case 'start':
-      return '开始'
+      return '开始节点'
     case 'skill':
       return '技能节点'
     case 'branch':
@@ -12,8 +12,10 @@ export const getNodeDefaultLabel = (type: string): string => {
       return 'LLM节点'
     case 'agent':
       return 'Agent节点'
+    case 'cli':
+      return 'CLI节点'
     case 'end':
-      return '结束'
+      return '结束节点'
     default:
       return '未知节点'
   }
