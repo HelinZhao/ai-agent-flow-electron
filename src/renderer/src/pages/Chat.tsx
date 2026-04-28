@@ -141,6 +141,11 @@ export default function Chat(): React.JSX.Element {
             const finalMessages = [...newMessages, agentMessage];
             setMessages(finalMessages);
 
+            // 窗口未聚焦时闪烁任务栏提醒用户
+            if (!document.hasFocus() && window.api?.notify) {
+                window.api.notify.flashFrame()
+            }
+
             // 自动保存对话历史（此时finalMessages已包含所有最新消息）
             if (selectedAgent && finalMessages.length > 0) {
                 try {
@@ -164,6 +169,11 @@ export default function Chat(): React.JSX.Element {
             };
             const finalMessages = [...newMessages, errorMessage];
             setMessages(finalMessages);
+
+            // 窗口未聚焦时闪烁任务栏提醒用户
+            if (!document.hasFocus() && window.api?.notify) {
+                window.api.notify.flashFrame()
+            }
 
             // 自动保存对话历史（此时finalMessages已包含所有最新消息）
             if (selectedAgent && finalMessages.length > 0) {

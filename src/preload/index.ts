@@ -18,6 +18,10 @@ const api = {
     deleteHistory: (agentId: string) => ipcRenderer.invoke('chat:deleteHistory', agentId),
     clearAllHistories: () => ipcRenderer.invoke('chat:clearAllHistories'),
     getHistoryDirectory: () => ipcRenderer.invoke('chat:getHistoryDirectory')
+  },
+  // 通知提醒API
+  notify: {
+    flashFrame: () => ipcRenderer.invoke('notify:flashFrame')
   }
 }
 

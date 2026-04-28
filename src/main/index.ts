@@ -97,6 +97,16 @@ app.whenReady().then(() => {
     }
   })
 
+  // 通知提醒IPC处理 — 窗口未聚焦时任务栏闪烁
+  ipcMain.handle('notify:flashFrame', () => {
+    const win = BrowserWindow.getAllWindows()[0]
+    if (win && !win.isFocused()) {
+      win.once('focus', () => win.flashFrame(false))
+      win.flashFrame(true)
+    }
+    return true
+  })
+
   // 自动启动服务器
   const server = new LocalServer()
   server
