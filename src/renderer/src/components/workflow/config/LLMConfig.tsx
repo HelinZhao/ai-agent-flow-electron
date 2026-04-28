@@ -4,6 +4,15 @@ import VariableConfigModal from '../VariableConfigModal';
 import CustomTextarea from '../../CustomTextarea';
 import CustomButton from '../../CustomButton';
 
+const AVAILABLE_TOOLS = [
+  { id: 'readFile', label: '读取文件', description: '读取指定文件内容' },
+  { id: 'writeFile', label: '写入文件', description: '将内容写入指定文件' },
+  { id: 'listDirectory', label: '列出目录', description: '列出目录下的文件和子目录' },
+  { id: 'executeCommand', label: '执行命令', description: '执行 shell 命令' },
+  { id: 'httpRequest', label: 'HTTP请求', description: '发送 HTTP 请求' },
+  { id: 'webSearch', label: '网页搜索', description: '搜索网页获取信息' },
+]
+
 interface LLMConfigProps {
   config: Record<string, any>;
   onConfigChange: (config: Record<string, any>) => void;
@@ -66,6 +75,47 @@ const LLMConfig: React.FC<LLMConfigProps> = ({ config, onConfigChange }) => {
           rows={4}
           placeholder="输入提示词模板，可以使用 {{variableName}} 格式的变量"
         />
+      </div>
+
+      <div>
+        <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+          工具
+        </label>
+        <p className="text-xs text-gray-500 dark:text-gray-400 mb-3">
+          勾选后 LLM 可以自主决定何时调用这些工具
+        </p>
+        <div className="grid grid-cols-2 gap-2">
+          {AVAILABLE_TOOLS.map(t => {
+            const enabled = (config.enabledTools || []).includes(t.id)
+            return (
+              <label
+                key={t.id}
+                className={`flex items-start space-x-2 p-2 border rounded-lg cursor-pointer transition-colors ${
+                  enabled
+                    ? 'border-blue-500 bg-blue-50 dark:bg-blue-900/20 text-blue-700 dark:text-blue-300'
+                    : 'border-gray-200 dark:border-gray-600 hover:bg-gray-50 dark:hover:bg-gray-700'
+                }`}
+              >
+                <input
+                  type="checkbox"
+                  checked={enabled}
+                  onChange={() => {
+                    const current = config.enabledTools || []
+                    const updated = enabled
+                      ? current.filter(id => id !== t.id)
+                      : [...current, t.id]
+                    onConfigChange({ ...config, enabledTools: updated })
+                  }}
+                  className="w-4 h-4 text-blue-600 rounded"
+                />
+                <div className="min-w-0 flex-1">
+                  <div className="text-sm font-medium truncate">{t.label}</div>
+                  <div className="text-xs text-gray-500 dark:text-gray-400 truncate" title={t.description}>{t.description}</div>
+                </div>
+              </label>
+            )
+          })}
+        </div>
       </div>
 
       <div>

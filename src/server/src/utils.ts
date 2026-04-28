@@ -7,6 +7,7 @@ import * as path from 'path'
 import * as iconv from 'iconv-lite'
 import * as jschardet from 'jschardet'
 import { createAgent } from "langchain"
+import { getToolsByIds } from './tools'
 
 export const getLLMEndpoint = (llmConfig: LLMConfig): string => {
   switch (llmConfig.provider) {
@@ -28,7 +29,8 @@ export const getLLMEndpoint = (llmConfig: LLMConfig): string => {
 export const callLLM = async (
   prompt: string,
   llmConfig: LLMConfig,
-  conversationHistory: BaseMessage[] = []
+  conversationHistory: BaseMessage[] = [],
+  enabledTools: string[] = []
 ): Promise<string> => {
   try {
 
@@ -43,15 +45,14 @@ export const callLLM = async (
       },
     })
 
-    // const response = await llm.invoke([...conversationHistory, new HumanMessage(prompt)])
-    // return response.content.toString()
+    const tools = getToolsByIds(enabledTools)
 
     const agent = createAgent({
       model: llm,
-      // tools: Object.entries(tools).map(([, fn]) => tool(fn)),
+      tools,
     });
 
-    const messages = prompt !== conversationHistory[conversationHistory.length - 1].content
+    const messages = prompt !== conversationHistory[conversationHistory.length - 1]?.content
       ? [...conversationHistory, new HumanMessage(prompt)]
       : conversationHistory
     const response = await agent.invoke({ messages });

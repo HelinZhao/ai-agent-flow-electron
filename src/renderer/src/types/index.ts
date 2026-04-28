@@ -112,6 +112,7 @@ export interface VariableConfig {
 export interface LLMNodeConfig {
   prompt: string
   variables: VariableConfig[]
+  enabledTools?: string[]
 }
 
 // 工作流执行监控相关类型

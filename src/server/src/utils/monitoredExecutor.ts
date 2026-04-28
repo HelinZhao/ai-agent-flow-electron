@@ -620,7 +620,8 @@ export class MonitoredLangGraphExecutor {
       })
 
       const finalPrompt = promptTemplate ? `${promptTemplate}\n\n当前用户输入: ${input}` : input
-      const result = await callLLM(finalPrompt, llmConfig, conversationHistory)
+      const enabledTools = node.data.config?.enabledTools || []
+      const result = await callLLM(finalPrompt, llmConfig, conversationHistory, enabledTools)
 
       return {
         output: result,
