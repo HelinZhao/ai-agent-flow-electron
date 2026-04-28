@@ -101,8 +101,24 @@ export default function Workflow(): React.JSX.Element {
         setCurrentWorkflow(prev => ({ ...prev, ...updatedWorkflow as Workflow }));
     }, [updateWorkflow, currentWorkflow?.id]);
 
+    const validateStartNode = useCallback((nodes: WorkflowNode[]): string | null => {
+        const startNodes = nodes.filter(n => n.type === 'start');
+        if (startNodes.length === 0) {
+            return '工作流必须包含一个开始节点';
+        }
+        if (startNodes.length > 1) {
+            return '工作流只能包含一个开始节点，当前有 ' + startNodes.length + ' 个';
+        }
+        return null;
+    }, []);
+
     const handleSave = useCallback(() => {
         if (currentWorkflow) {
+            const error = validateStartNode(currentWorkflow.nodes);
+            if (error) {
+                alert(error);
+                return;
+            }
             try {
                 updateWorkflow(currentWorkflow.id, currentWorkflow);
                 alert('保存成功');
@@ -110,7 +126,7 @@ export default function Workflow(): React.JSX.Element {
                 alert('保存失败');
             }
         }
-    }, [currentWorkflow, updateWorkflow]);
+    }, [currentWorkflow, updateWorkflow, validateStartNode]);
 
     const handleRun = useCallback(async () => {
         if (!currentWorkflow || !activeLLMConfig) {
@@ -147,6 +163,11 @@ export default function Workflow(): React.JSX.Element {
                 throw new Error('无效的工作流格式');
             }
 
+            const startNodeError = validateStartNode(importedWorkflow.nodes);
+            if (startNodeError) {
+                throw new Error(startNodeError);
+            }
+
             const newWorkflow: Workflow = {
                 ...importedWorkflow,
                 id: `workflow-${Date.now()}`,
@@ -162,7 +183,7 @@ export default function Workflow(): React.JSX.Element {
         } catch (error) {
             setImportError(error instanceof Error ? error.message : '导入失败');
         }
-    }, [importJsonText, addWorkflow]);
+    }, [importJsonText, addWorkflow, validateStartNode]);
 
     const handleImportFromFile = useCallback((event: React.ChangeEvent<HTMLInputElement>) => {
         const file = event.target.files?.[0];

@@ -6,6 +6,7 @@ import * as fs from 'fs/promises'
 import * as path from 'path'
 import * as iconv from 'iconv-lite'
 import * as jschardet from 'jschardet'
+import { createAgent } from "langchain"
 
 export const getLLMEndpoint = (llmConfig: LLMConfig): string => {
   switch (llmConfig.provider) {
@@ -30,6 +31,7 @@ export const callLLM = async (
   conversationHistory: BaseMessage[] = []
 ): Promise<string> => {
   try {
+
     const llm = new ChatOpenAI({
       model: llmConfig.model,
       temperature: llmConfig.temperature || 0.7,
@@ -38,10 +40,22 @@ export const callLLM = async (
       apiKey: llmConfig.apiKey,
       configuration: {
         baseURL: getLLMEndpoint(llmConfig)
-      }
+      },
     })
-    const response = await llm.invoke([...conversationHistory, new HumanMessage(prompt)])
-    return response.content.toString()
+
+    // const response = await llm.invoke([...conversationHistory, new HumanMessage(prompt)])
+    // return response.content.toString()
+
+    const agent = createAgent({
+      model: llm,
+      // tools: Object.entries(tools).map(([, fn]) => tool(fn)),
+    });
+
+    const messages = prompt !== conversationHistory[conversationHistory.length - 1].content
+      ? [...conversationHistory, new HumanMessage(prompt)]
+      : conversationHistory
+    const response = await agent.invoke({ messages });
+    return response.messages[response.messages.length - 1].content.toString()
   } catch (error) {
     throw new Error(`LLM调用错误: ${error instanceof Error ? error.message : '未知错误'}`)
   }
