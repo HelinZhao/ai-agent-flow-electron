@@ -1,26 +1,41 @@
 import ClickSqark from "@renderer/components/ClickSqark";
 import Layout from "@renderer/components/Layout";
-import { Outlet } from "react-router-dom";
 import '@renderer/assets/react-flow-custom.css';
 import '@renderer/assets/iconfont.css';
 import { useWorkflowStore } from "@renderer/store/workflowStore";
 import { useEffect } from "react";
+import Workflow from "./Workflow";
+import Skills from "./Skills";
+import Settings from "./Settings";
+import Agents from "./Agents";
+import Chat from "./Chat";
+
+const pages: Record<string, React.ReactNode> = {
+    '/': <Workflow />,
+    '/agents': <Agents />,
+    '/skills': <Skills />,
+    '/settings': <Settings />,
+    '/chat': <Chat />,
+};
 
 let init = false
 export default function App(): React.JSX.Element {
-    const { initialize } = useWorkflowStore();
+    const { initialize, currentPage, setCurrentPage } = useWorkflowStore();
 
-    // 组件挂载时自动加载数据（仅在客户端执行）
     useEffect(() => {
         if (init) return
         initialize();
         init = true
     }, [initialize]);
-    
+
     return (
-        <Layout>
+        <Layout currentPage={currentPage} onNavigate={setCurrentPage}>
             <ClickSqark />
-            <Outlet />
+            {Object.entries(pages).map(([path, component]) => (
+                <div key={path} className={currentPage === path ? '' : 'hidden'} style={{ height: '100%' }}>
+                    {component}
+                </div>
+            ))}
         </Layout>
-    )
+    );
 }

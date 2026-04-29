@@ -1,14 +1,14 @@
-import { Link, useLocation } from 'react-router-dom'
 import ThemeToggle from './ThemeToggle'
 import LLMConfigSwitcher from './LLMConfigSwitcher'
 import { useState } from 'react'
 
 interface LayoutProps {
   children: React.ReactNode
+  currentPage: string
+  onNavigate: (page: string) => void
 }
 
-const Layout: React.FC<LayoutProps> = ({ children }: LayoutProps) => {
-  const location = useLocation()
+const Layout: React.FC<LayoutProps> = ({ children, currentPage, onNavigate }: LayoutProps) => {
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false)
 
   const navItems = [
@@ -27,10 +27,10 @@ const Layout: React.FC<LayoutProps> = ({ children }: LayoutProps) => {
           {/* 导航项 */}
           <div className="flex-1 flex flex-col items-center py-4 space-y-2">
             {navItems.map((item) => (
-              <Link
+              <button
                 key={item.path}
-                to={item.path}
-                className={`group relative p-3 rounded-xl transition-all duration-200 focus:outline-none ${location.pathname === item.path
+                onClick={() => onNavigate(item.path)}
+                className={`group relative p-3 rounded-xl transition-all duration-200 focus:outline-none ${currentPage === item.path
                   ? 'bg-gradient-to-r from-blue-500 to-purple-600 text-white shadow-lg'
                   : 'text-gray-600 dark:text-gray-300 hover:text-blue-600 dark:hover:text-blue-400 hover:bg-gray-100/80 dark:hover:bg-gray-700/50'
                   }`}
@@ -44,7 +44,7 @@ const Layout: React.FC<LayoutProps> = ({ children }: LayoutProps) => {
                     <div className="absolute top-1/2 left-0 transform -translate-y-1/2 -translate-x-1 w-3 h-3 bg-white dark:bg-gray-700 rotate-45"></div>
                   </div>
                 </div>
-              </Link>
+              </button>
             ))}
           </div>
         </div>
@@ -101,18 +101,20 @@ const Layout: React.FC<LayoutProps> = ({ children }: LayoutProps) => {
           <div className="bg-white/95 dark:bg-gray-800/95 backdrop-blur-md border-t border-gray-200/50 dark:border-gray-700/50">
             <div className="px-4 py-2 space-y-1">
               {navItems.map((item) => (
-                <Link
+                <button
                   key={item.path}
-                  to={item.path}
-                  className={`flex items-center space-x-3 px-4 py-3 rounded-xl text-sm font-medium transition-all ${location.pathname === item.path
+                  className={`flex items-center space-x-3 px-4 py-3 rounded-xl text-sm font-medium transition-all w-full ${currentPage === item.path
                     ? 'bg-gradient-to-r from-blue-500 to-purple-600 text-white'
                     : 'text-gray-600 dark:text-gray-300 hover:bg-white/50 dark:hover:bg-gray-700/50'
                     }`}
-                  onClick={() => setIsMobileMenuOpen(false)}
+                  onClick={() => {
+                    onNavigate(item.path);
+                    setIsMobileMenuOpen(false);
+                  }}
                 >
                   <span className="text-lg">{item.icon}</span>
                   <span>{item.label}</span>
-                </Link>
+                </button>
               ))}
             </div>
           </div>

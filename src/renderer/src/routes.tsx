@@ -1,57 +1,15 @@
 import { lazy, Suspense } from "react";
 import { createHashRouter, RouterProvider } from "react-router-dom";
 const App = lazy(() => import('@renderer/pages/App'))
-const Workflow = lazy(() => import('@renderer/pages/Workflow'))
-const Skills = lazy(() => import('@renderer/pages/Skills'))
-const Chat = lazy(() => import('@renderer/pages/Chat'))
-const Settings = lazy(() => import('@renderer/pages/Settings'))
-const Agents = lazy(() => import('@renderer/pages/Agents'))
 
-export interface RouteType {
-    index?: boolean
-    path?: string
-    element: React.ReactNode,
-    children?: RouteType[],
-    meta: {
-        title: string,
-        icon?: React.ReactNode,
-        permission: string[],
-    }
-}
 const router = createHashRouter([
     {
         path: "/",
         element: <App />,
-        children: [
-            {
-                index: true,
-                element: <Workflow />,
-            },
-            {
-                path: "skills",
-                element: <Skills />,
-            },
-            {
-                path: "settings",
-                element: <Settings />,
-            },
-            {
-                path: "agents",
-                element: <Agents />,
-            },
-            {
-                path: "chat",
-                element: <Chat />,
-            },
-            {
-                path: "404",
-                element: <h1>404, 页面不存在</h1>,
-            },
-        ]
     },
 ]);
-export default function MainRouter(): React.JSX.Element {
 
+export default function MainRouter(): React.JSX.Element {
     return (
         <Suspense fallback={(
             <div

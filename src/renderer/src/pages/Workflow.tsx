@@ -378,7 +378,7 @@ export default function Workflow(): React.JSX.Element {
                     </div>
 
                     {/* 工作流列表侧边栏 */}
-                    <div className="lg:col-span-1 flex flex-col">
+                    <div className="lg:col-span-1 flex flex-col overflow-auto">
                         <div className="bg-white/80 dark:bg-gray-800/80 backdrop-blur-md rounded-lg shadow-lg border border-gray-200/50 dark:border-gray-700/50 flex-1 flex flex-col">
                             <div className="p-4 pb-2">
                                 <h3 className="text-base font-semibold text-gray-900 dark:text-white flex items-center space-x-2 mb-4">

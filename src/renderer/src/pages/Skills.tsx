@@ -129,7 +129,7 @@ export default function Skills(): React.JSX.Element {
 
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 h-[calc(100vh-200px)]">
                 {/* 技能列表 */}
-                <div className="lg:col-span-1 flex flex-col ">
+                <div className="lg:col-span-1 flex flex-col overflow-auto">
                     <div className="bg-white/80 dark:bg-gray-800/80 backdrop-blur-md shadow-lg rounded-lg border border-gray-200/50 dark:border-gray-700/50 flex-1 flex flex-col">
                         <div className="p-4 pb-2">
                             <div className="flex items-center space-x-2 mb-4">
@@ -228,7 +228,7 @@ export default function Skills(): React.JSX.Element {
                 </div>
 
                 {/* 技能编辑/预览 */}
-                <div className="lg:col-span-2 flex flex-col">
+                <div className="lg:col-span-2 flex flex-col overflow-auto">
                     <div className="bg-white/80 dark:bg-gray-800/80 backdrop-blur-md shadow-lg rounded-lg border border-gray-200/50 dark:border-gray-700/50 flex-1 flex flex-col">
                         <div className="flex-1 overflow-y-auto px-4 py-5 sm:p-6">
                             {isEditing ? (
@@ -295,12 +295,10 @@ export default function Skills(): React.JSX.Element {
                                 </div>
                             ) : selectedSkill ? (
                                 <div>
-                                    <h3 className="text-lg font-medium text-gray-900 mb-4">
+                                    <h3 className="text-2xl font-semibold text-gray-900 dark:text-white mb-2">
                                         {selectedSkill.name}
                                     </h3>
-                                    <div className="mb-4">
-                                        <span className="text-sm text-gray-500 dark:text-gray-400">{selectedSkill.description}</span>
-                                    </div>
+                                    <p className="text-gray-600 dark:text-gray-300">{selectedSkill.description || '暂无描述'}</p>
                                     <MarkdownPreview content={selectedSkill.content} />
                                 </div>
                             ) : (
