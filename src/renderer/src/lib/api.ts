@@ -259,10 +259,6 @@ export const workflowExecutionApi = {
   }> => {
     return new Promise((resolve, reject) => {
       const eventSource = new EventSource(`${baseURL}/execute-workflow/progress-sse/${executionId}`)
-      const timeout = setTimeout(() => {
-        eventSource.close()
-        reject(new Error('执行超时，请稍后查看执行状态'))
-      }, 100000)
 
       eventSource.onopen = () => {
         console.log('SSE连接已建立')
@@ -279,7 +275,6 @@ export const workflowExecutionApi = {
 
           // 处理不同类型的消息
           if (data.type === 'execution_complete') {
-            clearTimeout(timeout)
             eventSource.close()
 
             if (data.status === 'completed') {
@@ -316,7 +311,6 @@ export const workflowExecutionApi = {
               })
             }
           } else if (data.type === 'error') {
-            clearTimeout(timeout)
             eventSource.close()
             reject(new Error(data.message || 'SSE连接错误'))
           }
@@ -327,7 +321,6 @@ export const workflowExecutionApi = {
 
       eventSource.onerror = (error) => {
         console.error('SSE连接错误:', error)
-        clearTimeout(timeout)
         eventSource.close()
         reject(new Error('SSE连接失败'))
       }

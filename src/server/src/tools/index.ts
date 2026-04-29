@@ -20,7 +20,7 @@ const decodeBuffer = (buf: Buffer): string => {
 }
 
 const spawnWithOutput = (cmd: string, args: string[], cwd?: string, timeout?: number): Promise<string> => {
-  const timeoutMs = (timeout || 30) * 1000
+  const timeoutMs = (timeout || 120) * 1000
   return new Promise((resolve, reject) => {
     const child = spawn(cmd, args, { cwd: cwd || process.cwd(), windowsHide: true })
     const chunks: Buffer[] = []
@@ -93,18 +93,19 @@ export const executeCommandTool = tool(
     for (const p of blocked) {
       if (p.test(command)) return `命令被安全策略阻止: "${command}"`
     }
+    const effectiveTimeout = timeout || 120
     const isWin = process.platform === 'win32'
     if (isWin) {
-      return spawnWithOutput('cmd.exe', ['/d', '/s', '/c', command], process.cwd(), timeout || 30)
+      return spawnWithOutput('cmd.exe', ['/d', '/s', '/c', command], process.cwd(), effectiveTimeout)
     }
-    return spawnWithOutput('/bin/sh', ['-c', command], process.cwd(), timeout || 30)
+    return spawnWithOutput('/bin/sh', ['-c', command], process.cwd(), effectiveTimeout)
   },
   {
     name: 'executeCommand',
-    description: '执行一条 shell 命令并返回输出结果。可用于安装依赖、运行脚本等操作。',
+    description: '执行一条 shell 命令并返回输出结果。可用于安装依赖、运行脚本等操作。对于耗时较长的命令（如 npm install、npx create-react-app 等），建议设置较大的 timeout 值（如 300 秒）。',
     schema: z.object({
       command: z.string().describe('要执行的命令'),
-      timeout: z.number().optional().describe('超时秒数，默认30'),
+      timeout: z.number().optional().describe('超时秒数，默认120。耗时命令建议设为300或更大'),
     }),
   }
 )

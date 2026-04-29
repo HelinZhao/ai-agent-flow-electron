@@ -9,7 +9,8 @@
       "Bash(npm ls *)",
       "Bash(node -e \"const z = require\\('zod'\\); console.log\\('zod version:', z.ZodFirstPartyTypeKind ? 'v3-style' : 'unknown'\\)\")",
       "Bash(pnpm add *)",
-      "Bash(npm i *)"
+      "Bash(npm i *)",
+      "Bash(node -e \"const lc = require\\('langchain'\\); console.log\\(typeof lc.createAgent\\)\")"
     ]
   }
 }

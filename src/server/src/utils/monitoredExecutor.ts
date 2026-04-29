@@ -472,13 +472,14 @@ export class MonitoredLangGraphExecutor {
         }
       }
     } catch (error) {
+      const errorMsg = error instanceof Error ? error.message : '技能执行失败'
       return {
-        output: input,
+        output: errorMsg,
         metadata: {
           nodeId: node.id,
           label: node.data?.label,
           type: 'skill',
-          error: error instanceof Error ? error.message : '技能执行失败'
+          error: errorMsg
         }
       }
     }
@@ -542,13 +543,14 @@ export class MonitoredLangGraphExecutor {
         }
       }
     } catch (error) {
+      const errorMsg = error instanceof Error ? error.message : 'API调用失败'
       return {
-        output: input,
+        output: errorMsg,
         metadata: {
           nodeId: node.id,
           label: node.data?.label,
           type: 'api',
-          error: error instanceof Error ? error.message : 'API调用失败'
+          error: errorMsg
         }
       }
     }
@@ -587,13 +589,14 @@ export class MonitoredLangGraphExecutor {
         }
       }
     } catch (error) {
+      const errorMsg = error instanceof Error ? error.message : 'Agent执行失败'
       return {
-        output: input,
+        output: errorMsg,
         metadata: {
           nodeId: node.id,
           label: node.data?.label,
           type: 'agent',
-          error: error instanceof Error ? error.message : 'Agent执行失败'
+          error: errorMsg
         }
       }
     }
@@ -634,13 +637,14 @@ export class MonitoredLangGraphExecutor {
         }
       }
     } catch (error) {
+      const errorMsg = error instanceof Error ? error.message : 'LLM调用失败'
       return {
         output: input,
         metadata: {
           nodeId: node.id,
           label: node.data?.label,
           type: 'llm',
-          error: error instanceof Error ? error.message : 'LLM调用失败'
+          error: errorMsg
         }
       }
     }
@@ -738,13 +742,14 @@ export class MonitoredLangGraphExecutor {
         }
       }
     } catch (error) {
+      const errorMsg = error instanceof Error ? error.message : 'CLI命令执行失败'
       return {
-        output: input,
+        output: errorMsg,
         metadata: {
           nodeId: node.id,
           label: node.data?.label,
           type: 'cli',
-          error: error instanceof Error ? error.message : 'CLI命令执行失败',
+          error: errorMsg,
         }
       }
     }

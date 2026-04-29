@@ -350,7 +350,7 @@ export default function Settings(): React.JSX.Element {
                                         <CustomInput
                                             type="number"
                                             min="1"
-                                            max="4000"
+                                            max="1024000"
                                             {...register('maxTokens', { valueAsNumber: true })}
                                         />
                                     </div>

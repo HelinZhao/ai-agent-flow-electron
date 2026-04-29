@@ -26,40 +26,122 @@ export const getLLMEndpoint = (llmConfig: LLMConfig): string => {
   }
 }
 
+// 判断是否为可重试的瞬态错误（429 限流、网络断连等）
+const isRetryableError = (error: any): boolean => {
+  const msg = error instanceof Error ? error.message : String(error)
+  return /429|rate.?limit|quota|exceeded|connection.?error|ECONNRESET|ECONNREFUSED|ETIMEDOUT|fetch.?failed/i.test(msg)
+}
+
+const sleep = (ms: number) => new Promise(resolve => setTimeout(resolve, ms))
+
 export const callLLM = async (
   prompt: string,
   llmConfig: LLMConfig,
   conversationHistory: BaseMessage[] = [],
   enabledTools: string[] = []
 ): Promise<string> => {
-  try {
+  const maxAttempts = 3
+  let lastError: Error | null = null
 
-    const llm = new ChatOpenAI({
-      model: llmConfig.model,
-      temperature: llmConfig.temperature || 0.7,
-      maxTokens: llmConfig.maxTokens || 2000,
-      maxRetries: 2,
-      apiKey: llmConfig.apiKey,
-      configuration: {
-        baseURL: getLLMEndpoint(llmConfig)
-      },
-    })
-
-    const tools = getToolsByIds(enabledTools)
-
-    const agent = createAgent({
-      model: llm,
-      tools,
-    });
-
-    const messages = prompt !== conversationHistory[conversationHistory.length - 1]?.content
-      ? [...conversationHistory, new HumanMessage(prompt)]
-      : conversationHistory
-    const response = await agent.invoke({ messages });
-    return response.messages[response.messages.length - 1].content.toString()
-  } catch (error) {
-    throw new Error(`LLM调用错误: ${error instanceof Error ? error.message : '未知错误'}`)
+  for (let attempt = 1; attempt <= maxAttempts; attempt++) {
+    try {
+      return await callLLMOnce(prompt, llmConfig, conversationHistory, enabledTools, attempt)
+    } catch (error) {
+      lastError = error instanceof Error ? error : new Error(String(error))
+      if (!isRetryableError(lastError) || attempt >= maxAttempts) {
+        throw lastError
+      }
+      // 429 限流：指数退避等待
+      const waitSeconds = attempt * 10
+      console.log(`[LLM Agent] 第${attempt}次执行失败(${lastError.message})，${waitSeconds}秒后重试...`)
+      await sleep(waitSeconds * 1000)
+    }
   }
+  throw lastError!
+}
+
+const callLLMOnce = async (
+  prompt: string,
+  llmConfig: LLMConfig,
+  conversationHistory: BaseMessage[],
+  enabledTools: string[],
+  attempt: number
+): Promise<string> => {
+  const hasTools = enabledTools.length > 0
+  const effectiveMaxTokens = hasTools
+    ? Math.max(llmConfig.maxTokens || 2000, 4096)
+    : (llmConfig.maxTokens || 2000)
+
+  const llm = new ChatOpenAI({
+    model: llmConfig.model,
+    temperature: llmConfig.temperature || 0.7,
+    maxTokens: effectiveMaxTokens,
+    maxRetries: 6,
+    apiKey: llmConfig.apiKey,
+    configuration: {
+      baseURL: getLLMEndpoint(llmConfig)
+    },
+  })
+
+  const tools = getToolsByIds(enabledTools)
+
+  const agent = createAgent({
+    model: llm,
+    tools,
+  });
+
+  const messages = prompt !== conversationHistory[conversationHistory.length - 1]?.content
+    ? [...conversationHistory, new HumanMessage(prompt)]
+    : conversationHistory
+
+  const recursionLimit = hasTools ? 50 : 25
+
+  if (hasTools) {
+    if (attempt > 1) console.log(`[LLM Agent] 第${attempt}次重试开始`)
+    let lastAgentMsg: any = null
+    let stepCount = 0
+    const stream = await agent.stream({ messages }, { recursionLimit })
+
+    for await (const chunk of stream) {
+      for (const [nodeName, nodeState] of Object.entries(chunk)) {
+        if (nodeName === 'agent') {
+          const msg = nodeState?.messages?.[nodeState.messages.length - 1]
+          if (msg) {
+            stepCount++
+            lastAgentMsg = msg
+            if (msg.content && typeof msg.content === 'string') {
+              console.log(`[LLM Agent] 步骤${stepCount} - 模型输出: ${msg.content.substring(0, 200)}${msg.content.length > 200 ? '...' : ''}`)
+            }
+            const toolCalls = (msg as any).tool_calls
+            if (toolCalls && toolCalls.length > 0) {
+              for (const tc of toolCalls) {
+                console.log(`[LLM Agent] 步骤${stepCount} - 调用工具: ${tc.name}(${JSON.stringify(tc.args).substring(0, 300)})`)
+              }
+            }
+          }
+        } else if (nodeName === 'tools') {
+          const msg = nodeState?.messages?.[nodeState.messages.length - 1]
+          if (msg && msg.content) {
+            const resultStr = typeof msg.content === 'string'
+              ? msg.content
+              : JSON.stringify(msg.content)
+            console.log(`[LLM Agent] 工具结果 (${msg.name || 'unknown'}): ${resultStr.substring(0, 300)}${resultStr.length > 300 ? '...' : ''}`)
+          }
+        }
+      }
+    }
+
+    const finalContent = lastAgentMsg?.content?.toString() || ''
+    if (!finalContent) {
+      console.log(`[LLM Agent] agent 返回内容为空，可能因递归限制(${recursionLimit})或步数不足被截断`)
+    }
+    console.log(`[LLM Agent] 执行完成，共${stepCount}步`)
+    return finalContent
+  }
+
+  // 无工具时直接 invoke
+  const response = await agent.invoke({ messages }, { recursionLimit });
+  return response.messages[response.messages.length - 1].content.toString()
 }
 
 export const executeApiCall = async (apiConfig: ApiConfig): Promise<any> => {

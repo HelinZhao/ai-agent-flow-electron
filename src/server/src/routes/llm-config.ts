@@ -103,11 +103,7 @@ router.put('/:id', async (req, res) => {
       return res.status(404).json({ error: '配置不存在' })
     }
 
-    // 如果要设置为活跃配置，先将其他配置设为非活跃
-    if (isActive) {
-      await LLMConfigModel.update({ isActive: false }, { where: {} })
-    }
-
+    // isActive 只能通过专门的 activate 路径修改，更新时不覆盖
     await config.update({
       name,
       provider,
@@ -115,8 +111,7 @@ router.put('/:id', async (req, res) => {
       model,
       baseUrl,
       temperature,
-      maxTokens,
-      isActive
+      maxTokens
     })
 
     return res.status(200).json(config)

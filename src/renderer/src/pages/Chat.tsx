@@ -16,6 +16,7 @@ export default function Chat(): React.JSX.Element {
     const [searchTerm, setSearchTerm] = useState('');
     const [isLoading, setIsLoading] = useState(false);
     const [isLoadingHistory, setIsLoadingHistory] = useState(false);
+    const [currentExecutionId, setCurrentExecutionId] = useState<string | null>(null);
     const messagesEndRef = useRef<HTMLDivElement>(null);
 
     // 过滤agents基于搜索词
@@ -113,6 +114,7 @@ export default function Chat(): React.JSX.Element {
             if (!success) {
                 throw new Error(`AI Agent 对话启动失败`)
             }
+            setCurrentExecutionId(executionId)
 
             // 等待执行完成并获取结果（使用SSE）
             const { message, success: finalSuccess } = await workflowExecutionApi.waitForAgentChatResultSSE(
@@ -191,6 +193,7 @@ export default function Chat(): React.JSX.Element {
             }
         } finally {
             setIsLoading(false);
+            setCurrentExecutionId(null);
         }
     };
 
@@ -198,6 +201,17 @@ export default function Chat(): React.JSX.Element {
         if (e.key === 'Enter' && !e.shiftKey) {
             e.preventDefault();
             handleSendMessage();
+        }
+    };
+
+    const handleTerminate = async (): Promise<void> => {
+        if (!currentExecutionId) return;
+        try {
+            await workflowExecutionApi.stopExecution(currentExecutionId);
+            setIsLoading(false);
+            setCurrentExecutionId(null);
+        } catch (error) {
+            console.error('终止执行失败:', error);
         }
     };
 
@@ -482,25 +496,28 @@ export default function Chat(): React.JSX.Element {
                                             <div className="text-xs text-gray-400 dark:text-gray-500">
                                                 {inputMessage.length}/2000
                                             </div>
-                                            <CustomButton
-                                                onClick={handleSendMessage}
-                                                disabled={!inputMessage.trim() || isLoading}
-                                                variant="primary"
-                                                size="sm"
-                                                className="flex items-center space-x-2 px-6"
-                                            >
-                                                {isLoading ? (
-                                                    <>
-                                                        <div className="animate-spin rounded-full h-3 w-3 border-b-2 border-white"></div>
-                                                        <span>发送中</span>
-                                                    </>
-                                                ) : (
-                                                    <>
-                                                        <span>🚀</span>
-                                                        <span>发送</span>
-                                                    </>
-                                                )}
-                                            </CustomButton>
+                                            {isLoading ? (
+                                                <CustomButton
+                                                    onClick={handleTerminate}
+                                                    variant="danger"
+                                                    size="sm"
+                                                    className="flex items-center space-x-2 px-6"
+                                                >
+                                                    <span>⏹</span>
+                                                    <span>终止</span>
+                                                </CustomButton>
+                                            ) : (
+                                                <CustomButton
+                                                    onClick={handleSendMessage}
+                                                    disabled={!inputMessage.trim()}
+                                                    variant="primary"
+                                                    size="sm"
+                                                    className="flex items-center space-x-2 px-6"
+                                                >
+                                                    <span>🚀</span>
+                                                    <span>发送</span>
+                                                </CustomButton>
+                                            )}
                                         </div>
                                     </div>
                                 </div>
