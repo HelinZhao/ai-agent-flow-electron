@@ -55,7 +55,12 @@ export const readFileTool = tool(
 export const writeFileTool = tool(
   async ({ filePath, content }: { filePath: string; content: string }) => {
     const resolved = path.resolve(filePath)
-    await fs.mkdir(path.dirname(resolved), { recursive: true })
+    const dir = path.dirname(resolved)
+    try {
+      await fs.access(dir)
+    } catch {
+      await fs.mkdir(dir, { recursive: true })
+    }
     await fs.writeFile(resolved, content, 'utf-8')
     return `已写入文件: ${resolved} (${content.length} 字符)`
   },
