@@ -7,7 +7,9 @@
       "Bash(xxd \"d:/codes/ai-agent-flow-electron/src/server/src/utils.ts\")",
       "Bash(node -e ' *)",
       "Bash(npm ls *)",
-      "Bash(node -e \"const z = require\\('zod'\\); console.log\\('zod version:', z.ZodFirstPartyTypeKind ? 'v3-style' : 'unknown'\\)\")"
+      "Bash(node -e \"const z = require\\('zod'\\); console.log\\('zod version:', z.ZodFirstPartyTypeKind ? 'v3-style' : 'unknown'\\)\")",
+      "Bash(pnpm add *)",
+      "Bash(npm i *)"
     ]
   }
 }

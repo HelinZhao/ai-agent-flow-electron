@@ -170,3 +170,45 @@ body {
 .dark * {
   scrollbar-color: #6b7280 #374151;
 }
+
+/* Markdown渲染样式 — 与编辑器预览一致 */
+.markdown-body {
+  word-break: break-word;
+  overflow-wrap: break-word;
+  font-size: 14px;
+  line-height: 1.7;
+  word-wrap: break-word;
+}
+.markdown-body h1 { font-size: 1.6em; margin: 0.6em 0; font-weight: 700; }
+.markdown-body h2 { font-size: 1.4em; margin: 0.5em 0; font-weight: 600; }
+.markdown-body h3 { font-size: 1.2em; margin: 0.4em 0; font-weight: 600; }
+.markdown-body h4 { font-size: 1em; margin: 0.3em 0; font-weight: 600; }
+.markdown-body p { margin: 0.6em 0; }
+.markdown-body ul, .markdown-body ol { margin: 0.6em 0; padding-left: 2em; }
+.markdown-body li { margin: 0.2em 0; }
+.markdown-body blockquote { border-left: 4px solid #dfe2e5; padding: 0.4em 1em; margin: 0.6em 0; background: #f8f8f8; color: #555; }
+.markdown-body code { background: #f0f0f0; padding: 2px 6px; border-radius: 3px; font-size: 0.9em; font-family: 'Consolas', 'Monaco', monospace; }
+.markdown-body pre { background: #f6f8fa; padding: 1em; border-radius: 6px; overflow-x: auto; margin: 0.6em 0; }
+.markdown-body pre code { background: none; padding: 0; font-size: 0.85em; }
+.markdown-body table { border-collapse: collapse; margin: 0.6em 0; width: 100%; }
+.markdown-body th, .markdown-body td { border: 1px solid #dfe2e5; padding: 6px 12px; }
+.markdown-body th { background: #f6f8fa; font-weight: 600; }
+.markdown-body a { color: #0366d6; text-decoration: none; }
+.markdown-body a:hover { text-decoration: underline; }
+.markdown-body img { max-width: 100%; }
+.markdown-body hr { border: none; border-top: 1px solid #eaecef; margin: 1em 0; }
+
+.dark .markdown-body {
+  word-break: break-word;
+  overflow-wrap: break-word; color: #e5e7eb; }
+.dark .markdown-body h1, .dark .markdown-body h2, .dark .markdown-body h3, .dark .markdown-body h4, .dark .markdown-body h5, .dark .markdown-body h6 { color: #f3f4f6; }
+.dark .markdown-body blockquote { border-left-color: #4b5563; background: #374151; color: #d1d5db; }
+.dark .markdown-body code { background: #374151; color: #e5e7eb; }
+.dark .markdown-body pre { background: #1f2937; }
+.dark .markdown-body pre code { color: #e5e7eb; }
+.dark .markdown-body th, .dark .markdown-body td { border-color: #4b5563; }
+.dark .markdown-body th { background: #374151; color: #f3f4f6; }
+.dark .markdown-body a { color: #60a5fa; }
+.dark .markdown-body hr { border-top-color: #4b5563; }
+.dark .markdown-body strong { color: #f3f4f6; }
+.dark .markdown-body li { color: #e5e7eb; }

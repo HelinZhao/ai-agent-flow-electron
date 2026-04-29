@@ -4,6 +4,7 @@ import { Agent } from '@renderer/types';
 import MarkdownIt from 'markdown-it';
 import MdEditor from 'react-markdown-editor-lite';
 import 'react-markdown-editor-lite/lib/index.css';
+import MarkdownPreview from '@renderer/components/MarkdownPreview';
 import CustomSelect from '@renderer/components/CustomSelect';
 import CustomInput from '@renderer/components/CustomInput';
 import CustomButton from '@renderer/components/CustomButton';
@@ -342,22 +343,7 @@ export default function Agents(): React.JSX.Element {
                                         </div>
                                     )}
 
-                                    <div className="border border-gray-200/50 dark:border-gray-600/50 rounded-xl overflow-hidden">
-                                        <MdEditor
-                                            style={{ height: '500px' }}
-                                            value={selectedAgent.instructions}
-                                            renderHTML={text => mdParser.render(text)}
-                                            config={{
-                                                view: {
-                                                    menu: false,    // 隐藏菜单栏
-                                                    md: false,      // 隐藏编辑区
-                                                    html: true,     // 显示预览区
-                                                    fullScreen: false // 隐藏全屏按钮
-                                                }
-                                            }}
-                                            readOnly={true}     // 设置为只读模式
-                                        />
-                                    </div>
+                                    <MarkdownPreview content={selectedAgent.instructions} className="border border-gray-200/50 dark:border-gray-600/50 rounded-xl p-4" />
                                 </div>
                             ) : (
                                 <div className="text-center py-16">

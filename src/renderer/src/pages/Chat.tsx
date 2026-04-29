@@ -4,6 +4,7 @@ import { Agent, ChatHistory, ChatMessage } from '@renderer/types';
 import { chatHistoryApi } from '@renderer/lib/chatHistory';
 import { workflowExecutionApi } from '@renderer/lib/api';
 import CustomButton from '@renderer/components/CustomButton';
+import MarkdownPreview from '@renderer/components/MarkdownPreview';
 
 // 使用全局类型定义，不需要重复定义
 
@@ -287,9 +288,9 @@ export default function Chat(): React.JSX.Element {
             </div>
 
             {/* 聊天内容区域 */}
-            <div className="flex-1 flex overflow-auto">
+            <div className="flex-1 flex overflow-hidden">
                 {/* 左侧Agent列表 */}
-                <div className="w-72 bg-white/60 dark:bg-gray-800/60 backdrop-blur-sm border-r border-gray-200/50 dark:border-gray-700/50 p-4 overflow-auto">
+                <div className="w-72 flex-shrink-0 bg-white/60 dark:bg-gray-800/60 backdrop-blur-sm border-r border-gray-200/50 dark:border-gray-700/50 p-4 overflow-y-auto">
                     <div className="flex items-center space-x-2 mb-4">
                         <span className="text-lg">🤖</span>
                         <h3 className="font-semibold text-gray-900 dark:text-white">Agent列表</h3>
@@ -364,11 +365,11 @@ export default function Chat(): React.JSX.Element {
                 </div>
 
                 {/* 右侧聊天区域 */}
-                <div className="flex-1 flex flex-col h-full">
+                <div className="flex-1 flex flex-col min-w-0">
                     {selectedAgent ? (
                         <>
                             {/* 消息列表 */}
-                            <div className="flex-1 overflow-y-auto p-6 space-y-6 bg-gradient-to-b from-white/50 to-gray-50/30 dark:from-gray-800/50 dark:to-gray-900/30">
+                            <div className="flex-1 overflow-y-auto overflow-x-hidden p-6 space-y-6 bg-gradient-to-b from-white/50 to-gray-50/30 dark:from-gray-800/50 dark:to-gray-900/30">
                                 {messages.length === 0 && (
                                     <div className="flex flex-col items-center justify-center py-16">
                                         <div className="text-6xl mb-4 animate-bounce">💬</div>
@@ -386,7 +387,7 @@ export default function Chat(): React.JSX.Element {
                                         key={message.id}
                                         className={`flex ${message.sender === 'user' ? 'justify-end' : 'justify-start'} group`}
                                     >
-                                        <div className={`flex items-start space-x-2 max-w-3xl ${message.sender === 'user' ? 'flex-row-reverse space-x-reverse' : ''}`}>
+                                        <div className={`flex items-start space-x-2 ${message.sender === 'user' ? 'flex-row-reverse space-x-reverse max-w-[70%]' : 'max-w-[80%]'}`}>
                                             {/* 头像 */}
                                             <div className={`w-8 h-8 rounded-full flex items-center justify-center text-white text-sm flex-shrink-0 mt-1 ${message.sender === 'user'
                                                 ? 'bg-gradient-to-r from-gray-500 to-gray-600'
@@ -397,14 +398,17 @@ export default function Chat(): React.JSX.Element {
 
                                             {/* 消息气泡 */}
                                             <div
-                                                className={`px-4 py-3 shadow-sm ${message.sender === 'user'
+                                                className={`px-4 py-3 shadow-sm min-w-0 ${message.sender === 'user'
                                                     ? 'bg-gradient-to-r from-blue-500 to-blue-600 text-white rounded-2xl rounded-br-sm'
                                                     : 'bg-white dark:bg-gray-700/80 text-gray-900 dark:text-white border border-gray-200/50 dark:border-gray-600/50 rounded-2xl rounded-bl-sm backdrop-blur-sm'
                                                     }`}
                                             >
-                                                <div className="text-sm leading-relaxed" style={{ whiteSpace: "pre-wrap" }}>
-                                                    {message.content}
-                                                </div>
+                                                {message.sender === 'user'
+                                                    ? <div className="text-sm leading-relaxed" style={{ whiteSpace: "pre-wrap" }}>{message.content}</div>
+                                                    : <div className="text-sm leading-relaxed">
+                                                        <MarkdownPreview content={message.content} />
+                                                      </div>
+                                                }
                                                 <div className={`text-xs mt-2 flex items-center space-x-1 ${message.sender === 'user' ? 'text-blue-100' : 'text-gray-500 dark:text-gray-400'
                                                     }`}>
                                                     <span>{formatTime(message.timestamp)}</span>

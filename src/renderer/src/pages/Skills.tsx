@@ -4,6 +4,7 @@ import { Skill } from '@renderer/types';
 import MdEditor from 'react-markdown-editor-lite';
 import 'react-markdown-editor-lite/lib/index.css';
 import MarkdownIt from 'markdown-it';
+import MarkdownPreview from '@renderer/components/MarkdownPreview';
 import CustomButton from '@renderer/components/CustomButton';
 import CustomInput from '@renderer/components/CustomInput';
 import CustomFileUpload from '@renderer/components/CustomFileUpload';
@@ -300,20 +301,7 @@ export default function Skills(): React.JSX.Element {
                                     <div className="mb-4">
                                         <span className="text-sm text-gray-500 dark:text-gray-400">{selectedSkill.description}</span>
                                     </div>
-                                    <MdEditor
-                                        value={selectedSkill.content}
-                                        className="border border-gray-300 rounded-md overflow-hidden" style={{ height: '500px' }}
-                                        renderHTML={text => mdParser.render(text)}
-                                        config={{
-                                            view: {
-                                                menu: false,    // 隐藏菜单栏
-                                                md: false,      // 隐藏编辑区
-                                                html: true,     // 显示预览区
-                                                fullScreen: false // 隐藏全屏按钮
-                                            }
-                                        }}
-                                        readOnly={true}     // 设置为只读模式
-                                    />
+                                    <MarkdownPreview content={selectedSkill.content} />
                                 </div>
                             ) : (
                                 <div className="text-center py-12 text-gray-500 dark:text-gray-400">

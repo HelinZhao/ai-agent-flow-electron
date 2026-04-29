@@ -1,5 +1,6 @@
 import React from 'react';
 import { useWorkflowStore } from '@renderer/store/workflowStore';
+import MarkdownPreview from '@renderer/components/MarkdownPreview';
 import CustomSelect from '../../CustomSelect';
 
 interface SkillConfigProps {
@@ -9,6 +10,7 @@ interface SkillConfigProps {
 
 const SkillConfig: React.FC<SkillConfigProps> = ({ config, onConfigChange }) => {
   const { skills } = useWorkflowStore();
+  const selectedSkill = skills.find(s => s.id === config.skillId);
   return (
     <div className="space-y-4">
       <div>
@@ -37,8 +39,8 @@ const SkillConfig: React.FC<SkillConfigProps> = ({ config, onConfigChange }) => 
           <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
             技能预览
           </label>
-          <div className="border border-gray-300 dark:border-gray-600 rounded-md p-3 max-h-40 overflow-y-auto text-sm bg-gray-50 dark:bg-gray-700 text-gray-900 dark:text-gray-300">
-            {skills.find(s => s.id === config.skillId)?.content || '技能内容不可用'}
+          <div className="border border-gray-300 dark:border-gray-600 rounded-md p-3 max-h-60 overflow-y-auto bg-gray-50 dark:bg-gray-700 ">
+            <MarkdownPreview content={selectedSkill?.content || '技能内容不可用'} />
           </div>
         </div>
       )}
