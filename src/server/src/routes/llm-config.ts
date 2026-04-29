@@ -96,7 +96,7 @@ router.post('/', async (req, res) => {
 router.put('/:id', async (req, res) => {
   try {
     const { id } = req.params
-    const { name, provider, apiKey, model, baseUrl, temperature, maxTokens, isActive } = req.body
+    const { name, provider, apiKey, model, baseUrl, temperature, maxTokens } = req.body
 
     const config = await LLMConfigModel.findByPk(id)
     if (!config) {

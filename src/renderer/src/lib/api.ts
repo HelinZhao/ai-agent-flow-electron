@@ -248,6 +248,20 @@ export const workflowExecutionApi = {
       threadId
     }),
 
+  // 用户审批工具调用
+  approveToolCall: (
+    executionId: string,
+    decisions: { type: 'approve' | 'reject'; message?: string }[]
+  ): Promise<{ success: boolean; message: string }> =>
+    api.post(`/execute-workflow/approve-tool/${executionId}`, { decisions }),
+
+  // 按工具类型设置会话级放权
+  setAutoApprove: (
+    executionId: string,
+    toolName: string
+  ): Promise<{ success: boolean; message: string }> =>
+    api.post(`/execute-workflow/auto-approve/${executionId}`, { toolName }),
+
   // 等待AI Agent对话完成并获取结果（使用SSE）
   waitForAgentChatResultSSE: (
     executionId: string,

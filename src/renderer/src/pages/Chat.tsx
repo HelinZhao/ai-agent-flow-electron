@@ -1,12 +1,20 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { useWorkflowStore } from '@renderer/store/workflowStore';
-import { Agent, ChatHistory, ChatMessage } from '@renderer/types';
+import { Agent, ChatHistory, ChatMessage, ToolApprovalRequest } from '@renderer/types';
 import { chatHistoryApi } from '@renderer/lib/chatHistory';
 import { workflowExecutionApi } from '@renderer/lib/api';
 import CustomButton from '@renderer/components/CustomButton';
 import MarkdownPreview from '@renderer/components/MarkdownPreview';
 
-// 使用全局类型定义，不需要重复定义
+// 工具名称中文映射
+const TOOL_LABELS: Record<string, string> = {
+    readFile: '读取文件',
+    writeFile: '写入文件',
+    listDirectory: '列出目录',
+    executeCommand: '执行命令',
+    httpRequest: 'HTTP请求',
+    webSearch: '网页搜索',
+};
 
 export default function Chat(): React.JSX.Element {
     const { agents, workflows, activeLLMConfig } = useWorkflowStore();
@@ -17,6 +25,8 @@ export default function Chat(): React.JSX.Element {
     const [isLoading, setIsLoading] = useState(false);
     const [isLoadingHistory, setIsLoadingHistory] = useState(false);
     const [currentExecutionId, setCurrentExecutionId] = useState<string | null>(null);
+    const [pendingApproval, setPendingApproval] = useState<ToolApprovalRequest | null>(null);
+    const [autoApprovedTools, setAutoApprovedTools] = useState<Set<string>>(new Set());
     const messagesEndRef = useRef<HTMLDivElement>(null);
 
     // 过滤agents基于搜索词
@@ -120,11 +130,26 @@ export default function Chat(): React.JSX.Element {
             const { message, success: finalSuccess } = await workflowExecutionApi.waitForAgentChatResultSSE(
                 executionId,
                 (progress) => {
-                    // 可以在这里更新UI显示执行进度
-                    console.log('执行进度:', progress)
-                    // 如果收到节点更新，可以显示进度信息
-                    if (progress.type === 'node_update') {
+                    // 工具审批请求：暂停等待用户决策
+                    if (progress.type === 'tool_approval_required') {
+                        console.log('工具审批请求:', progress)
+                        // 如果此工具类型已放权，自动审批
+                        if (autoApprovedTools.size > 0 && progress.actionRequests.every(a => autoApprovedTools.has(a.name))) {
+                            workflowExecutionApi.approveToolCall(
+                                currentExecutionId!,
+                                progress.actionRequests.map(() => ({ type: 'approve' }))
+                            ).catch(console.error)
+                        } else {
+                            setPendingApproval({
+                                actionRequests: progress.actionRequests,
+                                reviewConfigs: progress.reviewConfigs,
+                            })
+                            scrollToBottom()
+                        }
+                    } else if (progress.type === 'node_update') {
                         console.log(`节点 ${progress.nodeLabel} 已完成`)
+                        // 工具审批已处理时清除
+                        setPendingApproval(null)
                     }
                 }
             )
@@ -252,6 +277,33 @@ export default function Chat(): React.JSX.Element {
     const formatTime = (timestamp: string): string => {
         const date = new Date(timestamp);
         return date.toLocaleTimeString('zh-CN', { hour: '2-digit', minute: '2-digit' });
+    };
+
+    const handleApprove = async (approved: boolean): Promise<void> => {
+        if (!currentExecutionId || !pendingApproval) return;
+        try {
+            await workflowExecutionApi.approveToolCall(
+                currentExecutionId,
+                pendingApproval.actionRequests.map(() => ({
+                    type: approved ? 'approve' : 'reject',
+                    message: approved ? undefined : '用户拒绝执行此工具',
+                }))
+            );
+            setPendingApproval(null);
+        } catch (error) {
+            console.error('审批操作失败:', error);
+        }
+    };
+
+    const handleAutoApprove = async (toolName: string): Promise<void> => {
+        if (!currentExecutionId) return;
+        try {
+            await workflowExecutionApi.setAutoApprove(currentExecutionId, toolName);
+            setAutoApprovedTools(prev => new Set([...prev, toolName]));
+            setPendingApproval(null);
+        } catch (error) {
+            console.error('设置自动审批失败:', error);
+        }
     };
 
     return (
@@ -438,7 +490,7 @@ export default function Chat(): React.JSX.Element {
                                     </div>
                                 ))}
 
-                                {isLoading && (
+                                {isLoading && !pendingApproval && (
                                     <div className="flex justify-start">
                                         <div className="flex items-start space-x-2 max-w-3xl">
                                             <div className="w-8 h-8 bg-gradient-to-r from-blue-500 to-purple-500 rounded-full flex items-center justify-center text-white text-sm flex-shrink-0 mt-1">
@@ -452,6 +504,59 @@ export default function Chat(): React.JSX.Element {
                                                         <div className="w-2 h-2 bg-gray-400 rounded-full animate-bounce" style={{ animationDelay: '0.2s' }}></div>
                                                     </div>
                                                     <span className="text-sm text-gray-500 dark:text-gray-400">{selectedAgent.name} 正在思考...</span>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                )}
+
+                                {isLoading && pendingApproval && (
+                                    <div className="flex justify-start">
+                                        <div className="flex items-start space-x-2 max-w-[80%]">
+                                            <div className="w-8 h-8 bg-gradient-to-r from-orange-500 to-red-500 rounded-full flex items-center justify-center text-white text-sm flex-shrink-0 mt-1">
+                                                ⚠️
+                                            </div>
+                                            <div className="bg-white dark:bg-gray-700/80 border border-orange-300/50 dark:border-orange-600/50 px-4 py-3 rounded-2xl rounded-bl-sm shadow-sm backdrop-blur-sm">
+                                                <div className="text-sm text-gray-700 dark:text-gray-200 font-medium mb-2">
+                                                    工具调用需要审批
+                                                </div>
+                                                <div className="space-y-2 mb-3">
+                                                    {pendingApproval.actionRequests.map((action, i) => (
+                                                        <div key={i} className="bg-gray-50 dark:bg-gray-600/50 rounded-lg p-2 text-xs">
+                                                            <div className="font-medium text-gray-900 dark:text-white">
+                                                                {TOOL_LABELS[action.name] || action.name}
+                                                            </div>
+                                                            <div className="text-gray-600 dark:text-gray-300 mt-1 max-h-[80px] overflow-auto">
+                                                                {JSON.stringify(action.args, null, 2)}
+                                                            </div>
+                                                        </div>
+                                                    ))}
+                                                </div>
+                                                <div className="flex flex-wrap items-center gap-2">
+                                                    <CustomButton
+                                                        onClick={() => handleApprove(true)}
+                                                        variant="primary"
+                                                        size="sm"
+                                                    >
+                                                        允许
+                                                    </CustomButton>
+                                                    <CustomButton
+                                                        onClick={() => handleApprove(false)}
+                                                        variant="danger"
+                                                        size="sm"
+                                                    >
+                                                        拒绝
+                                                    </CustomButton>
+                                                    {pendingApproval.actionRequests.map((action) => (
+                                                        <CustomButton
+                                                            key={action.name}
+                                                            onClick={() => handleAutoApprove(action.name)}
+                                                            variant="secondary"
+                                                            size="sm"
+                                                        >
+                                                            本会话允许{TOOL_LABELS[action.name] || action.name}
+                                                        </CustomButton>
+                                                    ))}
                                                 </div>
                                             </div>
                                         </div>

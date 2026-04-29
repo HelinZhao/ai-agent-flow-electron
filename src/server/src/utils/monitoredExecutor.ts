@@ -11,7 +11,7 @@ import {
 } from '@langchain/langgraph'
 import { MemorySaver } from '@langchain/langgraph'
 import { BaseMessage, HumanMessage, AIMessage } from '@langchain/core/messages'
-import { callLLM, executeApiCall, executeCliCommand, executeCliTemplate } from '../utils'
+import { callLLM, executeApiCall, executeCliCommand, executeCliTemplate, HITLRequest, HITLResponse, HITLDecision, CallLLMOptions } from '../utils'
 import { v4 as uuidv4 } from 'uuid'
 
 // 执行状态存储
@@ -33,6 +33,8 @@ interface ExecutionState {
   agentId?: string
   threadId?: string
   compiledGraph?: CompiledStateGraph<any, any>
+  autoApprovedToolTypes: Set<string>
+  pendingApproval: { resolve: (response: HITLResponse) => void; request: HITLRequest } | null
 }
 const menory = new MemorySaver()
 
@@ -72,7 +74,9 @@ export class MonitoredLangGraphExecutor {
         }
       ],
       agentId,
-      threadId
+      threadId,
+      autoApprovedToolTypes: new Set<string>(),
+      pendingApproval: null,
     }
 
     this.executionStates.set(executionId, executionState)
@@ -347,7 +351,7 @@ export class MonitoredLangGraphExecutor {
 
   // 执行带监控的节点
   private async executeMonitoredNode(
-    _executionId: string,
+    executionId: string,
     node: WorkflowNode,
     input: string,
     llmConfig: LLMConfig,
@@ -356,7 +360,7 @@ export class MonitoredLangGraphExecutor {
     const startTime = Date.now()
 
     try {
-      const result = await this.executeNode(node, input, llmConfig, conversationHistory)
+      const result = await this.executeNode(executionId, node, input, llmConfig, conversationHistory)
       const endTime = Date.now()
 
       return {
@@ -384,6 +388,7 @@ export class MonitoredLangGraphExecutor {
 
   // 原有的节点执行逻辑
   private async executeNode(
+    executionId: string,
     node: WorkflowNode,
     input: string,
     llmConfig: LLMConfig,
@@ -406,7 +411,7 @@ export class MonitoredLangGraphExecutor {
         return await this.executeApi(node, input, llmConfig)
 
       case 'llm':
-        return await this.executeLLM(node, input, llmConfig, conversationHistory)
+        return await this.executeLLM(executionId, node, input, llmConfig, conversationHistory)
 
       case 'agent':
         return await this.executeAgent(node, input, llmConfig, conversationHistory)
@@ -603,6 +608,7 @@ export class MonitoredLangGraphExecutor {
   }
 
   private async executeLLM(
+    executionId: string,
     node: WorkflowNode,
     input: string,
     llmConfig: LLMConfig,
@@ -624,7 +630,63 @@ export class MonitoredLangGraphExecutor {
 
       const finalPrompt = promptTemplate ? `${promptTemplate}\n\n当前用户输入: ${input}` : input
       const enabledTools = node.data.config?.enabledTools || []
-      const result = await callLLM(finalPrompt, llmConfig, conversationHistory, enabledTools)
+
+      // 构建 HITL 宯批回调
+      const hasDangerousTools = enabledTools.some((t: string) => ['writeFile', 'executeCommand', 'httpRequest'].includes(t))
+      const options: CallLLMOptions = hasDangerousTools
+        ? {
+            approvalCallback: async (request: HITLRequest): Promise<HITLResponse> => {
+              const execState = this.executionStates.get(executionId)
+              if (!execState) {
+                return { decisions: request.actionRequests.map(() => ({ type: 'reject', message: '执行状态不存在' })) }
+              }
+
+              // 按工具类型判断：已放行的工具自动批准，其余需要审批
+              const autoApproved: string[] = []
+              const needApproval: { name: string; args: Record<string, any>; description: string }[] = []
+              for (const action of request.actionRequests) {
+                if (execState.autoApprovedToolTypes.has(action.name)) {
+                  autoApproved.push(action.name)
+                } else {
+                  needApproval.push(action)
+                }
+              }
+
+              // 全部已放行
+              if (needApproval.length === 0) {
+                return { decisions: request.actionRequests.map(() => ({ type: 'approve' })) }
+              }
+
+              // 广播 SSE 请求审批事件（只包含需要审批的工具）
+              this.broadcastToSSEClients(executionId, {
+                type: 'tool_approval_required',
+                executionId,
+                actionRequests: needApproval,
+                reviewConfigs: request.reviewConfigs.filter(rc => needApproval.some(a => a.name === rc.actionName)),
+              })
+
+              // 创建 Promise 等待用户审批
+              const approvalPromise = new Promise<HITLResponse>((resolve) => {
+                execState.pendingApproval = { resolve, request }
+              })
+
+              const userResponse = await approvalPromise
+
+              // 合并结果：自动批准的 + 用户决策的
+              const decisions: HITLDecision[] = request.actionRequests.map((action) => {
+                if (execState.autoApprovedToolTypes.has(action.name)) {
+                  return { type: 'approve' }
+                }
+                const userDecision = userResponse.decisions.find(d => d.type !== 'approve' || needApproval.some(a => a.name === action.name))
+                return userDecision || { type: 'approve' }
+              })
+
+              return { decisions }
+            }
+          }
+        : {}
+
+      const result = await callLLM(finalPrompt, llmConfig, conversationHistory, enabledTools, options)
 
       return {
         output: result,
@@ -952,5 +1014,42 @@ ${conditionText}
       executionId,
       clientCount: clients.length
     }))
+  }
+
+  // 用户审批工具调用
+  approveToolCall(executionId: string, decisions: HITLDecision[]): boolean {
+    const execState = this.executionStates.get(executionId)
+    if (!execState || !execState.pendingApproval) return false
+
+    const { resolve } = execState.pendingApproval
+    const response: HITLResponse = { decisions }
+    execState.pendingApproval = null
+    resolve(response)
+    return true
+  }
+
+  // 按工具类型设置会话级放权
+  setAutoApprove(executionId: string, toolName: string): boolean {
+    const execState = this.executionStates.get(executionId)
+    if (!execState) return false
+
+    execState.autoApprovedToolTypes.add(toolName)
+
+    // 如果当前有等待中的审批且包含该工具，立即放行
+    if (execState.pendingApproval) {
+      const allApproved = execState.pendingApproval.request.actionRequests.every(
+        (a) => execState.autoApprovedToolTypes.has(a.name)
+      )
+      if (allApproved) {
+        const { resolve, request } = execState.pendingApproval
+        const response: HITLResponse = {
+          decisions: request.actionRequests.map(() => ({ type: 'approve' }))
+        }
+        execState.pendingApproval = null
+        resolve(response)
+      }
+    }
+
+    return true
   }
 }

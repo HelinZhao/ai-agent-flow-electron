@@ -172,3 +172,20 @@ export interface CliNodeConfig {
   outputMode: 'raw' | 'llm_process'
   llmProcessPrompt?: string
 }
+
+// 工具审批相关类型
+export interface ToolApprovalAction {
+  name: string
+  args: Record<string, any>
+  description: string
+}
+
+export interface ToolApprovalRequest {
+  actionRequests: ToolApprovalAction[]
+  reviewConfigs: { actionName: string; allowedDecisions: string[] }[]
+}
+
+export interface ToolApprovalDecision {
+  type: 'approve' | 'reject'
+  message?: string
+}

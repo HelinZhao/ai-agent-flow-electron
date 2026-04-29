@@ -6,8 +6,28 @@ import * as fs from 'fs/promises'
 import * as path from 'path'
 import * as iconv from 'iconv-lite'
 import * as jschardet from 'jschardet'
-import { createAgent } from "langchain"
+import { createAgent, humanInTheLoopMiddleware } from "langchain"
+import { MemorySaver } from "@langchain/langgraph"
+import { Command } from "@langchain/langgraph"
 import { getToolsByIds } from './tools'
+
+export interface HITLRequest {
+  actionRequests: { name: string; args: Record<string, any>; description: string }[]
+  reviewConfigs: { actionName: string; allowedDecisions: string[] }[]
+}
+
+export interface HITLDecision {
+  type: 'approve' | 'reject'
+  message?: string
+}
+
+export interface HITLResponse {
+  decisions: HITLDecision[]
+}
+
+export interface CallLLMOptions {
+  approvalCallback?: (request: HITLRequest) => Promise<HITLResponse>
+}
 
 export const getLLMEndpoint = (llmConfig: LLMConfig): string => {
   switch (llmConfig.provider) {
@@ -38,21 +58,22 @@ export const callLLM = async (
   prompt: string,
   llmConfig: LLMConfig,
   conversationHistory: BaseMessage[] = [],
-  enabledTools: string[] = []
+  enabledTools: string[] = [],
+  options?: CallLLMOptions
 ): Promise<string> => {
-  const maxAttempts = 3
+  const maxAttempts = 5
   let lastError: Error | null = null
 
   for (let attempt = 1; attempt <= maxAttempts; attempt++) {
     try {
-      return await callLLMOnce(prompt, llmConfig, conversationHistory, enabledTools, attempt)
+      return await callLLMOnce(prompt, llmConfig, conversationHistory, enabledTools, attempt, options)
     } catch (error) {
       lastError = error instanceof Error ? error : new Error(String(error))
       if (!isRetryableError(lastError) || attempt >= maxAttempts) {
         throw lastError
       }
-      // 429 限流：指数退避等待
-      const waitSeconds = attempt * 10
+      // 429 限流需要更长等待，指数退避：30s, 60s, 120s, 240s
+      const waitSeconds = Math.min(30 * Math.pow(2, attempt - 1), 240)
       console.log(`[LLM Agent] 第${attempt}次执行失败(${lastError.message})，${waitSeconds}秒后重试...`)
       await sleep(waitSeconds * 1000)
     }
@@ -65,7 +86,8 @@ const callLLMOnce = async (
   llmConfig: LLMConfig,
   conversationHistory: BaseMessage[],
   enabledTools: string[],
-  attempt: number
+  attempt: number,
+  options?: CallLLMOptions
 ): Promise<string> => {
   const hasTools = enabledTools.length > 0
   const effectiveMaxTokens = hasTools
@@ -85,9 +107,26 @@ const callLLMOnce = async (
 
   const tools = getToolsByIds(enabledTools)
 
+  // 构建 HITL 中间件：危险工具需要审批，安全工具自动放行
+  const needsApproval = enabledTools.some(t => ['writeFile', 'executeCommand', 'httpRequest'].includes(t))
+  const useHITL = hasTools && needsApproval && options?.approvalCallback
+
+  const interruptOn: Record<string, boolean> = {}
+  if (useHITL) {
+    for (const toolId of enabledTools) {
+      // 危险工具拦截，安全工具自动放行
+      interruptOn[toolId] = ['writeFile', 'executeCommand', 'httpRequest'].includes(toolId)
+    }
+  }
+
+  const checkpointer = useHITL ? new MemorySaver() : undefined
+  const threadId = `thread-${Date.now()}`
+
   const agent = createAgent({
     model: llm,
     tools,
+    middleware: useHITL ? [humanInTheLoopMiddleware({ interruptOn })] : [],
+    checkpointer,
   });
 
   const messages = prompt !== conversationHistory[conversationHistory.length - 1]?.content
@@ -96,8 +135,54 @@ const callLLMOnce = async (
 
   const recursionLimit = hasTools ? 50 : 25
 
+  if (attempt > 1) console.log(`[LLM Agent] 第${attempt}次重试开始`)
+
+  // HITL 模式：invoke + 检查 interrupt + 等待审批 + resume 循环
+  if (useHITL) {
+    let stepCount = 0
+    let result: any = await agent.invoke({ messages }, {
+      configurable: { thread_id: threadId },
+      recursionLimit,
+    })
+
+    while (result.__interrupt__ && result.__interrupt__.length > 0) {
+      // 提取 HITL 请求信息
+      const interruptValue = result.__interrupt__[0].value as HITLRequest
+      stepCount++
+      for (const action of interruptValue.actionRequests) {
+        console.log(`[LLM Agent] 步骤${stepCount} - 等待审批: ${action.name}(${JSON.stringify(action.args).substring(0, 300)})`)
+      }
+
+      // 调用审批回调，等待用户决策
+      const hitlResponse: HITLResponse = await options!.approvalCallback!(interruptValue)
+
+      // 用用户决策 resume agent
+      console.log(`[LLM Agent] 审批结果: ${hitlResponse.decisions.map(d => d.type).join(',')}`)
+      result = await agent.invoke(new Command({ resume: hitlResponse }), {
+        configurable: { thread_id: threadId },
+        recursionLimit,
+      })
+
+      // 解析 resume 后的中间步骤（工具执行结果）
+      const lastMsg = result.messages?.[result.messages.length - 1]
+      if (lastMsg) {
+        stepCount++
+        if (lastMsg.content && typeof lastMsg.content === 'string') {
+          console.log(`[LLM Agent] 步骤${stepCount} - 模型输出: ${lastMsg.content.substring(0, 200)}${lastMsg.content.length > 200 ? '...' : ''}`)
+        }
+      }
+    }
+
+    const finalContent = result.messages?.[result.messages.length - 1]?.content?.toString() || ''
+    if (!finalContent) {
+      console.log(`[LLM Agent] agent 返回内容为空，可能因递归限制(${recursionLimit})或步数不足被截断`)
+    }
+    console.log(`[LLM Agent] 执行完成，共${stepCount}步`)
+    return finalContent
+  }
+
+  // 无 HITL：stream 模式追踪每一步
   if (hasTools) {
-    if (attempt > 1) console.log(`[LLM Agent] 第${attempt}次重试开始`)
     let lastAgentMsg: any = null
     let stepCount = 0
     const stream = await agent.stream({ messages }, { recursionLimit })

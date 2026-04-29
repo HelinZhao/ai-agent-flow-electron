@@ -277,6 +277,56 @@ router.post('/resume/:executionId', async (req, res) => {
   }
 })
 
+// 用户审批工具调用
+router.post('/approve-tool/:executionId', async (req, res) => {
+  try {
+    const { executionId } = req.params
+    const { decisions } = req.body
+
+    if (!decisions || !Array.isArray(decisions)) {
+      return res.status(400).json({ error: 'Missing decisions array' })
+    }
+
+    const success = monitoredExecutor.approveToolCall(executionId, decisions)
+
+    if (!success) {
+      return res.status(404).json({ error: 'No pending tool approval found for this execution' })
+    }
+
+    return res.status(200).json({ success: true, message: '工具审批已处理' })
+  } catch (error) {
+    console.error('审批工具调用错误:', error)
+    return res.status(500).json({
+      error: error instanceof Error ? error.message : '审批工具调用失败'
+    })
+  }
+})
+
+// 按工具类型设置会话级放权
+router.post('/auto-approve/:executionId', async (req, res) => {
+  try {
+    const { executionId } = req.params
+    const { toolName } = req.body
+
+    if (!toolName) {
+      return res.status(400).json({ error: 'Missing toolName parameter' })
+    }
+
+    const success = monitoredExecutor.setAutoApprove(executionId, toolName)
+
+    if (!success) {
+      return res.status(404).json({ error: 'Execution not found' })
+    }
+
+    return res.status(200).json({ success: true, message: `已设置 ${toolName} 在当前会话自动放行` })
+  } catch (error) {
+    console.error('设置自动审批错误:', error)
+    return res.status(500).json({
+      error: error instanceof Error ? error.message : '设置自动审批失败'
+    })
+  }
+})
+
 // 原有的同步执行接口（保持向后兼容）
 router.post('/', async (req, res) => {
   try {
