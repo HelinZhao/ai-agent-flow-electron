@@ -127,7 +127,6 @@ export const httpRequestTool = tool(
 
 export const webSearchTool = tool(
   async ({ query }: { query: string }) => {
-    console.log(999)
     const url = `https://lite.duckduckgo.com/lite/?q=${encodeURIComponent(query)}`
     const resp = await fetch(url, { headers: { 'User-Agent': 'Mozilla/5.0' } })
     const html = await resp.text()

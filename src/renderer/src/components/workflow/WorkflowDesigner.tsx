@@ -34,14 +34,14 @@ const nodeTypes = {
 
 interface WorkflowDesignerProps {
   workflow: Workflow;
-  onWorkflowChange: (workflow: Partial<Workflow>) => void;
-  onSave: () => void;
+  onSave: (nodes: WorkflowNode[], edges: WorkflowEdge[]) => void;
   onRun: () => void;
-  isRunning: boolean
+  isRunning: boolean;
+  onCanvasChange?: (nodes: WorkflowNode[], edges: WorkflowEdge[]) => void;
 }
 
 function WorkflowDesigner(props: WorkflowDesignerProps): React.JSX.Element {
-  const { workflow, onWorkflowChange, onSave, onRun, isRunning } = props
+  const { workflow, onSave, onRun, isRunning, onCanvasChange } = props
   const [selectedNode, setSelectedNode] = useState<WorkflowNode | null>(null);
   const [contextMenu, setContextMenu] = useState<{ x: number; y: number } | null>(null);
   const [branchSelection, setBranchSelection] = useState<{
@@ -81,6 +81,11 @@ function WorkflowDesigner(props: WorkflowDesignerProps): React.JSX.Element {
 
   const [nodes, setNodes, onNodesChange] = useNodesState<WorkflowNode>(initialNodes);
   const [edges, setEdges, onEdgesChange] = useEdgesState<WorkflowEdge>(initialEdges);
+
+  // 同步画布实时数据给父组件（不触发重渲染，仅更新 ref）
+  useEffect(() => {
+    onCanvasChange?.(nodes, edges);
+  }, [nodes, edges, onCanvasChange]);
 
   const onConnect = useCallback(
     (params: Connection) => {
@@ -152,14 +157,6 @@ function WorkflowDesigner(props: WorkflowDesignerProps): React.JSX.Element {
   const onNodeClick = useCallback((_event: React.MouseEvent, node: WorkflowNode) => {
     setSelectedNode(node || null);
   }, []);
-
-  useEffect(() => {
-    onWorkflowChange({
-      nodes: nodes,
-      edges: edges,
-      updatedAt: new Date()
-    })
-  }, [nodes, edges, onWorkflowChange])
 
   const onUnselectNode = useCallback(() => {
     setSelectedNode(null);
@@ -236,6 +233,7 @@ function WorkflowDesigner(props: WorkflowDesignerProps): React.JSX.Element {
           nodesConnectable={true}
           multiSelectionKeyCode="Shift"
           deleteKeyCode="Delete"
+          onNodesDelete={() => setSelectedNode(null)}
           onPaneClick={handlePaneClick}
           onContextMenu={handlePaneContextMenu}
           onDragOver={handleDragOver}
@@ -244,7 +242,7 @@ function WorkflowDesigner(props: WorkflowDesignerProps): React.JSX.Element {
           <Background />
           <Controls />
           <NodeListPanel />
-          <ControlPanel onSave={onSave} onRun={onRun} isRunning={isRunning} />
+          <ControlPanel onSave={() => onSave(nodes, edges)} onRun={onRun} isRunning={isRunning} />
           {selectedNode && (
             <NodeConfigPanel
               node={selectedNode}

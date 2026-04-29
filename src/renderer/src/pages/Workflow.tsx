@@ -1,7 +1,7 @@
-import React, { useState, useCallback } from 'react';
+import React, { useState, useCallback, useRef, useMemo } from 'react';
 import WorkflowDesigner from '@renderer/components/workflow/WorkflowDesigner';
 import { useWorkflowStore } from '@renderer/store/workflowStore';
-import { WorkflowNode, type Workflow } from '@renderer/types';
+import { WorkflowNode, WorkflowEdge, type Workflow } from '@renderer/types';
 import { useMemoizedFn } from 'ahooks';
 import { ReactFlowProvider } from '@xyflow/react';
 import { useWorkflowExecution } from '@renderer/hooks/useWorkflowExecution';
@@ -13,7 +13,13 @@ import CustomFileUpload from '@renderer/components/CustomFileUpload';
 
 export default function Workflow(): React.JSX.Element {
     const { workflows, addWorkflow, updateWorkflow, deleteWorkflow, activeLLMConfig } = useWorkflowStore();
-    const [currentWorkflow, setCurrentWorkflow] = useState<Workflow | null>(null);
+    const [currentWorkflowId, setCurrentWorkflowId] = useState<string | null>(null);
+
+    // 从 store 列表中查找当前工作流的持久化元数据
+    const currentWorkflow = useMemo(() =>
+        currentWorkflowId ? workflows.find(w => w.id === currentWorkflowId) ?? null : null,
+        [currentWorkflowId, workflows]
+    );
     const [searchTerm, setSearchTerm] = useState('');
 
     // 过滤workflows基于搜索词
@@ -32,6 +38,9 @@ export default function Workflow(): React.JSX.Element {
     const [workflowInput, setWorkflowInput] = useState('');
     const [pendingExecution, setPendingExecution] = useState(false);
     const [showProgressPanel, setShowProgressPanel] = useState(false);
+
+    // 画布实时数据的引用（不触发重渲染）
+    const canvasDataRef = useRef<{ nodes: WorkflowNode[]; edges: WorkflowEdge[] }>({ nodes: [], edges: [] });
     const [editingWorkflow, setEditingWorkflow] = useState<Workflow | null>(null);
     const [editName, setEditName] = useState('');
     const [editDescription, setEditDescription] = useState('');
@@ -88,18 +97,12 @@ export default function Workflow(): React.JSX.Element {
 
         const createdWorkflow = await addWorkflow(newWorkflow);;
         if (createdWorkflow) {
-            setCurrentWorkflow(createdWorkflow);
+            setCurrentWorkflowId(createdWorkflow.id);
         }
 
         setNewWorkflowName('');
         setIsCreating(false);
     });
-
-    const handleWorkflowChange = useCallback((updatedWorkflow: Partial<Workflow>) => {
-        if (!currentWorkflow?.id) return
-        updateWorkflow(currentWorkflow.id, updatedWorkflow);
-        setCurrentWorkflow(prev => ({ ...prev, ...updatedWorkflow as Workflow }));
-    }, [updateWorkflow, currentWorkflow?.id]);
 
     const validateStartNode = useCallback((nodes: WorkflowNode[]): string | null => {
         const startNodes = nodes.filter(n => n.type === 'start');
@@ -112,19 +115,19 @@ export default function Workflow(): React.JSX.Element {
         return null;
     }, []);
 
-    const handleSave = useCallback(() => {
-        if (currentWorkflow) {
-            const error = validateStartNode(currentWorkflow.nodes);
-            if (error) {
-                alert(error);
-                return;
-            }
-            try {
-                updateWorkflow(currentWorkflow.id, currentWorkflow);
-                alert('保存成功');
-            } catch {
-                alert('保存失败');
-            }
+    const handleSave = useCallback((nodes: WorkflowNode[], edges: WorkflowEdge[]) => {
+        if (!currentWorkflow) return;
+        const error = validateStartNode(nodes);
+        if (error) {
+            alert(error);
+            return;
+        }
+        try {
+            const updated = { ...currentWorkflow, nodes, edges, updatedAt: new Date() };
+            updateWorkflow(currentWorkflow.id, updated);
+            alert('保存成功');
+        } catch {
+            alert('保存失败');
         }
     }, [currentWorkflow, updateWorkflow, validateStartNode]);
 
@@ -142,12 +145,20 @@ export default function Workflow(): React.JSX.Element {
     const handleExecute = useCallback(async () => {
         if (!currentWorkflow || !workflowInput.trim()) return;
 
+        // 使用画布当前编辑中的数据而非已持久化的数据
+        const canvasData = canvasDataRef.current;
+        const workflowToRun: Workflow = {
+            ...currentWorkflow,
+            nodes: canvasData.nodes.length > 0 ? canvasData.nodes : currentWorkflow.nodes,
+            edges: canvasData.edges.length > 0 ? canvasData.edges : currentWorkflow.edges,
+        };
+
         setPendingExecution(true);
         setShowInputDialog(false);
         setShowProgressPanel(true);
 
         try {
-            await executeWorkflow(currentWorkflow, workflowInput);
+            await executeWorkflow(workflowToRun, workflowInput);
         } catch (error) {
             console.error('工作流执行失败:', error);
         } finally {
@@ -176,7 +187,7 @@ export default function Workflow(): React.JSX.Element {
             };
 
             addWorkflow(newWorkflow);
-            setCurrentWorkflow(newWorkflow);
+            setCurrentWorkflowId(newWorkflow.id);
             setShowImportModal(false);
             setImportJsonText('');
             setImportError(null);
@@ -220,19 +231,10 @@ export default function Workflow(): React.JSX.Element {
             updatedAt: new Date()
         });
 
-        if (currentWorkflow?.id === editingWorkflow.id) {
-            setCurrentWorkflow(prev => prev ? {
-                ...prev,
-                name: editName.trim(),
-                description: editDescription.trim(),
-                updatedAt: new Date()
-            } : null);
-        }
-
         setEditingWorkflow(null);
         setEditName('');
         setEditDescription('');
-    }, [editingWorkflow, editName, editDescription, updateWorkflow, currentWorkflow]);
+    }, [editingWorkflow, editName, editDescription, updateWorkflow, currentWorkflowId]);
 
     const resetImportModal = useCallback(() => {
         setShowImportModal(false);
@@ -351,10 +353,12 @@ export default function Workflow(): React.JSX.Element {
                                     <WorkflowDesigner
                                         key={currentWorkflow.id}
                                         workflow={currentWorkflow}
-                                        onWorkflowChange={handleWorkflowChange}
                                         onSave={handleSave}
                                         onRun={handleRun}
                                         isRunning={isRunning}
+                                        onCanvasChange={(nodes, edges) => {
+                                            canvasDataRef.current = { nodes, edges };
+                                        }}
                                     />
                                 </ReactFlowProvider>
                             ) : (
@@ -408,7 +412,7 @@ export default function Workflow(): React.JSX.Element {
                                                 ? 'border-blue-500/50 bg-gradient-to-r from-blue-50 to-purple-50 dark:from-blue-900/20 dark:to-purple-900/20'
                                                 : 'border-gray-200/50 dark:border-gray-600/50 hover:border-gray-300/50 dark:hover:border-gray-500/50 hover:shadow-sm bg-white/50 dark:bg-gray-700/30'
                                                 }`}
-                                            onClick={() => setCurrentWorkflow(workflow)}
+                                            onClick={() => setCurrentWorkflowId(workflow.id)}
                                         >
                                             <div className="flex justify-between items-start">
                                                 <div className="flex-1 min-w-0">
@@ -581,8 +585,8 @@ export default function Workflow(): React.JSX.Element {
                             <CustomButton
                                 onClick={() => {
                                     deleteWorkflow(workflowToDelete);
-                                    if (currentWorkflow?.id === workflowToDelete) {
-                                        setCurrentWorkflow(null);
+                                    if (currentWorkflowId === workflowToDelete) {
+                                        setCurrentWorkflowId(null);
                                     }
                                     setWorkflowToDelete(null);
                                 }}

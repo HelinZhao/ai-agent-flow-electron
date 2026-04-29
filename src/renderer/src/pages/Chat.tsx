@@ -160,6 +160,7 @@ export default function Chat(): React.JSX.Element {
             }
         } catch (error) {
             console.error('消息发送失败:', error);
+            console.log(error)
             const errorMessage: ChatMessage = {
                 id: `msg-${Date.now() + 1}`,
                 content: `抱歉，处理您的消息时出现了错误: ${error instanceof Error ? error.message : '未知错误'}`,
