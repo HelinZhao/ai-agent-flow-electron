@@ -266,6 +266,12 @@ export const workflowExecutionApi = {
   ): Promise<{ success: boolean; message: string }> =>
     api.post(`/execute-workflow/auto-approve/${executionId}`, { toolName }),
 
+  // 删除线程的AI记忆（checkpoint数据）
+  deleteThread: (
+    threadId: string
+  ): Promise<{ success: boolean; message: string }> =>
+    api.delete(`/execute-workflow/delete-thread/${threadId}`),
+
   // 等待AI Agent对话完成并获取结果（使用SSE）
   waitForAgentChatResultSSE: (
     executionId: string,

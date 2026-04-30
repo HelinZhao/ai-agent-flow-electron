@@ -1135,6 +1135,12 @@ ${conditionText}
 
     return true
   }
+
+  // 删除线程的checkpoint记忆和附件数据
+  async deleteThread(threadId: string): Promise<void> {
+    await checkpointer.deleteThread(threadId)
+    this.threadAttachments.delete(threadId)
+  }
 }
 
 function formatSize(bytes: number): string {

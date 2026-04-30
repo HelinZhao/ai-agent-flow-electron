@@ -281,11 +281,41 @@ export default function Chat(): React.JSX.Element {
         }
     };
 
-    const startNewChat = (): void => {
-        // 先清除历史记录文件
-        if (selectedAgent) {
+    const startNewChat = async (): Promise<void> => {
+        if (!selectedAgent) return;
+
+        // 如果没有消息，直接清除无需确认
+        if (messages.length === 0) {
             saveChatHistory([]);
+            setMessages([]);
+            return;
         }
+
+        // 确认对话框：提示将清除对话历史和AI记忆
+        const confirmMessage = `确定要开始新对话吗？\n\n这将清除与 ${selectedAgent.name} 的所有对话历史，同时清除AI的记忆（包括之前的对话上下文）。此操作不可恢复。`;
+        if (!window.confirm(confirmMessage)) {
+            return;
+        }
+
+        // 清除AI的checkpoint记忆
+        try {
+            await workflowExecutionApi.deleteThread(selectedAgent.id);
+        } catch (error) {
+            console.error('清除AI记忆失败:', error);
+        }
+
+        // 清除本地聊天历史文件
+        try {
+            const result = await chatHistoryApi.deleteHistory(selectedAgent.id);
+            if (result.success) {
+                console.log(`已清空Agent ${selectedAgent.name} 的对话历史`);
+            } else {
+                console.error('清空对话历史文件失败:', result.error);
+            }
+        } catch (error) {
+            console.error('清空对话历史文件时发生错误:', error);
+        }
+
         setMessages([]);
     };
 

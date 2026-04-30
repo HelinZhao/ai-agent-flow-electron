@@ -327,6 +327,29 @@ router.post('/auto-approve/:executionId', async (req, res) => {
   }
 })
 
+// 删除线程的AI记忆（checkpoint数据）
+router.delete('/delete-thread/:threadId', async (req, res) => {
+  try {
+    const { threadId } = req.params
+
+    if (!threadId) {
+      return res.status(400).json({ error: 'Missing threadId parameter' })
+    }
+
+    await monitoredExecutor.deleteThread(threadId)
+
+    return res.status(200).json({
+      success: true,
+      message: `线程 ${threadId} 的AI记忆已清除`
+    })
+  } catch (error) {
+    console.error('删除线程记忆错误:', error)
+    return res.status(500).json({
+      error: error instanceof Error ? error.message : '删除线程记忆失败'
+    })
+  }
+})
+
 // 原有的同步执行接口（保持向后兼容）
 router.post('/', async (req, res) => {
   try {
