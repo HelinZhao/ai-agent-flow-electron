@@ -3,7 +3,7 @@ import { useWorkflowStore } from '@renderer/store/workflowStore';
 import { Agent, AttachmentMetadata, ChatHistory, ChatMessage, ToolApprovalRequest } from '@renderer/types';
 import { chatHistoryApi } from '@renderer/lib/chatHistory';
 import { workflowExecutionApi } from '@renderer/lib/api';
-import { AttachmentData, processFileAttachment, stripAttachmentForHistory } from '@renderer/lib/attachmentUtils';
+import { AttachmentData, processFileAttachment, stripAttachmentForHistory, formatFileSize } from '@renderer/lib/attachmentUtils';
 import CustomButton from '@renderer/components/CustomButton';
 import MarkdownPreview from '@renderer/components/MarkdownPreview';
 import AttachmentPreview from '@renderer/components/AttachmentPreview';
@@ -32,6 +32,7 @@ export default function Chat(): React.JSX.Element {
     const [pendingApproval, setPendingApproval] = useState<ToolApprovalRequest | null>(null);
     const [autoApprovedTools, setAutoApprovedTools] = useState<Set<string>>(new Set());
     const [pendingAttachments, setPendingAttachments] = useState<AttachmentData[]>([]);
+    const [previewImage, setPreviewImage] = useState<AttachmentMetadata | null>(null);
     const messagesEndRef = useRef<HTMLDivElement>(null);
 
     // 过滤agents基于搜索词
@@ -346,6 +347,26 @@ export default function Chat(): React.JSX.Element {
         }
     };
 
+    const handleAttachmentClick = (att: AttachmentMetadata): void => {
+        if (att.category === 'image') {
+            setPreviewImage(att);
+        } else {
+            // 非图片文件：用Express URL在新窗口打开
+            const SERVER_URL = 'http://localhost:3100';
+            const url = att.url
+                ? (att.url.startsWith('/') ? `${SERVER_URL}${att.url}` : att.url)
+                : `${SERVER_URL}/api/attachments/${att.id}/${encodeURIComponent(att.name)}`;
+            window.open(url, '_blank');
+        }
+    };
+
+    const getPreviewImageUrl = (att: AttachmentMetadata): string => {
+        const SERVER_URL = 'http://localhost:3100';
+        if (att.url) return att.url.startsWith('/') ? `${SERVER_URL}${att.url}` : att.url;
+        if (att.previewUrl) return att.previewUrl;
+        return `${SERVER_URL}/api/attachments/${att.id}/${encodeURIComponent(att.name)}`;
+    };
+
     return (
         <div className="h-full flex flex-col overflow-hidden bg-gray-50/50 dark:bg-gray-900/50">
             {/* 顶部工具栏 */}
@@ -509,7 +530,7 @@ export default function Chat(): React.JSX.Element {
                                                     : 'bg-white dark:bg-gray-700/80 text-gray-900 dark:text-white border border-gray-200/50 dark:border-gray-600/50 rounded-2xl rounded-bl-sm backdrop-blur-sm'
                                                     }`}
                                             >
-                                                <AttachmentDisplay attachments={message.attachments} sender={message.sender} />
+                                                <AttachmentDisplay attachments={message.attachments} sender={message.sender} onAttachmentClick={handleAttachmentClick} />
                                                 {message.sender === 'user'
                                                     ? <div className="text-sm leading-relaxed" style={{ whiteSpace: "pre-wrap" }}>{message.content}</div>
                                                     : <div className="text-sm leading-relaxed">
@@ -717,6 +738,32 @@ export default function Chat(): React.JSX.Element {
                     )}
                 </div>
             </div>
+
+            {/* 图片预览模态框 */}
+            {previewImage && (
+                <div
+                    className="fixed inset-0 z-50 bg-black/80 flex items-center justify-center"
+                    onClick={() => setPreviewImage(null)}
+                >
+                    <div className="relative max-w-[90vw] max-h-[90vh]">
+                        <img
+                            src={getPreviewImageUrl(previewImage)}
+                            alt={previewImage.name}
+                            className="max-w-[90vw] max-h-[90vh] object-contain rounded-lg shadow-2xl"
+                            onClick={(e) => e.stopPropagation()}
+                        />
+                        <button
+                            onClick={() => setPreviewImage(null)}
+                            className="absolute -top-3 -right-3 w-8 h-8 bg-gray-800/80 hover:bg-gray-700 text-white rounded-full flex items-center justify-center text-lg shadow-lg transition-colors"
+                        >
+                            ✕
+                        </button>
+                        <div className="absolute bottom-0 left-0 right-0 bg-black/60 text-white text-sm px-4 py-2 rounded-b-lg">
+                            {previewImage.name} · {formatFileSize(previewImage.size)}
+                        </div>
+                    </div>
+                </div>
+            )}
         </div>
     );
 }

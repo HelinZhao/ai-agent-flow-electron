@@ -1,6 +1,7 @@
 import express from 'express'
 import cors from 'cors'
 import path from 'path'
+import fs from 'fs/promises'
 import { initDatabase } from './database'
 import workflowsRouter from './routes/workflows'
 import agentsRouter from './routes/agents'
@@ -54,14 +55,26 @@ export class LocalServer {
     this.app.use('/api/execute-workflow', executeWorkflowRouter)
 
     // 附件文件服务：/api/attachments/:id/:filename
-    this.app.get('/api/attachments/:id/:filename', (req, res) => {
+    this.app.get('/api/attachments/:id/:filename', async (req, res) => {
       const { id, filename } = req.params
-      const filePath = path.join(getDataDir('/attachments'), `${id}-${filename}`)
-      res.sendFile(filePath, (err) => {
-        if (err) {
-          res.status(404).json({ error: '附件文件不存在' })
+      const filePath = path.resolve(getDataDir('/attachments'), `${id}-${filename}`)
+
+      try {
+        const data = await fs.readFile(filePath)
+        const ext = path.extname(filename).toLowerCase()
+        const contentTypes: Record<string, string> = {
+          '.jpg': 'image/jpeg', '.jpeg': 'image/jpeg', '.png': 'image/png',
+          '.gif': 'image/gif', '.webp': 'image/webp', '.svg': 'image/svg+xml',
+          '.pdf': 'application/pdf', '.txt': 'text/plain',
+          '.py': 'text/plain', '.js': 'text/javascript', '.ts': 'text/plain',
+          '.json': 'application/json', '.md': 'text/plain',
         }
-      })
+        res.setHeader('Content-Type', contentTypes[ext] || 'application/octet-stream')
+        res.setHeader('Content-Disposition', `inline; filename="${filename}"`)
+        res.end(data)
+      } catch (err) {
+        res.status(404).json({ error: '附件文件不存在' })
+      }
     })
 
     // 健康检查端点
