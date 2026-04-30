@@ -58,7 +58,7 @@ export interface ApiConfig {
 }
 
 export interface LLMConfig {
-  provider: 'openai' | 'anthropic' | 'azure' | 'qwen' | 'longcat'
+  provider: 'openai' | 'anthropic' | 'azure' | 'bailian' | 'longcat'
   apiKey: string
   model: string
   baseUrl?: string

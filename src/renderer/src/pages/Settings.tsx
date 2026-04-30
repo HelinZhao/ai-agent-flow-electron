@@ -45,7 +45,7 @@ export default function Settings(): React.JSX.Element {
                     openai: { prefix: 'sk-', message: 'OpenAI API Key必须以sk-开头' },
                     anthropic: { prefix: 'sk-ant-', message: 'Anthropic API Key必须以sk-ant-开头' },
                     azure: { prefix: '', message: '' },
-                    qwen: { prefix: 'sk-', message: 'Qwen API Key必须以sk-开头' },
+                    bailian: { prefix: 'sk-', message: 'Bailian API Key必须以sk-开头' },
                     longcat: { prefix: 'ak_', message: 'LongCat API Key必须以ak_开头' }
                 };
 
@@ -274,7 +274,7 @@ export default function Settings(): React.JSX.Element {
                                             { value: 'openai', label: 'OpenAI' },
                                             { value: 'anthropic', label: 'Anthropic' },
                                             { value: 'azure', label: 'Azure OpenAI' },
-                                            { value: 'qwen', label: 'Qwen (通义千问)' },
+                                            { value: 'bailian', label: 'Bailian (阿里百炼)' },
                                             { value: 'longcat', label: 'Longcat (LongCat)' }
                                         ]}
                                         placeholder="选择提供商"
@@ -320,7 +320,7 @@ export default function Settings(): React.JSX.Element {
                                             getValues('provider') === 'openai' ? 'https://api.openai.com/v1' :
                                                 getValues('provider') === 'anthropic' ? 'https://api.anthropic.com' :
                                                     getValues('provider') === 'azure' ? 'https://your-resource.openai.azure.com/' :
-                                                        getValues('provider') === 'qwen' ? 'https://dashscope.aliyuncs.com/compatible-mode/v1' :
+                                                        getValues('provider') === 'bailian' ? 'https://dashscope.aliyuncs.com/compatible-mode/v1' :
                                                             getValues('provider') === 'longcat' ? 'https://api.longcat.ai' :
                                                                 'https://api.openai.com/v1'
                                         }

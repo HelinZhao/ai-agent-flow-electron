@@ -1,11 +1,13 @@
 import express from 'express'
 import cors from 'cors'
+import path from 'path'
 import { initDatabase } from './database'
 import workflowsRouter from './routes/workflows'
 import agentsRouter from './routes/agents'
 import skillsRouter from './routes/skills'
 import llmConfigRouter from './routes/llm-config'
 import executeWorkflowRouter from './routes/execute-workflow'
+import { getDataDir } from './utils'
 import { app } from 'electron'
 
 export class LocalServer {
@@ -50,6 +52,17 @@ export class LocalServer {
     this.app.use('/api/skills', skillsRouter)
     this.app.use('/api/llm-config', llmConfigRouter)
     this.app.use('/api/execute-workflow', executeWorkflowRouter)
+
+    // 附件文件服务：/api/attachments/:id/:filename
+    this.app.get('/api/attachments/:id/:filename', (req, res) => {
+      const { id, filename } = req.params
+      const filePath = path.join(getDataDir('/attachments'), `${id}-${filename}`)
+      res.sendFile(filePath, (err) => {
+        if (err) {
+          res.status(404).json({ error: '附件文件不存在' })
+        }
+      })
+    })
 
     // 健康检查端点
     this.app.get('/health', (_req, res) => {

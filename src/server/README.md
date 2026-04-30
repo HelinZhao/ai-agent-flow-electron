@@ -7,7 +7,7 @@
 - 🚀 基于Express.js构建的高性能API服务
 - 🗄️ SQLite数据库存储，支持工作流、智能体、技能等数据管理
 - 🔗 LangGraph集成，支持复杂工作流的执行
-- 🤖 多LLM提供商支持（OpenAI、Anthropic、Azure、Qwen、LongCat）
+- 🤖 多LLM提供商支持（OpenAI、Anthropic、Azure、Bailian、LongCat）
 - 🛣️ RESTful API设计，易于集成和使用
 
 ## 技术栈
@@ -137,7 +137,7 @@ interface Skill {
 ```typescript
 interface LLMConfig {
   id: string;
-  provider: 'openai' | 'anthropic' | 'azure' | 'qwen' | 'longcat';
+  provider: 'openai' | 'anthropic' | 'azure' | 'bailian' | 'longcat';
   apiKey: string;
   model: string;
   baseUrl?: string;

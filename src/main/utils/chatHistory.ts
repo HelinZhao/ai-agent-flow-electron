@@ -10,6 +10,7 @@ export interface AttachmentMetadata {
   type: string          // MIME类型
   size: number          // 文件大小
   category: 'image' | 'text' | 'pdf' | 'binary'  // 分类
+  url?: string          // Express服务URL（/api/attachments/:id/:filename，重启后仍可访问）
 }
 
 export interface ChatMessage {
@@ -105,8 +106,19 @@ export class ChatHistoryManager {
         }
       }
 
-      // 更新消息
-      existingHistory.messages = messages
+      // 更新消息（剥离previewUrl等大体积字段，避免JSON膨胀）
+      existingHistory.messages = messages.map(msg => ({
+        ...msg,
+        attachments: msg.attachments?.map(att => ({
+          id: att.id,
+          name: att.name,
+          type: att.type,
+          size: att.size,
+          category: att.category,
+          url: att.url,  // Express URL是小字符串，可持久化
+          // previewUrl(base64)不存入历史文件，前端从Express URL加载图片
+        }))
+      }))
       existingHistory.updatedAt = new Date().toISOString()
 
       // 如果有用户消息，生成标题

@@ -10,20 +10,13 @@ import {
   Command
 } from '@langchain/langgraph'
 import { BaseMessage, HumanMessage, AIMessage } from '@langchain/core/messages'
-import { callLLM, executeApiCall, executeCliCommand, executeCliTemplate, HITLRequest, HITLResponse, HITLDecision, CallLLMOptions, getDataDir } from '../utils'
+import {
+  callLLM, executeApiCall, executeCliCommand, executeCliTemplate,
+  HITLRequest, HITLResponse, HITLDecision, CallLLMOptions, getDataDir,
+  AttachmentPayload, saveAttachmentToDisk
+} from '../utils'
 import { v4 as uuidv4 } from 'uuid'
 import { SqliteSaver } from "@langchain/langgraph-checkpoint-sqlite";
-
-// 附件数据（从API接收）
-interface AttachmentPayload {
-  id: string
-  name: string
-  type: string
-  size: number
-  category: 'image' | 'text' | 'pdf' | 'binary'
-  dataUrl?: string
-  textContent?: string
-}
 
 // 执行状态存储
 interface ExecutionState {
@@ -54,6 +47,8 @@ const checkpointer = SqliteSaver.fromConnString(getDataDir('/database.sqlite'));
 export class MonitoredLangGraphExecutor {
   private executionStates = new Map<string, ExecutionState>()
   private sseClients = new Map<string, any[]>() // executionId -> SSE clients
+  // 线程级附件存储：跨对话累积图片等附件数据，供后续对话的callLLM注入
+  private threadAttachments = new Map<string, AttachmentPayload[]>()
   private WorkflowState = Annotation.Root({
     messages: Annotation<BaseMessage[]>({
       reducer: (x, y) => x.concat(y)
@@ -91,10 +86,48 @@ export class MonitoredLangGraphExecutor {
       threadId,
       autoApprovedToolTypes: new Set<string>(autoApprovedTools || []),
       pendingApproval: null,
-      attachments,
+      attachments: [], // 将在下方替换为filePath版本
+    }
+
+    // 将附件数据保存到磁盘，释放内存中的base64字符串
+    let diskAttachments: AttachmentPayload[] | undefined
+    if (attachments && attachments.length > 0) {
+      diskAttachments = []
+      for (const att of attachments) {
+        try {
+          const filePath = await saveAttachmentToDisk(att)
+          diskAttachments.push({
+            id: att.id,
+            name: att.name,
+            type: att.type,
+            size: att.size,
+            category: att.category,
+            filePath,
+          })
+        } catch (error) {
+          console.error(`保存附件 ${att.name} 到磁盘失败:`, error)
+          // 保存失败时保留原始dataUrl（降级处理）
+          diskAttachments.push(att)
+        }
+      }
+      executionState.attachments = diskAttachments
     }
 
     this.executionStates.set(executionId, executionState)
+
+    // 线程级累积附件（轻量filePath引用，无base64）
+    if (diskAttachments && diskAttachments.length > 0) {
+      const threadKey = threadId || agentId || 'default-thread'
+      const existing = this.threadAttachments.get(threadKey) || []
+      const merged = [...existing]
+      for (const att of diskAttachments) {
+        if (!merged.some(e => e.id === att.id)) {
+          merged.push(att)
+        }
+      }
+      this.threadAttachments.set(threadKey, merged)
+    }
+
     // 在后台执行工作流
     this.executeWorkflowAsync(executionId, workflow, input, llmConfig, agentId, threadId, attachments)
 
@@ -213,12 +246,16 @@ export class MonitoredLangGraphExecutor {
             })
           }
 
+          // 合并当前执行附件与线程级累积附件，确保后续对话也能获取图片数据
+          const allAttachments = this.mergeThreadAttachments(execState)
+
           const nodeResult = await this.executeMonitoredNode(
             executionId,
             node,
             input,
             llmConfig,
-            conversationHistory
+            conversationHistory,
+            allAttachments
           )
           nodeResults.set(node.id, nodeResult)
 
@@ -329,7 +366,7 @@ export class MonitoredLangGraphExecutor {
 
     try {
       const initialState = {
-        messages: [buildHumanMessage(input, attachments)]
+        messages: [await buildHumanMessage(input, attachments)]
       }
 
       const state = this.executionStates.get(executionId)
@@ -381,12 +418,13 @@ export class MonitoredLangGraphExecutor {
     node: WorkflowNode,
     input: string,
     llmConfig: LLMConfig,
-    conversationHistory?: BaseMessage[]
+    conversationHistory?: BaseMessage[],
+    attachments?: AttachmentPayload[]
   ) {
     const startTime = Date.now()
 
     try {
-      const result = await this.executeNode(executionId, node, input, llmConfig, conversationHistory)
+      const result = await this.executeNode(executionId, node, input, llmConfig, conversationHistory, attachments)
       const endTime = Date.now()
 
       return {
@@ -418,7 +456,8 @@ export class MonitoredLangGraphExecutor {
     node: WorkflowNode,
     input: string,
     llmConfig: LLMConfig,
-    conversationHistory?: BaseMessage[]
+    conversationHistory?: BaseMessage[],
+    attachments?: AttachmentPayload[]
   ) {
     switch (node.type) {
       case 'start':
@@ -428,7 +467,7 @@ export class MonitoredLangGraphExecutor {
         }
 
       case 'skill':
-        return await this.executeSkill(node, input, llmConfig, conversationHistory)
+        return await this.executeSkill(node, input, llmConfig, conversationHistory, attachments)
 
       case 'branch':
         return await this.executeBranch(node, input, llmConfig)
@@ -437,10 +476,10 @@ export class MonitoredLangGraphExecutor {
         return await this.executeApi(node, input, llmConfig)
 
       case 'llm':
-        return await this.executeLLM(executionId, node, input, llmConfig, conversationHistory)
+        return await this.executeLLM(executionId, node, input, llmConfig, conversationHistory, attachments)
 
       case 'agent':
-        return await this.executeAgent(node, input, llmConfig, conversationHistory)
+        return await this.executeAgent(node, input, llmConfig, conversationHistory, attachments)
 
       case 'cli':
         return await this.executeCli(node, input, llmConfig)
@@ -464,7 +503,8 @@ export class MonitoredLangGraphExecutor {
     node: WorkflowNode,
     input: string,
     llmConfig: LLMConfig,
-    conversationHistory?: BaseMessage[]
+    conversationHistory?: BaseMessage[],
+    attachments?: AttachmentPayload[]
   ) {
     if (!node.data.config?.skillId) {
       return {
@@ -490,7 +530,7 @@ export class MonitoredLangGraphExecutor {
 
       const skillContent = `${skill.name}\n\n描述: ${skill.description}\n\n内容: ${skill.content}`
       const prompt = `${skillContent}\n\n当前用户输入: ${input}\n\n请根据以上技能内容处理用户输入，只返回处理后的结果，不要重复用户输入的内容。如果只是传递信息，请简洁地总结或转换，避免重复。`
-      const result = await callLLM(prompt, llmConfig, conversationHistory)
+      const result = await callLLM(prompt, llmConfig, conversationHistory, [], undefined, attachments)
 
       return {
         output: result,
@@ -591,7 +631,8 @@ export class MonitoredLangGraphExecutor {
     node: WorkflowNode,
     input: string,
     llmConfig: LLMConfig,
-    conversationHistory?: BaseMessage[]
+    conversationHistory?: BaseMessage[],
+    attachments?: AttachmentPayload[]
   ) {
     if (!node.data.config?.agentId) {
       return {
@@ -608,7 +649,7 @@ export class MonitoredLangGraphExecutor {
     try {
       const agentInstructions = `Agent ID: ${node.data.config.agentId}\n这是一个Agent节点`
       const prompt = `${agentInstructions}\n\n当前用户输入: ${input}\n\n请根据以上指令处理用户输入，只返回处理后的结果，不要重复用户输入的内容。`
-      const result = await callLLM(prompt, llmConfig, conversationHistory)
+      const result = await callLLM(prompt, llmConfig, conversationHistory, [], undefined, attachments)
 
       return {
         output: result,
@@ -638,7 +679,8 @@ export class MonitoredLangGraphExecutor {
     node: WorkflowNode,
     input: string,
     llmConfig: LLMConfig,
-    conversationHistory?: BaseMessage[]
+    conversationHistory?: BaseMessage[],
+    attachments?: AttachmentPayload[]
   ) {
     try {
       let promptTemplate = node.data.config?.prompt || ''
@@ -712,7 +754,7 @@ export class MonitoredLangGraphExecutor {
         }
         : {}
 
-      const result = await callLLM(finalPrompt, llmConfig, conversationHistory, enabledTools, options)
+      const result = await callLLM(finalPrompt, llmConfig, conversationHistory, enabledTools, options, attachments)
 
       return {
         output: result,
@@ -876,6 +918,21 @@ ${conditionText}
       console.error('条件评估失败:', error)
       return 'null'
     }
+  }
+
+  // 合并当前执行附件与线程级累积附件（按id去重）
+  private mergeThreadAttachments(execState?: ExecutionState): AttachmentPayload[] | undefined {
+    if (!execState) return undefined
+    const threadKey = execState.threadId || execState.agentId || 'default-thread'
+    const threadAtts = this.threadAttachments.get(threadKey) || []
+    const currentAtts = execState.attachments || []
+    const merged = [...threadAtts]
+    for (const att of currentAtts) {
+      if (!merged.some(e => e.id === att.id)) {
+        merged.push(att)
+      }
+    }
+    return merged.length > 0 ? merged : undefined
   }
 
   // 获取执行状态
@@ -1086,49 +1143,42 @@ function formatSize(bytes: number): string {
   return `${(bytes / (1024 * 1024)).toFixed(1)} MB`
 }
 
-function buildHumanMessage(input: string, attachments?: AttachmentPayload[]): HumanMessage {
+async function buildHumanMessage(input: string, attachments?: AttachmentPayload[]): Promise<HumanMessage> {
   if (!attachments || attachments.length === 0) {
     return new HumanMessage(input)
   }
 
-  const contentParts: Array<{ type: string; text?: string; image_url?: { url: string } }> = []
-
-  if (input) {
-    contentParts.push({ type: 'text', text: input })
-  }
+  // 构建纯文本内容（图片数据不在LangGraph层面传递，而是在callLLM时注入）
+  let textContent = input
 
   for (const att of attachments) {
     switch (att.category) {
       case 'image':
-        if (att.dataUrl) {
-          contentParts.push({
-            type: 'image_url',
-            image_url: { url: att.dataUrl }
-          })
-          contentParts.push({ type: 'text', text: `[图片: ${att.name}]` })
-        }
+        textContent += `\n[图片附件: ${att.name}]`
         break
-
       case 'text':
         if (att.textContent) {
-          contentParts.push({
-            type: 'text',
-            text: `\n\n---\n文件: ${att.name}\n---\n${att.textContent}\n---`
-          })
+          textContent += `\n\n---\n文件: ${att.name}\n---\n${att.textContent}\n---`
+        } else if (att.filePath) {
+          try {
+            const { loadAttachmentAsText } = await import('../utils')
+            const content = await loadAttachmentAsText(att.filePath)
+            textContent += `\n\n---\n文件: ${att.name}\n---\n${content}\n---`
+          } catch {
+            textContent += `\n[文本文件: ${att.name} (${att.size} bytes, 内容无法读取)]`
+          }
         } else {
-          contentParts.push({ type: 'text', text: `[文件: ${att.name} (${att.size} bytes, 内容无法读取)]` })
+          textContent += `\n[文本文件: ${att.name} (${att.size} bytes, 内容无法读取)]`
         }
         break
-
       case 'pdf':
-        contentParts.push({ type: 'text', text: `[PDF文件: ${att.name} (${formatSize(att.size)})]` })
+        textContent += `\n[PDF文件: ${att.name} (${formatSize(att.size)})]`
         break
-
       case 'binary':
-        contentParts.push({ type: 'text', text: `[文件: ${att.name} (${att.type}, ${formatSize(att.size)})]` })
+        textContent += `\n[文件: ${att.name} (${att.type}, ${formatSize(att.size)})]`
         break
     }
   }
 
-  return new HumanMessage({ content: contentParts })
+  return new HumanMessage(textContent)
 }

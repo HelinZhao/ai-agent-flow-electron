@@ -60,7 +60,7 @@ export interface ApiConfig {
 export interface LLMConfig {
   id?: string
   name: string
-  provider: 'openai' | 'anthropic' | 'azure' | 'qwen' | 'longcat'
+  provider: 'openai' | 'anthropic' | 'azure' | 'bailian' | 'longcat'
   apiKey: string
   model: string
   baseUrl?: string
@@ -89,6 +89,7 @@ export interface AttachmentMetadata {
   size: number          // 文件大小
   category: 'image' | 'text' | 'pdf' | 'binary'  // 分类
   previewUrl?: string   // 图片预览（仅当前会话使用，不存入历史）
+  url?: string          // Express服务URL（/api/attachments/:id/:filename，不存入历史）
 }
 
 // 对话历史相关类型

@@ -72,7 +72,9 @@ function readFileAsText(file: File): Promise<string> {
   })
 }
 
-// 去除大体积字段，仅保留轻量元数据用于历史持久化
+// 去除大体积字段，保留轻量元数据
+// previewUrl(base64)仅用于当前会话即时展示，存入历史时由main端自动剥离
+// url(Express路径)是小字符串，可存入历史用于重启后加载图片
 export function stripAttachmentForHistory(att: AttachmentData): AttachmentMetadata {
   return {
     id: att.id,
@@ -80,6 +82,8 @@ export function stripAttachmentForHistory(att: AttachmentData): AttachmentMetada
     type: att.type,
     size: att.size,
     category: att.category,
+    previewUrl: att.category === 'image' ? att.previewUrl : undefined,
+    url: `/api/attachments/${att.id}/${encodeURIComponent(att.name)}`,
   }
 }
 

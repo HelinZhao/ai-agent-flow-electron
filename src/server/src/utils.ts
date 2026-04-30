@@ -38,7 +38,7 @@ export const getLLMEndpoint = (llmConfig: LLMConfig): string => {
       return 'https://api.anthropic.com/v1'
     case 'azure':
       return llmConfig.baseUrl || ''
-    case 'qwen':
+    case 'bailian':
       return llmConfig.baseUrl || 'https://dashscope.aliyuncs.com/compatible-mode/v1'
     case 'longcat':
       return llmConfig.baseUrl || 'https://api.longcat.chat/openai/v1'
@@ -55,19 +55,43 @@ const isRetryableError = (error: any): boolean => {
 
 const sleep = (ms: number) => new Promise(resolve => setTimeout(resolve, ms))
 
+export function isVisionModel(model: string): boolean {
+  const visionPatterns = [
+    '4o', '4-turbo', 'vision', 'gpt-4-vision',
+    'o1', 'o3', 'o4',
+    'claude-3', 'claude-3.5', 'claude-4',
+    'vl', 'qwen-vl', 'qwen2-vl',
+    'gemini', 'grok-2', 'qwen3.6-plus'
+  ]
+  const lowerModel = model.toLowerCase()
+  return visionPatterns.some(pattern => lowerModel.includes(pattern))
+}
+
+export interface AttachmentPayload {
+  id: string
+  name: string
+  type: string
+  size: number
+  category: 'image' | 'text' | 'pdf' | 'binary'
+  dataUrl?: string        // base64 data URI（仅临时传输，不持久化）
+  textContent?: string    // 文本内容（仅临时传输，不持久化）
+  filePath?: string       // 磁盘文件路径（持久化）
+}
+
 export const callLLM = async (
   prompt: string,
   llmConfig: LLMConfig,
   conversationHistory: BaseMessage[] = [],
   enabledTools: string[] = [],
-  options?: CallLLMOptions
+  options?: CallLLMOptions,
+  attachments?: AttachmentPayload[]
 ): Promise<string> => {
   const maxAttempts = 5
   let lastError: Error | null = null
 
   for (let attempt = 1; attempt <= maxAttempts; attempt++) {
     try {
-      return await callLLMOnce(prompt, llmConfig, conversationHistory, enabledTools, attempt, options)
+      return await callLLMOnce(prompt, llmConfig, conversationHistory, enabledTools, attempt, options, attachments)
     } catch (error) {
       lastError = error instanceof Error ? error : new Error(String(error))
       if (!isRetryableError(lastError) || attempt >= maxAttempts) {
@@ -88,7 +112,8 @@ const callLLMOnce = async (
   conversationHistory: BaseMessage[],
   enabledTools: string[],
   attempt: number,
-  options?: CallLLMOptions
+  options?: CallLLMOptions,
+  attachments?: AttachmentPayload[]
 ): Promise<string> => {
   const hasTools = enabledTools.length > 0
   const effectiveMaxTokens = hasTools
@@ -137,8 +162,50 @@ const callLLMOnce = async (
       ? lastContent.filter((p: any) => p.type === 'text').map((p: any) => p.text || '').join('\n')
       : ''
 
+  // 构建消息：如果有图片附件且模型支持vision，直接注入image_url到HumanMessage
+  // 优先使用dataUrl，若不存在则从filePath读取磁盘文件生成data URI
+  const imageAttachments = attachments?.filter(att => att.category === 'image') || []
+  const supportsVision = isVisionModel(llmConfig.model)
+
+  // 为图片附件准备dataUrl（从磁盘读取或直接使用）
+  const imageDataUrls: Map<string, string> = new Map()
+  for (const att of imageAttachments) {
+    if (att.dataUrl) {
+      imageDataUrls.set(att.id, att.dataUrl)
+    } else if (att.filePath) {
+      try {
+        const dataUrl = await loadAttachmentAsDataUrl(att.filePath, att.type)
+        imageDataUrls.set(att.id, dataUrl)
+      } catch (error) {
+        console.error(`[LLM Agent] 读取图片附件 ${att.name} 失败:`, error)
+      }
+    }
+  }
+
+  const hasImages = imageDataUrls.size > 0 && supportsVision
+
+  if (hasImages) {
+    console.log(`[LLM Agent] 模型 ${llmConfig.model} 支持vision，注入${imageDataUrls.size}张图片`)
+  } else if (imageAttachments.length > 0) {
+    console.log(`[LLM Agent] 模型 ${llmConfig.model} 不支持vision，图片附件将以文本标注形式传递`)
+  }
+
+  const userMessage = hasImages
+    ? new HumanMessage({
+        content: [
+          { type: 'text', text: prompt },
+          ...imageAttachments
+            .filter(att => imageDataUrls.has(att.id))
+            .map(att => ({
+              type: 'image_url' as const,
+              image_url: { url: imageDataUrls.get(att.id)! }
+            }))
+        ]
+      })
+    : new HumanMessage(prompt)
+
   const messages = prompt !== lastContentStr
-    ? [...conversationHistory, new HumanMessage(prompt)]
+    ? [...conversationHistory, userMessage]
     : conversationHistory
 
   const recursionLimit = hasTools ? 50 : 25
@@ -453,4 +520,34 @@ export const getDataDir = (subPath?: string): string => {
   } else {
     return path.join(`./data${subPath}`) // 开发时
   }
+}
+
+// 将附件数据保存到磁盘文件
+export async function saveAttachmentToDisk(att: AttachmentPayload): Promise<string> {
+  const attachDir = getDataDir('/attachments')
+  await fs.mkdir(attachDir, { recursive: true })
+  const filePath = path.join(attachDir, `${att.id}-${att.name}`)
+
+  if (att.dataUrl) {
+    const base64Data = att.dataUrl.replace(/^data:[^;]+;base64,/, '')
+    await fs.writeFile(filePath, Buffer.from(base64Data, 'base64'))
+  } else if (att.textContent) {
+    await fs.writeFile(filePath, att.textContent, 'utf-8')
+  } else {
+    throw new Error(`附件 ${att.name} 无内容可保存`)
+  }
+
+  return filePath
+}
+
+// 从磁盘文件读取并生成 data URI（用于发送给LLM）
+export async function loadAttachmentAsDataUrl(filePath: string, mimeType: string): Promise<string> {
+  const buffer = await fs.readFile(filePath)
+  const base64 = buffer.toString('base64')
+  return `data:${mimeType};base64,${base64}`
+}
+
+// 从磁盘文件读取文本内容
+export async function loadAttachmentAsText(filePath: string): Promise<string> {
+  return await fs.readFile(filePath, 'utf-8')
 }

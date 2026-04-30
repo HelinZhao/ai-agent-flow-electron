@@ -4,7 +4,7 @@ import sequelize from '../database'
 export interface LLMConfigAttributes {
   id: string
   name: string
-  provider: 'openai' | 'anthropic' | 'azure' | 'qwen' | 'longcat'
+  provider: 'openai' | 'anthropic' | 'azure' | 'bailian' | 'longcat'
   apiKey: string
   model: string
   baseUrl?: string
@@ -26,7 +26,7 @@ export class LLMConfigModel
 {
   declare id: string
   declare name: string
-  declare provider: 'openai' | 'anthropic' | 'azure' | 'qwen' | 'longcat'
+  declare provider: 'openai' | 'anthropic' | 'azure' | 'bailian' | 'longcat'
   declare apiKey: string
   declare model: string
   declare baseUrl?: string

@@ -22,7 +22,7 @@
 - OpenAI
 - Anthropic
 - Azure OpenAI
-- Qwen (通义千问)
+- Bailian (阿里百炼)
 - Longcat
 
 ### 4. 数据持久化

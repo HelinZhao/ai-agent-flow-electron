@@ -7,7 +7,7 @@ AI Agent Flow Designer 是一个基于 Electron + React + TypeScript 的可视�
 - 🎨 **可视化工作流设计** - 基于 ReactFlow 的拖拽式工作流编辑器
 - 🤖 **多 Agent 支持** - 创建和管理多个 AI Agent
 - 🛠️ **技能管理** - 自定义和管理 AI 技能
-- 🔧 **多LLM配置管理** - 支持创建和管理多个AI模型配置，一键切换不同提供商（OpenAI、Anthropic、Azure、Qwen、LongCat）
+- 🔧 **多LLM配置管理** - 支持创建和管理多个AI模型配置，一键切换不同提供商（OpenAI、Anthropic、Azure、Bailian、LongCat）
 - 💾 **本地数据存储** - 使用 SQLite 数据库进行本地数据持久化
 - 🌐 **RESTful API** - 内置 Express 服务器提供完整的 API 接口
 - 🎯 **实时执行** - 支持工作流的实时执行和调试
@@ -206,7 +206,7 @@ interface Skill {
 interface LLMConfig {
   id?: string                    // 配置ID
   name: string                   // 配置名称
-  provider: 'openai' | 'anthropic' | 'azure' | 'qwen' | 'longcat'
+  provider: 'openai' | 'anthropic' | 'azure' | 'bailian' | 'longcat'
   apiKey: string                 // API密钥
   model: string                  // 模型名称
   baseUrl?: string              // 自定义API地址（可选）
