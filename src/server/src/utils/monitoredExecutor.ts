@@ -13,6 +13,18 @@ import { BaseMessage, HumanMessage, AIMessage } from '@langchain/core/messages'
 import { callLLM, executeApiCall, executeCliCommand, executeCliTemplate, HITLRequest, HITLResponse, HITLDecision, CallLLMOptions, getDataDir } from '../utils'
 import { v4 as uuidv4 } from 'uuid'
 import { SqliteSaver } from "@langchain/langgraph-checkpoint-sqlite";
+
+// 附件数据（从API接收）
+interface AttachmentPayload {
+  id: string
+  name: string
+  type: string
+  size: number
+  category: 'image' | 'text' | 'pdf' | 'binary'
+  dataUrl?: string
+  textContent?: string
+}
+
 // 执行状态存储
 interface ExecutionState {
   executionId: string
@@ -34,6 +46,7 @@ interface ExecutionState {
   compiledGraph?: CompiledStateGraph<any, any>
   autoApprovedToolTypes: Set<string>
   pendingApproval: { resolve: (response: HITLResponse) => void; request: HITLRequest } | null
+  attachments?: AttachmentPayload[]
 }
 const checkpointer = SqliteSaver.fromConnString(getDataDir('/database.sqlite'));
 
@@ -53,7 +66,9 @@ export class MonitoredLangGraphExecutor {
     input: string,
     llmConfig: LLMConfig,
     agentId?: string,
-    threadId?: string
+    threadId?: string,
+    attachments?: AttachmentPayload[],
+    autoApprovedTools?: string[]
   ): Promise<string> {
     const executionId = uuidv4()
 
@@ -74,13 +89,14 @@ export class MonitoredLangGraphExecutor {
       ],
       agentId,
       threadId,
-      autoApprovedToolTypes: new Set<string>(),
+      autoApprovedToolTypes: new Set<string>(autoApprovedTools || []),
       pendingApproval: null,
+      attachments,
     }
 
     this.executionStates.set(executionId, executionState)
     // 在后台执行工作流
-    this.executeWorkflowAsync(executionId, workflow, input, llmConfig, agentId, threadId)
+    this.executeWorkflowAsync(executionId, workflow, input, llmConfig, agentId, threadId, attachments)
 
     return executionId
   }
@@ -92,7 +108,8 @@ export class MonitoredLangGraphExecutor {
     input: string,
     llmConfig: LLMConfig,
     agentId?: string,
-    threadId?: string
+    threadId?: string,
+    attachments?: AttachmentPayload[]
   ): Promise<void> {
     try {
       const state = this.executionStates.get(executionId)
@@ -101,7 +118,7 @@ export class MonitoredLangGraphExecutor {
       }
       const compiledGraph = await this.buildMonitoredLangGraph(executionId, workflow, llmConfig)
       state.compiledGraph = compiledGraph
-      await this.executeMonitoredLangGraph(compiledGraph, input, executionId, agentId, threadId)
+      await this.executeMonitoredLangGraph(compiledGraph, input, executionId, agentId, threadId, attachments)
       // 检查是否被暂停，如果是则不更新为完成状态
       if (state.status === 'running') {
         // 更新执行状态为完成
@@ -168,7 +185,18 @@ export class MonitoredLangGraphExecutor {
       graph.addNode(
         node.id,
         async (state: any) => {
-          const input = state.messages[state.messages.length - 1]?.content || ''
+          const lastMessage = state.messages[state.messages.length - 1]
+          let input: string
+          if (typeof lastMessage?.content === 'string') {
+            input = lastMessage.content
+          } else if (Array.isArray(lastMessage?.content)) {
+            input = lastMessage.content
+              .filter((part: any) => part.type === 'text')
+              .map((part: any) => part.text || '')
+              .join('\n')
+          } else {
+            input = ''
+          }
           const conversationHistory = state.messages || []
           const execState = this.executionStates.get(executionId)
           // 更新当前执行节点
@@ -290,7 +318,8 @@ export class MonitoredLangGraphExecutor {
     input: string,
     executionId: string,
     agentId?: string,
-    threadId?: string
+    threadId?: string,
+    attachments?: AttachmentPayload[]
   ): Promise<string> {
     const config = {
       configurable: {
@@ -300,7 +329,7 @@ export class MonitoredLangGraphExecutor {
 
     try {
       const initialState = {
-        messages: [new HumanMessage(input)]
+        messages: [buildHumanMessage(input, attachments)]
       }
 
       const state = this.executionStates.get(executionId)
@@ -1049,4 +1078,57 @@ ${conditionText}
 
     return true
   }
+}
+
+function formatSize(bytes: number): string {
+  if (bytes < 1024) return `${bytes} B`
+  if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`
+  return `${(bytes / (1024 * 1024)).toFixed(1)} MB`
+}
+
+function buildHumanMessage(input: string, attachments?: AttachmentPayload[]): HumanMessage {
+  if (!attachments || attachments.length === 0) {
+    return new HumanMessage(input)
+  }
+
+  const contentParts: Array<{ type: string; text?: string; image_url?: { url: string } }> = []
+
+  if (input) {
+    contentParts.push({ type: 'text', text: input })
+  }
+
+  for (const att of attachments) {
+    switch (att.category) {
+      case 'image':
+        if (att.dataUrl) {
+          contentParts.push({
+            type: 'image_url',
+            image_url: { url: att.dataUrl }
+          })
+          contentParts.push({ type: 'text', text: `[图片: ${att.name}]` })
+        }
+        break
+
+      case 'text':
+        if (att.textContent) {
+          contentParts.push({
+            type: 'text',
+            text: `\n\n---\n文件: ${att.name}\n---\n${att.textContent}\n---`
+          })
+        } else {
+          contentParts.push({ type: 'text', text: `[文件: ${att.name} (${att.size} bytes, 内容无法读取)]` })
+        }
+        break
+
+      case 'pdf':
+        contentParts.push({ type: 'text', text: `[PDF文件: ${att.name} (${formatSize(att.size)})]` })
+        break
+
+      case 'binary':
+        contentParts.push({ type: 'text', text: `[文件: ${att.name} (${att.type}, ${formatSize(att.size)})]` })
+        break
+    }
+  }
+
+  return new HumanMessage({ content: contentParts })
 }

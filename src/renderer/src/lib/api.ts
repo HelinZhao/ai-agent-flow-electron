@@ -234,7 +234,9 @@ export const workflowExecutionApi = {
   agentChatMonitor: (
     agentId: string,
     input: string,
-    threadId?: string
+    threadId?: string,
+    attachments?: any[],
+    autoApprovedTools?: string[]
   ): Promise<{
     executionId: string
     success: boolean
@@ -245,7 +247,9 @@ export const workflowExecutionApi = {
     api.post('/execute-workflow/agent-chat-monitor', {
       agentId,
       input,
-      threadId
+      threadId,
+      attachments,
+      autoApprovedTools,
     }),
 
   // 用户审批工具调用

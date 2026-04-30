@@ -1,5 +1,5 @@
 import React, { useRef } from 'react';
-import CustomButton from './CustomButton';
+import CustomButton, { CustomButtonProps } from './CustomButton';
 
 interface CustomFileUploadProps {
   accept?: string;
@@ -7,6 +7,9 @@ interface CustomFileUploadProps {
   className?: string;
   children?: React.ReactNode;
   disabled?: boolean;
+  multiple?: boolean;
+  size?: CustomButtonProps['size'];
+  variant?: CustomButtonProps['variant'];
 }
 
 const CustomFileUpload: React.FC<CustomFileUploadProps> = ({
@@ -14,7 +17,10 @@ const CustomFileUpload: React.FC<CustomFileUploadProps> = ({
   onChange,
   className = '',
   children = '选择文件',
-  disabled = false
+  disabled = false,
+  multiple = false,
+  size,
+  variant = 'secondary'
 }) => {
   const fileInputRef = useRef<HTMLInputElement>(null);
 
@@ -28,10 +34,11 @@ const CustomFileUpload: React.FC<CustomFileUploadProps> = ({
     <div className={`relative ${className}`}>
       <CustomButton
         type="button"
-        variant="secondary"
+        variant={variant}
         onClick={handleClick}
         disabled={disabled}
         className="w-full"
+        size={size}
       >
         <span>📁</span>
         <span>{children}</span>
@@ -43,6 +50,7 @@ const CustomFileUpload: React.FC<CustomFileUploadProps> = ({
         onChange={onChange}
         className="hidden"
         disabled={disabled}
+        multiple={multiple}
       />
     </div>
   );

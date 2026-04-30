@@ -3,12 +3,22 @@ import { join } from 'path'
 import { promises as fs } from 'fs'
 import { existsSync } from 'fs'
 
+// 附件元数据（轻量，用于历史持久化）
+export interface AttachmentMetadata {
+  id: string
+  name: string          // 文件名
+  type: string          // MIME类型
+  size: number          // 文件大小
+  category: 'image' | 'text' | 'pdf' | 'binary'  // 分类
+}
+
 export interface ChatMessage {
   id: string
   content: string
   sender: 'user' | 'agent'
   timestamp: string // ISO string
   agentId?: string
+  attachments?: AttachmentMetadata[]
 }
 
 export interface ChatHistory {
@@ -59,7 +69,11 @@ export class ChatHistoryManager {
   }
 
   // 生成对话标题
-  private generateChatTitle(firstUserMessage: string): string {
+  private generateChatTitle(firstUserMessage: string, attachments?: AttachmentMetadata[]): string {
+    if (firstUserMessage === '(附件)' && attachments && attachments.length > 0) {
+      const fileNames = attachments.map(a => a.name).join(', ')
+      return fileNames.substring(0, 20) + (fileNames.length > 20 ? '...' : '')
+    }
     return firstUserMessage.substring(0, 20) + (firstUserMessage.length > 20 ? '...' : '')
   }
 
@@ -99,7 +113,7 @@ export class ChatHistoryManager {
       if (!existingHistory.title && messages.length > 0) {
         const firstUserMessage = messages.find((msg) => msg.sender === 'user')
         if (firstUserMessage) {
-          existingHistory.title = this.generateChatTitle(firstUserMessage.content)
+          existingHistory.title = this.generateChatTitle(firstUserMessage.content, firstUserMessage.attachments)
         }
       }
 

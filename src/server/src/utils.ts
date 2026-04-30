@@ -130,7 +130,14 @@ const callLLMOnce = async (
     checkpointer,
   });
 
-  const messages = prompt !== conversationHistory[conversationHistory.length - 1]?.content
+  const lastContent = conversationHistory[conversationHistory.length - 1]?.content
+  const lastContentStr = typeof lastContent === 'string'
+    ? lastContent
+    : Array.isArray(lastContent)
+      ? lastContent.filter((p: any) => p.type === 'text').map((p: any) => p.text || '').join('\n')
+      : ''
+
+  const messages = prompt !== lastContentStr
     ? [...conversationHistory, new HumanMessage(prompt)]
     : conversationHistory
 

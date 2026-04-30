@@ -1,10 +1,14 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { useWorkflowStore } from '@renderer/store/workflowStore';
-import { Agent, ChatHistory, ChatMessage, ToolApprovalRequest } from '@renderer/types';
+import { Agent, AttachmentMetadata, ChatHistory, ChatMessage, ToolApprovalRequest } from '@renderer/types';
 import { chatHistoryApi } from '@renderer/lib/chatHistory';
 import { workflowExecutionApi } from '@renderer/lib/api';
+import { AttachmentData, processFileAttachment, stripAttachmentForHistory } from '@renderer/lib/attachmentUtils';
 import CustomButton from '@renderer/components/CustomButton';
 import MarkdownPreview from '@renderer/components/MarkdownPreview';
+import AttachmentPreview from '@renderer/components/AttachmentPreview';
+import AttachmentDisplay from '@renderer/components/AttachmentDisplay';
+import CustomFileUpload from '@renderer/components/CustomFileUpload';
 
 // 工具名称中文映射
 const TOOL_LABELS: Record<string, string> = {
@@ -27,6 +31,7 @@ export default function Chat(): React.JSX.Element {
     const [currentExecutionId, setCurrentExecutionId] = useState<string | null>(null);
     const [pendingApproval, setPendingApproval] = useState<ToolApprovalRequest | null>(null);
     const [autoApprovedTools, setAutoApprovedTools] = useState<Set<string>>(new Set());
+    const [pendingAttachments, setPendingAttachments] = useState<AttachmentData[]>([]);
     const messagesEndRef = useRef<HTMLDivElement>(null);
 
     // 过滤agents基于搜索词
@@ -89,24 +94,38 @@ export default function Chat(): React.JSX.Element {
     };
 
     const handleSendMessage = async (): Promise<void> => {
-        if (!inputMessage.trim() || !selectedAgent || !activeLLMConfig) {
+        if ((!inputMessage.trim() && pendingAttachments.length === 0) || !selectedAgent || !activeLLMConfig) {
             if (!activeLLMConfig) {
                 alert('请先配置LLM API');
             }
             return;
         }
 
+        const attachmentsMetadata: AttachmentMetadata[] = pendingAttachments.map(stripAttachmentForHistory);
         const userMessage: ChatMessage = {
             id: `msg-${Date.now()}`,
-            content: inputMessage,
+            content: inputMessage || (pendingAttachments.length > 0 ? '(附件)' : ''),
             sender: 'user',
             timestamp: new Date().toISOString(),
+            attachments: attachmentsMetadata,
         };
 
         const newMessages = [...messages, userMessage];
         setMessages(newMessages);
         setInputMessage('');
+        setPendingAttachments([]);
         setIsLoading(true);
+
+        // 构建附件发送数据
+        const attachmentsPayload = pendingAttachments.map(att => ({
+            id: att.id,
+            name: att.name,
+            type: att.type,
+            size: att.size,
+            category: att.category,
+            dataUrl: att.dataUrl,
+            textContent: att.textContent,
+        }))
 
         try {
             // 获取Agent绑定的工作流
@@ -118,8 +137,10 @@ export default function Chat(): React.JSX.Element {
             // 执行AI Agent对话
             const { executionId, success } = await workflowExecutionApi.agentChatMonitor(
                 selectedAgent.id,
-                inputMessage,
-                selectedAgent.id // 使用agent ID作为thread ID来维持对话记忆
+                userMessage.content,
+                selectedAgent.id,
+                attachmentsPayload,
+                Array.from(autoApprovedTools)
             )
             if (!success) {
                 throw new Error(`AI Agent 对话启动失败`)
@@ -136,7 +157,7 @@ export default function Chat(): React.JSX.Element {
                         // 如果此工具类型已放权，自动审批
                         if (autoApprovedTools.size > 0 && progress.actionRequests.every(a => autoApprovedTools.has(a.name))) {
                             workflowExecutionApi.approveToolCall(
-                                currentExecutionId!,
+                                executionId,
                                 progress.actionRequests.map(() => ({ type: 'approve' }))
                             ).catch(console.error)
                         } else {
@@ -225,8 +246,27 @@ export default function Chat(): React.JSX.Element {
     const handleKeyPress = (e: React.KeyboardEvent): void => {
         if (e.key === 'Enter' && !e.shiftKey) {
             e.preventDefault();
-            handleSendMessage();
+            if (inputMessage.trim() || pendingAttachments.length > 0) {
+                handleSendMessage();
+            }
         }
+    };
+
+    const handleFileSelect = async (e: React.ChangeEvent<HTMLInputElement>): Promise<void> => {
+        const files = e.target.files;
+        if (!files || files.length === 0) return;
+
+        const newAttachments: AttachmentData[] = [];
+        for (const file of Array.from(files)) {
+            try {
+                const attachment = await processFileAttachment(file);
+                newAttachments.push(attachment);
+            } catch (error) {
+                console.error(`处理文件 ${file.name} 失败:`, error);
+            }
+        }
+
+        setPendingAttachments(prev => [...prev, ...newAttachments]);
     };
 
     const handleTerminate = async (): Promise<void> => {
@@ -469,11 +509,12 @@ export default function Chat(): React.JSX.Element {
                                                     : 'bg-white dark:bg-gray-700/80 text-gray-900 dark:text-white border border-gray-200/50 dark:border-gray-600/50 rounded-2xl rounded-bl-sm backdrop-blur-sm'
                                                     }`}
                                             >
+                                                <AttachmentDisplay attachments={message.attachments} sender={message.sender} />
                                                 {message.sender === 'user'
                                                     ? <div className="text-sm leading-relaxed" style={{ whiteSpace: "pre-wrap" }}>{message.content}</div>
                                                     : <div className="text-sm leading-relaxed">
                                                         <MarkdownPreview content={message.content} />
-                                                      </div>
+                                                    </div>
                                                 }
                                                 <div className={`text-xs mt-2 flex items-center space-x-1 ${message.sender === 'user' ? 'text-blue-100' : 'text-gray-500 dark:text-gray-400'
                                                     }`}>
@@ -570,6 +611,10 @@ export default function Chat(): React.JSX.Element {
                             <div className="p-4 pt-0">
                                 <div className="bg-gray-50/80 dark:bg-gray-700/50 rounded-2xl border border-gray-200/50 dark:border-gray-600/50 overflow-hidden backdrop-blur-sm">
                                     <div className="p-4">
+                                        <AttachmentPreview
+                                            attachments={pendingAttachments}
+                                            onRemove={(id) => setPendingAttachments(prev => prev.filter(a => a.id !== id))}
+                                        />
                                         <textarea
                                             value={inputMessage}
                                             onChange={(e) => setInputMessage(e.target.value)}
@@ -587,6 +632,15 @@ export default function Chat(): React.JSX.Element {
 
                                     <div className="flex items-center justify-between px-4 py-3 bg-white/50 dark:bg-gray-800/30 border-t border-gray-200/30 dark:border-gray-600/30">
                                         <div className="flex items-center space-x-3 text-xs text-gray-500 dark:text-gray-400">
+                                            <CustomFileUpload
+                                                onChange={handleFileSelect}
+                                                multiple
+                                                disabled={isLoading}
+                                                size='sm'
+                                                variant='ghost'
+                                            >
+                                                附件
+                                            </CustomFileUpload>
                                             <div className="flex items-center space-x-1">
                                                 <kbd className="px-1.5 py-0.5 bg-gray-100 dark:bg-gray-600 rounded text-xs">Enter</kbd>
                                                 <span>发送</span>
@@ -614,7 +668,7 @@ export default function Chat(): React.JSX.Element {
                                             ) : (
                                                 <CustomButton
                                                     onClick={handleSendMessage}
-                                                    disabled={!inputMessage.trim()}
+                                                    disabled={!inputMessage.trim() && pendingAttachments.length === 0}
                                                     variant="primary"
                                                     size="sm"
                                                     className="flex items-center space-x-2 px-6"

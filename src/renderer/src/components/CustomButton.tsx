@@ -1,6 +1,6 @@
 import React from 'react';
 
-interface CustomButtonProps extends React.ButtonHTMLAttributes<HTMLButtonElement> {
+export interface CustomButtonProps extends React.ButtonHTMLAttributes<HTMLButtonElement> {
   variant?: 'primary' | 'secondary' | 'success' | 'danger' | 'warning' | 'ghost';
   size?: 'sm' | 'md' | 'lg' | 'xl';
   fullWidth?: boolean;

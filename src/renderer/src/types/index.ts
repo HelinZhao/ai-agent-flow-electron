@@ -81,6 +81,16 @@ export interface Agent {
   updatedAt: Date
 }
 
+// 附件元数据（轻量，用于历史持久化）
+export interface AttachmentMetadata {
+  id: string
+  name: string          // 文件名
+  type: string          // MIME类型
+  size: number          // 文件大小
+  category: 'image' | 'text' | 'pdf' | 'binary'  // 分类
+  previewUrl?: string   // 图片预览（仅当前会话使用，不存入历史）
+}
+
 // 对话历史相关类型
 export interface ChatMessage {
   id: string
@@ -88,6 +98,7 @@ export interface ChatMessage {
   sender: 'user' | 'agent'
   timestamp: string // ISO string
   agentId?: string
+  attachments?: AttachmentMetadata[]
 }
 
 export interface ChatHistory {

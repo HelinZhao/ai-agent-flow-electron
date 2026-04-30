@@ -407,7 +407,7 @@ router.post('/', async (req, res) => {
 // AI Agent 对话 API（带监控）
 router.post('/agent-chat-monitor', async (req, res) => {
   try {
-    const { agentId, input, threadId } = req.body
+    const { agentId, input, threadId, attachments, autoApprovedTools } = req.body
 
     // 验证必要参数
     if (!agentId || !input) {
@@ -482,7 +482,9 @@ router.post('/agent-chat-monitor', async (req, res) => {
       input,
       llmConfig,
       agentId,
-      threadId || agentId // 使用 agentId 作为默认 threadId
+      threadId || agentId, // 使用 agentId 作为默认 threadId
+      attachments,
+      autoApprovedTools
     )
 
     return res.status(200).json({
