@@ -9,11 +9,10 @@ import {
   interrupt,
   Command
 } from '@langchain/langgraph'
-import { MemorySaver } from '@langchain/langgraph'
 import { BaseMessage, HumanMessage, AIMessage } from '@langchain/core/messages'
-import { callLLM, executeApiCall, executeCliCommand, executeCliTemplate, HITLRequest, HITLResponse, HITLDecision, CallLLMOptions } from '../utils'
+import { callLLM, executeApiCall, executeCliCommand, executeCliTemplate, HITLRequest, HITLResponse, HITLDecision, CallLLMOptions, getDataDir } from '../utils'
 import { v4 as uuidv4 } from 'uuid'
-
+import { SqliteSaver } from "@langchain/langgraph-checkpoint-sqlite";
 // 执行状态存储
 interface ExecutionState {
   executionId: string
@@ -36,7 +35,7 @@ interface ExecutionState {
   autoApprovedToolTypes: Set<string>
   pendingApproval: { resolve: (response: HITLResponse) => void; request: HITLRequest } | null
 }
-const menory = new MemorySaver()
+const checkpointer = SqliteSaver.fromConnString(getDataDir('/database.sqlite'));
 
 // 带监控的LangGraph执行器
 export class MonitoredLangGraphExecutor {
@@ -282,9 +281,7 @@ export class MonitoredLangGraphExecutor {
       graph.addEdge(endNode.id as any, END)
     }
 
-    return graph.compile({
-      checkpointer: menory
-    })
+    return graph.compile({ checkpointer })
   }
 
   // 执行带监控的LangGraph
@@ -635,55 +632,55 @@ export class MonitoredLangGraphExecutor {
       const hasDangerousTools = enabledTools.some((t: string) => ['writeFile', 'executeCommand', 'httpRequest'].includes(t))
       const options: CallLLMOptions = hasDangerousTools
         ? {
-            approvalCallback: async (request: HITLRequest): Promise<HITLResponse> => {
-              const execState = this.executionStates.get(executionId)
-              if (!execState) {
-                return { decisions: request.actionRequests.map(() => ({ type: 'reject', message: '执行状态不存在' })) }
-              }
-
-              // 按工具类型判断：已放行的工具自动批准，其余需要审批
-              const autoApproved: string[] = []
-              const needApproval: { name: string; args: Record<string, any>; description: string }[] = []
-              for (const action of request.actionRequests) {
-                if (execState.autoApprovedToolTypes.has(action.name)) {
-                  autoApproved.push(action.name)
-                } else {
-                  needApproval.push(action)
-                }
-              }
-
-              // 全部已放行
-              if (needApproval.length === 0) {
-                return { decisions: request.actionRequests.map(() => ({ type: 'approve' })) }
-              }
-
-              // 广播 SSE 请求审批事件（只包含需要审批的工具）
-              this.broadcastToSSEClients(executionId, {
-                type: 'tool_approval_required',
-                executionId,
-                actionRequests: needApproval,
-                reviewConfigs: request.reviewConfigs.filter(rc => needApproval.some(a => a.name === rc.actionName)),
-              })
-
-              // 创建 Promise 等待用户审批
-              const approvalPromise = new Promise<HITLResponse>((resolve) => {
-                execState.pendingApproval = { resolve, request }
-              })
-
-              const userResponse = await approvalPromise
-
-              // 合并结果：自动批准的 + 用户决策的
-              const decisions: HITLDecision[] = request.actionRequests.map((action) => {
-                if (execState.autoApprovedToolTypes.has(action.name)) {
-                  return { type: 'approve' }
-                }
-                const userDecision = userResponse.decisions.find(d => d.type !== 'approve' || needApproval.some(a => a.name === action.name))
-                return userDecision || { type: 'approve' }
-              })
-
-              return { decisions }
+          approvalCallback: async (request: HITLRequest): Promise<HITLResponse> => {
+            const execState = this.executionStates.get(executionId)
+            if (!execState) {
+              return { decisions: request.actionRequests.map(() => ({ type: 'reject', message: '执行状态不存在' })) }
             }
+
+            // 按工具类型判断：已放行的工具自动批准，其余需要审批
+            const autoApproved: string[] = []
+            const needApproval: { name: string; args: Record<string, any>; description: string }[] = []
+            for (const action of request.actionRequests) {
+              if (execState.autoApprovedToolTypes.has(action.name)) {
+                autoApproved.push(action.name)
+              } else {
+                needApproval.push(action)
+              }
+            }
+
+            // 全部已放行
+            if (needApproval.length === 0) {
+              return { decisions: request.actionRequests.map(() => ({ type: 'approve' })) }
+            }
+
+            // 广播 SSE 请求审批事件（只包含需要审批的工具）
+            this.broadcastToSSEClients(executionId, {
+              type: 'tool_approval_required',
+              executionId,
+              actionRequests: needApproval,
+              reviewConfigs: request.reviewConfigs.filter(rc => needApproval.some(a => a.name === rc.actionName)),
+            })
+
+            // 创建 Promise 等待用户审批
+            const approvalPromise = new Promise<HITLResponse>((resolve) => {
+              execState.pendingApproval = { resolve, request }
+            })
+
+            const userResponse = await approvalPromise
+
+            // 合并结果：自动批准的 + 用户决策的
+            const decisions: HITLDecision[] = request.actionRequests.map((action) => {
+              if (execState.autoApprovedToolTypes.has(action.name)) {
+                return { type: 'approve' }
+              }
+              const userDecision = userResponse.decisions.find(d => d.type !== 'approve' || needApproval.some(a => a.name === action.name))
+              return userDecision || { type: 'approve' }
+            })
+
+            return { decisions }
           }
+        }
         : {}
 
       const result = await callLLM(finalPrompt, llmConfig, conversationHistory, enabledTools, options)

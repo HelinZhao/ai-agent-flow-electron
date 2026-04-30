@@ -2,14 +2,15 @@ import { BaseMessage, HumanMessage } from '@langchain/core/messages'
 import { ApiConfig, LLMConfig } from './types'
 import { ChatOpenAI } from '@langchain/openai'
 import { exec, spawn } from 'child_process'
-import * as fs from 'fs/promises'
-import * as path from 'path'
-import * as iconv from 'iconv-lite'
-import * as jschardet from 'jschardet'
+import fs from 'fs/promises'
+import path from 'path'
+import iconv from 'iconv-lite'
+import jschardet from 'jschardet'
 import { createAgent, humanInTheLoopMiddleware } from "langchain"
 import { MemorySaver } from "@langchain/langgraph"
 import { Command } from "@langchain/langgraph"
 import { getToolsByIds } from './tools'
+import { app } from 'electron'
 
 export interface HITLRequest {
   actionRequests: { name: string; args: Record<string, any>; description: string }[]
@@ -436,4 +437,13 @@ export const executeCliCommand = async (options: CliExecutionOptions): Promise<{
       })
     })
   })
+}
+
+// 获取数据目录
+export const getDataDir = (subPath?: string): string => {
+  if (app.isPackaged) {
+    return path.join(path.dirname(process.execPath), `data${subPath}`)
+  } else {
+    return path.join(`./data${subPath}`) // 开发时
+  }
 }

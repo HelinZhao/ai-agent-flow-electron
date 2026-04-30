@@ -1,15 +1,6 @@
 import { Sequelize } from 'sequelize'
-import path from 'path'
-import { app } from 'electron'
+import { getDataDir } from '../utils'
 
-// 获取数据目录
-const getDataDir = (subPath?: string): string => {
-  if (app.isPackaged) {
-    return path.join(path.dirname(process.execPath), `data${subPath}`)
-  } else {
-    return path.join(`./data${subPath}`) // 开发时
-  }
-}
 // 创建Sequelize实例，使用SQLite数据库
 const sequelize = new Sequelize({
   dialect: 'sqlite',
