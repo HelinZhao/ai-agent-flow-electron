@@ -1,7 +1,7 @@
 import { WorkflowNode } from "@renderer/types";
 import { Panel, useReactFlow } from "@xyflow/react";
 import { memo, useCallback } from "react";
-import { NODE_DEFS, getNodeDefaultLabel, COLOR_CLASSES } from "./nodes";
+import { NODE_DEFS, getNodeDefaultLabel } from "./nodes";
 import { v4 as uuidv4 } from 'uuid';
 
 const NodeListPanel = ():  React.JSX.Element => {
@@ -35,7 +35,7 @@ const NodeListPanel = ():  React.JSX.Element => {
               draggable
               onDragStart={(e) => handleDragStart(e, def.type)}
               onClick={() => handleAddNode(def.type as WorkflowNode['type'])}
-              className={`px-3 py-2 text-xs ${COLOR_CLASSES[def.color].bg} ${COLOR_CLASSES[def.color].text} ${COLOR_CLASSES[def.color].hover} rounded cursor-move`}
+              className={`px-3 py-2 text-xs bg-${def.color}-100 text-${def.color}-800 hover:bg-${def.color}-200 rounded cursor-move`}
             >
               {def.shortLabel}
             </div>

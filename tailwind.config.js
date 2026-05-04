@@ -2,6 +2,11 @@
 module.exports = {
   darkMode: 'class',
   content: ['./src/renderer/src/**/*.{js,jsx,ts,tsx,mdx}', './index.html'],
+  safelist: [
+    // 节点颜色类（NODE_DEFS 使用的 8 种颜色 × bg/text/hover × 阶）
+    { pattern: /bg-(green|blue|yellow|indigo|purple|red|orange|gray)-(100|200)/ },
+    { pattern: /text-(green|blue|yellow|indigo|purple|red|orange|gray)-(400|500|600|800)/ },
+  ],
   theme: {
     extend: {
       colors: {

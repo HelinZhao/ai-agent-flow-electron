@@ -1,6 +1,6 @@
 import { WorkflowNode } from '@renderer/types'
 import { memo, useState } from 'react'
-import { NODE_DEFS, NODE_CATEGORIES, COLOR_CLASSES } from './nodes'
+import { NODE_DEFS, NODE_CATEGORIES } from './nodes'
 
 interface ContextMenuProps {
   x: number
@@ -44,7 +44,7 @@ const ContextMenu: React.FC<ContextMenuProps> = (props: ContextMenuProps) => {
               onAddNode(nodeType.type as WorkflowNode['type'], flowPosition)
               onClose()
             }}
-            className={`w-full px-4 py-2 text-left text-sm hover:bg-gray-50 dark:hover:bg-gray-700 ${COLOR_CLASSES[nodeType.color].bg} ${COLOR_CLASSES[nodeType.color].text}`}
+            className={`w-full px-4 py-2 text-left text-sm hover:bg-gray-50 bg-${nodeType.color}-100 text-${nodeType.color}-800`}
           >
             {nodeType.shortLabel}
           </button>
