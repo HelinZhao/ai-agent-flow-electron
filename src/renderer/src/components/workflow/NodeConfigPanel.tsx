@@ -94,7 +94,7 @@ const NodeConfigPanel: React.FC<NodeConfigPanelProps> = ({ node, onClose }: Node
           </button>
         </div>
 
-        <div className="space-y-4 overflow-y-auto p-4" style={{ maxHeight: 'calc(100vh - 300px)' }}>
+        <div className="space-y-4 overflow-y-auto p-4 max-h-[calc(100vh-360px)]">
           <div>
             <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
               节点标签

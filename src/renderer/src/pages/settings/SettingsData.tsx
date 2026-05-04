@@ -19,7 +19,7 @@ export default function SettingsData(): React.JSX.Element {
 
   return (
     <div className="space-y-4">
-      <h3 className="text-lg font-medium text-gray-900 dark:text-gray-100">数据管理</h3>
+      <h3 className="text-lg font-bold text-gray-900 dark:text-white mb-6">数据管理</h3>
 
       <div className="space-y-3">
         <div className="flex items-center justify-between p-3 bg-gray-50 dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-800">

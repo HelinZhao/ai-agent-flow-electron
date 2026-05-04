@@ -1,6 +1,8 @@
 import { BaseMessage, HumanMessage } from '@langchain/core/messages'
 import { ApiConfig, LLMConfig } from './types'
 import { ChatOpenAI } from '@langchain/openai'
+import { BaseCache } from '@langchain/core/caches'
+import { Generation } from '@langchain/core/outputs'
 import { exec, spawn } from 'child_process'
 import fs from 'fs/promises'
 import path from 'path'
@@ -11,6 +13,35 @@ import { MemorySaver } from "@langchain/langgraph"
 import { Command } from "@langchain/langgraph"
 import { getToolsByIds } from './tools'
 import { app } from 'electron'
+
+const CACHE_TTL_MS = 10 * 60 * 1000 // 10分钟
+// 带 TTL 的 LLM 缓存，条目超过指定时间后自动淘汰，避免内存无限增长
+class TTLCache extends BaseCache<Generation[]> {
+  private store = new Map<string, { value: Generation[]; ts: number }>()
+
+  // 淘汰超过 TTL 的条目
+  private evictExpired(): void {
+    const now = Date.now()
+    for (const [key, entry] of this.store) {
+      if (now - entry.ts > CACHE_TTL_MS) {
+        this.store.delete(key)
+      }
+    }
+  }
+
+  async lookup(prompt: string, llmKey: string): Promise<Generation[] | null> {
+    this.evictExpired()
+    const key = this.keyEncoder(prompt, llmKey)
+    const entry = this.store.get(key)
+    return entry?.value ?? null
+  }
+
+  async update(prompt: string, llmKey: string, value: Generation[]): Promise<void> {
+    this.store.set(this.keyEncoder(prompt, llmKey), { value, ts: Date.now() })
+  }
+}
+
+const llmCache = new TTLCache()
 
 export interface HITLRequest {
   actionRequests: { name: string; args: Record<string, any>; description: string }[]
@@ -28,6 +59,7 @@ export interface HITLResponse {
 
 export interface CallLLMOptions {
   approvalCallback?: (request: HITLRequest) => Promise<HITLResponse>
+  cache?: boolean
 }
 
 export const getLLMEndpoint = (llmConfig: LLMConfig): string => {
@@ -129,6 +161,7 @@ const callLLMOnce = async (
     configuration: {
       baseURL: getLLMEndpoint(llmConfig)
     },
+    ...(options?.cache ? { cache: llmCache } : {}),
   })
 
   const tools = getToolsByIds(enabledTools)
@@ -137,24 +170,7 @@ const callLLMOnce = async (
   const needsApproval = enabledTools.some(t => ['writeFile', 'executeCommand', 'httpRequest'].includes(t))
   const useHITL = hasTools && needsApproval && options?.approvalCallback
 
-  const interruptOn: Record<string, boolean> = {}
-  if (useHITL) {
-    for (const toolId of enabledTools) {
-      // 危险工具拦截，安全工具自动放行
-      interruptOn[toolId] = ['writeFile', 'executeCommand', 'httpRequest'].includes(toolId)
-    }
-  }
-
-  const checkpointer = useHITL ? new MemorySaver() : undefined
-  const threadId = `thread-${Date.now()}`
-
-  const agent = createAgent({
-    model: llm,
-    tools,
-    middleware: useHITL ? [humanInTheLoopMiddleware({ interruptOn })] : [],
-    checkpointer,
-  });
-
+  // 构建消息（公共逻辑，直接调用和 agent 路径共用）
   const lastContent = conversationHistory[conversationHistory.length - 1]?.content
   const lastContentStr = typeof lastContent === 'string'
     ? lastContent
@@ -162,12 +178,8 @@ const callLLMOnce = async (
       ? lastContent.filter((p: any) => p.type === 'text').map((p: any) => p.text || '').join('\n')
       : ''
 
-  // 构建消息：如果有图片附件且模型支持vision，直接注入image_url到HumanMessage
-  // 优先使用dataUrl，若不存在则从filePath读取磁盘文件生成data URI
   const imageAttachments = attachments?.filter(att => att.category === 'image') || []
   const supportsVision = isVisionModel(llmConfig.model)
-
-  // 为图片附件准备dataUrl（从磁盘读取或直接使用）
   const imageDataUrls: Map<string, string> = new Map()
   for (const att of imageAttachments) {
     if (att.dataUrl) {
@@ -192,25 +204,50 @@ const callLLMOnce = async (
 
   const userMessage = hasImages
     ? new HumanMessage({
-        content: [
-          { type: 'text', text: prompt },
-          ...imageAttachments
-            .filter(att => imageDataUrls.has(att.id))
-            .map(att => ({
-              type: 'image_url' as const,
-              image_url: { url: imageDataUrls.get(att.id)! }
-            }))
-        ]
-      })
+      content: [
+        { type: 'text', text: prompt },
+        ...imageAttachments
+          .filter(att => imageDataUrls.has(att.id))
+          .map(att => ({
+            type: 'image_url' as const,
+            image_url: { url: imageDataUrls.get(att.id)! }
+          }))
+      ]
+    })
     : new HumanMessage(prompt)
 
   const messages = prompt !== lastContentStr
     ? [...conversationHistory, userMessage]
     : conversationHistory
 
-  const recursionLimit = hasTools ? 50 : 25
-
   if (attempt > 1) console.log(`[LLM Agent] 第${attempt}次重试开始`)
+
+  // 无工具且无 HITL 时直接调用模型，绕过 createAgent 避免 LangGraph 注入动态元数据破坏缓存
+  if (!hasTools && !useHITL) {
+    const response = await llm.invoke(messages)
+    return response.content.toString()
+  }
+
+  // 有工具或 HITL 时走 createAgent 路径
+  const interruptOn: Record<string, boolean> = {}
+  if (useHITL) {
+    for (const toolId of enabledTools) {
+      // 危险工具拦截，安全工具自动放行
+      interruptOn[toolId] = ['writeFile', 'executeCommand', 'httpRequest'].includes(toolId)
+    }
+  }
+
+  const checkpointer = useHITL ? new MemorySaver() : undefined
+  const threadId = `thread-${Date.now()}`
+
+  const agent = createAgent({
+    model: llm,
+    tools,
+    middleware: useHITL ? [humanInTheLoopMiddleware({ interruptOn })] : [],
+    checkpointer,
+  });
+
+  const recursionLimit = hasTools ? 50 : 25
 
   // HITL 模式：invoke + 检查 interrupt + 等待审批 + resume 循环
   if (useHITL) {

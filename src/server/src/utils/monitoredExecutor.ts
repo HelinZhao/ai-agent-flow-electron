@@ -1,4 +1,4 @@
-import { Workflow, LLMConfig, WorkflowNode } from '../types'
+import { Workflow, LLMConfig, WorkflowNode, WorkflowBranch } from '../types'
 import { SkillModel } from '../models'
 import {
   StateGraph,
@@ -754,7 +754,7 @@ export class MonitoredLangGraphExecutor {
         }
         : {}
 
-      const result = await callLLM(finalPrompt, llmConfig, conversationHistory, enabledTools, options, attachments)
+      const result = await callLLM(finalPrompt, llmConfig, conversationHistory, enabledTools, { ...options, cache: node.data.config?.enableCache ?? false }, attachments)
 
       return {
         output: result,
@@ -885,10 +885,10 @@ export class MonitoredLangGraphExecutor {
     }
   }
 
-  private async evaluateBranches(branches: any[], input: string, llmConfig: LLMConfig) {
+  private async evaluateBranches(branches: WorkflowBranch[], input: string, llmConfig: LLMConfig) {
     try {
       const conditionText = branches
-        .map((item, index) => `条件${index + 1} [ID: ${item.id}]: ${item.condition}`)
+        .map((item, index) => `条件${index + 1}: ${item.condition}`)
         .join('\n')
 
       const prompt = `你是一个条件评估引擎，请根据输入内容判断满足哪个条件。
@@ -900,20 +900,16 @@ ${conditionText}
 
 评估规则:
 1. 仔细分析输入内容，判断其满足哪个条件
-2. 只返回满足条件的ID值，不要包含任何其他文字、标点符号或解释
-3. 如果多个条件都满足，返回第一个满足条件的ID
+2. 只返回满足条件的序号，不要包含任何其他文字、标点符号或解释
+3. 如果多个条件都满足，返回第一个满足条件的序号
 4. 如果没有任何条件满足，只返回字符串"null"
-5. 返回格式必须严格：要么是条件ID，要么是"null"
+5. 返回格式必须严格：要么是条件的序号，要么是"null"
 
 请严格按照以上规则进行评估，只输出结果：`
-
-      const result = await callLLM(prompt, llmConfig)
+      const result = await callLLM(prompt, llmConfig, undefined, undefined, { cache: true })
       const cleanResult = result.trim().replace(/[\s\n\r.,，。!！?？;；]/g, '')
-
-      const isValidResult =
-        branches.some((branch) => branch.id === cleanResult) || cleanResult === 'null'
-
-      return isValidResult ? cleanResult : 'null'
+      const isValidResult = !Number.isNaN(Number(cleanResult))
+      return isValidResult ? branches[Number(cleanResult) - 1].id : 'null'
     } catch (error) {
       console.error('条件评估失败:', error)
       return 'null'

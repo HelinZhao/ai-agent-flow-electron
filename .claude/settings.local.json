@@ -10,7 +10,18 @@
       "Bash(node -e \"const z = require\\('zod'\\); console.log\\('zod version:', z.ZodFirstPartyTypeKind ? 'v3-style' : 'unknown'\\)\")",
       "Bash(pnpm add *)",
       "Bash(npm i *)",
-      "Bash(node -e \"const lc = require\\('langchain'\\); console.log\\(typeof lc.createAgent\\)\")"
+      "Bash(node -e \"const lc = require\\('langchain'\\); console.log\\(typeof lc.createAgent\\)\")",
+      "WebSearch",
+      "Bash(node -e \"require\\('langchain/cache/sqlite'\\)\")",
+      "Bash(node -e \"import\\('langchain/cache/sqlite'\\).then\\(m => console.log\\(Object.keys\\(m\\)\\)\\).catch\\(e => console.error\\(e.message\\)\\)\")",
+      "Bash(node -e \"const p=require\\('fs'\\).readFileSync\\(0,'utf8'\\);const j=JSON.parse\\(p\\);console.log\\(JSON.stringify\\(j.exports,null,2\\)\\)\")",
+      "Bash(node -e \"const p=require\\('fs'\\).readFileSync\\(0,'utf8'\\);const j=JSON.parse\\(p\\);console.log\\(j.version\\)\")",
+      "Bash(node -e \"const p=require\\('fs'\\).readFileSync\\(0,'utf8'\\);const j=JSON.parse\\(p\\);const keys=Object.keys\\(j.exports||{}\\).filter\\(k=>k.includes\\('cache'\\)\\);console.log\\(keys\\)\")",
+      "Bash(node -e \"import\\('@langchain/community/cache/sqlite'\\).then\\(m => console.log\\(Object.keys\\(m\\)\\)\\).catch\\(e => console.error\\(e.message\\)\\)\")",
+      "Bash(node -e \"const p=require\\('fs'\\).readFileSync\\(0,'utf8'\\);const j=JSON.parse\\(p\\);const keys=Object.keys\\(j.exports||{}\\).filter\\(k=>k.includes\\('cache'\\)||k.includes\\('Cache'\\)\\);console.log\\(keys.join\\('\\\\n'\\)\\)\")",
+      "Bash(node -e \"import\\('@langchain/core/caches'\\).then\\(m => console.log\\(Object.keys\\(m\\)\\)\\).catch\\(e => console.error\\(e.message\\)\\)\")",
+      "Bash(node -e \"const { sha256 } = require\\('@langchain/core/caches'\\); console.log\\(typeof sha256\\)\")",
+      "Bash(node -e \"const { InMemoryCache, BaseCache } = require\\('@langchain/core/caches'\\); console.log\\(Object.getOwnPropertyNames\\(BaseCache.prototype\\)\\); console.log\\(Object.getOwnPropertyNames\\(InMemoryCache.prototype\\)\\);\")"
     ]
   }
 }

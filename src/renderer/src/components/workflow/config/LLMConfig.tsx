@@ -90,11 +90,10 @@ const LLMConfig: React.FC<LLMConfigProps> = ({ config, onConfigChange }) => {
             return (
               <label
                 key={t.id}
-                className={`flex items-start space-x-2 p-2 border rounded-lg cursor-pointer transition-colors ${
-                  enabled
-                    ? 'border-blue-500 bg-blue-50 dark:bg-blue-900/20 text-blue-700 dark:text-blue-300'
-                    : 'border-gray-200 dark:border-gray-600 hover:bg-gray-50 dark:hover:bg-gray-700 text-gray-900 dark:text-white'
-                }`}
+                className={`flex items-start space-x-2 p-2 border rounded-lg cursor-pointer transition-colors ${enabled
+                  ? 'border-blue-500 bg-blue-50 dark:bg-blue-900/20 text-blue-700 dark:text-blue-300'
+                  : 'border-gray-200 dark:border-gray-600 hover:bg-gray-50 dark:hover:bg-gray-700 text-gray-900 dark:text-white'
+                  }`}
               >
                 <input
                   type="checkbox"
@@ -226,7 +225,25 @@ const LLMConfig: React.FC<LLMConfigProps> = ({ config, onConfigChange }) => {
         initialVariable={editingVariable || undefined}
         existingVariables={variables}
       />
-    </div>
+
+      <div>
+        <div className="flex items-center space-x-3">
+          <input
+            type="checkbox"
+            checked={config.enableCache ?? false}
+            onChange={(e) => onConfigChange({ ...config, enableCache: e.target.checked })}
+            className="w-4 h-4 text-blue-600 rounded"
+          />
+          <label className="text-sm font-medium text-gray-700 dark:text-gray-300">
+            启用缓存
+          </label>
+        </div>
+        <div className="text-xs text-gray-500 bg-gray-50 dark:bg-gray-700 p-3 rounded">
+          相同 prompt 重复调用时直接返回缓存结果，节省 API 调用。注意：缓存会持续占用内存，且结果不会随外部数据更新，可能返回过时内容。
+        </div>
+      </div>
+
+    </div >
   );
 };
 
