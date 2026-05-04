@@ -1,5 +1,5 @@
 import { Sequelize } from 'sequelize'
-import { getDataDir } from '../utils'
+import { getDataDir } from '../utils/file'
 
 // 创建Sequelize实例，使用SQLite数据库
 const sequelize = new Sequelize({

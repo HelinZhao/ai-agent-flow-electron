@@ -10,11 +10,12 @@ import {
   Command
 } from '@langchain/langgraph'
 import { BaseMessage, HumanMessage, AIMessage } from '@langchain/core/messages'
-import {
-  callLLM, executeApiCall, executeCliCommand, executeCliTemplate,
-  HITLRequest, HITLResponse, HITLDecision, CallLLMOptions, getDataDir,
-  AttachmentPayload, saveAttachmentToDisk
-} from '../utils'
+import { callLLM } from './llm'
+import { executeApiCall } from './api'
+import { executeCliCommand, executeCliTemplate } from './cli'
+import { HITLRequest, HITLResponse, HITLDecision, CallLLMOptions } from './hitl'
+import { getDataDir, saveAttachmentToDisk } from './file'
+import { AttachmentPayload } from './shared'
 import { v4 as uuidv4 } from 'uuid'
 import { SqliteSaver } from "@langchain/langgraph-checkpoint-sqlite";
 
@@ -1163,7 +1164,7 @@ async function buildHumanMessage(input: string, attachments?: AttachmentPayload[
           textContent += `\n\n---\n文件: ${att.name}\n---\n${att.textContent}\n---`
         } else if (att.filePath) {
           try {
-            const { loadAttachmentAsText } = await import('../utils')
+            const { loadAttachmentAsText } = await import('./file')
             const content = await loadAttachmentAsText(att.filePath)
             textContent += `\n\n---\n文件: ${att.name}\n---\n${content}\n---`
           } catch {
