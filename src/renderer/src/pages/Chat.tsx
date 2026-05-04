@@ -4,11 +4,11 @@ import { Agent, AttachmentMetadata, ChatHistory, ChatMessage, ToolApprovalReques
 import { chatHistoryApi } from '@renderer/lib/chatHistory';
 import { workflowExecutionApi } from '@renderer/lib/api';
 import { AttachmentData, processFileAttachment, stripAttachmentForHistory, formatFileSize } from '@renderer/lib/attachmentUtils';
-import CustomButton from '@renderer/components/CustomButton';
+import CustomButton from '@renderer/components/ui/CustomButton';
 import MarkdownPreview from '@renderer/components/MarkdownPreview';
-import AttachmentPreview from '@renderer/components/AttachmentPreview';
-import AttachmentDisplay from '@renderer/components/AttachmentDisplay';
-import CustomFileUpload from '@renderer/components/CustomFileUpload';
+import AttachmentPreview from '@renderer/components/chat/AttachmentPreview';
+import AttachmentDisplay from '@renderer/components/chat/AttachmentDisplay';
+import CustomFileUpload from '@renderer/components/ui/CustomFileUpload';
 
 // 工具名称中文映射
 const TOOL_LABELS: Record<string, string> = {

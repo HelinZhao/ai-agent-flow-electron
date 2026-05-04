@@ -1,9 +1,9 @@
 import React, { useState } from 'react';
 import { VariableConfig } from '@renderer/types';
-import CustomSelect from '../CustomSelect';
-import CustomInput from '../CustomInput';
-import CustomButton from '../CustomButton';
-import CustomTextarea from '../CustomTextarea';
+import CustomSelect from '../ui/CustomSelect';
+import CustomInput from '../ui/CustomInput';
+import CustomButton from '../ui/CustomButton';
+import CustomTextarea from '../ui/CustomTextarea';
 
 interface VariableConfigModalProps {
   isOpen: boolean;

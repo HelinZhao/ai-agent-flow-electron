@@ -6,10 +6,10 @@ import { useMemoizedFn } from 'ahooks';
 import { ReactFlowProvider } from '@xyflow/react';
 import { useWorkflowExecution } from '@renderer/hooks/useWorkflowExecution';
 import ExecutionProgressPanel from '@renderer/components/workflow/ExecutionProgressPanel';
-import CustomInput from '@renderer/components/CustomInput';
-import CustomButton from '@renderer/components/CustomButton';
-import CustomTextarea from '@renderer/components/CustomTextarea';
-import CustomFileUpload from '@renderer/components/CustomFileUpload';
+import CustomInput from '@renderer/components/ui/CustomInput';
+import CustomButton from '@renderer/components/ui/CustomButton';
+import CustomTextarea from '@renderer/components/ui/CustomTextarea';
+import CustomFileUpload from '@renderer/components/ui/CustomFileUpload';
 import { NODE_DEFS_MAP } from '@renderer/components/workflow/nodes';
 
 export default function Workflow(): React.JSX.Element {

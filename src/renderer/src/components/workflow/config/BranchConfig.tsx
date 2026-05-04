@@ -1,8 +1,8 @@
 import React from 'react';
 import { v4 as uuidv4 } from 'uuid';
-import CustomButton from '../../CustomButton';
-import CustomInput from '../../CustomInput';
-import CustomTextarea from '../../CustomTextarea';
+import CustomButton from '../../ui/CustomButton';
+import CustomInput from '../../ui/CustomInput';
+import CustomTextarea from '../../ui/CustomTextarea';
 
 interface BranchCondition {
   id: string;

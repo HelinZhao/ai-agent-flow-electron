@@ -1,5 +1,5 @@
 import React from 'react';
-import { formClasses } from '@renderer/styles/form-colors';
+import { formClasses } from './form-colors';
 
 interface CustomTextareaProps extends Omit<React.TextareaHTMLAttributes<HTMLTextAreaElement>, 'size'> {
   label?: string;

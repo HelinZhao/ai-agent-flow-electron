@@ -1,6 +1,6 @@
 import { Panel } from "@xyflow/react";
 import { memo } from "react";
-import CustomButton from '../CustomButton';
+import CustomButton from '../ui/CustomButton';
 
 interface ControlPanelProps {
     onRun: () => void

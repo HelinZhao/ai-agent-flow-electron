@@ -1,8 +1,8 @@
 import React, { useState } from 'react';
 import { VariableConfig } from '@renderer/types';
 import VariableConfigModal from '../VariableConfigModal';
-import CustomTextarea from '../../CustomTextarea';
-import CustomButton from '../../CustomButton';
+import CustomTextarea from '../../ui/CustomTextarea';
+import CustomButton from '../../ui/CustomButton';
 
 const AVAILABLE_TOOLS = [
   { id: 'readFile', label: '读取文件', description: '读取指定文件内容' },

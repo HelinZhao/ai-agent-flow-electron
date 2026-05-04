@@ -5,9 +5,9 @@ import MarkdownIt from 'markdown-it';
 import MdEditor from 'react-markdown-editor-lite';
 import 'react-markdown-editor-lite/lib/index.css';
 import MarkdownPreview from '@renderer/components/MarkdownPreview';
-import CustomSelect from '@renderer/components/CustomSelect';
-import CustomInput from '@renderer/components/CustomInput';
-import CustomButton from '@renderer/components/CustomButton';
+import CustomSelect from '@renderer/components/ui/CustomSelect';
+import CustomInput from '@renderer/components/ui/CustomInput';
+import CustomButton from '@renderer/components/ui/CustomButton';
 
 const mdParser = new MarkdownIt(/* Markdown-it options */);
 export default function Agents(): React.JSX.Element {

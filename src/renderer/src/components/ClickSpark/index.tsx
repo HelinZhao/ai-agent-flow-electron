@@ -3,7 +3,7 @@ import { useEventListener } from 'ahooks';
 import styles from './style.module.less'
 import { useRef, useState } from 'react';
 
-export default function ClickSqark(): React.JSX.Element {
+export default function ClickSpark(): React.JSX.Element {
     const svgRef = useRef<SVGSVGElement>(null)
     const [position, setPosition] = useState({ left: 0, top: 0 })
 

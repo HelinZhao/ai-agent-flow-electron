@@ -1,5 +1,5 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { formClasses } from '@renderer/styles/form-colors';
+import { formClasses } from './form-colors';
 
 interface SelectOption {
   value: string;

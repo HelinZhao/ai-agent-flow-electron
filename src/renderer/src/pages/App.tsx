@@ -1,5 +1,5 @@
-import ClickSqark from "@renderer/components/ClickSqark";
-import Layout from "@renderer/components/Layout";
+import ClickSpark from "@renderer/components/ClickSpark";
+import Layout from "@renderer/components/layout/Layout";
 import '@renderer/assets/react-flow-custom.css';
 import '@renderer/assets/iconfont.css';
 import { useWorkflowStore } from "@renderer/store/workflowStore";
@@ -30,7 +30,7 @@ export default function App(): React.JSX.Element {
 
     return (
         <Layout currentPage={currentPage} onNavigate={setCurrentPage}>
-            <ClickSqark />
+            <ClickSpark />
             {Object.entries(pages).map(([path, component]) => (
                 <div key={path} className={currentPage === path ? '' : 'hidden'} style={{ height: '100%' }}>
                     {component}

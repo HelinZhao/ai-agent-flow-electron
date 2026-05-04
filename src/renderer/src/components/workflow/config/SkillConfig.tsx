@@ -1,7 +1,7 @@
 import React from 'react';
 import { useWorkflowStore } from '@renderer/store/workflowStore';
 import MarkdownPreview from '@renderer/components/MarkdownPreview';
-import CustomSelect from '../../CustomSelect';
+import CustomSelect from '../../ui/CustomSelect';
 
 interface SkillConfigProps {
   config: Record<string, any>;

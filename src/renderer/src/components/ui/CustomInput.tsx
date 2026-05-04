@@ -1,5 +1,5 @@
 import React from 'react';
-import { formClasses } from '@renderer/styles/form-colors';
+import { formClasses } from './form-colors';
 
 interface CustomInputProps extends Omit<React.InputHTMLAttributes<HTMLInputElement>, 'size'> {
   label?: string;

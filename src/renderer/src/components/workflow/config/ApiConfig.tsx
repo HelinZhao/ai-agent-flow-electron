@@ -1,7 +1,7 @@
 import React from 'react';
-import CustomSelect from '../../CustomSelect';
-import CustomInput from '../../CustomInput';
-import CustomTextarea from '../../CustomTextarea';
+import CustomSelect from '../../ui/CustomSelect';
+import CustomInput from '../../ui/CustomInput';
+import CustomTextarea from '../../ui/CustomTextarea';
 
 interface ApiConfigProps {
   config: Record<string, any>;

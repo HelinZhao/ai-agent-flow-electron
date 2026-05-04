@@ -3,9 +3,9 @@ import { useForm } from 'react-hook-form';
 import { useWorkflowStore } from '@renderer/store/workflowStore';
 import { LLMConfig } from '@renderer/types';
 import { llmConfigApi } from '@renderer/lib/api';
-import CustomSelect from '@renderer/components/CustomSelect';
-import CustomInput from '@renderer/components/CustomInput';
-import CustomButton from '@renderer/components/CustomButton';
+import CustomSelect from '@renderer/components/ui/CustomSelect';
+import CustomInput from '@renderer/components/ui/CustomInput';
+import CustomButton from '@renderer/components/ui/CustomButton';
 
 export default function SettingsLLM(): React.JSX.Element {
     const {

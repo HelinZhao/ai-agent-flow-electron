@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { chatHistoryApi } from '@renderer/lib/chatHistory';
-import CustomButton from '@renderer/components/CustomButton';
+import CustomButton from '@renderer/components/ui/CustomButton';
 
 export default function SettingsData(): React.JSX.Element {
   const [isClearing, setIsClearing] = useState(false);

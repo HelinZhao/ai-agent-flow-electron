@@ -5,9 +5,9 @@ import MdEditor from 'react-markdown-editor-lite';
 import 'react-markdown-editor-lite/lib/index.css';
 import MarkdownIt from 'markdown-it';
 import MarkdownPreview from '@renderer/components/MarkdownPreview';
-import CustomButton from '@renderer/components/CustomButton';
-import CustomInput from '@renderer/components/CustomInput';
-import CustomFileUpload from '@renderer/components/CustomFileUpload';
+import CustomButton from '@renderer/components/ui/CustomButton';
+import CustomInput from '@renderer/components/ui/CustomInput';
+import CustomFileUpload from '@renderer/components/ui/CustomFileUpload';
 
 const mdParser = new MarkdownIt(/* Markdown-it options */);
 

@@ -7,8 +7,8 @@ import LLMConfig from './config/LLMConfig';
 import ApiConfig from './config/ApiConfig';
 import AgentConfig from './config/AgentConfig';
 import CLIConfig from './config/CliConfig';
-import CustomInput from '../CustomInput';
-import CustomButton from '../CustomButton';
+import CustomInput from '../ui/CustomInput';
+import CustomButton from '../ui/CustomButton';
 import { getNodeDefaultLabel } from './nodes';
 
 interface NodeConfigPanelProps {
