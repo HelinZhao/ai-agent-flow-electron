@@ -2,18 +2,24 @@ import React from 'react';
 import { useThemeStore } from '@renderer/store/themeStore';
 
 const ThemeToggle: React.FC = () => {
-  const { theme, toggleTheme } = useThemeStore();
+  const { theme, setTheme } = useThemeStore();
+
+  const handleToggle = () => {
+    setTheme(theme === 'light' ? 'dark' : 'light')
+  };
+
+  const resolvedIsDark = theme === 'dark' || (theme === 'system' && typeof window !== 'undefined' && window.matchMedia('(prefers-color-scheme: dark)').matches)
 
   return (
     <button
-      onClick={toggleTheme}
+      onClick={handleToggle}
       className="relative p-2 rounded-xl bg-white/50 dark:bg-gray-700/50 backdrop-blur-sm border border-gray-200/50 dark:border-gray-600/50 hover:bg-white/70 dark:hover:bg-gray-600/50 transition-all duration-300 group overflow-hidden"
-      title={theme === 'light' ? '切换到深色模式' : '切换到浅色模式'}
+      title={resolvedIsDark ? '切换到浅色模式' : '切换到深色模式'}
     >
       <div className="relative w-5 h-5 flex items-center justify-center">
         {/* 太阳图标 */}
         <div className={`absolute inset-0 transform transition-all duration-500 ${
-          theme === 'light'
+          !resolvedIsDark
             ? 'rotate-0 scale-100 opacity-100'
             : 'rotate-90 scale-0 opacity-0'
         }`}>
@@ -35,7 +41,7 @@ const ThemeToggle: React.FC = () => {
 
         {/* 月亮图标 */}
         <div className={`absolute inset-0 transform transition-all duration-500 ${
-          theme === 'dark'
+          resolvedIsDark
             ? 'rotate-0 scale-100 opacity-100'
             : '-rotate-90 scale-0 opacity-0'
         }`}>
@@ -57,7 +63,7 @@ const ThemeToggle: React.FC = () => {
 
         {/* 背景光效 */}
         <div className={`absolute inset-0 rounded-full transition-all duration-500 ${
-          theme === 'light'
+          !resolvedIsDark
             ? 'bg-amber-100 scale-150 opacity-20'
             : 'bg-indigo-900 scale-150 opacity-20'
         }`}></div>
