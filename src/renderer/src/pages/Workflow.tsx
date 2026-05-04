@@ -10,6 +10,7 @@ import CustomInput from '@renderer/components/CustomInput';
 import CustomButton from '@renderer/components/CustomButton';
 import CustomTextarea from '@renderer/components/CustomTextarea';
 import CustomFileUpload from '@renderer/components/CustomFileUpload';
+import { NODE_DEFS_MAP } from '@renderer/components/workflow/nodes';
 
 export default function Workflow(): React.JSX.Element {
     const { workflows, addWorkflow, updateWorkflow, deleteWorkflow, activeLLMConfig } = useWorkflowStore();
@@ -75,14 +76,14 @@ export default function Workflow(): React.JSX.Element {
             id: 'start-node',
             type: 'start',
             position: { x: 100, y: 100 },
-            data: { label: '开始' }
+            data: { label: NODE_DEFS_MAP['start'].shortLabel }
         };
 
         const endNode: WorkflowNode = {
             id: 'end-node',
             type: 'end',
             position: { x: 500, y: 100 },
-            data: { label: '结束' }
+            data: { label: NODE_DEFS_MAP['end'].shortLabel }
         };
 
         const newWorkflow: Workflow = {

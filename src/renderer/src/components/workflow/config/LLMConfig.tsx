@@ -93,7 +93,7 @@ const LLMConfig: React.FC<LLMConfigProps> = ({ config, onConfigChange }) => {
                 className={`flex items-start space-x-2 p-2 border rounded-lg cursor-pointer transition-colors ${
                   enabled
                     ? 'border-blue-500 bg-blue-50 dark:bg-blue-900/20 text-blue-700 dark:text-blue-300'
-                    : 'border-gray-200 dark:border-gray-600 hover:bg-gray-50 dark:hover:bg-gray-700'
+                    : 'border-gray-200 dark:border-gray-600 hover:bg-gray-50 dark:hover:bg-gray-700 text-gray-900 dark:text-white'
                 }`}
               >
                 <input

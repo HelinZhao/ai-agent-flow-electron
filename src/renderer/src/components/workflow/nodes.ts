@@ -1,22 +1,30 @@
-export const getNodeDefaultLabel = (type: string): string => {
-  switch (type) {
-    case 'start':
-      return '开始节点'
-    case 'skill':
-      return '技能节点'
-    case 'branch':
-      return '分支节点'
-    case 'api':
-      return 'API节点'
-    case 'llm':
-      return 'LLM节点'
-    case 'agent':
-      return 'Agent节点'
-    case 'cli':
-      return 'CLI节点'
-    case 'end':
-      return '结束节点'
-    default:
-      return '未知节点'
-  }
+export interface NodeDef {
+  type: string
+  shortLabel: string
+  defaultLabel: string
+  color: string
+  category: 'basic' | 'logic' | 'integration'
+  hasTargetHandle: boolean
+  hasSourceHandle: boolean
 }
+
+export const NODE_DEFS: NodeDef[] = [
+  { type: 'start', shortLabel: '开始', defaultLabel: '开始节点', color: 'green', category: 'basic', hasTargetHandle: false, hasSourceHandle: true },
+  { type: 'skill', shortLabel: '技能', defaultLabel: '技能节点', color: 'blue', category: 'logic', hasTargetHandle: true, hasSourceHandle: true },
+  { type: 'branch', shortLabel: '分支', defaultLabel: '分支节点', color: 'yellow', category: 'logic', hasTargetHandle: true, hasSourceHandle: true },
+  { type: 'llm', shortLabel: 'LLM', defaultLabel: 'LLM节点', color: 'indigo', category: 'logic', hasTargetHandle: true, hasSourceHandle: true },
+  { type: 'api', shortLabel: 'API', defaultLabel: 'API节点', color: 'purple', category: 'integration', hasTargetHandle: true, hasSourceHandle: true },
+  { type: 'agent', shortLabel: 'Agent', defaultLabel: 'Agent节点', color: 'red', category: 'integration', hasTargetHandle: true, hasSourceHandle: true },
+  { type: 'cli', shortLabel: 'CLI', defaultLabel: 'CLI节点', color: 'orange', category: 'integration', hasTargetHandle: true, hasSourceHandle: true },
+  { type: 'end', shortLabel: '结束', defaultLabel: '结束节点', color: 'gray', category: 'basic', hasTargetHandle: true, hasSourceHandle: false },
+]
+
+export const NODE_DEFS_MAP: Record<string, NodeDef> = Object.fromEntries(NODE_DEFS.map(n => [n.type, n]))
+
+export const NODE_CATEGORIES = [
+  { key: 'basic', label: '基础节点' },
+  { key: 'logic', label: '逻辑节点' },
+  { key: 'integration', label: '集成节点' },
+]
+
+export const getNodeDefaultLabel = (type: string): string => NODE_DEFS_MAP[type]?.defaultLabel ?? '未知节点'
