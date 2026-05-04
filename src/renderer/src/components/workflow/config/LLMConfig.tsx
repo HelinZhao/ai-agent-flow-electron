@@ -227,7 +227,7 @@ const LLMConfig: React.FC<LLMConfigProps> = ({ config, onConfigChange }) => {
       />
 
       <div>
-        <div className="flex items-center space-x-3">
+        <div className="flex items-center space-x-3 mb-2">
           <input
             type="checkbox"
             checked={config.enableCache ?? false}

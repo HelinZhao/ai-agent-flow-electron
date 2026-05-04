@@ -110,3 +110,7 @@
   width: 100% !important;
   height: 100% !important;
 }
+
+.react-flow__panel.react-flow__attribution {
+  display: none !important;
+}
