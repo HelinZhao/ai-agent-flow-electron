@@ -5,6 +5,7 @@ import CustomButton from '../ui/CustomButton';
 interface ControlPanelProps {
     onRun: () => void
     onSave: () => void
+    onAutoLayout: () => void
     isRunning: boolean
 }
 
@@ -13,6 +14,13 @@ const ControlPanel: React.FC<ControlPanelProps> = (props: ControlPanelProps) => 
     return (
         <Panel position="top-right">
             <div className="flex space-x-2">
+                <CustomButton
+                    onClick={props.onAutoLayout}
+                    variant="secondary"
+                    size="sm"
+                >
+                    布局
+                </CustomButton>
                 <CustomButton
                     onClick={props.onSave}
                     variant="primary"

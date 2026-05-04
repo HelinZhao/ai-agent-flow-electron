@@ -19,6 +19,7 @@ import NodeListPanel from './NodeListPanel';
 import { getNodeDefaultLabel } from './nodes';
 import ContextMenu from './ContextMenu';
 import ControlPanel from './ControlPanel';
+import { autoLayout } from './layoutUtils';
 import { v4 as uuidv4 } from 'uuid';
 
 const nodeTypes = {
@@ -210,6 +211,10 @@ function WorkflowDesigner(props: WorkflowDesignerProps): React.JSX.Element {
     handleAddNodeAtPosition(nodeType as WorkflowNode['type'], position);
   }, [handleAddNodeAtPosition, screenToFlowPosition]);
 
+  const handleAutoLayout = useCallback(() => {
+    setNodes(autoLayout(nodes, edges))
+  }, [nodes, edges, setNodes]);
+
   return (
     <div className="flex h-full w-full">
       <div className="flex-1 h-full min-h-0">
@@ -242,7 +247,7 @@ function WorkflowDesigner(props: WorkflowDesignerProps): React.JSX.Element {
           <Background />
           <Controls />
           <NodeListPanel />
-          <ControlPanel onSave={() => onSave(nodes, edges)} onRun={onRun} isRunning={isRunning} />
+          <ControlPanel onSave={() => onSave(nodes, edges)} onRun={onRun} isRunning={isRunning} onAutoLayout={handleAutoLayout} />
           {selectedNode && (
             <NodeConfigPanel
               node={selectedNode}
