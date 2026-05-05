@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react'
+import { createPortal } from 'react-dom'
 import { knowledgeBaseApi } from '@renderer/lib/api'
 import { KnowledgeChunk } from '@renderer/types'
 import CustomButton from '@renderer/components/ui/CustomButton'
@@ -12,13 +13,14 @@ interface ChunkViewerProps {
 export default function ChunkViewer({ kbId, docName, onClose }: ChunkViewerProps): React.JSX.Element {
   const [chunks, setChunks] = useState<KnowledgeChunk[]>([])
   const [isLoading, setIsLoading] = useState(false)
-  const [viewingContent, setViewingContent] = useState<string | null>(null)
+  const [viewingChunk, setViewingChunk] = useState<KnowledgeChunk | null>(null)
   const [editingChunk, setEditingChunk] = useState<KnowledgeChunk | null>(null)
   const [editContent, setEditContent] = useState('')
   const [showAddForm, setShowAddForm] = useState(false)
   const [newContent, setNewContent] = useState('')
   const [currentPage, setCurrentPage] = useState(1)
   const [isFullscreen, setIsFullscreen] = useState(false)
+  const [deleteTarget, setDeleteTarget] = useState<string | null>(null)
   const pageSize = 5
 
   const loadChunks = async () => {
@@ -33,9 +35,7 @@ export default function ChunkViewer({ kbId, docName, onClose }: ChunkViewerProps
     }
   }
 
-  useEffect(() => {
-    loadChunks()
-  }, [kbId, docName])
+  useEffect(() => { loadChunks() }, [kbId, docName])
 
   const handleEdit = (chunk: KnowledgeChunk) => {
     setEditingChunk(chunk)
@@ -60,11 +60,9 @@ export default function ChunkViewer({ kbId, docName, onClose }: ChunkViewerProps
   }
 
   const handleDelete = async (chunkId: string) => {
-    if (!confirm('确定要删除这个分块吗？')) return
     setIsLoading(true)
     try {
       await knowledgeBaseApi.deleteChunk(kbId, chunkId)
-      // 删除后如果当前页已无数据，回退一页
       const remaining = chunks.length - 1
       const maxPage = Math.max(1, Math.ceil(remaining / pageSize))
       if (currentPage > maxPage) setCurrentPage(maxPage)
@@ -73,6 +71,7 @@ export default function ChunkViewer({ kbId, docName, onClose }: ChunkViewerProps
       console.error('删除分块失败:', error)
     } finally {
       setIsLoading(false)
+      setDeleteTarget(null)
     }
   }
 
@@ -103,79 +102,104 @@ export default function ChunkViewer({ kbId, docName, onClose }: ChunkViewerProps
   }
 
   const isEditingOrAdding = editingChunk || showAddForm
-  const modalClass = isFullscreen && isEditingOrAdding
-    ? 'bg-white dark:bg-gray-800 rounded-lg shadow-xl w-full h-[90vh] max-w-4xl overflow-hidden mx-4 flex flex-col'
-    : 'bg-white dark:bg-gray-800 rounded-lg shadow-xl w-full max-w-2xl h-[560px] max-h-[80vh] overflow-hidden mx-4 flex flex-col'
-
-  // 全屏切换按钮 SVG
-  const fullscreenIcon = (
-    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-      <path d="M8 3H5a2 2 0 0 0-2 2v3m18 0V5a2 2 0 0 0-2-2h-3m0 18h3a2 2 0 0 0 2-2v-3M3 16v3a2 2 0 0 0 2 2h3" />
-    </svg>
-  )
-  const shrinkIcon = (
-    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-      <path d="M8 3v3a2 2 0 0 1-2 2H3m18 0h-3a2 2 0 0 1-2-2V3m0 18v-3a2 2 0 0 1 2-2h3M3 16h3a2 2 0 0 1 2 2v3" />
-    </svg>
-  )
+  const modalSizeClass = isFullscreen && isEditingOrAdding
+    ? 'w-full h-full'
+    : 'w-full max-w-2xl h-[560px] max-h-[80vh]'
 
   const totalPages = Math.max(1, Math.ceil(chunks.length / pageSize))
   const pagedChunks = chunks.slice((currentPage - 1) * pageSize, currentPage * pageSize)
 
-  return (
-    <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50" onClick={onClose}>
+  const formatWordCount = (text: string) => {
+    const len = text.length
+    return `${len} 字符`
+  }
+
+  return createPortal(
+    <div className="fixed inset-0 bg-black/40 backdrop-blur-sm flex items-center justify-center z-[9999]" onClick={onClose}>
       <div
-        className={modalClass}
+        className={`bg-white dark:bg-gray-800 rounded-2xl shadow-2xl ${modalSizeClass} overflow-hidden mx-4 flex flex-col border border-gray-200/50 dark:border-gray-700/50`}
         onClick={(e) => e.stopPropagation()}
       >
-        <div className="flex items-center justify-between p-4 border-b border-gray-200 dark:border-gray-700">
-          <h3 className="text-lg font-bold text-gray-900 dark:text-white">
-            文档分块 — {docName}
-          </h3>
+        {/* ========== 标题栏 ========== */}
+        <div className="flex items-center justify-between px-5 py-3.5 border-b border-gray-100 dark:border-gray-700">
           <div className="flex items-center space-x-2">
-            <CustomButton onClick={() => setShowAddForm(true)} variant="secondary" size="sm">
-              + 新增分块
-            </CustomButton>
-            <button onClick={onClose} className="text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 text-xl">
-              &times;
+            <div className="flex items-center justify-center w-5 h-5 rounded-md bg-gray-100 dark:bg-gray-700">
+              <svg className="w-3 h-3 text-gray-500 dark:text-gray-400" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                <path d="M4 4h16v16H4zM8 4v16M4 8h16M4 12h16M4 16h16" />
+              </svg>
+            </div>
+            <h3 className="text-base font-semibold text-gray-900 dark:text-white">
+              {docName}
+            </h3>
+            <span className="text-xs text-gray-400 dark:text-gray-500">
+              {chunks.length} 个分块
+            </span>
+          </div>
+          <div className="flex items-center space-x-2">
+            {!viewingChunk && !editingChunk && !showAddForm && (
+              <CustomButton onClick={() => setShowAddForm(true)} variant="primary" size="sm">
+                添加分块
+              </CustomButton>
+            )}
+            <button onClick={onClose} className="flex items-center justify-center w-7 h-7 rounded-lg text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors">
+              <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M18 6L6 18M6 6l12 12" /></svg>
             </button>
           </div>
         </div>
 
-        {/* 查看完整内容 — 覆盖整个内容区 */}
-        {viewingContent ? (
-          <div className="flex-1 overflow-y-auto p-4">
-            <div className="flex items-center justify-between mb-3">
-              <p className="text-sm font-medium text-gray-700 dark:text-gray-300">完整内容</p>
-              <button onClick={() => setViewingContent(null)} className="text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 text-lg">
-                &times;
-              </button>
+        {/* ========== 查看分块详情 ========== */}
+        {viewingChunk ? (
+          <div className="flex-1 flex flex-col overflow-hidden">
+            <div className="flex items-center justify-between px-5 py-3 bg-gray-50 dark:bg-gray-900/50 border-b border-gray-100 dark:border-gray-700">
+              <div className="flex items-center space-x-2">
+                <span className="text-xs font-medium bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-300 px-2 py-0.5 rounded-md">
+                  #{viewingChunk.chunkIndex}
+                </span>
+                <span className="text-xs text-gray-500 dark:text-gray-400">{formatWordCount(viewingChunk.content)}</span>
+                {!viewingChunk.enabled && (
+                  <span className="text-xs font-medium bg-gray-200 text-gray-500 dark:bg-gray-700 dark:text-gray-400 px-2 py-0.5 rounded-md">
+                    已停用
+                  </span>
+                )}
+              </div>
+              <CustomButton onClick={() => setViewingChunk(null)} variant="secondary" size="sm">
+                返回
+              </CustomButton>
             </div>
-            <div className="border border-gray-200 dark:border-gray-700 rounded-lg p-4 text-sm text-gray-700 dark:text-gray-300 bg-gray-50 dark:bg-gray-900 whitespace-pre-wrap break-words">
-              {viewingContent}
+            <div className="flex-1 overflow-y-auto p-5">
+              <div className="text-sm text-gray-700 dark:text-gray-300 whitespace-pre-wrap break-words leading-relaxed">
+                {viewingChunk.content}
+              </div>
             </div>
           </div>
         ) : editingChunk ? (
-          /* 编辑分块 — 覆盖整个内容区 */
-          <div className="flex-1 flex flex-col p-4 overflow-hidden">
-            <div className="flex items-center justify-between mb-3">
-              <p className="text-sm font-medium text-gray-700 dark:text-gray-300">编辑分块 #{editingChunk.chunkIndex}</p>
+          /* ========== 编辑分块 ========== */
+          <div className="flex-1 flex flex-col overflow-hidden">
+            <div className="flex items-center justify-between px-5 py-3 bg-gray-50 dark:bg-gray-900/50 border-b border-gray-100 dark:border-gray-700">
               <div className="flex items-center space-x-2">
-                <button onClick={() => setIsFullscreen(!isFullscreen)} className="text-gray-400 hover:text-gray-600 dark:hover:text-gray-300" title={isFullscreen ? '缩小' : '全屏'}>
-                  {isFullscreen ? shrinkIcon : fullscreenIcon}
-                </button>
-                <button onClick={() => { setEditingChunk(null); setEditContent(''); setIsFullscreen(false) }} className="text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 text-lg">
-                  &times;
-                </button>
+                <span className="text-xs font-medium bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-300 px-2 py-0.5 rounded-md">
+                  #{editingChunk.chunkIndex}
+                </span>
+                <span className="text-sm font-medium text-gray-900 dark:text-white">编辑分块</span>
+              </div>
+              <div className="flex items-center space-x-2">
+                <CustomButton onClick={() => setIsFullscreen(!isFullscreen)} variant="ghost" size="sm">
+                  {isFullscreen ? '缩小' : '全屏'}
+                </CustomButton>
+                <CustomButton onClick={() => { setEditingChunk(null); setEditContent(''); setIsFullscreen(false) }} variant="ghost" size="sm">
+                  取消
+                </CustomButton>
               </div>
             </div>
-            <textarea
-              value={editContent}
-              onChange={(e) => setEditContent(e.target.value)}
-              className="flex-1 w-full border border-gray-300 dark:border-gray-600 rounded-lg p-3 text-sm bg-white dark:bg-gray-700 text-gray-900 dark:text-white resize-none focus:ring-2 focus:ring-blue-500 focus:outline-none"
-            />
-            <div className="flex justify-end space-x-2 mt-3">
-              <CustomButton onClick={() => { setEditingChunk(null); setEditContent('') }} variant="secondary" size="sm">
+            <div className="flex-1 p-5 overflow-hidden">
+              <textarea
+                value={editContent}
+                onChange={(e) => setEditContent(e.target.value)}
+                className="w-full h-full border border-gray-200 dark:border-gray-600 rounded-xl p-4 text-sm bg-white dark:bg-gray-700 text-gray-900 dark:text-white resize-none focus:ring-2 focus:ring-blue-500 focus:outline-none transition-all"
+              />
+            </div>
+            <div className="flex justify-end space-x-3 px-5 py-3 border-t border-gray-100 dark:border-gray-700">
+              <CustomButton onClick={() => { setEditingChunk(null); setEditContent(''); setIsFullscreen(false) }} variant="secondary" size="sm">
                 取消
               </CustomButton>
               <CustomButton onClick={handleSaveEdit} variant="primary" size="sm" disabled={isLoading || !editContent.trim()}>
@@ -184,27 +208,29 @@ export default function ChunkViewer({ kbId, docName, onClose }: ChunkViewerProps
             </div>
           </div>
         ) : showAddForm ? (
-          /* 新增分块 — 覆盖整个内容区 */
-          <div className="flex-1 flex flex-col p-4 overflow-hidden">
-            <div className="flex items-center justify-between mb-3">
-              <p className="text-sm font-medium text-gray-700 dark:text-gray-300">新增分块内容</p>
+          /* ========== 新增分块 ========== */
+          <div className="flex-1 flex flex-col overflow-hidden">
+            <div className="flex items-center justify-between px-5 py-3 bg-gray-50 dark:bg-gray-900/50 border-b border-gray-100 dark:border-gray-700">
+              <span className="text-sm font-medium text-gray-900 dark:text-white">新增分块</span>
               <div className="flex items-center space-x-2">
-                <button onClick={() => setIsFullscreen(!isFullscreen)} className="text-gray-400 hover:text-gray-600 dark:hover:text-gray-300" title={isFullscreen ? '缩小' : '全屏'}>
-                  {isFullscreen ? shrinkIcon : fullscreenIcon}
-                </button>
-                <button onClick={() => { setShowAddForm(false); setNewContent(''); setIsFullscreen(false) }} className="text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 text-lg">
-                  &times;
-                </button>
+                <CustomButton onClick={() => setIsFullscreen(!isFullscreen)} variant="ghost" size="sm">
+                  {isFullscreen ? '缩小' : '全屏'}
+                </CustomButton>
+                <CustomButton onClick={() => { setShowAddForm(false); setNewContent(''); setIsFullscreen(false) }} variant="ghost" size="sm">
+                  取消
+                </CustomButton>
               </div>
             </div>
-            <textarea
-              value={newContent}
-              onChange={(e) => setNewContent(e.target.value)}
-              className="flex-1 w-full border border-gray-300 dark:border-gray-600 rounded-lg p-3 text-sm bg-white dark:bg-gray-700 text-gray-900 dark:text-white resize-none focus:ring-2 focus:ring-blue-500 focus:outline-none"
-              placeholder="输入分块文本内容..."
-            />
-            <div className="flex justify-end space-x-2 mt-3">
-              <CustomButton onClick={() => { setShowAddForm(false); setNewContent('') }} variant="secondary" size="sm">
+            <div className="flex-1 p-5 overflow-hidden">
+              <textarea
+                value={newContent}
+                onChange={(e) => setNewContent(e.target.value)}
+                className="w-full h-full border border-gray-200 dark:border-gray-600 rounded-xl p-4 text-sm bg-white dark:bg-gray-700 text-gray-900 dark:text-white resize-none focus:ring-2 focus:ring-blue-500 focus:outline-none transition-all"
+                placeholder="输入分块文本内容..."
+              />
+            </div>
+            <div className="flex justify-end space-x-3 px-5 py-3 border-t border-gray-100 dark:border-gray-700">
+              <CustomButton onClick={() => { setShowAddForm(false); setNewContent(''); setIsFullscreen(false) }} variant="secondary" size="sm">
                 取消
               </CustomButton>
               <CustomButton onClick={handleAdd} variant="primary" size="sm" disabled={isLoading || !newContent.trim()}>
@@ -213,88 +239,144 @@ export default function ChunkViewer({ kbId, docName, onClose }: ChunkViewerProps
             </div>
           </div>
         ) : (
-          <div className="flex-1 flex flex-col overflow-hidden p-4">
+          /* ========== 分块列表 ========== */
+          <div className="flex-1 flex flex-col overflow-hidden">
             {pagedChunks.length === 0 && !isLoading && (
-              <div className="text-center py-8 text-gray-500 dark:text-gray-400">
-                该文档暂无分块数据
+              <div className="flex-1 flex flex-col items-center justify-center text-gray-400 dark:text-gray-500">
+                <svg className="w-10 h-10 mb-3 opacity-40" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5">
+                  <path d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                </svg>
+                <p className="text-sm">该文档暂无分块数据</p>
+                <p className="text-xs mt-1">上传文档后系统会自动生成分块</p>
               </div>
             )}
 
-            <div className="flex-1 overflow-y-auto space-y-3">
+            <div className="flex-1 overflow-y-auto">
               {pagedChunks.map((chunk) => (
-                <div key={chunk.id} className={`border rounded-lg p-3 ${chunk.enabled
-                  ? 'border-gray-200 dark:border-gray-700'
-                  : 'border-gray-200 dark:border-gray-700 opacity-50 bg-gray-50 dark:bg-gray-900'
-                }`}>
-                  <div className="flex items-center justify-between mb-2">
-                    <div className="flex items-center space-x-2">
-                      <span className={`text-xs px-2 py-1 rounded ${chunk.enabled
-                        ? 'bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-300'
-                        : 'bg-gray-200 text-gray-500 dark:bg-gray-700 dark:text-gray-500'
-                      }`}>
-                        #{chunk.chunkIndex}
+                <div
+                  key={chunk.id}
+                  className={`group/card relative px-5 py-2.5 border-b border-gray-100 dark:border-gray-700/50 transition-colors cursor-pointer ${
+                    chunk.enabled
+                      ? 'hover:bg-gray-50 dark:hover:bg-gray-700/30'
+                      : 'bg-gray-50/80 dark:bg-gray-900/50 opacity-60 hover:bg-gray-100/80 dark:hover:bg-gray-700/50'
+                  }`}
+                  onClick={() => setViewingChunk(chunk)}
+                >
+                  {/* 顶部：索引 + 元数据 + 状态 */}
+                  <div className="flex items-center justify-between h-5">
+                    <div className="flex items-center space-x-1.5">
+                      <div className="flex items-center space-x-1">
+                        <div className="flex items-center justify-center w-4 h-4 rounded bg-gray-100 dark:bg-gray-700">
+                          <svg className="w-2.5 h-2.5 text-gray-500 dark:text-gray-400" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                            <path d="M4 4h16v16H4zM8 4v16M4 8h16M4 12h16" />
+                          </svg>
+                        </div>
+                        <span className={`text-xs font-medium ${chunk.enabled ? 'text-gray-500 dark:text-gray-400' : 'text-gray-400 dark:text-gray-500'}`}>
+                          {String(chunk.chunkIndex).padStart(2, '0')}
+                        </span>
+                      </div>
+                      <span className="text-gray-300 dark:text-gray-600">·</span>
+                      <span className={`text-xs ${chunk.enabled ? 'text-gray-500 dark:text-gray-400' : 'text-gray-400 dark:text-gray-500'}`}>
+                        {formatWordCount(chunk.content)}
                       </span>
                       {!chunk.enabled && (
-                        <span className="text-xs text-gray-400 dark:text-gray-500">已停用</span>
+                        <>
+                          <span className="text-gray-300 dark:text-gray-600">·</span>
+                          <span className="text-xs font-medium text-gray-400 dark:text-gray-500">
+                            已停用
+                          </span>
+                        </>
                       )}
-                      <span className="text-xs text-gray-500 dark:text-gray-400">
-                        {new Date(chunk.createdAt).toLocaleString()}
-                      </span>
                     </div>
-                    <div className="flex items-center space-x-1">
-                      <CustomButton onClick={() => handleToggle(chunk.id)} variant={chunk.enabled ? 'ghost' : 'success'} size="sm">
-                        {chunk.enabled ? '停用' : '启用'}
-                      </CustomButton>
-                      <CustomButton onClick={() => setViewingContent(chunk.content)} variant="ghost" size="sm">
-                        查看
-                      </CustomButton>
-                      <CustomButton onClick={() => handleEdit(chunk)} variant="secondary" size="sm">
-                        编辑
-                      </CustomButton>
-                      <CustomButton onClick={() => handleDelete(chunk.id)} variant="danger" size="sm">
-                        删除
-                      </CustomButton>
+
+                    {/* 悬浮操作栏 — hover 时显示 */}
+                    <div className="absolute top-0 right-4 z-10 hidden group-hover/card:flex items-center gap-1 px-2 py-1.5 rounded-xl border border-gray-200 dark:border-gray-600 bg-white dark:bg-gray-800 shadow-lg backdrop-blur-sm">
+                      {/* 启停开关 */}
+                      <button
+                        onClick={(e) => { e.stopPropagation(); handleToggle(chunk.id) }}
+                        className={`relative inline-flex h-4 w-7 items-center rounded-full transition-colors ${
+                          chunk.enabled ? 'bg-blue-500' : 'bg-gray-300 dark:bg-gray-600'
+                        }`}
+                      >
+                        <span className={`inline-block h-3 w-3 transform rounded-full bg-white transition-transform ${
+                          chunk.enabled ? 'translate-x-3' : 'translate-x-0.5'
+                        }`} />
+                      </button>
+                      <div className="w-px h-4 bg-gray-200 dark:bg-gray-600" />
+                      {/* 编辑 */}
+                      <button
+                        onClick={(e) => { e.stopPropagation(); handleEdit(chunk) }}
+                        className="flex items-center justify-center w-6 h-6 rounded-lg text-gray-400 hover:text-blue-600 dark:hover:text-blue-400 hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors"
+                      >
+                        <svg className="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" /></svg>
+                      </button>
+                      {/* 删除 */}
+                      <button
+                        onClick={(e) => { e.stopPropagation(); setDeleteTarget(chunk.id) }}
+                        className="flex items-center justify-center w-6 h-6 rounded-lg text-gray-400 hover:text-red-600 dark:hover:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors"
+                      >
+                        <svg className="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" /></svg>
+                      </button>
                     </div>
                   </div>
-                  <p className={`text-sm break-all ${chunk.enabled
-                    ? 'text-gray-700 dark:text-gray-300'
+
+                  {/* 内容预览 — line-clamp */}
+                  <div className={`mt-0.5 text-sm leading-relaxed ${chunk.enabled
+                    ? 'text-gray-600 dark:text-gray-400'
                     : 'text-gray-400 dark:text-gray-500'
-                  }`}>
-                    {chunk.content.length > 80 ? chunk.content.slice(0, 80) + '...' : chunk.content}
-                  </p>
+                  } line-clamp-2`}>
+                    {chunk.content}
+                  </div>
                 </div>
               ))}
             </div>
 
+            {/* 分页 */}
             {totalPages > 1 && (
-              <div className="flex items-center justify-between pt-3 border-t border-gray-200 dark:border-gray-700 mt-3">
-                <span className="text-xs text-gray-500 dark:text-gray-400">
-                  共 {chunks.length} 条，第 {currentPage}/{totalPages} 页
+              <div className="flex items-center justify-between px-5 py-2.5 border-t border-gray-100 dark:border-gray-700 bg-gray-50/50 dark:bg-gray-900/30">
+                <span className="text-xs text-gray-400 dark:text-gray-500">
+                  {chunks.length} 条 · {currentPage}/{totalPages}
                 </span>
-                <div className="flex items-center space-x-2">
-                  <CustomButton
+                <div className="flex items-center space-x-1">
+                  <button
                     onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
-                    variant="secondary"
-                    size="sm"
                     disabled={currentPage <= 1}
+                    className="flex items-center justify-center w-7 h-7 rounded-lg text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 disabled:opacity-30 disabled:hover:bg-transparent transition-colors"
                   >
-                    上一页
-                  </CustomButton>
-                  <CustomButton
+                    <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M15 19l-7-7 7-7" /></svg>
+                  </button>
+                  <button
                     onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))}
-                    variant="secondary"
-                    size="sm"
                     disabled={currentPage >= totalPages}
+                    className="flex items-center justify-center w-7 h-7 rounded-lg text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 disabled:opacity-30 disabled:hover:bg-transparent transition-colors"
                   >
-                    下一页
-                  </CustomButton>
+                    <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M9 5l7 7-7 7" /></svg>
+                  </button>
                 </div>
               </div>
             )}
           </div>
         )}
 
-        </div>
-    </div>
+        {/* ========== 删除确认弹窗 ========== */}
+        {deleteTarget && (
+          <div className="absolute inset-0 bg-white/80 dark:bg-gray-800/80 backdrop-blur-sm flex items-center justify-center z-20 rounded-2xl">
+            <div className="bg-white dark:bg-gray-800 rounded-xl shadow-xl border border-gray-200 dark:border-gray-700 p-5 mx-4 max-w-sm">
+              <h4 className="text-base font-semibold text-gray-900 dark:text-white mb-2">删除分块</h4>
+              <p className="text-sm text-gray-500 dark:text-gray-400 mb-4">确定要删除这个分块吗？此操作不可恢复。</p>
+              <div className="flex justify-end space-x-3">
+                <CustomButton onClick={() => setDeleteTarget(null)} variant="secondary" size="sm">
+                  取消
+                </CustomButton>
+                <CustomButton onClick={() => handleDelete(deleteTarget)} variant="danger" size="sm" disabled={isLoading}>
+                  {isLoading ? '删除中...' : '删除'}
+                </CustomButton>
+              </div>
+            </div>
+          </div>
+        )}
+      </div>
+    </div>,
+    document.body
   )
 }

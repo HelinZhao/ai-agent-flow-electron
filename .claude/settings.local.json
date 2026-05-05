@@ -22,7 +22,19 @@
       "Bash(node -e \"import\\('@langchain/core/caches'\\).then\\(m => console.log\\(Object.keys\\(m\\)\\)\\).catch\\(e => console.error\\(e.message\\)\\)\")",
       "Bash(node -e \"const { sha256 } = require\\('@langchain/core/caches'\\); console.log\\(typeof sha256\\)\")",
       "Bash(node -e \"const { InMemoryCache, BaseCache } = require\\('@langchain/core/caches'\\); console.log\\(Object.getOwnPropertyNames\\(BaseCache.prototype\\)\\); console.log\\(Object.getOwnPropertyNames\\(InMemoryCache.prototype\\)\\);\")",
-      "Bash(node -e \"const s = require\\('sqlite-vec'\\); console.log\\(typeof s, Object.keys\\(s\\)\\)\")"
+      "Bash(node -e \"const s = require\\('sqlite-vec'\\); console.log\\(typeof s, Object.keys\\(s\\)\\)\")",
+      "WebFetch(domain:docs.dify.ai)",
+      "WebFetch(domain:github.com)",
+      "Bash(gh api *)",
+      "WebFetch(domain:raw.githubusercontent.com)",
+      "Bash(curl -sL \"https://raw.githubusercontent.com/langgenius/dify/main/web/app/components/knowledge/knowledge-chunk-card.tsx\")",
+      "Bash(curl -sL \"https://api.github.com/repos/langgenius/dify/git/trees/main?recursive=1\")",
+      "Bash(python3 -c \"import sys,json; data=json.load\\(sys.stdin\\); paths=[x['path'] for x in data['tree'] if 'chunk' in x['path'].lower\\(\\) or 'segment' in x['path'].lower\\(\\) and x['path'].startswith\\('web'\\)]; print\\('\\\\n'.join\\(paths[:30]\\)\\)\")",
+      "Bash(python3 -c \"import sys,json; data=json.load\\(sys.stdin\\); paths=[x['path'] for x in data['tree'] if \\('segment' in x['path'].lower\\(\\) and x['path'].startswith\\('web/app/components/datasets'\\)\\) or \\('chunk-list' in x['path'].lower\\(\\) and x['path'].startswith\\('web/app'\\)\\)]; print\\('\\\\n'.join\\(paths[:40]\\)\\)\")",
+      "Bash(curl -sL \"https://raw.githubusercontent.com/langgenius/dify/main/web/app/components/datasets/documents/detail/completed/segment-card/index.tsx\")",
+      "Bash(curl -sL \"https://raw.githubusercontent.com/langgenius/dify/main/web/app/components/datasets/documents/detail/completed/segment-list.tsx\")",
+      "Bash(curl -sL \"https://raw.githubusercontent.com/langgenius/dify/main/web/app/components/datasets/documents/detail/completed/common/segment-index-tag.tsx\")",
+      "Bash(curl -sL \"https://raw.githubusercontent.com/langgenius/dify/main/web/app/components/datasets/documents/detail/completed/segment-card/chunk-content.tsx\")"
     ]
   }
 }
