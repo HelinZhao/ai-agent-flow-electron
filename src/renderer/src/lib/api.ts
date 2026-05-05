@@ -6,7 +6,8 @@ import {
   LLMConfig,
   WorkflowExecutionProgress,
   WorkflowExecutionMetrics,
-  NodeExecutionResult
+  NodeExecutionResult,
+  KnowledgeBase
 } from '@renderer/types'
 
 const baseURL = 'http://localhost:3100/api'
@@ -39,7 +40,7 @@ api.interceptors.response.use(
       data: error.response?.data,
       message: error.message
     })
-    return Promise.reject(error.response?.data?.message ? new Error(error.response.data.message) : error)
+    return Promise.reject(error.response?.data?.error ? new Error(error.response.data.error) : error)
   }
 )
 
@@ -427,6 +428,33 @@ export const workflowExecutionApi = {
       poll()
     })
   }
+}
+
+// 知识库 API
+export const knowledgeBaseApi = {
+  getAll: (): Promise<KnowledgeBase[]> => api.get('/knowledge-base'),
+
+  create: (data: Partial<KnowledgeBase>): Promise<KnowledgeBase> =>
+    api.post('/knowledge-base', data),
+
+  update: (id: string, data: Partial<KnowledgeBase>): Promise<KnowledgeBase> =>
+    api.put(`/knowledge-base/${id}`, data),
+
+  delete: (id: string): Promise<void> => api.delete(`/knowledge-base/${id}`),
+
+  uploadDocument: (id: string, file: File): Promise<{ message: string; chunkCount: number }> => {
+    const formData = new FormData()
+    formData.append('file', file)
+    return api.post(`/knowledge-base/${id}/documents`, formData, {
+      headers: { 'Content-Type': 'multipart/form-data' }
+    })
+  },
+
+  deleteDocument: (id: string, docName: string): Promise<void> =>
+    api.delete(`/knowledge-base/${id}/documents/${encodeURIComponent(docName)}`),
+
+  getStats: (id: string): Promise<{ documents: string[]; totalChunks: number }> =>
+    api.get(`/knowledge-base/${id}/stats`),
 }
 
 export default api

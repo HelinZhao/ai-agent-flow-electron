@@ -1,7 +1,7 @@
 import { create } from 'zustand'
 import { persist } from 'zustand/middleware'
-import { Workflow, Skill, Agent, LLMConfig } from '@renderer/types'
-import { workflowApi, skillApi, agentApi, llmConfigApi } from '@renderer/lib/api'
+import { Workflow, Skill, Agent, LLMConfig, KnowledgeBase } from '@renderer/types'
+import { workflowApi, skillApi, agentApi, llmConfigApi, knowledgeBaseApi } from '@renderer/lib/api'
 
 interface WorkflowState {
   workflows: Workflow[]
@@ -42,6 +42,16 @@ interface WorkflowState {
   getLLMConfigs: () => Promise<void>
   getActiveLLMConfig: () => Promise<void>
 
+  // Knowledge base actions
+  knowledgeBases: KnowledgeBase[]
+  getKnowledgeBases: () => Promise<void>
+  addKnowledgeBase: (data: Partial<KnowledgeBase>) => Promise<void>
+  updateKnowledgeBase: (id: string, updates: Partial<KnowledgeBase>) => Promise<void>
+  deleteKnowledgeBase: (id: string) => Promise<void>
+  uploadDocumentToKB: (id: string, file: File) => Promise<void>
+  deleteDocumentFromKB: (id: string, docName: string) => Promise<void>
+  setKnowledgeBases: (kbs: KnowledgeBase[]) => void
+
   // Internal helper methods
   setLoading: (loading: boolean) => void
   setError: (error: string | null) => void
@@ -60,6 +70,7 @@ export const useWorkflowStore = create<WorkflowState>()(
       agents: [],
       llmConfigs: [],
       activeLLMConfig: null,
+      knowledgeBases: [],
       currentWorkflow: null,
       currentPage: '/',
       loading: false,
@@ -98,6 +109,7 @@ export const useWorkflowStore = create<WorkflowState>()(
       setAgents: (agents: Agent[]) => set({ agents }),
       setLLMConfigs: (configs: LLMConfig[]) => set({ llmConfigs: configs }),
       setActiveLLMConfig: (config: LLMConfig | null) => set({ activeLLMConfig: config }),
+      setKnowledgeBases: (kbs: KnowledgeBase[]) => set({ knowledgeBases: kbs }),
       addWorkflow: async (workflow) => {
         const state = get()
         try {
@@ -403,6 +415,103 @@ export const useWorkflowStore = create<WorkflowState>()(
         } catch (error) {
           console.error('获取活跃LLM配置失败:', error)
           state.setError('获取活跃LLM配置失败')
+        } finally {
+          state.setLoading(false)
+        }
+      },
+
+      // Knowledge base CRUD
+      getKnowledgeBases: async () => {
+        const state = get()
+        try {
+          state.setLoading(true)
+          state.setError(null)
+          const kbs = await knowledgeBaseApi.getAll()
+          state.setKnowledgeBases(kbs)
+        } catch (error) {
+          console.error('获取知识库列表失败:', error)
+          state.setError('获取知识库列表失败')
+        } finally {
+          state.setLoading(false)
+        }
+      },
+
+      addKnowledgeBase: async (data) => {
+        const state = get()
+        try {
+          state.setLoading(true)
+          state.setError(null)
+          const newKB = await knowledgeBaseApi.create(data)
+          set({ knowledgeBases: [newKB, ...state.knowledgeBases] })
+        } catch (error) {
+          console.error('创建知识库失败:', error)
+          state.setError('创建知识库失败')
+          throw error
+        } finally {
+          state.setLoading(false)
+        }
+      },
+
+      updateKnowledgeBase: async (id, updates) => {
+        const state = get()
+        try {
+          state.setLoading(true)
+          state.setError(null)
+          const updated = await knowledgeBaseApi.update(id, updates)
+          set({ knowledgeBases: state.knowledgeBases.map(kb => kb.id === id ? updated : kb) })
+        } catch (error) {
+          console.error('更新知识库失败:', error)
+          state.setError('更新知识库失败')
+          throw error
+        } finally {
+          state.setLoading(false)
+        }
+      },
+
+      deleteKnowledgeBase: async (id) => {
+        const state = get()
+        try {
+          state.setLoading(true)
+          state.setError(null)
+          await knowledgeBaseApi.delete(id)
+          set({ knowledgeBases: state.knowledgeBases.filter(kb => kb.id !== id) })
+        } catch (error) {
+          console.error('删除知识库失败:', error)
+          state.setError('删除知识库失败')
+          throw error
+        } finally {
+          state.setLoading(false)
+        }
+      },
+
+      uploadDocumentToKB: async (id, file) => {
+        const state = get()
+        try {
+          state.setLoading(true)
+          state.setError(null)
+          await knowledgeBaseApi.uploadDocument(id, file)
+          // 重新获取列表以更新文档统计
+          await state.getKnowledgeBases()
+        } catch (error) {
+          console.error('上传文档失败:', error)
+          state.setError('上传文档失败')
+          throw error
+        } finally {
+          state.setLoading(false)
+        }
+      },
+
+      deleteDocumentFromKB: async (id, docName) => {
+        const state = get()
+        try {
+          state.setLoading(true)
+          state.setError(null)
+          await knowledgeBaseApi.deleteDocument(id, docName)
+          await state.getKnowledgeBases()
+        } catch (error) {
+          console.error('删除文档失败:', error)
+          state.setError('删除文档失败')
+          throw error
         } finally {
           state.setLoading(false)
         }

@@ -21,7 +21,8 @@
       "Bash(node -e \"const p=require\\('fs'\\).readFileSync\\(0,'utf8'\\);const j=JSON.parse\\(p\\);const keys=Object.keys\\(j.exports||{}\\).filter\\(k=>k.includes\\('cache'\\)||k.includes\\('Cache'\\)\\);console.log\\(keys.join\\('\\\\n'\\)\\)\")",
       "Bash(node -e \"import\\('@langchain/core/caches'\\).then\\(m => console.log\\(Object.keys\\(m\\)\\)\\).catch\\(e => console.error\\(e.message\\)\\)\")",
       "Bash(node -e \"const { sha256 } = require\\('@langchain/core/caches'\\); console.log\\(typeof sha256\\)\")",
-      "Bash(node -e \"const { InMemoryCache, BaseCache } = require\\('@langchain/core/caches'\\); console.log\\(Object.getOwnPropertyNames\\(BaseCache.prototype\\)\\); console.log\\(Object.getOwnPropertyNames\\(InMemoryCache.prototype\\)\\);\")"
+      "Bash(node -e \"const { InMemoryCache, BaseCache } = require\\('@langchain/core/caches'\\); console.log\\(Object.getOwnPropertyNames\\(BaseCache.prototype\\)\\); console.log\\(Object.getOwnPropertyNames\\(InMemoryCache.prototype\\)\\);\")",
+      "Bash(node -e \"const s = require\\('sqlite-vec'\\); console.log\\(typeof s, Object.keys\\(s\\)\\)\")"
     ]
   }
 }

@@ -21,3 +21,6 @@ export { getDataDir, saveAttachmentToDisk, loadAttachmentAsDataUrl, loadAttachme
 
 // 工作流执行器
 export { MonitoredLangGraphExecutor } from './monitoredExecutor'
+
+// 知识库 RAG
+export { ingestDocument, retrieveContext, deleteDocumentChunks, deleteAllChunks, getDocumentStats } from './knowledge'

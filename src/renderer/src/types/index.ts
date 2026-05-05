@@ -201,3 +201,21 @@ export interface ToolApprovalDecision {
   type: 'approve' | 'reject'
   message?: string
 }
+
+// 知识库类型
+export interface KnowledgeBase {
+  id: string
+  name: string
+  description: string
+  type: 'internal' | 'external'
+  embeddingModel: string
+  chunkSize: number
+  chunkOverlap: number
+  topK: number
+  apiUrl: string
+  apiKey: string
+  documentCount?: number
+  totalChunks?: number
+  createdAt: Date
+  updatedAt: Date
+}

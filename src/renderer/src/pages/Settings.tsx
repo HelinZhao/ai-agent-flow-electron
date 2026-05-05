@@ -2,9 +2,11 @@ import React, { useState } from 'react';
 import SettingsLLM from './settings/SettingsLLM';
 import SettingsTheme from './settings/SettingsTheme';
 import SettingsData from './settings/SettingsData';
+import SettingsKnowledge from './settings/SettingsKnowledge';
 
 const SETTINGS_TABS = [
   { id: 'llm', label: '模型配置', icon: '🤖' },
+  { id: 'knowledge', label: '知识库', icon: '📚' },
   { id: 'theme', label: '外观主题', icon: '🎨' },
   { id: 'data', label: '数据管理', icon: '📦' },
 ]
@@ -16,6 +18,8 @@ export default function Settings(): React.JSX.Element {
     switch (activeTab) {
       case 'llm':
         return <SettingsLLM />;
+      case 'knowledge':
+        return <SettingsKnowledge />;
       case 'theme':
         return <SettingsTheme />;
       case 'data':

@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
-import { VariableConfig } from '@renderer/types';
+import { VariableConfig, KnowledgeBase } from '@renderer/types';
+import { useWorkflowStore } from '@renderer/store/workflowStore';
 import VariableConfigModal from '../VariableConfigModal';
 import CustomTextarea from '../../ui/CustomTextarea';
 import CustomButton from '../../ui/CustomButton';
@@ -22,6 +23,11 @@ const LLMConfig: React.FC<LLMConfigProps> = ({ config, onConfigChange }) => {
   const [showVariableModal, setShowVariableModal] = useState(false);
   const [editingVariable, setEditingVariable] = useState<VariableConfig | null>(null);
   const [variables, setVariables] = useState<VariableConfig[]>(config.variables || []);
+  const { knowledgeBases, getKnowledgeBases } = useWorkflowStore();
+
+  React.useEffect(() => {
+    if (knowledgeBases.length === 0) getKnowledgeBases()
+  }, [])
 
   // 当外部config变化时同步更新本地状态
   React.useEffect(() => {
@@ -225,6 +231,44 @@ const LLMConfig: React.FC<LLMConfigProps> = ({ config, onConfigChange }) => {
         initialVariable={editingVariable || undefined}
         existingVariables={variables}
       />
+
+      {/* 知识库增强 */}
+      <div>
+        <div className="flex items-center space-x-3 mb-2">
+          <input
+            type="checkbox"
+            checked={config.enableKnowledgeBase ?? false}
+            onChange={(e) => onConfigChange({
+              ...config,
+              enableKnowledgeBase: e.target.checked,
+              knowledgeBaseId: e.target.checked ? config.knowledgeBaseId : ''
+            })}
+            className="w-4 h-4 text-blue-600 rounded"
+          />
+          <label className="text-sm font-medium text-gray-700 dark:text-gray-300">
+            启用知识库增强
+          </label>
+        </div>
+        {config.enableKnowledgeBase && (
+          <div className="mt-2">
+            <select
+              value={config.knowledgeBaseId || ''}
+              onChange={(e) => onConfigChange({ ...config, knowledgeBaseId: e.target.value })}
+              className="w-full border border-gray-200 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-white rounded-lg px-3 py-2 text-sm focus:ring-blue-500 focus:border-blue-500"
+            >
+              <option value="">选择知识库</option>
+              {knowledgeBases.map(kb => (
+                <option key={kb.id} value={kb.id}>
+                  {kb.name} ({kb.type === 'internal' ? '内部' : '外部'})
+                </option>
+              ))}
+            </select>
+            <div className="text-xs text-gray-500 mt-1">
+              执行时自动从知识库检索相关内容注入提示词
+            </div>
+          </div>
+        )}
+      </div>
 
       <div>
         <div className="flex items-center space-x-3 mb-2">

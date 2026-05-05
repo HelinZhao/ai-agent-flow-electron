@@ -16,6 +16,7 @@ import { executeCliCommand, executeCliTemplate } from './cli'
 import { HITLRequest, HITLResponse, HITLDecision, CallLLMOptions } from './hitl'
 import { getDataDir, saveAttachmentToDisk } from './file'
 import { AttachmentPayload } from './shared'
+import { retrieveContext } from './knowledge'
 import { v4 as uuidv4 } from 'uuid'
 import { SqliteSaver } from "@langchain/langgraph-checkpoint-sqlite";
 
@@ -700,6 +701,20 @@ export class MonitoredLangGraphExecutor {
       const finalPrompt = promptTemplate ? `${promptTemplate}\n\n当前用户输入: ${input}` : input
       const enabledTools = node.data.config?.enabledTools || []
 
+      // RAG 知识库增强：检索上下文并注入 prompt
+      let promptWithRag = finalPrompt
+      const { enableKnowledgeBase, knowledgeBaseId } = node.data.config || {}
+      if (enableKnowledgeBase && knowledgeBaseId) {
+        try {
+          const ragContext = await retrieveContext(knowledgeBaseId, input)
+          if (ragContext) {
+            promptWithRag = `【知识库参考资料】\n${ragContext}\n\n---\n\n${finalPrompt}`
+          }
+        } catch (err) {
+          console.error('知识库检索失败:', err)
+        }
+      }
+
       // 构建 HITL 宯批回调
       const hasDangerousTools = enabledTools.some((t: string) => ['writeFile', 'executeCommand', 'httpRequest'].includes(t))
       const options: CallLLMOptions = hasDangerousTools
@@ -755,7 +770,7 @@ export class MonitoredLangGraphExecutor {
         }
         : {}
 
-      const result = await callLLM(finalPrompt, llmConfig, conversationHistory, enabledTools, { ...options, cache: node.data.config?.enableCache ?? false }, attachments)
+      const result = await callLLM(promptWithRag, llmConfig, conversationHistory, enabledTools, { ...options, cache: node.data.config?.enableCache ?? false }, attachments)
 
       return {
         output: result,
