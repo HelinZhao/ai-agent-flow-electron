@@ -4,6 +4,7 @@ import { useWorkflowStore } from '@renderer/store/workflowStore';
 import VariableConfigModal from '../VariableConfigModal';
 import CustomTextarea from '../../ui/CustomTextarea';
 import CustomButton from '../../ui/CustomButton';
+import CustomSelect from '../../ui/CustomSelect';
 
 const AVAILABLE_TOOLS = [
   { id: 'readFile', label: '读取文件', description: '读取指定文件内容' },
@@ -251,18 +252,16 @@ const LLMConfig: React.FC<LLMConfigProps> = ({ config, onConfigChange }) => {
         </div>
         {config.enableKnowledgeBase && (
           <div className="mt-2">
-            <select
+            <CustomSelect
               value={config.knowledgeBaseId || ''}
-              onChange={(e) => onConfigChange({ ...config, knowledgeBaseId: e.target.value })}
-              className="w-full border border-gray-200 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-white rounded-lg px-3 py-2 text-sm focus:ring-blue-500 focus:border-blue-500"
-            >
-              <option value="">选择知识库</option>
-              {knowledgeBases.map(kb => (
-                <option key={kb.id} value={kb.id}>
-                  {kb.name} ({kb.type === 'internal' ? '内部' : '外部'})
-                </option>
-              ))}
-            </select>
+              onChange={(val) => onConfigChange({ ...config, knowledgeBaseId: val })}
+              options={knowledgeBases.map(kb => ({
+                value: kb.id,
+                label: `${kb.name} (${kb.type === 'internal' ? '内部' : '外部'})`
+              }))}
+              placeholder="选择知识库"
+              size="sm"
+            />
             <div className="text-xs text-gray-500 mt-1">
               执行时自动从知识库检索相关内容注入提示词
             </div>

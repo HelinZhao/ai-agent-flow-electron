@@ -19,10 +19,10 @@ const CustomButton: React.FC<CustomButtonProps> = ({
   ...props
 }) => {
   const sizeClasses = {
-    sm: 'px-3 py-1.5 text-sm min-h-[32px]',
-    md: 'px-4 py-2.5 text-base min-h-[44px]',
-    lg: 'px-6 py-3.5 text-lg min-h-[52px]',
-    xl: 'px-8 py-4 text-lg min-h-[56px]'
+    sm: 'px-3 py-1.5 text-sm min-h-[32px] rounded',
+    md: 'px-4 py-2.5 text-base min-h-[44px] rounded-md',
+    lg: 'px-6 py-3.5 text-lg min-h-[52px] rounded-xl',
+    xl: 'px-8 py-4 text-lg min-h-[56px] rounded-xl'
   };
 
   const variantClasses = {

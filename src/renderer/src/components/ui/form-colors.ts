@@ -38,7 +38,7 @@ export const formColors = {
 // 预构建的常用类组合
 export const formClasses = {
   input: {
-    base: 'border rounded-xl transition-all duration-200 backdrop-blur-sm',
+    base: 'border transition-all duration-200 backdrop-blur-sm',
     normal: 'border-gray-300/70 dark:border-gray-600/50 hover:border-gray-400/70 dark:hover:border-gray-500/50 focus:border-blue-500/50',
     error: 'border-red-300 dark:border-red-600 focus:border-red-500/50',
     disabled: 'border-gray-300 dark:border-gray-600',
@@ -51,7 +51,7 @@ export const formClasses = {
   },
 
   select: {
-    base: 'border rounded-xl transition-all duration-200 backdrop-blur-sm',
+    base: 'border transition-all duration-200 backdrop-blur-sm',
     normal: 'border-gray-300/70 dark:border-gray-600/50 hover:border-gray-400/70 dark:hover:border-gray-500/50 focus:border-blue-500/50',
     error: 'border-red-300 dark:border-red-600 focus:border-red-500/50',
     disabled: 'border-gray-300 dark:border-gray-600',
