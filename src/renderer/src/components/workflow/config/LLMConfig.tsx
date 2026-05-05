@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { VariableConfig, KnowledgeBase } from '@renderer/types';
+import { VariableConfig } from '@renderer/types';
 import { useWorkflowStore } from '@renderer/store/workflowStore';
 import VariableConfigModal from '../VariableConfigModal';
 import CustomTextarea from '../../ui/CustomTextarea';

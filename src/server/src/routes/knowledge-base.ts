@@ -5,7 +5,7 @@ import fs from 'fs/promises'
 import { KnowledgeBaseModel } from '../models'
 import { LLMConfigModel } from '../models'
 import { getDataDir } from '../utils/file'
-import { ingestDocument, deleteDocumentChunks, deleteAllChunks, getDocumentStats, retrieveContext } from '../utils/knowledge'
+import { ingestDocument, deleteDocumentChunks, deleteAllChunks, getDocumentStats, retrieveContext, getChunksByDocument, addChunk, updateChunkContent, deleteSingleChunk, toggleChunkEnabled, reconstructDocumentFromChunks } from '../utils/knowledge'
 
 // 提供商 → 默认 embedding 模型名
 const PROVIDER_EMBEDDING_MODEL: Record<string, string> = {
@@ -52,7 +52,7 @@ router.get('/', async (_req, res) => {
     // 为每个知识库附加文档统计
     const result = await Promise.all(knowledgeBases.map(async (kb) => {
       const stats = await getDocumentStats(kb.id)
-      return { ...kb.toJSON(), documentCount: stats.documents.length, totalChunks: stats.totalChunks }
+      return { ...kb.toJSON(), documents: stats.documents, documentCount: stats.documents.length, totalChunks: stats.totalChunks }
     }))
 
     return res.status(200).json(result)
@@ -225,6 +225,151 @@ router.get('/:id/stats', async (req, res) => {
   } catch (error) {
     console.error('获取统计错误:', error)
     return res.status(500).json({ error: '服务器内部错误' })
+  }
+})
+
+// 获取指定文档的分块列表
+router.get('/:id/chunks/:docName', async (req, res) => {
+  try {
+    const { id, docName } = req.params
+    const kb = await KnowledgeBaseModel.findByPk(id)
+    if (!kb) {
+      return res.status(404).json({ error: '知识库不存在' })
+    }
+
+    const chunks = await getChunksByDocument(id, docName)
+    return res.status(200).json(chunks.map(c => ({
+      id: c.id,
+      knowledgeBaseId: c.knowledgeBaseId,
+      content: c.content,
+      source: c.source,
+      chunkIndex: c.chunkIndex,
+      enabled: c.enabled,
+      createdAt: c.createdAt,
+      updatedAt: c.updatedAt
+    })))
+  } catch (error) {
+    console.error('获取分块列表错误:', error)
+    return res.status(500).json({ error: '服务器内部错误' })
+  }
+})
+
+// 新增一个分块
+router.post('/:id/chunks', async (req, res) => {
+  try {
+    const { id } = req.params
+    const { content, source } = req.body
+
+    if (!content || !source) {
+      return res.status(400).json({ error: '内容和来源文档名不能为空' })
+    }
+
+    const kb = await KnowledgeBaseModel.findByPk(id)
+    if (!kb) {
+      return res.status(404).json({ error: '知识库不存在' })
+    }
+
+    if (kb.type !== 'internal') {
+      return res.status(400).json({ error: '仅内部知识库支持手动管理分块' })
+    }
+
+    const chunk = await addChunk(id, source, content)
+    return res.status(201).json({
+      id: chunk.id,
+      knowledgeBaseId: chunk.knowledgeBaseId,
+      content: chunk.content,
+      source: chunk.source,
+      chunkIndex: chunk.chunkIndex,
+      enabled: chunk.enabled,
+      createdAt: chunk.createdAt,
+      updatedAt: chunk.updatedAt
+    })
+  } catch (error) {
+    console.error('新增分块错误:', error)
+    return res.status(500).json({ error: `新增分块失败: ${error instanceof Error ? error.message : '未知错误'}` })
+  }
+})
+
+// 更新分块内容
+router.put('/:id/chunks/:chunkId', async (req, res) => {
+  try {
+    const { id, chunkId } = req.params
+    const { content } = req.body
+
+    if (!content) {
+      return res.status(400).json({ error: '内容不能为空' })
+    }
+
+    const kb = await KnowledgeBaseModel.findByPk(id)
+    if (!kb) {
+      return res.status(404).json({ error: '知识库不存在' })
+    }
+
+    await updateChunkContent(chunkId, content)
+    return res.status(200).json({ message: '分块更新成功' })
+  } catch (error) {
+    console.error('更新分块错误:', error)
+    return res.status(500).json({ error: `更新分块失败: ${error instanceof Error ? error.message : '未知错误'}` })
+  }
+})
+
+// 删除单个分块
+router.delete('/:id/chunks/:chunkId', async (req, res) => {
+  try {
+    const { id, chunkId } = req.params
+
+    const kb = await KnowledgeBaseModel.findByPk(id)
+    if (!kb) {
+      return res.status(404).json({ error: '知识库不存在' })
+    }
+
+    await deleteSingleChunk(chunkId)
+    return res.status(200).json({ message: '分块删除成功' })
+  } catch (error) {
+    console.error('删除分块错误:', error)
+    return res.status(500).json({ error: `删除分块失败: ${error instanceof Error ? error.message : '未知错误'}` })
+  }
+})
+
+// 切换分块启用/停用状态
+router.patch('/:id/chunks/:chunkId/toggle', async (req, res) => {
+  try {
+    const { id, chunkId } = req.params
+
+    const kb = await KnowledgeBaseModel.findByPk(id)
+    if (!kb) {
+      return res.status(404).json({ error: '知识库不存在' })
+    }
+
+    const chunk = await toggleChunkEnabled(chunkId)
+    return res.status(200).json({
+      id: chunk.id,
+      enabled: chunk.enabled,
+      message: chunk.enabled ? '分块已启用' : '分块已停用'
+    })
+  } catch (error) {
+    console.error('切换分块状态错误:', error)
+    return res.status(500).json({ error: `切换状态失败: ${error instanceof Error ? error.message : '未知错误'}` })
+  }
+})
+
+// 重新下载文档（从分块拼接重建）
+router.get('/:id/documents/:docName/download', async (req, res) => {
+  try {
+    const { id, docName } = req.params
+
+    const kb = await KnowledgeBaseModel.findByPk(id)
+    if (!kb) {
+      return res.status(404).json({ error: '知识库不存在' })
+    }
+
+    const content = await reconstructDocumentFromChunks(id, docName)
+    res.setHeader('Content-Type', 'text/plain; charset=utf-8')
+    res.setHeader('Content-Disposition', `attachment; filename="${docName}"`)
+    return res.send(content)
+  } catch (error) {
+    console.error('下载文档错误:', error)
+    return res.status(500).json({ error: `下载失败: ${error instanceof Error ? error.message : '未知错误'}` })
   }
 })
 

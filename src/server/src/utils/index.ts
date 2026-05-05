@@ -23,4 +23,4 @@ export { getDataDir, saveAttachmentToDisk, loadAttachmentAsDataUrl, loadAttachme
 export { MonitoredLangGraphExecutor } from './monitoredExecutor'
 
 // 知识库 RAG
-export { ingestDocument, retrieveContext, deleteDocumentChunks, deleteAllChunks, getDocumentStats } from './knowledge'
+export { ingestDocument, retrieveContext, deleteDocumentChunks, deleteAllChunks, getDocumentStats, getChunksByDocument, addChunk, updateChunkContent, deleteSingleChunk, toggleChunkEnabled, reconstructDocumentFromChunks } from './knowledge'

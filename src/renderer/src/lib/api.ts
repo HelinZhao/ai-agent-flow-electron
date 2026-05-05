@@ -7,7 +7,8 @@ import {
   WorkflowExecutionProgress,
   WorkflowExecutionMetrics,
   NodeExecutionResult,
-  KnowledgeBase
+  KnowledgeBase,
+  KnowledgeChunk
 } from '@renderer/types'
 
 const baseURL = 'http://localhost:3100/api'
@@ -455,6 +456,26 @@ export const knowledgeBaseApi = {
 
   getStats: (id: string): Promise<{ documents: string[]; totalChunks: number }> =>
     api.get(`/knowledge-base/${id}/stats`),
+
+  getChunks: (kbId: string, docName: string): Promise<KnowledgeChunk[]> =>
+    api.get(`/knowledge-base/${kbId}/chunks/${encodeURIComponent(docName)}`),
+
+  addChunk: (kbId: string, data: { content: string; source: string }): Promise<KnowledgeChunk> =>
+    api.post(`/knowledge-base/${kbId}/chunks`, data),
+
+  updateChunk: (kbId: string, chunkId: string, data: { content: string }): Promise<{ message: string }> =>
+    api.put(`/knowledge-base/${kbId}/chunks/${chunkId}`, data),
+
+  deleteChunk: (kbId: string, chunkId: string): Promise<{ message: string }> =>
+    api.delete(`/knowledge-base/${kbId}/chunks/${chunkId}`),
+
+  toggleChunk: (kbId: string, chunkId: string): Promise<{ id: string; enabled: boolean; message: string }> =>
+    api.patch(`/knowledge-base/${kbId}/chunks/${chunkId}/toggle`),
+
+  downloadDocument: (kbId: string, docName: string): Promise<Blob> =>
+    axios.get(`${baseURL}/knowledge-base/${kbId}/documents/${encodeURIComponent(docName)}/download`, {
+      responseType: 'blob'
+    }).then(res => res.data),
 }
 
 // 数据管理 API

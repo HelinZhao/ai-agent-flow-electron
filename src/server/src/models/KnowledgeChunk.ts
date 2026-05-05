@@ -7,6 +7,7 @@ export interface KnowledgeChunkAttributes {
   content: string
   source: string
   chunkIndex: number
+  enabled: boolean
   createdAt: Date
   updatedAt: Date
 }
@@ -26,6 +27,7 @@ export class KnowledgeChunkModel
   declare content: string
   declare source: string
   declare chunkIndex: number
+  declare enabled: boolean
   declare createdAt: Date
   declare updatedAt: Date
 }
@@ -56,6 +58,11 @@ KnowledgeChunkModel.init(
     chunkIndex: {
       type: DataTypes.INTEGER,
       allowNull: false
+    },
+    enabled: {
+      type: DataTypes.BOOLEAN,
+      allowNull: false,
+      defaultValue: true
     },
     createdAt: {
       type: DataTypes.DATE,

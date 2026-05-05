@@ -216,6 +216,19 @@ export interface KnowledgeBase {
   apiKey: string
   documentCount?: number
   totalChunks?: number
+  documents?: string[]
+  createdAt: Date
+  updatedAt: Date
+}
+
+// 知识库分块类型
+export interface KnowledgeChunk {
+  id: string
+  knowledgeBaseId: string
+  content: string
+  source: string
+  chunkIndex: number
+  enabled: boolean
   createdAt: Date
   updatedAt: Date
 }

@@ -2,8 +2,10 @@ import React, { useState, useRef } from 'react'
 import { useForm } from 'react-hook-form'
 import { useWorkflowStore } from '@renderer/store/workflowStore'
 import { KnowledgeBase } from '@renderer/types'
+import { knowledgeBaseApi } from '@renderer/lib/api'
 import CustomInput from '@renderer/components/ui/CustomInput'
 import CustomButton from '@renderer/components/ui/CustomButton'
+import ChunkViewer from '@renderer/components/workflow/config/ChunkViewer'
 
 export default function SettingsKnowledge(): React.JSX.Element {
   const {
@@ -20,6 +22,7 @@ export default function SettingsKnowledge(): React.JSX.Element {
   const [message, setMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null)
   const [editingId, setEditingId] = useState<string | null>(null)
   const [showForm, setShowForm] = useState(false)
+  const [chunkViewerState, setChunkViewerState] = useState<{ kbId: string; docName: string } | null>(null)
   const fileInputRef = useRef<HTMLInputElement>(null)
 
   const { register, handleSubmit, formState: { errors }, reset, watch, setValue } = useForm<KnowledgeBase>({
@@ -107,6 +110,20 @@ export default function SettingsKnowledge(): React.JSX.Element {
       setMessage({ type: 'error', text: '删除文档失败' })
     } finally {
       setIsLoading(false)
+    }
+  }
+
+  const handleDownload = async (kbId: string, docName: string) => {
+    try {
+      const blob = await knowledgeBaseApi.downloadDocument(kbId, docName)
+      const url = URL.createObjectURL(blob)
+      const a = document.createElement('a')
+      a.href = url
+      a.download = docName
+      a.click()
+      URL.revokeObjectURL(url)
+    } catch (error) {
+      setMessage({ type: 'error', text: `下载文档失败: ${error instanceof Error ? error.message : '未知错误'}` })
     }
   }
 
@@ -201,19 +218,33 @@ export default function SettingsKnowledge(): React.JSX.Element {
             </div>
 
             {/* 内部知识库的文档列表 */}
-            {kb.type === 'internal' && (kb as any).documents?.length > 0 && (
+            {kb.type === 'internal' && kb.documents && kb.documents.length > 0 && (
               <div className="mt-3 border-t border-gray-100 dark:border-gray-700 pt-3">
                 <p className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">已上传文档：</p>
                 <div className="space-y-1">
-                  {(kb as any).documents.map((doc: string) => (
+                  {kb.documents!.map((doc) => (
                     <div key={doc} className="flex items-center justify-between text-sm text-gray-600 dark:text-gray-400 py-1">
                       <span>{doc}</span>
-                      <button
-                        onClick={() => handleDeleteDoc(kb.id, doc)}
-                        className="text-red-500 hover:text-red-700 text-xs"
-                      >
-                        删除
-                      </button>
+                      <div className="flex items-center space-x-2">
+                        <button
+                          onClick={() => setChunkViewerState({ kbId: kb.id, docName: doc })}
+                          className="text-blue-500 hover:text-blue-700 text-xs"
+                        >
+                          查看分块
+                        </button>
+                        <button
+                          onClick={() => handleDownload(kb.id, doc)}
+                          className="text-green-500 hover:text-green-700 text-xs"
+                        >
+                          下载
+                        </button>
+                        <button
+                          onClick={() => handleDeleteDoc(kb.id, doc)}
+                          className="text-red-500 hover:text-red-700 text-xs"
+                        >
+                          删除
+                        </button>
+                      </div>
                     </div>
                   ))}
                 </div>
@@ -380,6 +411,15 @@ export default function SettingsKnowledge(): React.JSX.Element {
             </CustomButton>
           </div>
         </form>
+      )}
+
+      {/* 分块查看弹窗 */}
+      {chunkViewerState && (
+        <ChunkViewer
+          kbId={chunkViewerState.kbId}
+          docName={chunkViewerState.docName}
+          onClose={() => { setChunkViewerState(null); getKnowledgeBases() }}
+        />
       )}
     </div>
   )

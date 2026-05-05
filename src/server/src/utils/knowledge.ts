@@ -142,7 +142,8 @@ export async function ingestDocument(
       knowledgeBaseId,
       content: chunk,
       source: fileName,
-      chunkIndex: i
+      chunkIndex: i,
+      enabled: true
     })
     chunkRecords.push(chunkRecord)
   }
@@ -207,7 +208,8 @@ export async function retrieveContext(
   const chunks = await KnowledgeChunkModel.findAll({
     where: {
       id: chunkIds,
-      knowledgeBaseId
+      knowledgeBaseId,
+      enabled: true
     }
   })
 
@@ -292,4 +294,116 @@ export async function getDocumentStats(knowledgeBaseId: string): Promise<{ docum
   })
   const documents = [...new Set(chunks.map(c => c.source))]
   return { documents, totalChunks: chunks.length }
+}
+
+// 获取指定文档的所有分块
+export async function getChunksByDocument(knowledgeBaseId: string, docName: string): Promise<KnowledgeChunkModel[]> {
+  return KnowledgeChunkModel.findAll({
+    where: { knowledgeBaseId, source: docName },
+    order: [['chunkIndex', 'ASC']]
+  })
+}
+
+// 新增单个分块（手动添加）
+export async function addChunk(knowledgeBaseId: string, docName: string, content: string): Promise<KnowledgeChunkModel> {
+  // 获取该文档当前最大 chunkIndex
+  const existingChunks = await KnowledgeChunkModel.findAll({
+    where: { knowledgeBaseId, source: docName },
+    attributes: ['chunkIndex']
+  })
+  const maxIndex = existingChunks.length > 0
+    ? Math.max(...existingChunks.map(c => c.chunkIndex))
+    : -1
+
+  const { embeddings, dims } = await getEmbeddingsInstance()
+  const vector = await embeddings.embedQuery(content)
+
+  const chunkRecord = await KnowledgeChunkModel.create({
+    knowledgeBaseId,
+    content,
+    source: docName,
+    chunkIndex: maxIndex + 1,
+    enabled: true
+  })
+
+  const db = await getVecDb()
+  await createVecTable(dims)
+  const vectorBuffer = Buffer.from(new Float32Array(vector).buffer)
+  db.prepare('INSERT INTO vec_chunks(chunk_id, embedding) VALUES (?, ?)').run(chunkRecord.id, vectorBuffer)
+
+  console.log(`[Knowledge] 手动新增分块: ${chunkRecord.id}, 文档: ${docName}`)
+  return chunkRecord
+}
+
+// 更新分块内容（删除旧向量 → 重新 embedding → 写入新向量）
+export async function updateChunkContent(chunkId: string, newContent: string): Promise<void> {
+  const chunk = await KnowledgeChunkModel.findByPk(chunkId)
+  if (!chunk) throw new Error('分块不存在')
+
+  const { embeddings, dims } = await getEmbeddingsInstance()
+
+  // 删除旧向量
+  const db = await getVecDb()
+  await ensureVecTableExists()
+  db.prepare('DELETE FROM vec_chunks WHERE chunk_id = ?').run(chunkId)
+
+  // 重新 embedding
+  const vector = await embeddings.embedQuery(newContent)
+  await createVecTable(dims)
+  const vectorBuffer = Buffer.from(new Float32Array(vector).buffer)
+  db.prepare('INSERT INTO vec_chunks(chunk_id, embedding) VALUES (?, ?)').run(chunkId, vectorBuffer)
+
+  // 更新内容
+  await chunk.update({ content: newContent })
+  console.log(`[Knowledge] 更新分块: ${chunkId}`)
+}
+
+// 删除单个分块及其向量
+export async function deleteSingleChunk(chunkId: string): Promise<void> {
+  const chunk = await KnowledgeChunkModel.findByPk(chunkId)
+  if (!chunk) throw new Error('分块不存在')
+
+  const db = await getVecDb()
+  await ensureVecTableExists()
+  db.prepare('DELETE FROM vec_chunks WHERE chunk_id = ?').run(chunkId)
+
+  await chunk.destroy()
+  console.log(`[Knowledge] 删除单个分块: ${chunkId}`)
+}
+
+// 切换分块启用/停用状态
+export async function toggleChunkEnabled(chunkId: string): Promise<KnowledgeChunkModel> {
+  const chunk = await KnowledgeChunkModel.findByPk(chunkId)
+  if (!chunk) throw new Error('分块不存在')
+
+  await chunk.update({ enabled: !chunk.enabled })
+  console.log(`[Knowledge] 分块 ${chunkId} 状态切换为: ${chunk.enabled ? '启用' : '停用'}`)
+  return chunk
+}
+
+// 从分块拼接重建文档内容
+export async function reconstructDocumentFromChunks(knowledgeBaseId: string, docName: string): Promise<string> {
+  const kb = await KnowledgeBaseModel.findByPk(knowledgeBaseId)
+  if (!kb) throw new Error('知识库不存在')
+
+  const chunks = await KnowledgeChunkModel.findAll({
+    where: { knowledgeBaseId, source: docName },
+    order: [['chunkIndex', 'ASC']]
+  })
+
+  if (chunks.length === 0) throw new Error('文档无分块数据')
+
+  if (kb.chunkOverlap > 0 && chunks.length > 1) {
+    // 有重叠：每个分块取前 (chunkSize - chunkOverlap) 字符，最后一个取完整
+    const effectiveLen = kb.chunkSize - kb.chunkOverlap
+    const parts: string[] = []
+    for (let i = 0; i < chunks.length - 1; i++) {
+      parts.push(chunks[i].content.slice(0, effectiveLen))
+    }
+    parts.push(chunks[chunks.length - 1].content)
+    return parts.join('')
+  }
+
+  // 无重叠：直接拼接
+  return chunks.map(c => c.content).join('')
 }
