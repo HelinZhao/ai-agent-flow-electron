@@ -22,6 +22,13 @@ const api = {
   // 通知提醒API
   notify: {
     flashFrame: () => ipcRenderer.invoke('notify:flashFrame')
+  },
+  // 窗口控制API
+  window: {
+    minimize: () => ipcRenderer.invoke('window:minimize'),
+    maximize: () => ipcRenderer.invoke('window:maximize'),
+    close: () => ipcRenderer.invoke('window:close'),
+    isMaximized: () => ipcRenderer.invoke('window:isMaximized')
   }
 }
 

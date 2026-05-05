@@ -10,16 +10,17 @@ function createWindow(): void {
   const mainWindow = new BrowserWindow({
     width: 1200,
     height: 800,
-    minWidth: 800, // 最小宽度
-    minHeight: 600, // 最小高度
+    minWidth: 800,
+    minHeight: 600,
     show: false,
     autoHideMenuBar: true,
-    resizable: true, // 允许用户调整窗口大小
+    resizable: true,
+    frame: false,
     ...(process.platform === 'linux' ? { icon } : {}),
     webPreferences: {
       preload: join(__dirname, '../preload/index.mjs'),
       sandbox: false,
-      webSecurity: false // 允许加载本地资源和字体
+      webSecurity: false
     }
   })
 
@@ -105,6 +106,30 @@ app.whenReady().then(() => {
       win.flashFrame(true)
     }
     return true
+  })
+
+  // 窗口控制IPC处理
+  ipcMain.handle('window:minimize', () => {
+    const win = BrowserWindow.getAllWindows()[0]
+    if (win) win.minimize()
+  })
+  ipcMain.handle('window:maximize', () => {
+    const win = BrowserWindow.getAllWindows()[0]
+    if (win) {
+      if (win.isMaximized()) {
+        win.unmaximize()
+      } else {
+        win.maximize()
+      }
+    }
+  })
+  ipcMain.handle('window:close', () => {
+    const win = BrowserWindow.getAllWindows()[0]
+    if (win) win.close()
+  })
+  ipcMain.handle('window:isMaximized', () => {
+    const win = BrowserWindow.getAllWindows()[0]
+    return win ? win.isMaximized() : false
   })
 
   // 自动启动服务器

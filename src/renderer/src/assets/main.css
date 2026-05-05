@@ -2,6 +2,14 @@
 @tailwind components;
 @tailwind utilities;
 
+/* Electron无边框窗口拖拽区域 */
+.app-drag {
+  -webkit-app-region: drag;
+}
+.app-no-drag {
+  -webkit-app-region: no-drag;
+}
+
 :root {
   --foreground-rgb: 0, 0, 0;
   --background-start-rgb: 214, 219, 220;

@@ -21,10 +21,18 @@ interface NotifyAPI {
   flashFrame: () => Promise<boolean>
 }
 
+interface WindowAPI {
+  minimize: () => Promise<void>
+  maximize: () => Promise<void>
+  close: () => Promise<void>
+  isMaximized: () => Promise<boolean>
+}
+
 interface CustomAPI {
   server: ServerAPI
   chatHistory: ChatHistoryAPI
   notify: NotifyAPI
+  window: WindowAPI
 }
 
 declare global {
