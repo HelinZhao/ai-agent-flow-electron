@@ -8,6 +8,7 @@ import agentsRouter from './routes/agents'
 import skillsRouter from './routes/skills'
 import llmConfigRouter from './routes/llm-config'
 import knowledgeBaseRouter from './routes/knowledge-base'
+import dataRouter from './routes/data'
 import executeWorkflowRouter from './routes/execute-workflow'
 import { getDataDir } from './utils'
 import { app } from 'electron'
@@ -54,6 +55,7 @@ export class LocalServer {
     this.app.use('/api/skills', skillsRouter)
     this.app.use('/api/llm-config', llmConfigRouter)
     this.app.use('/api/knowledge-base', knowledgeBaseRouter)
+    this.app.use('/api/data', dataRouter)
     this.app.use('/api/execute-workflow', executeWorkflowRouter)
 
     // 附件文件服务：/api/attachments/:id/:filename
