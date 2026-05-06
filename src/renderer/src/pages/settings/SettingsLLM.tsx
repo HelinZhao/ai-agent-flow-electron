@@ -6,7 +6,7 @@ import { llmConfigApi } from '@renderer/lib/api';
 import CustomSelect from '@renderer/components/ui/CustomSelect';
 import CustomInput from '@renderer/components/ui/CustomInput';
 import CustomButton from '@renderer/components/ui/CustomButton';
-import { LLM_DEFAULTS, PROVIDER_DEFAULT_BASE_URLS, PROVIDER_API_KEY_PREFIXES, TEMPERATURE_RANGE, MAX_TOKENS_RANGE, MIN_LLM_CONFIG_COUNT } from '@renderer/config';
+import { LLM_DEFAULTS, PROVIDER_MATES, TEMPERATURE_RANGE, MAX_TOKENS_RANGE, MIN_LLM_CONFIG_COUNT } from '@renderer/config';
 
 export default function SettingsLLM(): React.JSX.Element {
     const {
@@ -21,7 +21,6 @@ export default function SettingsLLM(): React.JSX.Element {
     const [message, setMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
     const [editingConfig, setEditingConfig] = useState<string | null>(null);
     const [showForm, setShowForm] = useState(false);
-
     const { register, handleSubmit, formState: { errors }, reset, watch, getValues, setValue } = useForm<LLMConfig>({
         defaultValues: {
             name: '',
@@ -34,6 +33,7 @@ export default function SettingsLLM(): React.JSX.Element {
             isActive: false
         }
     });
+    const provider = watch('provider')
 
     const onSubmit = async (data: LLMConfig): Promise<void> => {
         setIsLoading(true);
@@ -42,11 +42,11 @@ export default function SettingsLLM(): React.JSX.Element {
         try {
             if (data.apiKey) {
                 const validationRules = {
-                    openai: { prefix: PROVIDER_API_KEY_PREFIXES.openai, message: 'OpenAI API Key必须以sk-开头' },
-                    anthropic: { prefix: PROVIDER_API_KEY_PREFIXES.anthropic, message: 'Anthropic API Key必须以sk-ant-开头' },
-                    azure: { prefix: PROVIDER_API_KEY_PREFIXES.azure, message: '' },
-                    bailian: { prefix: PROVIDER_API_KEY_PREFIXES.bailian, message: 'Bailian API Key必须以sk-开头' },
-                    longcat: { prefix: PROVIDER_API_KEY_PREFIXES.longcat, message: 'LongCat API Key必须以ak_开头' }
+                    openai: { prefix: PROVIDER_MATES.openai.prefix, message: 'OpenAI API Key必须以sk-开头' },
+                    anthropic: { prefix: PROVIDER_MATES.anthropic.prefix, message: 'Anthropic API Key必须以sk-ant-开头' },
+                    azure: { prefix: PROVIDER_MATES.azure.prefix, message: '' },
+                    bailian: { prefix: PROVIDER_MATES.bailian.prefix, message: 'Bailian API Key必须以sk-开头' },
+                    longcat: { prefix: PROVIDER_MATES.longcat.prefix, message: 'LongCat API Key必须以ak_开头' }
                 };
 
                 const rule = validationRules[data.provider as keyof typeof validationRules];
@@ -255,17 +255,11 @@ export default function SettingsLLM(): React.JSX.Element {
                             提供商
                         </label>
                         <CustomSelect
-                            value={watch('provider')}
+                            value={provider}
                             onChange={(value) => {
                                 setValue('provider', value as LLMConfig['provider'], { shouldValidate: true });
                             }}
-                            options={[
-                                { value: 'openai', label: 'OpenAI' },
-                                { value: 'anthropic', label: 'Anthropic' },
-                                { value: 'azure', label: 'Azure OpenAI' },
-                                { value: 'bailian', label: 'Bailian (阿里百炼)' },
-                                { value: 'longcat', label: 'Longcat (LongCat)' }
-                            ]}
+                            options={Object.entries(PROVIDER_MATES).map(([key, item]) => ({ value: key, label: item.name }))}
                             placeholder="选择提供商"
                             error={!!errors.provider}
                         />
@@ -281,7 +275,7 @@ export default function SettingsLLM(): React.JSX.Element {
                         <CustomInput
                             type="password"
                             {...register('apiKey', { required: '请输入API Key' })}
-                            placeholder={PROVIDER_API_KEY_PREFIXES[watch('provider')] + "..."}
+                            placeholder={(PROVIDER_MATES[provider]?.prefix || "") + "..."}
                             error={errors.apiKey?.message}
                         />
                         {errors.apiKey && (
@@ -305,7 +299,7 @@ export default function SettingsLLM(): React.JSX.Element {
                         </label>
                         <CustomInput
                             {...register('baseUrl')}
-                            placeholder={PROVIDER_DEFAULT_BASE_URLS[getValues('provider')] || 'https://api.openai.com/v1'}
+                            placeholder={(PROVIDER_MATES[provider]?.baseUrl ?? "") || 'https://api.openai.com/v1'}
                             helper="留空使用默认地址，或使用自定义代理地址"
                         />
                     </div>

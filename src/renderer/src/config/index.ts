@@ -34,23 +34,37 @@ export const LLM_DEFAULTS = {
   maxTokens: 2000,
   baseUrl: '',
 }
-
-/** 提供商默认 API 地址（仅作 placeholder 提示） */
-export const PROVIDER_DEFAULT_BASE_URLS: Record<string, string> = {
-  openai: 'https://api.openai.com/v1',
-  anthropic: 'https://api.anthropic.com',
-  azure: 'https://your-resource.openai.azure.com/',
-  bailian: 'https://dashscope.aliyuncs.com/compatible-mode/v1',
-  longcat: 'https://api.longcat.ai',
-}
-
-/** 提供商 API Key 前缀校验规则 */
-export const PROVIDER_API_KEY_PREFIXES: Record<string, string> = {
-  openai: 'sk-',
-  anthropic: 'sk-ant-',
-  azure: '',
-  bailian: 'sk-',
-  longcat: 'ak_',
+/** 提供商信息 */
+export const PROVIDER_MATES: Record<string, {
+  name: string, // 提供商显示名称
+  baseUrl: string, // 默认 API 地址（仅作 placeholder 提示）
+  prefix: string // 提供商 API Key 前缀校验规则
+}> = {
+  openai: {
+    name: 'OpenAI',
+    baseUrl: 'https://api.openai.com/v1',
+    prefix: 'sk-'
+  },
+  anthropic: {
+    name: 'Anthropic',
+    baseUrl: 'https://api.anthropic.com',
+    prefix: 'sk-ant-'
+  },
+  azure: {
+    name: 'Azure OpenAI',
+    baseUrl: 'https://your-resource.openai.azure.com/',
+    prefix: ''
+  },
+  bailian: {
+    name: 'Bailian (阿里百炼)',
+    baseUrl: 'https://dashscope.aliyuncs.com/compatible-mode/v1',
+    prefix: 'sk-'
+  },
+  longcat: {
+    name: 'Longcat (美团龙猫)',
+    baseUrl: 'https://api.longcat.ai',
+    prefix: 'sk-'
+  },
 }
 
 /** Temperature 输入范围 */
