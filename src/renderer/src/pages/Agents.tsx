@@ -53,9 +53,9 @@ export default function Agents(): React.JSX.Element {
         setIsLoading(true);
         try {
             if (selectedAgent) {
-                updateAgent(selectedAgent.id, formData);
+                await updateAgent(selectedAgent.id, formData);
             } else {
-                addAgent(formData);
+                await addAgent(formData);
             }
             setIsEditing(false);
             setSelectedAgent(null);
