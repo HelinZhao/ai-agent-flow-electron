@@ -12,9 +12,6 @@ import { loadAttachmentAsDataUrl } from './file'
 import { PROVIDER_DEFAULT_BASE_URLS, DEFAULT_TEMPERATURE, DEFAULT_MAX_TOKENS, MIN_MAX_TOKENS_WITH_TOOLS, LLM_MAX_RETRIES, LLM_SDK_MAX_RETRIES, LLM_RETRY_BASE_DELAY, LLM_RETRY_MAX_DELAY, LANGGRAPH_RECURSION_LIMIT_WITH_TOOLS, LANGGRAPH_RECURSION_LIMIT_NO_TOOLS, DANGEROUS_TOOLS } from '../config'
 
 export const getLLMEndpoint = (llmConfig: LLMConfig): string => {
-  if (llmConfig.provider === 'azure') {
-    return llmConfig.baseUrl || ''
-  }
   const defaultUrl = PROVIDER_DEFAULT_BASE_URLS[llmConfig.provider]
   if (defaultUrl) {
     return llmConfig.baseUrl || defaultUrl

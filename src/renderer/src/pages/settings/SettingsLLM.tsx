@@ -41,17 +41,10 @@ export default function SettingsLLM(): React.JSX.Element {
 
         try {
             if (data.apiKey) {
-                const validationRules = {
-                    openai: { prefix: PROVIDER_MATES.openai.prefix, message: 'OpenAI API Key必须以sk-开头' },
-                    anthropic: { prefix: PROVIDER_MATES.anthropic.prefix, message: 'Anthropic API Key必须以sk-ant-开头' },
-                    azure: { prefix: PROVIDER_MATES.azure.prefix, message: '' },
-                    bailian: { prefix: PROVIDER_MATES.bailian.prefix, message: 'Bailian API Key必须以sk-开头' },
-                    longcat: { prefix: PROVIDER_MATES.longcat.prefix, message: 'LongCat API Key必须以ak_开头' }
-                };
-
-                const rule = validationRules[data.provider as keyof typeof validationRules];
-                if (rule && rule.prefix && !data.apiKey.startsWith(rule.prefix)) {
-                    throw new Error(rule.message);
+                const previderMate = PROVIDER_MATES[data.provider]
+                if (previderMate && !data.apiKey.startsWith(previderMate.prefix)) {
+                    const message = `${previderMate.name} API Key必须以${previderMate.prefix}开头`;
+                    throw new Error(message);
                 }
             }
 

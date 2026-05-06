@@ -50,11 +50,6 @@ export const PROVIDER_MATES: Record<string, {
     baseUrl: 'https://api.anthropic.com',
     prefix: 'sk-ant-'
   },
-  azure: {
-    name: 'Azure OpenAI',
-    baseUrl: 'https://your-resource.openai.azure.com/',
-    prefix: ''
-  },
   bailian: {
     name: 'Bailian (阿里百炼)',
     baseUrl: 'https://dashscope.aliyuncs.com/compatible-mode/v1',
@@ -63,6 +58,11 @@ export const PROVIDER_MATES: Record<string, {
   longcat: {
     name: 'Longcat (美团龙猫)',
     baseUrl: 'https://api.longcat.ai',
+    prefix: 'ak_'
+  },
+  deepseek: {
+    name: 'Deepseek (深度求索)',
+    baseUrl: 'https://api.deepseek.com',
     prefix: 'sk-'
   },
 }

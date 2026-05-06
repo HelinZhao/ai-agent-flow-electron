@@ -78,18 +78,18 @@ export const LLM_CACHE_TTL = 10 * 60 * 1000 // 10 分钟
 export const PROVIDER_DEFAULT_BASE_URLS: Record<string, string> = {
   openai: 'https://api.openai.com/v1',
   anthropic: 'https://api.anthropic.com/v1',
-  azure: 'https://your-resource.openai.azure.com/',
   bailian: 'https://dashscope.aliyuncs.com/compatible-mode/v1',
   longcat: 'https://api.longcat.chat/openai/v1',
+  deepseek: 'https://api.deepseek.com',
 }
 
 /** LLM 提供商对应的 API Key 常见前缀（用于输入校验提示） */
 export const PROVIDER_API_KEY_PREFIXES: Record<string, string> = {
   openai: 'sk-',
   anthropic: 'sk-ant-',
-  azure: '',
   bailian: 'sk-',
   longcat: 'ak_',
+  deepseek: 'sk-',
 }
 
 // ========== 视觉模型检测 ==========
