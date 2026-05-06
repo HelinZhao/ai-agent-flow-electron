@@ -9,6 +9,7 @@ import MarkdownPreview from '@renderer/components/MarkdownPreview';
 import AttachmentPreview from '@renderer/components/chat/AttachmentPreview';
 import AttachmentDisplay from '@renderer/components/chat/AttachmentDisplay';
 import CustomFileUpload from '@renderer/components/ui/CustomFileUpload';
+import { SERVER_BASE_URL } from '@renderer/config';
 
 // 工具名称中文映射
 const TOOL_LABELS: Record<string, string> = {
@@ -382,19 +383,17 @@ export default function Chat(): React.JSX.Element {
             setPreviewImage(att);
         } else {
             // 非图片文件：用Express URL在新窗口打开
-            const SERVER_URL = 'http://localhost:3100';
             const url = att.url
-                ? (att.url.startsWith('/') ? `${SERVER_URL}${att.url}` : att.url)
-                : `${SERVER_URL}/api/attachments/${att.id}/${encodeURIComponent(att.name)}`;
+                ? (att.url.startsWith('/') ? `${SERVER_BASE_URL}${att.url}` : att.url)
+                : `${SERVER_BASE_URL}/api/attachments/${att.id}/${encodeURIComponent(att.name)}`;
             window.open(url, '_blank');
         }
     };
 
     const getPreviewImageUrl = (att: AttachmentMetadata): string => {
-        const SERVER_URL = 'http://localhost:3100';
-        if (att.url) return att.url.startsWith('/') ? `${SERVER_URL}${att.url}` : att.url;
+        if (att.url) return att.url.startsWith('/') ? `${SERVER_BASE_URL}${att.url}` : att.url;
         if (att.previewUrl) return att.previewUrl;
-        return `${SERVER_URL}/api/attachments/${att.id}/${encodeURIComponent(att.name)}`;
+        return `${SERVER_BASE_URL}/api/attachments/${att.id}/${encodeURIComponent(att.name)}`;
     };
 
     return (

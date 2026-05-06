@@ -6,6 +6,7 @@ import { llmConfigApi } from '@renderer/lib/api';
 import CustomSelect from '@renderer/components/ui/CustomSelect';
 import CustomInput from '@renderer/components/ui/CustomInput';
 import CustomButton from '@renderer/components/ui/CustomButton';
+import { LLM_DEFAULTS, PROVIDER_DEFAULT_BASE_URLS, PROVIDER_API_KEY_PREFIXES, TEMPERATURE_RANGE, MAX_TOKENS_RANGE, MIN_LLM_CONFIG_COUNT } from '@renderer/config';
 
 export default function SettingsLLM(): React.JSX.Element {
     const {
@@ -24,12 +25,12 @@ export default function SettingsLLM(): React.JSX.Element {
     const { register, handleSubmit, formState: { errors }, reset, watch, getValues, setValue } = useForm<LLMConfig>({
         defaultValues: {
             name: '',
-            provider: 'openai',
+            provider: LLM_DEFAULTS.provider,
             apiKey: '',
-            model: 'gpt-3.5-turbo',
-            baseUrl: '',
-            temperature: 0.7,
-            maxTokens: 2000,
+            model: LLM_DEFAULTS.model,
+            baseUrl: LLM_DEFAULTS.baseUrl,
+            temperature: LLM_DEFAULTS.temperature,
+            maxTokens: LLM_DEFAULTS.maxTokens,
             isActive: false
         }
     });
@@ -41,11 +42,11 @@ export default function SettingsLLM(): React.JSX.Element {
         try {
             if (data.apiKey) {
                 const validationRules = {
-                    openai: { prefix: 'sk-', message: 'OpenAI API Key必须以sk-开头' },
-                    anthropic: { prefix: 'sk-ant-', message: 'Anthropic API Key必须以sk-ant-开头' },
-                    azure: { prefix: '', message: '' },
-                    bailian: { prefix: 'sk-', message: 'Bailian API Key必须以sk-开头' },
-                    longcat: { prefix: 'ak_', message: 'LongCat API Key必须以ak_开头' }
+                    openai: { prefix: PROVIDER_API_KEY_PREFIXES.openai, message: 'OpenAI API Key必须以sk-开头' },
+                    anthropic: { prefix: PROVIDER_API_KEY_PREFIXES.anthropic, message: 'Anthropic API Key必须以sk-ant-开头' },
+                    azure: { prefix: PROVIDER_API_KEY_PREFIXES.azure, message: '' },
+                    bailian: { prefix: PROVIDER_API_KEY_PREFIXES.bailian, message: 'Bailian API Key必须以sk-开头' },
+                    longcat: { prefix: PROVIDER_API_KEY_PREFIXES.longcat, message: 'LongCat API Key必须以ak_开头' }
                 };
 
                 const rule = validationRules[data.provider as keyof typeof validationRules];
@@ -149,12 +150,12 @@ export default function SettingsLLM(): React.JSX.Element {
     const startNewConfig = () => {
         reset({
             name: '',
-            provider: 'openai',
+            provider: LLM_DEFAULTS.provider,
             apiKey: '',
-            model: 'gpt-3.5-turbo',
-            baseUrl: '',
-            temperature: 0.7,
-            maxTokens: 2000,
+            model: LLM_DEFAULTS.model,
+            baseUrl: LLM_DEFAULTS.baseUrl,
+            temperature: LLM_DEFAULTS.temperature,
+            maxTokens: LLM_DEFAULTS.maxTokens,
             isActive: false
         });
         setEditingConfig(null);
@@ -218,7 +219,7 @@ export default function SettingsLLM(): React.JSX.Element {
                                     onClick={() => handleDelete(config.id!)}
                                     variant="danger"
                                     size="sm"
-                                    disabled={llmConfigs.length <= 1}
+                                    disabled={llmConfigs.length <= MIN_LLM_CONFIG_COUNT}
                                 >
                                     删除
                                 </CustomButton>
@@ -280,7 +281,7 @@ export default function SettingsLLM(): React.JSX.Element {
                         <CustomInput
                             type="password"
                             {...register('apiKey', { required: '请输入API Key' })}
-                            placeholder="sk-..."
+                            placeholder={PROVIDER_API_KEY_PREFIXES[watch('provider')] + "..."}
                             error={errors.apiKey?.message}
                         />
                         {errors.apiKey && (
@@ -304,14 +305,7 @@ export default function SettingsLLM(): React.JSX.Element {
                         </label>
                         <CustomInput
                             {...register('baseUrl')}
-                            placeholder={
-                                getValues('provider') === 'openai' ? 'https://api.openai.com/v1' :
-                                    getValues('provider') === 'anthropic' ? 'https://api.anthropic.com' :
-                                        getValues('provider') === 'azure' ? 'https://your-resource.openai.azure.com/' :
-                                            getValues('provider') === 'bailian' ? 'https://dashscope.aliyuncs.com/compatible-mode/v1' :
-                                                getValues('provider') === 'longcat' ? 'https://api.longcat.ai' :
-                                                    'https://api.openai.com/v1'
-                            }
+                            placeholder={PROVIDER_DEFAULT_BASE_URLS[getValues('provider')] || 'https://api.openai.com/v1'}
                             helper="留空使用默认地址，或使用自定义代理地址"
                         />
                     </div>
@@ -323,9 +317,9 @@ export default function SettingsLLM(): React.JSX.Element {
                             </label>
                             <input
                                 type="range"
-                                min="0"
-                                max="2"
-                                step="0.1"
+                                min={TEMPERATURE_RANGE.min}
+                                max={TEMPERATURE_RANGE.max}
+                                step={TEMPERATURE_RANGE.step}
                                 {...register('temperature', { valueAsNumber: true })}
                                 className="w-full bg-white dark:bg-gray-700"
                             />
@@ -337,8 +331,8 @@ export default function SettingsLLM(): React.JSX.Element {
                             </label>
                             <CustomInput
                                 type="number"
-                                min="1"
-                                max="1024000"
+                                min={MAX_TOKENS_RANGE.min}
+                                max={MAX_TOKENS_RANGE.max}
                                 {...register('maxTokens', { valueAsNumber: true })}
                             />
                         </div>

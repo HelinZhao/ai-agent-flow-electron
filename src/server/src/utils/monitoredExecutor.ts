@@ -19,6 +19,7 @@ import { AttachmentPayload } from './shared'
 import { retrieveContext } from './knowledge'
 import { v4 as uuidv4 } from 'uuid'
 import { SqliteSaver } from "@langchain/langgraph-checkpoint-sqlite";
+import { DB_FILENAME, DANGEROUS_TOOLS, LANGGRAPH_RECURSION_LIMIT_WITH_TOOLS, LANGGRAPH_RECURSION_LIMIT_NO_TOOLS } from '../config'
 
 // 执行状态存储
 interface ExecutionState {
@@ -43,7 +44,7 @@ interface ExecutionState {
   pendingApproval: { resolve: (response: HITLResponse) => void; request: HITLRequest } | null
   attachments?: AttachmentPayload[]
 }
-const checkpointer = SqliteSaver.fromConnString(getDataDir('/database.sqlite'));
+const checkpointer = SqliteSaver.fromConnString(getDataDir(DB_FILENAME));
 
 // 带监控的LangGraph执行器
 export class MonitoredLangGraphExecutor {
@@ -716,7 +717,7 @@ export class MonitoredLangGraphExecutor {
       }
 
       // 构建 HITL 宯批回调
-      const hasDangerousTools = enabledTools.some((t: string) => ['writeFile', 'executeCommand', 'httpRequest'].includes(t))
+      const hasDangerousTools = enabledTools.some((t: string) => DANGEROUS_TOOLS.includes(t))
       const options: CallLLMOptions = hasDangerousTools
         ? {
           approvalCallback: async (request: HITLRequest): Promise<HITLResponse> => {

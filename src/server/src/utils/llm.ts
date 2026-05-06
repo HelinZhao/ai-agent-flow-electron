@@ -9,22 +9,17 @@ import { llmCache } from './llmCache'
 import { HITLRequest, HITLResponse, CallLLMOptions } from './hitl'
 import { AttachmentPayload, isVisionModel } from './shared'
 import { loadAttachmentAsDataUrl } from './file'
+import { PROVIDER_DEFAULT_BASE_URLS, DEFAULT_TEMPERATURE, DEFAULT_MAX_TOKENS, MIN_MAX_TOKENS_WITH_TOOLS, LLM_MAX_RETRIES, LLM_SDK_MAX_RETRIES, LLM_RETRY_BASE_DELAY, LLM_RETRY_MAX_DELAY, LANGGRAPH_RECURSION_LIMIT_WITH_TOOLS, LANGGRAPH_RECURSION_LIMIT_NO_TOOLS, DANGEROUS_TOOLS } from '../config'
 
 export const getLLMEndpoint = (llmConfig: LLMConfig): string => {
-  switch (llmConfig.provider) {
-    case 'openai':
-      return 'https://api.openai.com/v1'
-    case 'anthropic':
-      return 'https://api.anthropic.com/v1'
-    case 'azure':
-      return llmConfig.baseUrl || ''
-    case 'bailian':
-      return llmConfig.baseUrl || 'https://dashscope.aliyuncs.com/compatible-mode/v1'
-    case 'longcat':
-      return llmConfig.baseUrl || 'https://api.longcat.chat/openai/v1'
-    default:
-      throw new Error(`不支持的LLM提供商: ${llmConfig.provider}`)
+  if (llmConfig.provider === 'azure') {
+    return llmConfig.baseUrl || ''
   }
+  const defaultUrl = PROVIDER_DEFAULT_BASE_URLS[llmConfig.provider]
+  if (defaultUrl) {
+    return llmConfig.baseUrl || defaultUrl
+  }
+  throw new Error(`不支持的LLM提供商: ${llmConfig.provider}`)
 }
 
 // 判断是否为可重试的瞬态错误（429 限流、网络断连等）
@@ -43,7 +38,7 @@ export const callLLM = async (
   options?: CallLLMOptions,
   attachments?: AttachmentPayload[]
 ): Promise<string> => {
-  const maxAttempts = 5
+  const maxAttempts = LLM_MAX_RETRIES
   let lastError: Error | null = null
 
   for (let attempt = 1; attempt <= maxAttempts; attempt++) {
@@ -54,8 +49,8 @@ export const callLLM = async (
       if (!isRetryableError(lastError) || attempt >= maxAttempts) {
         throw lastError
       }
-      // 429 限流需要更长等待，指数退避：30s, 60s, 120s, 240s
-      const waitSeconds = Math.min(30 * Math.pow(2, attempt - 1), 240)
+      // 429 限流需要更长等待，指数退避
+      const waitSeconds = Math.min(LLM_RETRY_BASE_DELAY * Math.pow(2, attempt - 1), LLM_RETRY_MAX_DELAY)
       console.log(`[LLM Agent] 第${attempt}次执行失败(${lastError.message})，${waitSeconds}秒后重试...`)
       await sleep(waitSeconds * 1000)
     }
@@ -74,14 +69,14 @@ const callLLMOnce = async (
 ): Promise<string> => {
   const hasTools = enabledTools.length > 0
   const effectiveMaxTokens = hasTools
-    ? Math.max(llmConfig.maxTokens || 2000, 4096)
-    : (llmConfig.maxTokens || 2000)
+    ? Math.max(llmConfig.maxTokens || DEFAULT_MAX_TOKENS, MIN_MAX_TOKENS_WITH_TOOLS)
+    : (llmConfig.maxTokens || DEFAULT_MAX_TOKENS)
 
   const llm = new ChatOpenAI({
     model: llmConfig.model,
-    temperature: llmConfig.temperature || 0.7,
+    temperature: llmConfig.temperature || DEFAULT_TEMPERATURE,
     maxTokens: effectiveMaxTokens,
-    maxRetries: 6,
+    maxRetries: LLM_SDK_MAX_RETRIES,
     apiKey: llmConfig.apiKey,
     configuration: {
       baseURL: getLLMEndpoint(llmConfig)
@@ -92,7 +87,7 @@ const callLLMOnce = async (
   const tools = getToolsByIds(enabledTools)
 
   // 构建 HITL 中间件：危险工具需要审批，安全工具自动放行
-  const needsApproval = enabledTools.some(t => ['writeFile', 'executeCommand', 'httpRequest'].includes(t))
+  const needsApproval = enabledTools.some(t => DANGEROUS_TOOLS.includes(t))
   const useHITL = hasTools && needsApproval && options?.approvalCallback
 
   // 构建消息（公共逻辑，直接调用和 agent 路径共用）
@@ -158,7 +153,7 @@ const callLLMOnce = async (
   if (useHITL) {
     for (const toolId of enabledTools) {
       // 危险工具拦截，安全工具自动放行
-      interruptOn[toolId] = ['writeFile', 'executeCommand', 'httpRequest'].includes(toolId)
+      interruptOn[toolId] = DANGEROUS_TOOLS.includes(toolId)
     }
   }
 
@@ -172,7 +167,7 @@ const callLLMOnce = async (
     checkpointer,
   });
 
-  const recursionLimit = hasTools ? 50 : 25
+  const recursionLimit = hasTools ? LANGGRAPH_RECURSION_LIMIT_WITH_TOOLS : LANGGRAPH_RECURSION_LIMIT_NO_TOOLS
 
   // HITL 模式：invoke + 检查 interrupt + 等待审批 + resume 循环
   if (useHITL) {

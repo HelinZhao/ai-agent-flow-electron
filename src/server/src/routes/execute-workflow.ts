@@ -2,6 +2,7 @@ import { Router } from 'express'
 import { Workflow, LLMConfig } from '../types'
 import { AgentModel, WorkflowModel, LLMConfigModel } from '../models'
 import { MonitoredLangGraphExecutor } from '../utils/monitoredExecutor'
+import { WORKFLOW_POLL_MAX_ATTEMPTS, WORKFLOW_POLL_INTERVAL } from '../config'
 
 const router = Router()
 
@@ -393,7 +394,7 @@ router.post('/', async (req, res) => {
 
     // 等待执行完成（简化处理）
     let attempts = 0
-    const maxAttempts = 100 // 最多等待50秒（100 * 500ms）
+    const maxAttempts = WORKFLOW_POLL_MAX_ATTEMPTS
 
     while (attempts < maxAttempts) {
       const state = monitoredExecutor.getExecutionState(result)
@@ -411,7 +412,7 @@ router.post('/', async (req, res) => {
         })
       }
 
-      await new Promise((resolve) => setTimeout(resolve, 500))
+      await new Promise((resolve) => setTimeout(resolve, WORKFLOW_POLL_INTERVAL))
       attempts++
     }
 

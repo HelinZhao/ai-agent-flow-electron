@@ -10,8 +10,9 @@ import {
   KnowledgeBase,
   KnowledgeChunk
 } from '@renderer/types'
+import { API_BASE_URL, POLL_MAX_ATTEMPTS, POLL_INTERVAL } from '@renderer/config'
 
-const baseURL = 'http://localhost:3100/api'
+const baseURL = API_BASE_URL
 
 // 创建axios实例
 const api = axios.create({
@@ -364,8 +365,8 @@ export const workflowExecutionApi = {
   }> => {
     return new Promise((resolve, reject) => {
       let attempts = 0
-      const maxAttempts = 100 // 最多等待100秒（200 * 500ms）
-      const pollInterval = 1000 // 500ms轮询一次
+      const maxAttempts = POLL_MAX_ATTEMPTS // 最多等待100秒（200 * 500ms）
+      const pollInterval = POLL_INTERVAL // 500ms轮询一次
 
       const poll = async () => {
         try {

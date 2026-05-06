@@ -3,6 +3,7 @@ import fs from 'fs/promises'
 import path from 'path'
 import iconv from 'iconv-lite'
 import jschardet from 'jschardet'
+import { CLI_DEFAULT_TIMEOUT, CLI_MAX_BUFFER } from '../config'
 
 // Buffer 编码解码：jschardet 自动检测 + iconv-lite 解码
 const decodeBuffer = (buf: Buffer): string => {
@@ -20,7 +21,7 @@ const decodeBuffer = (buf: Buffer): string => {
 
 // spawn 执行并收集输出（用于 npm/pip/node/python 模板）
 const spawnWithOutput = (cmd: string, args: string[], options: { cwd?: string; timeout?: number }): Promise<{ stdout: string; stderr: string; exitCode: number | null }> => {
-  const timeoutMs = (options.timeout || 30) * 1000
+  const timeoutMs = (options.timeout || CLI_DEFAULT_TIMEOUT) * 1000
   return new Promise((resolve, reject) => {
     const child = spawn(cmd, args, {
       cwd: options.cwd || process.cwd(),
@@ -36,7 +37,7 @@ const spawnWithOutput = (cmd: string, args: string[], options: { cwd?: string; t
 
     const timer = setTimeout(() => {
       child.kill()
-      reject(new Error(`命令执行超时 (超过 ${options.timeout || 30} 秒)`))
+      reject(new Error(`命令执行超时 (超过 ${options.timeout || CLI_DEFAULT_TIMEOUT} 秒)`))
     }, timeoutMs)
 
     child.on('close', (code: number | null) => {
@@ -62,7 +63,7 @@ export const executeCliTemplate = async (
   options: { workingDirectory?: string; timeout?: number }
 ): Promise<{ stdout: string; stderr: string; exitCode: number | null }> => {
   const cwd = options.workingDirectory || process.cwd()
-  const timeout = options.timeout || 30
+  const timeout = options.timeout || CLI_DEFAULT_TIMEOUT
 
   switch (templateId) {
     case 'npm_install': {
@@ -170,18 +171,18 @@ export const executeCliCommand = async (options: CliExecutionOptions): Promise<{
     }
   }
 
-  const timeoutMs = (timeout || 30) * 1000
+  const timeoutMs = (timeout || CLI_DEFAULT_TIMEOUT) * 1000
 
   return new Promise((resolve, reject) => {
     exec(command, {
       cwd: workingDirectory || process.cwd(),
       timeout: timeoutMs,
-      maxBuffer: 1024 * 1024 * 10,
+      maxBuffer: CLI_MAX_BUFFER,
       windowsHide: true,
       encoding: 'buffer',
     }, (error, stdoutBuf, stderrBuf) => {
       if (error && error.killed) {
-        reject(new Error(`命令执行超时 (超过 ${timeout || 30} 秒)`))
+        reject(new Error(`命令执行超时 (超过 ${timeout || CLI_DEFAULT_TIMEOUT} 秒)`))
         return
       }
 

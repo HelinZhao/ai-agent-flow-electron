@@ -6,18 +6,13 @@ import { KnowledgeBaseModel } from '../models'
 import { LLMConfigModel } from '../models'
 import { getDataDir } from '../utils/file'
 import { ingestDocument, deleteDocumentChunks, deleteAllChunks, getDocumentStats, retrieveContext, getChunksByDocument, addChunk, updateChunkContent, deleteSingleChunk, toggleChunkEnabled, reconstructDocumentFromChunks } from '../utils/knowledge'
+import { PROVIDER_EMBEDDING_MODEL, UPLOAD_DIR, KB_UPLOAD_EXTENSIONS, DEFAULT_CHUNK_SIZE, DEFAULT_CHUNK_OVERLAP, DEFAULT_TOP_K } from '../config'
 
-// 提供商 → 默认 embedding 模型名
-const PROVIDER_EMBEDDING_MODEL: Record<string, string> = {
-  openai: 'text-embedding-3-small',
-  bailian: 'text-embedding-v3',
-  longcat: 'text-embedding-3-small',
-  anthropic: 'text-embedding-3-small',
-  azure: 'text-embedding-3-small',
-}
+// 提供商 → 默认 embedding 模型名（从集中配置导入）
+// 导入自: PROVIDER_EMBEDDING_MODEL
 
 // 确保 uploads 目录存在
-const uploadsDir = getDataDir('/uploads')
+const uploadsDir = getDataDir(UPLOAD_DIR)
 fs.mkdir(uploadsDir, { recursive: true }).catch(() => {})
 
 const router = Router()
@@ -29,12 +24,14 @@ const upload = multer({
       cb(null, uploadsDir)
     },
     filename: (_req, file, cb) => {
-      cb(null, `${Date.now()}-${file.originalname}`)
+      // multer 用 Latin-1 解码 originalname，中文文件名需要还原为 UTF-8
+      const realName = Buffer.from(file.originalname, 'latin1').toString('utf-8')
+      cb(null, `${Date.now()}-${realName}`)
     }
   }),
   fileFilter: (_req, file, cb) => {
     const ext = path.extname(file.originalname).toLowerCase()
-    if (['.txt', '.md'].includes(ext)) {
+    if (KB_UPLOAD_EXTENSIONS.includes(ext)) {
       cb(null, true)
     } else {
       cb(new Error(`暂不支持 ${ext} 格式的文件，仅支持 txt/md`))
@@ -78,17 +75,17 @@ router.post('/', async (req, res) => {
     // 根据当前活跃 LLM 提供商自动设置 embedding 模型
     const activeConfig = await LLMConfigModel.findOne({ where: { isActive: true } })
     const embeddingModel = activeConfig
-      ? (PROVIDER_EMBEDDING_MODEL[activeConfig.provider] || 'text-embedding-3-small')
-      : 'text-embedding-3-small'
+      ? (PROVIDER_EMBEDDING_MODEL[activeConfig.provider] || PROVIDER_EMBEDDING_MODEL.openai)
+      : PROVIDER_EMBEDDING_MODEL.openai
 
     const kb = await KnowledgeBaseModel.create({
       name,
       description: description || '',
       type: type || 'internal',
       embeddingModel,
-      chunkSize: chunkSize || 500,
-      chunkOverlap: chunkOverlap || 50,
-      topK: topK || 3,
+      chunkSize: chunkSize || DEFAULT_CHUNK_SIZE,
+      chunkOverlap: chunkOverlap || DEFAULT_CHUNK_OVERLAP,
+      topK: topK || DEFAULT_TOP_K,
       apiUrl: apiUrl || '',
       apiKey: apiKey || ''
     })
@@ -167,7 +164,7 @@ router.post('/:id/documents', upload.single('file'), async (req, res) => {
       return res.status(400).json({ error: '请上传文件' })
     }
 
-    const chunkCount = await ingestDocument(id as string, req.file.path, req.file.originalname)
+    const chunkCount = await ingestDocument(id as string, req.file.path, Buffer.from(req.file.originalname, 'latin1').toString('utf-8'))
 
     // 处理完成后删除临时上传文件
     try { await fs.unlink(req.file.path) } catch {}

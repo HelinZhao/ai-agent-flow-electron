@@ -5,6 +5,7 @@ import { KnowledgeBase } from '@renderer/types'
 import CustomInput from '@renderer/components/ui/CustomInput'
 import CustomButton from '@renderer/components/ui/CustomButton'
 import KnowledgeDetail from './KnowledgeDetail'
+import { KB_DEFAULTS, CHUNK_SIZE_RANGE, CHUNK_OVERLAP_RANGE, TOP_K_RANGE } from '@renderer/config'
 
 export default function SettingsKnowledge(): React.JSX.Element {
   const {
@@ -26,10 +27,10 @@ export default function SettingsKnowledge(): React.JSX.Element {
     defaultValues: {
       name: '',
       description: '',
-      type: 'internal',
-      chunkSize: 500,
-      chunkOverlap: 50,
-      topK: 3,
+      type: KB_DEFAULTS.type,
+      chunkSize: KB_DEFAULTS.chunkSize,
+      chunkOverlap: KB_DEFAULTS.chunkOverlap,
+      topK: KB_DEFAULTS.topK,
       apiUrl: '',
       apiKey: '',
     }
@@ -83,10 +84,10 @@ export default function SettingsKnowledge(): React.JSX.Element {
     reset({
       name: '',
       description: '',
-      type: 'internal',
-      chunkSize: 500,
-      chunkOverlap: 50,
-      topK: 3,
+      type: KB_DEFAULTS.type,
+      chunkSize: KB_DEFAULTS.chunkSize,
+      chunkOverlap: KB_DEFAULTS.chunkOverlap,
+      topK: KB_DEFAULTS.topK,
       apiUrl: '',
       apiKey: '',
     })
@@ -306,15 +307,15 @@ export default function SettingsKnowledge(): React.JSX.Element {
                 <div className="grid grid-cols-3 gap-3">
                   <div>
                     <label className="block text-xs font-medium text-gray-500 dark:text-gray-400 mb-1">分块大小</label>
-                    <CustomInput type="number" min={100} max={2000} {...register('chunkSize', { valueAsNumber: true })} />
+                    <CustomInput type="number" min={CHUNK_SIZE_RANGE.min} max={CHUNK_SIZE_RANGE.max} {...register('chunkSize', { valueAsNumber: true })} />
                   </div>
                   <div>
                     <label className="block text-xs font-medium text-gray-500 dark:text-gray-400 mb-1">分块重叠</label>
-                    <CustomInput type="number" min={0} max={500} {...register('chunkOverlap', { valueAsNumber: true })} />
+                    <CustomInput type="number" min={CHUNK_OVERLAP_RANGE.min} max={CHUNK_OVERLAP_RANGE.max} {...register('chunkOverlap', { valueAsNumber: true })} />
                   </div>
                   <div>
                     <label className="block text-xs font-medium text-gray-500 dark:text-gray-400 mb-1">检索数量</label>
-                    <CustomInput type="number" min={1} max={20} {...register('topK', { valueAsNumber: true })} />
+                    <CustomInput type="number" min={TOP_K_RANGE.min} max={TOP_K_RANGE.max} {...register('topK', { valueAsNumber: true })} />
                   </div>
                 </div>
               </div>
@@ -336,7 +337,7 @@ export default function SettingsKnowledge(): React.JSX.Element {
                 </div>
                 <div>
                   <label className="block text-xs font-medium text-gray-500 dark:text-gray-400 mb-1">检索数量</label>
-                  <CustomInput type="number" min={1} max={20} {...register('topK', { valueAsNumber: true })} />
+                  <CustomInput type="number" min={TOP_K_RANGE.min} max={TOP_K_RANGE.max} {...register('topK', { valueAsNumber: true })} />
                 </div>
               </div>
             )}

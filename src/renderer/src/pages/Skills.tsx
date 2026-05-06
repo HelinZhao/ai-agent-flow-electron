@@ -8,6 +8,7 @@ import MarkdownPreview from '@renderer/components/MarkdownPreview';
 import CustomButton from '@renderer/components/ui/CustomButton';
 import CustomInput from '@renderer/components/ui/CustomInput';
 import CustomFileUpload from '@renderer/components/ui/CustomFileUpload';
+import { SKILL_IMPORT_ACCEPT } from '@renderer/config';
 
 const mdParser = new MarkdownIt(/* Markdown-it options */);
 
@@ -113,7 +114,7 @@ export default function Skills(): React.JSX.Element {
                 </div>
                 <div className="flex space-x-2">
                     <CustomFileUpload
-                        accept=".md,.txt"
+                        accept={SKILL_IMPORT_ACCEPT}
                         onChange={handleImportFromFile}
                     >
                         从文件导入

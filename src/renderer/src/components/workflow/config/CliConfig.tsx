@@ -2,6 +2,7 @@ import React from 'react';
 import CustomSelect from '../../ui/CustomSelect';
 import CustomInput from '../../ui/CustomInput';
 import CustomTextarea from '../../ui/CustomTextarea';
+import { CLI_DEFAULTS } from '@renderer/config';
 
 interface TemplateVariable {
   name: string
@@ -37,8 +38,8 @@ const CliConfig: React.FC<CliConfigProps> = ({ config, onConfigChange }) => {
     templateId: 'custom',
     templateVariables: {},
     workingDirectory: '',
-    timeout: 30,
-    outputMode: 'raw',
+    timeout: CLI_DEFAULTS.timeout,
+    outputMode: CLI_DEFAULTS.outputMode,
     llmProcessPrompt: '',
   }
 
@@ -143,8 +144,8 @@ const CliConfig: React.FC<CliConfigProps> = ({ config, onConfigChange }) => {
         </label>
         <CustomInput
           type="number"
-          value={cliConfig.timeout || 30}
-          onChange={(e) => updateCliConfig('timeout', parseInt(e.target.value) || 30)}
+          value={cliConfig.timeout || CLI_DEFAULTS.timeout}
+          onChange={(e) => updateCliConfig('timeout', parseInt(e.target.value) || CLI_DEFAULTS.timeout)}
           placeholder="30"
         />
       </div>
@@ -154,7 +155,7 @@ const CliConfig: React.FC<CliConfigProps> = ({ config, onConfigChange }) => {
           输出模式
         </label>
         <CustomSelect
-          value={cliConfig.outputMode || 'raw'}
+          value={cliConfig.outputMode || CLI_DEFAULTS.outputMode}
           onChange={(value) => updateCliConfig('outputMode', value)}
           options={[
             { value: 'raw', label: '原始输出' },

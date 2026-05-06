@@ -1,7 +1,8 @@
 import { BaseCache } from '@langchain/core/caches'
 import { Generation } from '@langchain/core/outputs'
+import { LLM_CACHE_TTL } from '../config'
 
-const CACHE_TTL_MS = 10 * 60 * 1000 // 10分钟
+const CACHE_TTL_MS = LLM_CACHE_TTL
 // 带 TTL 的 LLM 缓存，条目超过指定时间后自动淘汰，避免内存无限增长
 export class TTLCache extends BaseCache<Generation[]> {
   private store = new Map<string, { value: Generation[]; ts: number }>()

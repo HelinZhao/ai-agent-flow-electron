@@ -4,6 +4,7 @@ import { KnowledgeBase } from '@renderer/types'
 import { knowledgeBaseApi } from '@renderer/lib/api'
 import CustomButton from '@renderer/components/ui/CustomButton'
 import ChunkViewer from '@renderer/components/workflow/config/ChunkViewer'
+import { KB_UPLOAD_ACCEPT } from '@renderer/config'
 
 interface KnowledgeDetailProps {
   kb: KnowledgeBase
@@ -31,7 +32,7 @@ export default function KnowledgeDetail({ kb, onBack, onEdit, onDelete }: Knowle
       await uploadDocumentToKB(kb.id, file)
       setMessage({ type: 'success', text: `文档 "${file.name}" 上传成功` })
       fileInputRef.current.value = ''
-      onBack() // refresh by going back and re-entering
+      getKnowledgeBases()
     } catch (error) {
       setMessage({ type: 'error', text: error instanceof Error ? error.message : '上传失败' })
     } finally {
@@ -44,7 +45,7 @@ export default function KnowledgeDetail({ kb, onBack, onEdit, onDelete }: Knowle
     try {
       await deleteDocumentFromKB(kb.id, docName)
       setMessage({ type: 'success', text: '文档删除成功' })
-      onBack() // refresh by going back and re-entering
+      getKnowledgeBases()
     } catch (error) {
       setMessage({ type: 'error', text: '删除文档失败' })
     } finally {
@@ -170,7 +171,7 @@ export default function KnowledgeDetail({ kb, onBack, onEdit, onDelete }: Knowle
               <input
                 ref={fileInputRef}
                 type="file"
-                accept=".txt,.md,.pdf,.csv"
+                accept={KB_UPLOAD_ACCEPT}
                 className="hidden"
                 onChange={handleUpload}
               />
@@ -222,8 +223,8 @@ export default function KnowledgeDetail({ kb, onBack, onEdit, onDelete }: Knowle
                     <span className="text-sm text-gray-700 dark:text-gray-300 truncate">{doc}</span>
                   </div>
 
-                  {/* 悬浮操作栏 — absolute 定位避免高度跳跃 */}
-                  <div className="absolute right-3 top-1/2 -translate-y-1/2 z-10 hidden group-hover/doc:flex items-center gap-1 px-2 py-1.5 rounded-xl border border-gray-200 dark:border-gray-600 bg-white dark:bg-gray-800 shadow-lg backdrop-blur-sm">
+                  {/* 悬浮操作栏 — absolute + opacity 避免高度跳跃 */}
+                  <div className="absolute right-3 top-1/2 -translate-y-1/2 z-10 flex items-center gap-1 px-2 py-1.5 rounded-xl border border-gray-200 dark:border-gray-600 bg-white dark:bg-gray-800 shadow-lg backdrop-blur-sm opacity-0 group-hover/doc:opacity-100 transition-opacity pointer-events-none group-hover/doc:pointer-events-auto">
                     <button
                       onClick={() => setChunkViewerState({ kbId: kb.id, docName: doc })}
                       className="flex items-center justify-center w-6 h-6 rounded-lg text-gray-400 hover:text-blue-600 dark:hover:text-blue-400 hover:bg-blue-50 dark:hover:bg-blue-900/20 transition-colors"

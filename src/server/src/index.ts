@@ -11,12 +11,13 @@ import knowledgeBaseRouter from './routes/knowledge-base'
 import dataRouter from './routes/data'
 import executeWorkflowRouter from './routes/execute-workflow'
 import { getDataDir } from './utils'
+import { SERVER_PORT, BODY_SIZE_LIMIT, ATTACHMENT_DIR, ATTACHMENT_CONTENT_TYPES, API_VERSION, API_DISPLAY_NAME } from './config'
 import { app } from 'electron'
 
 export class LocalServer {
   private app: express.Application
   private server: any = null
-  private port: number = 3100
+  private port: number = SERVER_PORT
 
   constructor() {
     this.app = express()
@@ -27,8 +28,8 @@ export class LocalServer {
   // 中间件
   private setupMiddleware(): void {
     this.app.use(cors())
-    this.app.use(express.json({ limit: '50mb' }))
-    this.app.use(express.urlencoded({ extended: true, limit: '50mb' }))
+    this.app.use(express.json({ limit: BODY_SIZE_LIMIT }))
+    this.app.use(express.urlencoded({ extended: true, limit: BODY_SIZE_LIMIT }))
     this.app.use(express.static('public'))
   }
 
@@ -61,19 +62,12 @@ export class LocalServer {
     // 附件文件服务：/api/attachments/:id/:filename
     this.app.get('/api/attachments/:id/:filename', async (req, res) => {
       const { id, filename } = req.params
-      const filePath = path.resolve(getDataDir('/attachments'), `${id}-${filename}`)
+      const filePath = path.resolve(getDataDir(ATTACHMENT_DIR), `${id}-${filename}`)
 
       try {
         const data = await fs.readFile(filePath)
         const ext = path.extname(filename).toLowerCase()
-        const contentTypes: Record<string, string> = {
-          '.jpg': 'image/jpeg', '.jpeg': 'image/jpeg', '.png': 'image/png',
-          '.gif': 'image/gif', '.webp': 'image/webp', '.svg': 'image/svg+xml',
-          '.pdf': 'application/pdf', '.txt': 'text/plain',
-          '.py': 'text/plain', '.js': 'text/javascript', '.ts': 'text/plain',
-          '.json': 'application/json', '.md': 'text/plain',
-        }
-        res.setHeader('Content-Type', contentTypes[ext] || 'application/octet-stream')
+        res.setHeader('Content-Type', ATTACHMENT_CONTENT_TYPES[ext] || 'application/octet-stream')
         res.setHeader('Content-Disposition', `inline; filename="${filename}"`)
         res.end(data)
       } catch (err) {
@@ -89,8 +83,8 @@ export class LocalServer {
     // 根路径
     this.app.get('/', (_req, res) => {
       res.status(200).json({
-        message: 'AI Agent Flow Designer API Server',
-        version: '1.0.0',
+        message: API_DISPLAY_NAME,
+        version: API_VERSION,
         endpoints: {
           workflows: '/api/workflows',
           agents: '/api/agents',

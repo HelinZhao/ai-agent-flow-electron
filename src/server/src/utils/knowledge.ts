@@ -8,27 +8,20 @@ import { getDataDir } from './file'
 import { KnowledgeBaseModel, KnowledgeChunkModel } from '../models'
 import { LLMConfigModel } from '../models'
 import { getLLMEndpoint } from './llm'
-
-// 提供商 → embedding 模型 → 向量维度 的映射
-const PROVIDER_EMBEDDING: Record<string, { model: string; dims: number }> = {
-  openai: { model: 'text-embedding-3-small', dims: 1536 },
-  anthropic: { model: 'text-embedding-3-small', dims: 1536 },
-  azure: { model: 'text-embedding-3-small', dims: 1536 },
-  bailian: { model: 'text-embedding-v3', dims: 1024 },
-  longcat: { model: 'text-embedding-3-small', dims: 1536 },
-}
+import { PROVIDER_EMBEDDING_MODEL, PROVIDER_EMBEDDING_DIMS, KB_DB_FILENAME, VEC_TABLE_NAME, DEFAULT_VECTOR_DIMS, EXTERNAL_KB_TIMEOUT } from '../config'
 
 // 根据活跃 LLM 配置获取 embedding 信息
 async function getActiveEmbeddingConfig(): Promise<{ model: string; dims: number; apiKey: string; baseURL: string }> {
   const activeConfig = await LLMConfigModel.findOne({ where: { isActive: true } })
   if (!activeConfig) throw new Error('未找到活跃的LLM配置')
 
-  const config = PROVIDER_EMBEDDING[activeConfig.provider] || PROVIDER_EMBEDDING.openai
-  console.log(`[Knowledge] 活跃提供商: ${activeConfig.provider}, embedding模型: ${config.model}, 维度: ${config.dims}`)
+  const modelName = PROVIDER_EMBEDDING_MODEL[activeConfig.provider] || PROVIDER_EMBEDDING_MODEL.openai
+  const dims = PROVIDER_EMBEDDING_DIMS[activeConfig.provider] || PROVIDER_EMBEDDING_DIMS.openai
+  console.log(`[Knowledge] 活跃提供商: ${activeConfig.provider}, embedding模型: ${modelName}, 维度: ${dims}`)
 
   return {
-    model: config.model,
-    dims: config.dims,
+    model: modelName,
+    dims,
     apiKey: activeConfig.apiKey,
     baseURL: getLLMEndpoint(activeConfig),
   }
@@ -50,7 +43,7 @@ async function getEmbeddingsInstance(): Promise<{ embeddings: Embeddings; dims: 
 }
 
 // sqlite-vec 数据库实例
-const dbPath = getDataDir('/knowledge.sqlite')
+const dbPath = getDataDir(KB_DB_FILENAME)
 let vecDb: Database.Database | null = null
 
 async function getVecDb(): Promise<Database.Database> {
@@ -63,34 +56,33 @@ async function getVecDb(): Promise<Database.Database> {
 // 创建向量虚拟表（仅用于摄取时创建，检索时不重建）
 async function createVecTable(dims: number): Promise<void> {
   const db = await getVecDb()
-  const existing = db.prepare("SELECT name FROM sqlite_master WHERE type='table' AND name='vec_chunks'").get() as any
+  const existing = db.prepare(`SELECT name FROM sqlite_master WHERE type='table' AND name='${VEC_TABLE_NAME}'`).get() as any
   if (existing) {
     try {
-      const info = db.prepare("SELECT * FROM vec_chunks_info").get() as any
+      const info = db.prepare(`SELECT * FROM ${VEC_TABLE_NAME}_info`).get() as any
       if (info && info.dimension !== dims) {
-        console.log(`[Knowledge] 维度变化 ${info.dimension} → ${dims}, 重建 vec_chunks 表`)
-        db.exec('DROP TABLE vec_chunks')
-        db.exec(`CREATE VIRTUAL TABLE vec_chunks USING vec0(chunk_id text PRIMARY KEY, embedding float[${dims}])`)
+        console.log(`[Knowledge] 维度变化 ${info.dimension} → ${dims}, 重建 ${VEC_TABLE_NAME} 表`)
+        db.exec(`DROP TABLE ${VEC_TABLE_NAME}`)
+        db.exec(`CREATE VIRTUAL TABLE ${VEC_TABLE_NAME} USING vec0(chunk_id text PRIMARY KEY, embedding float[${dims}])`)
       }
     } catch {
-      // vec_chunks_info 不存在，表可能损坏，重建
-      console.log(`[Knowledge] vec_chunks_info 不可用，重建表`)
-      db.exec('DROP TABLE IF EXISTS vec_chunks')
-      db.exec(`CREATE VIRTUAL TABLE vec_chunks USING vec0(chunk_id text PRIMARY KEY, embedding float[${dims}])`)
+      console.log(`[Knowledge] ${VEC_TABLE_NAME}_info 不可用，重建表`)
+      db.exec(`DROP TABLE IF EXISTS ${VEC_TABLE_NAME}`)
+      db.exec(`CREATE VIRTUAL TABLE ${VEC_TABLE_NAME} USING vec0(chunk_id text PRIMARY KEY, embedding float[${dims}])`)
     }
   } else {
-    console.log(`[Knowledge] 创建 vec_chunks 表，维度: ${dims}`)
-    db.exec(`CREATE VIRTUAL TABLE IF NOT EXISTS vec_chunks USING vec0(chunk_id text PRIMARY KEY, embedding float[${dims}])`)
+    console.log(`[Knowledge] 创建 ${VEC_TABLE_NAME} 表，维度: ${dims}`)
+    db.exec(`CREATE VIRTUAL TABLE IF NOT EXISTS ${VEC_TABLE_NAME} USING vec0(chunk_id text PRIMARY KEY, embedding float[${dims}])`)
   }
 }
 
 // 仅确保 vec 表存在（用于检索，不会重建表）
 async function ensureVecTableExists(): Promise<void> {
   const db = await getVecDb()
-  const existing = db.prepare("SELECT name FROM sqlite_master WHERE type='table' AND name='vec_chunks'").get() as any
+  const existing = db.prepare(`SELECT name FROM sqlite_master WHERE type='table' AND name='${VEC_TABLE_NAME}'`).get() as any
   if (!existing) {
     // 表不存在时才创建（用默认维度）
-    db.exec(`CREATE VIRTUAL TABLE IF NOT EXISTS vec_chunks USING vec0(chunk_id text PRIMARY KEY, embedding float[1024])`)
+    db.exec(`CREATE VIRTUAL TABLE IF NOT EXISTS ${VEC_TABLE_NAME} USING vec0(chunk_id text PRIMARY KEY, embedding float[${DEFAULT_VECTOR_DIMS}])`)
   }
 }
 
@@ -154,7 +146,7 @@ export async function ingestDocument(
   console.log(`[Knowledge] embedding 完成，向量维度: ${vectors[0]?.length}，预期维度: ${dims}`)
 
   // 写入 sqlite-vec 虚拟表
-  const insertStmt = db.prepare('INSERT INTO vec_chunks(chunk_id, embedding) VALUES (?, ?)')
+  const insertStmt = db.prepare(`INSERT INTO ${VEC_TABLE_NAME}(chunk_id, embedding) VALUES (?, ?)`)
   for (let i = 0; i < chunkRecords.length; i++) {
     const vectorBuffer = Buffer.from(new Float32Array(vectors[i]).buffer)
     insertStmt.run(chunkRecords[i].id, vectorBuffer)
@@ -189,13 +181,13 @@ export async function retrieveContext(
   const db = await getVecDb()
   await ensureVecTableExists()
 
-  const vecCount = db.prepare("SELECT count(*) as cnt FROM vec_chunks").get() as any
-  console.log(`[Knowledge] vec_chunks 总向量数: ${vecCount?.cnt || 0}, 知识库分块数: ${totalChunks}, 查询维度: ${dims}`)
+  const vecCount = db.prepare(`SELECT count(*) as cnt FROM ${VEC_TABLE_NAME}`).get() as any
+  console.log(`[Knowledge] ${VEC_TABLE_NAME} 总向量数: ${vecCount?.cnt || 0}, 知识库分块数: ${totalChunks}, 查询维度: ${dims}`)
 
   const queryBuffer = Buffer.from(new Float32Array(queryVector).buffer)
   const rows = db.prepare(`
     SELECT chunk_id, distance
-    FROM vec_chunks
+    FROM ${VEC_TABLE_NAME}
     WHERE embedding MATCH ?
     ORDER BY distance ASC
     LIMIT ?
@@ -230,7 +222,7 @@ async function retrieveExternal(kb: KnowledgeBaseModel, query: string): Promise<
       ...(kb.apiKey ? { Authorization: `Bearer ${kb.apiKey}` } : {})
     },
     body: JSON.stringify({ query, topK: kb.topK }),
-    signal: AbortSignal.timeout(30000)
+    signal: AbortSignal.timeout(EXTERNAL_KB_TIMEOUT)
   })
 
   if (!response.ok) {
@@ -257,7 +249,7 @@ export async function deleteDocumentChunks(knowledgeBaseId: string, source: stri
 
   const db = await getVecDb()
   await ensureVecTableExists()
-  const deleteStmt = db.prepare('DELETE FROM vec_chunks WHERE chunk_id = ?')
+  const deleteStmt = db.prepare(`DELETE FROM ${VEC_TABLE_NAME} WHERE chunk_id = ?`)
   for (const id of chunkIds) {
     deleteStmt.run(id)
   }
@@ -276,7 +268,7 @@ export async function deleteAllChunks(knowledgeBaseId: string): Promise<void> {
 
   const db = await getVecDb()
   await ensureVecTableExists()
-  const deleteStmt = db.prepare('DELETE FROM vec_chunks WHERE chunk_id = ?')
+  const deleteStmt = db.prepare(`DELETE FROM ${VEC_TABLE_NAME} WHERE chunk_id = ?`)
   for (const id of chunkIds) {
     deleteStmt.run(id)
   }
@@ -329,7 +321,7 @@ export async function addChunk(knowledgeBaseId: string, docName: string, content
   const db = await getVecDb()
   await createVecTable(dims)
   const vectorBuffer = Buffer.from(new Float32Array(vector).buffer)
-  db.prepare('INSERT INTO vec_chunks(chunk_id, embedding) VALUES (?, ?)').run(chunkRecord.id, vectorBuffer)
+  db.prepare(`INSERT INTO ${VEC_TABLE_NAME}(chunk_id, embedding) VALUES (?, ?)`).run(chunkRecord.id, vectorBuffer)
 
   console.log(`[Knowledge] 手动新增分块: ${chunkRecord.id}, 文档: ${docName}`)
   return chunkRecord
@@ -345,13 +337,13 @@ export async function updateChunkContent(chunkId: string, newContent: string): P
   // 删除旧向量
   const db = await getVecDb()
   await ensureVecTableExists()
-  db.prepare('DELETE FROM vec_chunks WHERE chunk_id = ?').run(chunkId)
+  db.prepare(`DELETE FROM ${VEC_TABLE_NAME} WHERE chunk_id = ?`).run(chunkId)
 
   // 重新 embedding
   const vector = await embeddings.embedQuery(newContent)
   await createVecTable(dims)
   const vectorBuffer = Buffer.from(new Float32Array(vector).buffer)
-  db.prepare('INSERT INTO vec_chunks(chunk_id, embedding) VALUES (?, ?)').run(chunkId, vectorBuffer)
+  db.prepare(`INSERT INTO ${VEC_TABLE_NAME}(chunk_id, embedding) VALUES (?, ?)`).run(chunkId, vectorBuffer)
 
   // 更新内容
   await chunk.update({ content: newContent })
@@ -365,7 +357,7 @@ export async function deleteSingleChunk(chunkId: string): Promise<void> {
 
   const db = await getVecDb()
   await ensureVecTableExists()
-  db.prepare('DELETE FROM vec_chunks WHERE chunk_id = ?').run(chunkId)
+  db.prepare(`DELETE FROM ${VEC_TABLE_NAME} WHERE chunk_id = ?`).run(chunkId)
 
   await chunk.destroy()
   console.log(`[Knowledge] 删除单个分块: ${chunkId}`)

@@ -3,6 +3,7 @@ import { createPortal } from 'react-dom'
 import { knowledgeBaseApi } from '@renderer/lib/api'
 import { KnowledgeChunk } from '@renderer/types'
 import CustomButton from '@renderer/components/ui/CustomButton'
+import { CHUNK_PAGE_SIZE, CHUNK_VIEWER_HEIGHT, CHUNK_PREVIEW_LINES } from '@renderer/config'
 
 interface ChunkViewerProps {
   kbId: string
@@ -21,7 +22,7 @@ export default function ChunkViewer({ kbId, docName, onClose }: ChunkViewerProps
   const [currentPage, setCurrentPage] = useState(1)
   const [isFullscreen, setIsFullscreen] = useState(false)
   const [deleteTarget, setDeleteTarget] = useState<string | null>(null)
-  const pageSize = 5
+  const pageSize = CHUNK_PAGE_SIZE
 
   const loadChunks = async () => {
     setIsLoading(true)
@@ -104,7 +105,7 @@ export default function ChunkViewer({ kbId, docName, onClose }: ChunkViewerProps
   const isEditingOrAdding = editingChunk || showAddForm
   const modalSizeClass = isFullscreen && isEditingOrAdding
     ? 'w-full h-full'
-    : 'w-full max-w-2xl h-[560px] max-h-[80vh]'
+    : `w-full max-w-2xl ${CHUNK_VIEWER_HEIGHT}`
 
   const totalPages = Math.max(1, Math.ceil(chunks.length / pageSize))
   const pagedChunks = chunks.slice((currentPage - 1) * pageSize, currentPage * pageSize)
@@ -324,7 +325,7 @@ export default function ChunkViewer({ kbId, docName, onClose }: ChunkViewerProps
                   <div className={`mt-0.5 text-sm leading-relaxed ${chunk.enabled
                     ? 'text-gray-600 dark:text-gray-400'
                     : 'text-gray-400 dark:text-gray-500'
-                  } line-clamp-2`}>
+                  } line-clamp-${CHUNK_PREVIEW_LINES}`}>
                     {chunk.content}
                   </div>
                 </div>

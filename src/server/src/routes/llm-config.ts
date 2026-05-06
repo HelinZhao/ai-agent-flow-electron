@@ -3,6 +3,7 @@ import { LLMConfigModel } from '../models'
 import { LLMConfig } from '../types'
 import { Op } from 'sequelize'
 import { callLLM } from '../utils'
+import { PROVIDER_API_KEY_PREFIXES, TEST_TEMPERATURE, TEST_MAX_TOKENS } from '../config'
 
 const router = Router()
 
@@ -189,24 +190,28 @@ router.post('/test-connection', async (req, res) => {
     }
 
     // 验证API Key格式
-    const validationRules = {
-      openai: { prefix: 'sk-', message: 'OpenAI API Key必须以sk-开头' },
-      anthropic: { prefix: 'sk-ant-', message: 'Anthropic API Key必须以sk-ant-开头' },
-      azure: { prefix: '', message: '' },
-      bailian: { prefix: 'sk-', message: 'Bailian API Key必须以sk-开头' },
-      longcat: { prefix: 'ak_', message: 'LongCat API Key必须以ak_开头' }
-    }
+    const validationRules = PROVIDER_API_KEY_PREFIXES
 
-    const rule = validationRules[provider as keyof typeof validationRules]
-    if (rule && rule.prefix && !apiKey.startsWith(rule.prefix)) {
-      return res.status(400).json({ error: rule.message })
+    const providerKey = provider as keyof typeof validationRules
+    const prefix = validationRules[providerKey]
+    if (prefix && !apiKey.startsWith(prefix)) {
+      const prefixNames: Record<string, string> = {
+        openai: 'OpenAI',
+        anthropic: 'Anthropic',
+        azure: 'Azure',
+        bailian: 'Bailian',
+        longcat: 'LongCat'
+      }
+      const name = prefixNames[providerKey] || provider
+      const displayPrefix = prefix ? `以${prefix}开头` : ''
+      return res.status(400).json({ error: `${name} API Key必须${displayPrefix}` })
     }
 
     // 构建测试请求
     const llmConfig: LLMConfig = {
       model: model,
-      temperature: 0.1,
-      maxTokens: 10,
+      temperature: TEST_TEMPERATURE,
+      maxTokens: TEST_MAX_TOKENS,
       provider,
       apiKey
     }

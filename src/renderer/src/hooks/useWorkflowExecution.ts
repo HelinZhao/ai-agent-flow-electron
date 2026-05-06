@@ -7,6 +7,7 @@ import {
 } from '@renderer/types'
 import { workflowExecutionApi } from '@renderer/lib/api'
 import { useMemoizedFn } from 'ahooks'
+import { POLL_INTERVAL, HISTORY_DEFAULT_LIMIT } from '@renderer/config'
 
 interface UseWorkflowExecutionProps {
   onProgress?: (progress: WorkflowExecutionProgress) => void
@@ -102,7 +103,7 @@ export function useWorkflowExecution({
       if (execId) {
         fetchProgress(execId)
       }
-    }, 1000)
+    }, POLL_INTERVAL)
   })
 
   // 执行工作流
@@ -246,7 +247,7 @@ export function useExecutionHistory(workflowId?: string) {
   const [isLoading, setIsLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
 
-  const fetchHistory = async (limit = 50) => {
+  const fetchHistory = async (limit = HISTORY_DEFAULT_LIMIT) => {
     try {
       setIsLoading(true)
       setError(null)

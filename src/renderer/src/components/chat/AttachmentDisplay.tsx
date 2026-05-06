@@ -1,8 +1,9 @@
 import React from 'react'
 import { AttachmentMetadata } from '@renderer/types'
 import { formatFileSize } from '@renderer/lib/attachmentUtils'
+import { SERVER_BASE_URL } from '@renderer/config'
 
-const SERVER_URL = 'http://localhost:3100'
+const SERVER_URL = SERVER_BASE_URL
 
 const CATEGORY_ICONS: Record<string, string> = {
   image: '🖼️',

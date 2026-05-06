@@ -2,6 +2,7 @@ import { create } from 'zustand'
 import { persist } from 'zustand/middleware'
 import { Workflow, Skill, Agent, LLMConfig, KnowledgeBase } from '@renderer/types'
 import { workflowApi, skillApi, agentApi, llmConfigApi, knowledgeBaseApi } from '@renderer/lib/api'
+import { STORAGE_KEY, STORAGE_PERSIST_FIELDS } from '@renderer/config'
 
 interface WorkflowState {
   workflows: Workflow[]
@@ -518,10 +519,14 @@ export const useWorkflowStore = create<WorkflowState>()(
       }
     }),
     {
-      name: "workflow-storage",
-      partialize: (state) => ({
-        currentPage: state.currentPage
-      })
+      name: STORAGE_KEY,
+      partialize: (state) => {
+        const partial = STORAGE_PERSIST_FIELDS.reduce((res, key) => {
+          res[key] = state[key]
+          return res
+        }, {} as Record<string, unknown>)
+        return partial;
+      }
     }
   )
 )

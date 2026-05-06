@@ -5,6 +5,7 @@ import * as path from 'path'
 import { spawn } from 'child_process'
 import * as iconv from 'iconv-lite'
 import * as jschardet from 'jschardet'
+import { DUCKDUCKGO_URL, TOOL_EXECUTION_TIMEOUT, TOOL_READ_FILE_MAX_CHARS, TOOL_HTTP_MAX_CHARS, TOOL_WEB_SEARCH_MAX_RESULTS, TOOL_WEB_SEARCH_SNIPPET_LENGTH, WEB_SEARCH_USER_AGENT } from '../config'
 
 const decodeBuffer = (buf: Buffer): string => {
   if (buf.length === 0) return ''
@@ -20,7 +21,7 @@ const decodeBuffer = (buf: Buffer): string => {
 }
 
 const spawnWithOutput = (cmd: string, args: string[], cwd?: string, timeout?: number): Promise<string> => {
-  const timeoutMs = (timeout || 120) * 1000
+  const timeoutMs = (timeout || TOOL_EXECUTION_TIMEOUT) * 1000
   return new Promise((resolve, reject) => {
     const child = spawn(cmd, args, { cwd: cwd || process.cwd(), windowsHide: true })
     const chunks: Buffer[] = []
@@ -43,7 +44,7 @@ export const readFileTool = tool(
   async ({ filePath }: { filePath: string }) => {
     const resolved = path.resolve(filePath)
     const content = await fs.readFile(resolved, 'utf-8')
-    return content.length > 5000 ? content.substring(0, 5000) + '\n...(内容过长，已截断)' : content
+    return content.length > TOOL_READ_FILE_MAX_CHARS ? content.substring(0, TOOL_READ_FILE_MAX_CHARS) + '\n...(内容过长，已截断)' : content
   },
   {
     name: 'readFile',
@@ -93,7 +94,7 @@ export const executeCommandTool = tool(
     for (const p of blocked) {
       if (p.test(command)) return `命令被安全策略阻止: "${command}"`
     }
-    const effectiveTimeout = timeout || 120
+    const effectiveTimeout = timeout || TOOL_EXECUTION_TIMEOUT
     const isWin = process.platform === 'win32'
     if (isWin) {
       return spawnWithOutput('cmd.exe', ['/d', '/s', '/c', command], process.cwd(), effectiveTimeout)
@@ -105,7 +106,7 @@ export const executeCommandTool = tool(
     description: '执行一条 shell 命令并返回输出结果。可用于安装依赖、运行脚本等操作。对于耗时较长的命令（如 npm install、npx create-react-app 等），建议设置较大的 timeout 值（如 300 秒）。',
     schema: z.object({
       command: z.string().describe('要执行的命令'),
-      timeout: z.number().optional().describe('超时秒数，默认120。耗时命令建议设为300或更大'),
+      timeout: z.number().optional().describe(`超时秒数，默认${TOOL_EXECUTION_TIMEOUT}。耗时命令建议设为300或更大`),
     }),
   }
 )
@@ -117,7 +118,7 @@ export const httpRequestTool = tool(
     if (body && (method === 'POST' || method === 'PUT')) opts.body = body
     const resp = await fetch(url, opts)
     const text = await resp.text()
-    return text.length > 5000 ? text.substring(0, 5000) + '\n...(响应过长，已截断)' : text
+    return text.length > TOOL_HTTP_MAX_CHARS ? text.substring(0, TOOL_HTTP_MAX_CHARS) + '\n...(响应过长，已截断)' : text
   },
   {
     name: 'httpRequest',
@@ -133,17 +134,17 @@ export const httpRequestTool = tool(
 
 export const webSearchTool = tool(
   async ({ query }: { query: string }) => {
-    const url = `https://lite.duckduckgo.com/lite/?q=${encodeURIComponent(query)}`
-    const resp = await fetch(url, { headers: { 'User-Agent': 'Mozilla/5.0' } })
+    const url = `${DUCKDUCKGO_URL}?q=${encodeURIComponent(query)}`
+    const resp = await fetch(url, { headers: { 'User-Agent': WEB_SEARCH_USER_AGENT } })
     const html = await resp.text()
     const results: string[] = []
     const linkRegex = /<a[^>]*class="result__a"[^>]*>([^<]+)<\/a>/gi
     let match
-    while ((match = linkRegex.exec(html)) !== null && results.length < 5) {
+    while ((match = linkRegex.exec(html)) !== null && results.length < TOOL_WEB_SEARCH_MAX_RESULTS) {
       const title = match[1].trim()
       const afterIndex = match.index + match[0].length
       const snippet = html.substring(afterIndex, afterIndex + 200)
-        .replace(/<[^>]+>/g, '').trim().substring(0, 150)
+        .replace(/<[^>]+>/g, '').trim().substring(0, TOOL_WEB_SEARCH_SNIPPET_LENGTH)
       results.push(`${title}\n${snippet}`)
     }
     return results.length > 0

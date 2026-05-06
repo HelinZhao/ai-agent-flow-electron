@@ -1,13 +1,8 @@
+import { VISION_MODEL_PATTERNS } from '../config'
+
 export function isVisionModel(model: string): boolean {
-  const visionPatterns = [
-    '4o', '4-turbo', 'vision', 'gpt-4-vision',
-    'o1', 'o3', 'o4',
-    'claude-3', 'claude-3.5', 'claude-4',
-    'vl', 'qwen-vl', 'qwen2-vl',
-    'gemini', 'grok-2', 'qwen3.6-plus'
-  ]
   const lowerModel = model.toLowerCase()
-  return visionPatterns.some(pattern => lowerModel.includes(pattern))
+  return VISION_MODEL_PATTERNS.some(pattern => lowerModel.includes(pattern))
 }
 
 export interface AttachmentPayload {
