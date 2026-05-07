@@ -8,7 +8,7 @@ interface LayoutProps {
   currentPage: string
   onNavigate: (page: string) => void
 }
-
+const isElectron = Boolean(window.electron || window.api)
 const Layout: React.FC<LayoutProps> = ({ children, currentPage, onNavigate }: LayoutProps) => {
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false)
 
@@ -38,7 +38,7 @@ const Layout: React.FC<LayoutProps> = ({ children, currentPage, onNavigate }: La
             <ThemeToggle />
           </div>
         </div>
-        <WindowControls />
+        {isElectron && <WindowControls />}
       </div>
 
       {/* 移动端顶部导航栏 */}
@@ -64,7 +64,7 @@ const Layout: React.FC<LayoutProps> = ({ children, currentPage, onNavigate }: La
                 <div className={`w-full h-0.5 bg-gray-600 dark:bg-gray-300 transition-all ${isMobileMenuOpen ? '-rotate-45 -translate-y-1.5' : ''}`}></div>
               </div>
             </button>
-            <WindowControls />
+            {isElectron && <WindowControls />}
           </div>
         </div>
 
