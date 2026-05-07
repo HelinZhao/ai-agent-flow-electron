@@ -147,6 +147,79 @@ export const VEC_TABLE_NAME = 'vec_chunks'
 /** 外部知识库 API 调用超时（毫秒） */
 export const EXTERNAL_KB_TIMEOUT = 30000
 
+/**
+ * 外部知识库提供商适配器
+ * 定义各提供商检索 API 的请求体构建与响应解析方式
+ */
+export const EXTERNAL_KB_PROVIDERS: Record<string, {
+  name: string
+  buildBody: (query: string, topK: number) => any
+  parseResponse: (data: any) => string
+}> = {
+  generic: {
+    name: '通用 API',
+    buildBody: (query, topK) => ({ query, topK }),
+    parseResponse: (data) => {
+      if (Array.isArray(data.results)) return data.results.map((r: any) => r.content || r.text || String(r)).join('\n\n---\n\n')
+      if (Array.isArray(data.documents)) return data.documents.map((d: any) => d.content || d.text || String(d)).join('\n\n---\n\n')
+      if (typeof data.context === 'string') return data.context
+      return JSON.stringify(data)
+    }
+  },
+  dify: {
+    name: 'Dify',
+    buildBody: (query, topK) => ({
+      query,
+      retrieval_model: { top_k: topK, search_strategy: 'hybrid', reranking_enabled: false }
+    }),
+    parseResponse: (data) => {
+      const records = data.records || []
+      return records.map((r: any) => r.segment?.content || r.content || String(r)).join('\n\n---\n\n')
+    }
+  },
+  bailian: {
+    name: '阿里百炼',
+    buildBody: (query, topK) => ({ query, top_k: topK }),
+    parseResponse: (data) => {
+      const chunks = data.data?.chunks || data.chunks || []
+      return chunks.map((c: any) => c.content || String(c)).join('\n\n---\n\n')
+    }
+  },
+  qianfan: {
+    name: '百度千帆',
+    buildBody: (query, topK) => ({ query, limit: topK }),
+    parseResponse: (data) => {
+      const items = data.data || data.result || []
+      return items.map((i: any) => i.content || i.text || String(i)).join('\n\n---\n\n')
+    }
+  },
+  anythingllm: {
+    name: 'AnythingLLM',
+    buildBody: (query, topK) => ({ message: query, mode: 'query', topN: topK }),
+    parseResponse: (data) => {
+      if (data.textResponse) return data.textResponse
+      if (data.context?.text) return data.context.text
+      return JSON.stringify(data)
+    }
+  },
+  fastgpt: {
+    name: 'FastGPT',
+    buildBody: (query, topK) => ({ query, limit: topK }),
+    parseResponse: (data) => {
+      const items = data.data || data.records || []
+      return items.map((i: any) => i.content || i.text || String(i)).join('\n\n---\n\n')
+    }
+  },
+  ragflow: {
+    name: 'RAGFlow',
+    buildBody: (query, topK) => ({ query, top_k: topK }),
+    parseResponse: (data) => {
+      const chunks = data.data?.chunks || data.records || data.chunks || []
+      return chunks.map((c: any) => c.content || c.text || String(c)).join('\n\n---\n\n')
+    }
+  },
+}
+
 // ========== 文件上传 ==========
 
 /** 知识库文档上传允许的文件扩展名 */

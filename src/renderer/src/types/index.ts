@@ -208,6 +208,7 @@ export interface KnowledgeBase {
   name: string
   description: string
   type: 'internal' | 'external'
+  provider?: string
   embeddingModel: string
   chunkSize: number
   chunkOverlap: number

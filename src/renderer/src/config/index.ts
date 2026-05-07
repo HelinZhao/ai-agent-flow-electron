@@ -94,6 +94,21 @@ export const CHUNK_OVERLAP_RANGE = { min: 0, max: 500 }
 /** Top-K 检索范围 */
 export const TOP_K_RANGE = { min: 1, max: 20 }
 
+/** 外部知识库提供商元信息（显示名称、默认 URL、文档链接） */
+export const EXTERNAL_KB_PROVIDER_META: Record<string, {
+  name: string
+  defaultUrl: string
+  docs: string
+}> = {
+  generic: { name: '通用 API', defaultUrl: '', docs: '' },
+  dify: { name: 'Dify', defaultUrl: 'https://api.dify.ai/v1/datasets/{dataset_id}/retrieve', docs: 'https://docs.dify.ai' },
+  bailian: { name: '阿里百炼', defaultUrl: 'https://dashscope.aliyuncs.com/api/v1/services/knowledge-base/retrieve', docs: 'https://help.aliyun.com/zh/model-studio' },
+  qianfan: { name: '百度千帆', defaultUrl: 'https://qianfan.baidubce.com/v2/knowledge/retrieve', docs: 'https://cloud.baidu.com/doc/WENXINWORKSHOP' },
+  anythingllm: { name: 'AnythingLLM', defaultUrl: 'http://localhost:3001/api/v1/workspace/{workspace_id}/chat', docs: 'https://docs.useanythingllm.com' },
+  fastgpt: { name: 'FastGPT', defaultUrl: 'http://localhost:3000/api/v1/chat/knowledge/retrieve', docs: 'https://doc.fastgpt.in' },
+  ragflow: { name: 'RAGFlow', defaultUrl: 'http://localhost:9380/api/v1/retrieval', docs: 'https://ragflow.io/docs' },
+}
+
 // ========== 知识库文档管理 ==========
 
 /** 文档上传接受的 MIME 扩展名 */

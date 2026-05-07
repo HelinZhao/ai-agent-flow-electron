@@ -12,6 +12,7 @@ export interface KnowledgeBaseAttributes {
   chunkOverlap: number
   topK: number
   // 外部知识库配置
+  provider: string
   apiUrl: string
   apiKey: string
   createdAt: Date
@@ -35,6 +36,7 @@ export class KnowledgeBaseModel
   declare chunkSize: number
   declare chunkOverlap: number
   declare topK: number
+  declare provider: string
   declare apiUrl: string
   declare apiKey: string
   declare createdAt: Date
@@ -81,6 +83,11 @@ KnowledgeBaseModel.init(
       type: DataTypes.INTEGER,
       allowNull: false,
       defaultValue: 3
+    },
+    provider: {
+      type: DataTypes.STRING,
+      allowNull: false,
+      defaultValue: 'generic'
     },
     apiUrl: {
       type: DataTypes.STRING,

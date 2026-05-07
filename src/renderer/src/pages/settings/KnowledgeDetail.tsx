@@ -4,7 +4,7 @@ import { KnowledgeBase } from '@renderer/types'
 import { knowledgeBaseApi } from '@renderer/lib/api'
 import CustomButton from '@renderer/components/ui/CustomButton'
 import ChunkViewer from '@renderer/components/workflow/config/ChunkViewer'
-import { KB_UPLOAD_ACCEPT } from '@renderer/config'
+import { KB_UPLOAD_ACCEPT, EXTERNAL_KB_PROVIDER_META } from '@renderer/config'
 
 interface KnowledgeDetailProps {
   kb: KnowledgeBase
@@ -242,6 +242,14 @@ export default function KnowledgeDetail({ kb, onBack }: KnowledgeDetailProps): R
         <div className="bg-white dark:bg-gray-800 rounded-xl border border-gray-200/80 dark:border-gray-700/50 p-4">
           <h4 className="text-sm font-medium text-gray-900 dark:text-white mb-3">外部配置</h4>
           <div className="space-y-2">
+            <div className="flex items-center justify-between">
+              <span className="text-xs text-gray-500 dark:text-gray-400">提供商</span>
+              <span className="text-xs text-gray-700 dark:text-gray-300">
+                {kb.provider && EXTERNAL_KB_PROVIDER_META[kb.provider]
+                  ? EXTERNAL_KB_PROVIDER_META[kb.provider].name
+                  : kb.provider || '通用 API'}
+              </span>
+            </div>
             <div className="flex items-center justify-between">
               <span className="text-xs text-gray-500 dark:text-gray-400">API 地址</span>
               <span className="text-xs text-gray-700 dark:text-gray-300">{kb.apiUrl || '未配置'}</span>

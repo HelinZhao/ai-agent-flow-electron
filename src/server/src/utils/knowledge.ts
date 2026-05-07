@@ -8,7 +8,7 @@ import { getDataDir } from './file'
 import { KnowledgeBaseModel, KnowledgeChunkModel } from '../models'
 import { LLMConfigModel } from '../models'
 import { getLLMEndpoint } from './llm'
-import { PROVIDER_EMBEDDING_MODEL, PROVIDER_EMBEDDING_DIMS, KB_DB_FILENAME, VEC_TABLE_NAME, DEFAULT_VECTOR_DIMS, EXTERNAL_KB_TIMEOUT } from '../config'
+import { PROVIDER_EMBEDDING_MODEL, PROVIDER_EMBEDDING_DIMS, KB_DB_FILENAME, VEC_TABLE_NAME, DEFAULT_VECTOR_DIMS, EXTERNAL_KB_TIMEOUT, EXTERNAL_KB_PROVIDERS } from '../config'
 
 // 根据活跃 LLM 配置获取 embedding 信息
 async function getActiveEmbeddingConfig(): Promise<{ model: string; dims: number; apiKey: string; baseURL: string }> {
@@ -215,13 +215,16 @@ export async function retrieveContext(
 
 // 外部知识库检索：调用外部 API
 async function retrieveExternal(kb: KnowledgeBaseModel, query: string): Promise<string> {
+  const providerName = kb.provider || 'generic'
+  const adapter = EXTERNAL_KB_PROVIDERS[providerName] || EXTERNAL_KB_PROVIDERS.generic
+
   const response = await fetch(kb.apiUrl, {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
       ...(kb.apiKey ? { Authorization: `Bearer ${kb.apiKey}` } : {})
     },
-    body: JSON.stringify({ query, topK: kb.topK }),
+    body: JSON.stringify(adapter.buildBody(query, kb.topK)),
     signal: AbortSignal.timeout(EXTERNAL_KB_TIMEOUT)
   })
 
@@ -230,14 +233,7 @@ async function retrieveExternal(kb: KnowledgeBaseModel, query: string): Promise<
   }
 
   const data = await response.json()
-  if (Array.isArray(data.results)) {
-    return data.results.map((r: any) => r.content || r.text || String(r)).join('\n\n---\n\n')
-  }
-  if (Array.isArray(data.documents)) {
-    return data.documents.map((d: any) => d.content || d.text || String(d)).join('\n\n---\n\n')
-  }
-  if (typeof data.context === 'string') return data.context
-  return JSON.stringify(data)
+  return adapter.parseResponse(data)
 }
 
 // 删除文档的所有分块及其向量

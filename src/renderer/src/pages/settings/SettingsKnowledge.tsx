@@ -4,8 +4,9 @@ import { useWorkflowStore } from '@renderer/store/workflowStore'
 import { KnowledgeBase } from '@renderer/types'
 import CustomInput from '@renderer/components/ui/CustomInput'
 import CustomButton from '@renderer/components/ui/CustomButton'
+import CustomSelect from '@renderer/components/ui/CustomSelect'
 import KnowledgeDetail from './KnowledgeDetail'
-import { KB_DEFAULTS, CHUNK_SIZE_RANGE, CHUNK_OVERLAP_RANGE, TOP_K_RANGE } from '@renderer/config'
+import { KB_DEFAULTS, CHUNK_SIZE_RANGE, CHUNK_OVERLAP_RANGE, TOP_K_RANGE, EXTERNAL_KB_PROVIDER_META } from '@renderer/config'
 
 export default function SettingsKnowledge(): React.JSX.Element {
   const {
@@ -28,6 +29,7 @@ export default function SettingsKnowledge(): React.JSX.Element {
       name: '',
       description: '',
       type: KB_DEFAULTS.type,
+      provider: 'generic',
       chunkSize: KB_DEFAULTS.chunkSize,
       chunkOverlap: KB_DEFAULTS.chunkOverlap,
       topK: KB_DEFAULTS.topK,
@@ -37,6 +39,14 @@ export default function SettingsKnowledge(): React.JSX.Element {
   })
 
   const kbType = watch('type')
+
+  const handleProviderChange = (newProvider: string): void => {
+    setValue('provider', newProvider)
+    const meta = EXTERNAL_KB_PROVIDER_META[newProvider]
+    if (meta?.defaultUrl) {
+      setValue('apiUrl', meta.defaultUrl)
+    }
+  }
 
   React.useEffect(() => { getKnowledgeBases() }, [])
 
@@ -85,6 +95,7 @@ export default function SettingsKnowledge(): React.JSX.Element {
       name: '',
       description: '',
       type: KB_DEFAULTS.type,
+      provider: 'generic',
       chunkSize: KB_DEFAULTS.chunkSize,
       chunkOverlap: KB_DEFAULTS.chunkOverlap,
       topK: KB_DEFAULTS.topK,
@@ -321,6 +332,28 @@ export default function SettingsKnowledge(): React.JSX.Element {
 
             {kbType === 'external' && (
               <div className="p-4 bg-gray-50 dark:bg-gray-900/50 rounded-lg border border-gray-200 dark:border-gray-700 space-y-3">
+                <div>
+                  <label className="block text-xs font-medium text-gray-500 dark:text-gray-400 mb-1">提供商</label>
+                  <CustomSelect
+                    value={watch('provider') || 'generic'}
+                    onChange={handleProviderChange}
+                    options={Object.entries(EXTERNAL_KB_PROVIDER_META).map(([key, meta]) => ({
+                      value: key,
+                      label: meta.name
+                    }))}
+                    placeholder="选择提供商"
+                  />
+                  {watch('provider') && watch('provider') !== 'generic' && EXTERNAL_KB_PROVIDER_META[watch('provider')!]?.docs && (
+                    <a
+                      href={EXTERNAL_KB_PROVIDER_META[watch('provider')!].docs}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="text-xs text-blue-500 hover:text-blue-700 dark:text-blue-400 mt-1 inline-block"
+                    >
+                      查看 {EXTERNAL_KB_PROVIDER_META[watch('provider')!].name} 文档 →
+                    </a>
+                  )}
+                </div>
                 <div>
                   <label className="block text-xs font-medium text-gray-500 dark:text-gray-400 mb-1">API 地址</label>
                   <CustomInput
