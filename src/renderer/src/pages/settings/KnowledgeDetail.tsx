@@ -9,11 +9,9 @@ import { KB_UPLOAD_ACCEPT } from '@renderer/config'
 interface KnowledgeDetailProps {
   kb: KnowledgeBase
   onBack: () => void
-  onEdit: () => void
-  onDelete: () => void
 }
 
-export default function KnowledgeDetail({ kb, onBack, onEdit, onDelete }: KnowledgeDetailProps): React.JSX.Element {
+export default function KnowledgeDetail({ kb, onBack }: KnowledgeDetailProps): React.JSX.Element {
   const { uploadDocumentToKB, deleteDocumentFromKB, getKnowledgeBases } = useWorkflowStore()
 
   const [isLoading, setIsLoading] = useState(false)
@@ -126,23 +124,6 @@ export default function KnowledgeDetail({ kb, onBack, onEdit, onDelete }: Knowle
               )}
             </div>
           </div>
-        </div>
-
-        <div className="flex items-center space-x-2">
-          <button
-            onClick={onEdit}
-            className="flex items-center justify-center w-8 h-8 rounded-lg text-gray-400 hover:text-blue-600 dark:hover:text-blue-400 hover:bg-blue-50 dark:hover:bg-blue-900/20 transition-colors"
-            title="编辑知识库"
-          >
-            <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" /></svg>
-          </button>
-          <button
-            onClick={onDelete}
-            className="flex items-center justify-center w-8 h-8 rounded-lg text-gray-400 hover:text-red-600 dark:hover:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors"
-            title="删除知识库"
-          >
-            <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" /></svg>
-          </button>
         </div>
       </div>
 

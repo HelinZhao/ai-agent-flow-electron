@@ -106,8 +106,6 @@ export default function SettingsKnowledge(): React.JSX.Element {
       <KnowledgeDetail
         kb={kb}
         onBack={() => { setSelectedKbId(null); getKnowledgeBases() }}
-        onEdit={() => handleEdit(kb)}
-        onDelete={() => setDeleteKbTarget(kb.id)}
       />
     )
   }
