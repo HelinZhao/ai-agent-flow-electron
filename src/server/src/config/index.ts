@@ -170,7 +170,12 @@ export const EXTERNAL_KB_PROVIDERS: Record<string, {
     name: 'Dify',
     buildBody: (query, topK) => ({
       query,
-      retrieval_model: { top_k: topK, search_strategy: 'hybrid', reranking_enabled: false }
+      retrieval_model: {
+        search_method: 'hybrid_search',
+        top_k: topK,
+        reranking_enable: false,
+        score_threshold_enabled: false
+      }
     }),
     parseResponse: (data) => {
       const records = data.records || []
