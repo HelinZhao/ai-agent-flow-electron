@@ -15,6 +15,7 @@ export interface KnowledgeBaseAttributes {
   provider: string
   apiUrl: string
   apiKey: string
+  providerConfig: string
   createdAt: Date
   updatedAt: Date
 }
@@ -39,6 +40,7 @@ export class KnowledgeBaseModel
   declare provider: string
   declare apiUrl: string
   declare apiKey: string
+  declare providerConfig: string
   declare createdAt: Date
   declare updatedAt: Date
 }
@@ -96,6 +98,11 @@ KnowledgeBaseModel.init(
     },
     apiKey: {
       type: DataTypes.STRING,
+      allowNull: true,
+      defaultValue: ''
+    },
+    providerConfig: {
+      type: DataTypes.TEXT,
       allowNull: true,
       defaultValue: ''
     },

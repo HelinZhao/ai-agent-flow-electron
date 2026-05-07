@@ -215,6 +215,7 @@ export interface KnowledgeBase {
   topK: number
   apiUrl: string
   apiKey: string
+  providerConfig?: string
   documentCount?: number
   totalChunks?: number
   documents?: string[]

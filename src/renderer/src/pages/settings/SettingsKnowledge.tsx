@@ -40,6 +40,24 @@ export default function SettingsKnowledge(): React.JSX.Element {
 
   const kbType = watch('type')
 
+  /** 从 providerConfig JSON 中读取某个配置值 */
+  const getProviderConfigValue = (key: string): any => {
+    try {
+      return JSON.parse(watch('providerConfig') || '{}')[key]
+    } catch {
+      return undefined
+    }
+  }
+
+  /** 设置 providerConfig JSON 中的某个配置值 */
+  const setProviderConfigValue = (key: string, value: any): void => {
+    const current = watch('providerConfig') || '{}'
+    let parsed: Record<string, any> = {}
+    try { parsed = JSON.parse(current) } catch { /* ignore */ }
+    parsed[key] = value
+    setValue('providerConfig', JSON.stringify(parsed))
+  }
+
   const handleProviderChange = (newProvider: string): void => {
     setValue('provider', newProvider)
     const meta = EXTERNAL_KB_PROVIDER_META[newProvider]
@@ -366,6 +384,26 @@ export default function SettingsKnowledge(): React.JSX.Element {
                   <label className="block text-xs font-medium text-gray-500 dark:text-gray-400 mb-1">API Key（可选）</label>
                   <CustomInput type="password" {...register('apiKey')} placeholder="Bearer token" />
                 </div>
+
+                {watch('provider') === 'dify' && (
+                  <div className="border-t border-gray-200 dark:border-gray-600 pt-3">
+                    <p className="text-xs font-medium text-gray-500 dark:text-gray-400 mb-2">Dify 检索配置</p>
+                    <div>
+                      <label className="block text-xs font-medium text-gray-500 dark:text-gray-400 mb-1">搜索模式</label>
+                      <CustomSelect
+                        value={getProviderConfigValue('search_method') || 'keyword_search'}
+                        onChange={(v) => setProviderConfigValue('search_method', v)}
+                        options={[
+                          { value: 'keyword_search', label: '关键字搜索' },
+                          { value: 'semantic_search', label: '语义搜索' },
+                          { value: 'hybrid_search', label: '混合搜索' },
+                          { value: 'full_text_search', label: '全文搜索' },
+                        ]}
+                      />
+                    </div>
+                  </div>
+                )}
+
                 <div>
                   <label className="block text-xs font-medium text-gray-500 dark:text-gray-400 mb-1">检索数量</label>
                   <CustomInput type="number" min={TOP_K_RANGE.min} max={TOP_K_RANGE.max} {...register('topK', { valueAsNumber: true })} />

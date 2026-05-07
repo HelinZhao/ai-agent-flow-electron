@@ -218,13 +218,21 @@ async function retrieveExternal(kb: KnowledgeBaseModel, query: string): Promise<
   const providerName = kb.provider || 'generic'
   const adapter = EXTERNAL_KB_PROVIDERS[providerName] || EXTERNAL_KB_PROVIDERS.generic
 
+  // 解析提供商自定义配置（JSON 字符串），传递给 buildBody
+  let providerConfig: Record<string, any> = {}
+  if (kb.providerConfig) {
+    try {
+      providerConfig = JSON.parse(kb.providerConfig)
+    } catch { /* ignore malformed JSON */ }
+  }
+
   const response = await fetch(kb.apiUrl, {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
       ...(kb.apiKey ? { Authorization: `Bearer ${kb.apiKey}` } : {})
     },
-    body: JSON.stringify(adapter.buildBody(query, kb.topK)),
+    body: JSON.stringify(adapter.buildBody(query, kb.topK, providerConfig)),
     signal: AbortSignal.timeout(EXTERNAL_KB_TIMEOUT)
   })
 

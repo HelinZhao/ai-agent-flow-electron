@@ -153,12 +153,12 @@ export const EXTERNAL_KB_TIMEOUT = 30000
  */
 export const EXTERNAL_KB_PROVIDERS: Record<string, {
   name: string
-  buildBody: (query: string, topK: number) => any
+  buildBody: (query: string, topK: number, config?: Record<string, any>) => any
   parseResponse: (data: any) => string
 }> = {
   generic: {
     name: '通用 API',
-    buildBody: (query, topK) => ({ query, topK }),
+    buildBody: (query, topK, _config?) => ({ query, topK }),
     parseResponse: (data) => {
       if (Array.isArray(data.results)) return data.results.map((r: any) => r.content || r.text || String(r)).join('\n\n---\n\n')
       if (Array.isArray(data.documents)) return data.documents.map((d: any) => d.content || d.text || String(d)).join('\n\n---\n\n')
@@ -168,13 +168,13 @@ export const EXTERNAL_KB_PROVIDERS: Record<string, {
   },
   dify: {
     name: 'Dify',
-    buildBody: (query, topK) => ({
+    buildBody: (query, topK, config?) => ({
       query,
       retrieval_model: {
-        search_method: 'hybrid_search',
+        search_method: config?.search_method || 'keyword_search',
         top_k: topK,
-        reranking_enable: false,
-        score_threshold_enabled: false
+        reranking_enable: config?.reranking_enable ?? false,
+        score_threshold_enabled: config?.score_threshold_enabled ?? false
       }
     }),
     parseResponse: (data) => {
@@ -184,7 +184,7 @@ export const EXTERNAL_KB_PROVIDERS: Record<string, {
   },
   bailian: {
     name: '阿里百炼',
-    buildBody: (query, topK) => ({ query, top_k: topK }),
+    buildBody: (query, topK, _config?) => ({ query, top_k: topK }),
     parseResponse: (data) => {
       const chunks = data.data?.chunks || data.chunks || []
       return chunks.map((c: any) => c.content || String(c)).join('\n\n---\n\n')
@@ -192,7 +192,7 @@ export const EXTERNAL_KB_PROVIDERS: Record<string, {
   },
   qianfan: {
     name: '百度千帆',
-    buildBody: (query, topK) => ({ query, limit: topK }),
+    buildBody: (query, topK, _config?) => ({ query, limit: topK }),
     parseResponse: (data) => {
       const items = data.data || data.result || []
       return items.map((i: any) => i.content || i.text || String(i)).join('\n\n---\n\n')
@@ -200,7 +200,7 @@ export const EXTERNAL_KB_PROVIDERS: Record<string, {
   },
   anythingllm: {
     name: 'AnythingLLM',
-    buildBody: (query, topK) => ({ message: query, mode: 'query', topN: topK }),
+    buildBody: (query, topK, _config?) => ({ message: query, mode: 'query', topN: topK }),
     parseResponse: (data) => {
       if (data.textResponse) return data.textResponse
       if (data.context?.text) return data.context.text
@@ -209,7 +209,7 @@ export const EXTERNAL_KB_PROVIDERS: Record<string, {
   },
   fastgpt: {
     name: 'FastGPT',
-    buildBody: (query, topK) => ({ query, limit: topK }),
+    buildBody: (query, topK, _config?) => ({ query, limit: topK }),
     parseResponse: (data) => {
       const items = data.data || data.records || []
       return items.map((i: any) => i.content || i.text || String(i)).join('\n\n---\n\n')
@@ -217,7 +217,7 @@ export const EXTERNAL_KB_PROVIDERS: Record<string, {
   },
   ragflow: {
     name: 'RAGFlow',
-    buildBody: (query, topK) => ({ query, top_k: topK }),
+    buildBody: (query, topK, _config?) => ({ query, top_k: topK }),
     parseResponse: (data) => {
       const chunks = data.data?.chunks || data.records || data.chunks || []
       return chunks.map((c: any) => c.content || c.text || String(c)).join('\n\n---\n\n')

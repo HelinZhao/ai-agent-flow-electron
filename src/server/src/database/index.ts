@@ -10,19 +10,26 @@ const sequelize = new Sequelize({
 })
 
 /**
- * 执行增量迁移：给 knowledge_bases 表添加 provider 列（如不存在）
+ * 执行增量迁移：给 knowledge_bases 表添加新列（如不存在）
  */
-async function migrateKnowledgeBaseProvider(): Promise<void> {
+async function migrateKnowledgeBaseColumns(): Promise<void> {
   try {
     const queryInterface = sequelize.getQueryInterface()
     const tableInfo = await queryInterface.describeTable('knowledge_bases') as Record<string, unknown>
+
     if (!tableInfo.provider) {
       console.log('[Migration] knowledge_bases 表缺少 provider 列，执行迁移...')
       await sequelize.query(`ALTER TABLE knowledge_bases ADD COLUMN provider TEXT NOT NULL DEFAULT 'generic';`)
       console.log('[Migration] provider 列添加成功')
     }
+
+    if (!tableInfo.providerConfig) {
+      console.log('[Migration] knowledge_bases 表缺少 providerConfig 列，执行迁移...')
+      await sequelize.query(`ALTER TABLE knowledge_bases ADD COLUMN providerConfig TEXT;`)
+      console.log('[Migration] providerConfig 列添加成功')
+    }
   } catch (error) {
-    console.log('[Migration] 跳过 knowledge_bases provider 迁移:', (error as Error).message)
+    console.log('[Migration] 跳过 knowledge_bases 列迁移:', (error as Error).message)
   }
 }
 
@@ -35,7 +42,7 @@ export const initDatabase = async (): Promise<void> => {
     await sequelize.sync({ force: false }) // 使用force: false安全同步
     console.log('数据库同步成功')
     // 执行增量迁移
-    await migrateKnowledgeBaseProvider()
+    await migrateKnowledgeBaseColumns()
   } catch (error) {
     console.error('数据库连接失败:', error)
     throw error

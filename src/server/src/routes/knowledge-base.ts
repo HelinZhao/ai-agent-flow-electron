@@ -62,7 +62,7 @@ router.get('/', async (_req, res) => {
 // 创建知识库
 router.post('/', async (req, res) => {
   try {
-    const { name, description, type, chunkSize, chunkOverlap, topK, provider, apiUrl, apiKey } = req.body
+    const { name, description, type, chunkSize, chunkOverlap, topK, provider, apiUrl, apiKey, providerConfig } = req.body
 
     if (!name) {
       return res.status(400).json({ error: '知识库名称不能为空' })
@@ -87,6 +87,7 @@ router.post('/', async (req, res) => {
       chunkOverlap: chunkOverlap || DEFAULT_CHUNK_OVERLAP,
       topK: topK || DEFAULT_TOP_K,
       provider: provider || 'generic',
+      providerConfig: providerConfig || '',
       apiUrl: apiUrl || '',
       apiKey: apiKey || ''
     })
@@ -107,7 +108,7 @@ router.put('/:id', async (req, res) => {
       return res.status(404).json({ error: '知识库不存在' })
     }
 
-    const { name, description, type, embeddingModel, chunkSize, chunkOverlap, topK, provider, apiUrl, apiKey } = req.body
+    const { name, description, type, embeddingModel, chunkSize, chunkOverlap, topK, provider, providerConfig, apiUrl, apiKey } = req.body
 
     await kb.update({
       name,
@@ -118,6 +119,7 @@ router.put('/:id', async (req, res) => {
       chunkOverlap,
       topK,
       provider,
+      providerConfig,
       apiUrl,
       apiKey
     })
