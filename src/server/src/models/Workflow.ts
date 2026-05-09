@@ -7,6 +7,7 @@ export interface WorkflowAttributes {
   description: string
   nodes: string // JSON string
   edges: string // JSON string
+  layoutDirection?: string
   createdAt: Date
   updatedAt: Date
 }
@@ -25,6 +26,7 @@ export class WorkflowModel
   declare description: string
   declare nodes: string
   declare edges: string
+  declare layoutDirection?: string
   declare createdAt: Date
   declare updatedAt: Date
 }
@@ -51,6 +53,10 @@ WorkflowModel.init(
     edges: {
       type: DataTypes.TEXT,
       allowNull: false
+    },
+    layoutDirection: {
+      type: DataTypes.STRING,
+      allowNull: true
     },
     createdAt: {
       type: DataTypes.DATE,

@@ -40,7 +40,7 @@ router.get('/', async (_req, res) => {
 // 创建工作流
 router.post('/', async (req, res) => {
   try {
-    const { name, description, nodes, edges } = req.body
+    const { name, description, nodes, edges, layoutDirection } = req.body
     if (!name) {
       return res.status(400).json({ error: '名称为空' })
     }
@@ -48,7 +48,8 @@ router.post('/', async (req, res) => {
       name,
       description,
       nodes: JSON.stringify(nodes || []),
-      edges: JSON.stringify(edges || [])
+      edges: JSON.stringify(edges || []),
+      layoutDirection: layoutDirection || null
     })
     const json = workflow.toJSON()
     return res.status(201).json({
@@ -87,7 +88,7 @@ router.get('/:id', async (req, res) => {
 router.put('/:id', async (req, res) => {
   try {
     const { id } = req.params
-    const { name, description, nodes, edges } = req.body
+    const { name, description, nodes, edges, layoutDirection } = req.body
 
     const workflow = await WorkflowModel.findByPk(id)
     if (!workflow) {
@@ -98,13 +99,15 @@ router.put('/:id', async (req, res) => {
       name: name || workflow.name,
       description: description || workflow.description,
       nodes: JSON.stringify(nodes),
-      edges: JSON.stringify(edges)
+      edges: JSON.stringify(edges),
+      layoutDirection: layoutDirection || null
     })
 
     return res.status(200).json({
       ...workflow.toJSON(),
       nodes: safeJsonParse(workflow.nodes, []),
-      edges: safeJsonParse(workflow.edges, [])
+      edges: safeJsonParse(workflow.edges, []),
+      layoutDirection: workflow.layoutDirection || undefined
     })
   } catch (error) {
     console.error('更新工作流错误:', error)

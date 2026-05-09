@@ -1,12 +1,15 @@
 import { Panel } from "@xyflow/react";
 import { memo } from "react";
 import CustomButton from '../ui/CustomButton';
+import { LayoutDirection } from './LayoutDirectionContext';
 
 interface ControlPanelProps {
     onRun: () => void
     onSave: () => void
     onAutoLayout: () => void
     isRunning: boolean
+    layoutDirection: LayoutDirection
+    onToggleDirection: () => void
 }
 
 const ControlPanel: React.FC<ControlPanelProps> = (props: ControlPanelProps) => {
@@ -14,6 +17,13 @@ const ControlPanel: React.FC<ControlPanelProps> = (props: ControlPanelProps) => 
     return (
         <Panel position="top-right">
             <div className="flex space-x-2">
+                <CustomButton
+                    onClick={props.onToggleDirection}
+                    variant="secondary"
+                    size="sm"
+                >
+                    {props.layoutDirection === 'horizontal' ? '⇆ 水平' : '⇅ 垂直'}
+                </CustomButton>
                 <CustomButton
                     onClick={props.onAutoLayout}
                     variant="secondary"

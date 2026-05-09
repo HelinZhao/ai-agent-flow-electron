@@ -1,12 +1,13 @@
 import dagre from 'dagre'
 import { WorkflowNode, WorkflowEdge } from '@renderer/types'
+import { LayoutDirection } from './LayoutDirectionContext'
 
 const NODE_WIDTH = 140
 const NODE_HEIGHT = 60
 
-export function autoLayout(nodes: WorkflowNode[], edges: WorkflowEdge[]): WorkflowNode[] {
+export function autoLayout(nodes: WorkflowNode[], edges: WorkflowEdge[], direction: LayoutDirection = 'horizontal'): WorkflowNode[] {
   const g = new dagre.graphlib.Graph()
-  g.setGraph({ rankdir: 'LR', nodesep: 50, ranksep: 80 })
+  g.setGraph({ rankdir: direction === 'vertical' ? 'TB' : 'LR', nodesep: 50, ranksep: 80 })
   g.setDefaultEdgeLabel(() => ({}))
 
   for (const node of nodes) {

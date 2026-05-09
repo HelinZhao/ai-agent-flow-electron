@@ -41,7 +41,7 @@ export default function Workflow(): React.JSX.Element {
     const [showProgressPanel, setShowProgressPanel] = useState(false);
 
     // 画布实时数据的引用（不触发重渲染）
-    const canvasDataRef = useRef<{ nodes: WorkflowNode[]; edges: WorkflowEdge[] }>({ nodes: [], edges: [] });
+    const canvasDataRef = useRef<{ nodes: WorkflowNode[]; edges: WorkflowEdge[]; layoutDirection: 'horizontal' | 'vertical' }>({ nodes: [], edges: [], layoutDirection: 'horizontal' });
     const [editingWorkflow, setEditingWorkflow] = useState<Workflow | null>(null);
     const [editName, setEditName] = useState('');
     const [editDescription, setEditDescription] = useState('');
@@ -124,7 +124,7 @@ export default function Workflow(): React.JSX.Element {
             return;
         }
         try {
-            const updated = { ...currentWorkflow, nodes, edges, updatedAt: new Date() };
+            const updated = { ...currentWorkflow, nodes, edges, layoutDirection: canvasDataRef.current.layoutDirection, updatedAt: new Date() };
             updateWorkflow(currentWorkflow.id, updated);
             alert('保存成功');
         } catch {
@@ -152,6 +152,7 @@ export default function Workflow(): React.JSX.Element {
             ...currentWorkflow,
             nodes: canvasData.nodes.length > 0 ? canvasData.nodes : currentWorkflow.nodes,
             edges: canvasData.edges.length > 0 ? canvasData.edges : currentWorkflow.edges,
+            layoutDirection: canvasData.layoutDirection || currentWorkflow.layoutDirection,
         };
 
         setPendingExecution(true);
@@ -357,8 +358,8 @@ export default function Workflow(): React.JSX.Element {
                                         onSave={handleSave}
                                         onRun={handleRun}
                                         isRunning={isRunning}
-                                        onCanvasChange={(nodes, edges) => {
-                                            canvasDataRef.current = { nodes, edges };
+                                        onCanvasChange={(nodes, edges, layoutDirection) => {
+                                            canvasDataRef.current = { nodes, edges, layoutDirection: layoutDirection || 'horizontal' };
                                         }}
                                     />
                                 </ReactFlowProvider>

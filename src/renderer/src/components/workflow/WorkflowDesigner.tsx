@@ -8,6 +8,7 @@ import {
   Connection,
   useReactFlow,
   addEdge,
+  Position,
 } from '@xyflow/react';
 import '@xyflow/react/dist/style.css';
 import { createPortal } from 'react-dom';
@@ -20,6 +21,7 @@ import { getNodeDefaultLabel } from './nodes';
 import ContextMenu from './ContextMenu';
 import ControlPanel from './ControlPanel';
 import { autoLayout } from './layoutUtils';
+import { LayoutDirectionContext, LayoutDirection } from './LayoutDirectionContext';
 import { v4 as uuidv4 } from 'uuid';
 
 const nodeTypes = {
@@ -38,7 +40,7 @@ interface WorkflowDesignerProps {
   onSave: (nodes: WorkflowNode[], edges: WorkflowEdge[]) => void;
   onRun: () => void;
   isRunning: boolean;
-  onCanvasChange?: (nodes: WorkflowNode[], edges: WorkflowEdge[]) => void;
+  onCanvasChange?: (nodes: WorkflowNode[], edges: WorkflowEdge[], layoutDirection: LayoutDirection) => void;
 }
 
 function WorkflowDesigner(props: WorkflowDesignerProps): React.JSX.Element {
@@ -56,7 +58,13 @@ function WorkflowDesigner(props: WorkflowDesignerProps): React.JSX.Element {
     connection: null,
     selectedBranch: ''
   });
-  const { screenToFlowPosition } = useReactFlow();
+  const { screenToFlowPosition, fitView } = useReactFlow();
+  const [layoutDirection, setLayoutDirection] = useState<LayoutDirection>(workflow?.layoutDirection || 'horizontal');
+
+  // 当切换工作流时，恢复其保存的布局方向
+  useEffect(() => {
+    setLayoutDirection(workflow?.layoutDirection || 'horizontal');
+  }, [workflow?.id, workflow?.layoutDirection]);
 
   const initialNodes: WorkflowNode[] = useMemo(() => {
     return workflow?.nodes?.map((node: WorkflowNode) => ({
@@ -83,10 +91,19 @@ function WorkflowDesigner(props: WorkflowDesignerProps): React.JSX.Element {
   const [nodes, setNodes, onNodesChange] = useNodesState<WorkflowNode>(initialNodes);
   const [edges, setEdges, onEdgesChange] = useEdgesState<WorkflowEdge>(initialEdges);
 
+  // 根据布局方向给每个节点加上 sourcePosition/targetPosition，触发 React Flow 内部重算 handle bounds 和边缘路径
+  const positionedNodes = useMemo(() => {
+    return nodes.map(node => ({
+      ...node,
+      sourcePosition: layoutDirection === 'vertical' ? Position.Bottom : Position.Right,
+      targetPosition: layoutDirection === 'vertical' ? Position.Top : Position.Left,
+    }))
+  }, [nodes, layoutDirection])
+
   // 同步画布实时数据给父组件（不触发重渲染，仅更新 ref）
   useEffect(() => {
-    onCanvasChange?.(nodes, edges);
-  }, [nodes, edges, onCanvasChange]);
+    onCanvasChange?.(nodes, edges, layoutDirection);
+  }, [nodes, edges, layoutDirection, onCanvasChange]);
 
   const onConnect = useCallback(
     (params: Connection) => {
@@ -211,50 +228,63 @@ function WorkflowDesigner(props: WorkflowDesignerProps): React.JSX.Element {
     handleAddNodeAtPosition(nodeType as WorkflowNode['type'], position);
   }, [handleAddNodeAtPosition, screenToFlowPosition]);
 
+  const handleToggleDirection = useCallback(() => {
+    setLayoutDirection(prev => prev === 'horizontal' ? 'vertical' : 'horizontal')
+  }, [])
+
   const handleAutoLayout = useCallback(() => {
-    setNodes(autoLayout(nodes, edges))
-  }, [nodes, edges, setNodes]);
+    setNodes(autoLayout(nodes, edges, layoutDirection))
+    fitView()
+  }, [nodes, edges, setNodes, layoutDirection, fitView]);
 
   return (
     <div className="flex h-full w-full">
       <div className="flex-1 h-full min-h-0">
-        <ReactFlow
-          nodes={nodes}
-          edges={edges}
-          onNodesChange={onNodesChange}
-          onEdgesChange={onEdgesChange}
-          onConnect={onConnect}
-          onNodeClick={onNodeClick}
-          nodeTypes={nodeTypes}
-          fitView
-          className="bg-gray-50 dark:bg-gray-800 w-full h-full"
-          defaultViewport={{ x: 0, y: 0, zoom: 1 }}
-          panOnDrag={true}
-          zoomOnScroll={true}
-          zoomOnPinch={true}
-          panOnScroll={false}
-          elementsSelectable={true}
-          nodesDraggable={true}
-          nodesConnectable={true}
-          multiSelectionKeyCode="Shift"
-          deleteKeyCode="Delete"
-          onNodesDelete={() => setSelectedNode(null)}
-          onPaneClick={handlePaneClick}
-          onContextMenu={handlePaneContextMenu}
-          onDragOver={handleDragOver}
-          onDrop={handleDrop}
-        >
-          <Background />
-          <Controls />
-          <NodeListPanel />
-          <ControlPanel onSave={() => onSave(nodes, edges)} onRun={onRun} isRunning={isRunning} onAutoLayout={handleAutoLayout} />
-          {selectedNode && (
-            <NodeConfigPanel
-              node={selectedNode}
-              onClose={onUnselectNode}
+        <LayoutDirectionContext.Provider value={layoutDirection}>
+          <ReactFlow
+            nodes={positionedNodes}
+            edges={edges}
+            onNodesChange={onNodesChange}
+            onEdgesChange={onEdgesChange}
+            onConnect={onConnect}
+            onNodeClick={onNodeClick}
+            nodeTypes={nodeTypes}
+            className="bg-gray-50 dark:bg-gray-800 w-full h-full"
+            defaultViewport={{ x: 0, y: 0, zoom: 1 }}
+            panOnDrag={true}
+            zoomOnScroll={true}
+            zoomOnPinch={true}
+            panOnScroll={false}
+            elementsSelectable={true}
+            nodesDraggable={true}
+            nodesConnectable={true}
+            multiSelectionKeyCode="Shift"
+            deleteKeyCode="Delete"
+            onNodesDelete={() => setSelectedNode(null)}
+            onPaneClick={handlePaneClick}
+            onContextMenu={handlePaneContextMenu}
+            onDragOver={handleDragOver}
+            onDrop={handleDrop}
+          >
+            <Background />
+            <Controls />
+            <NodeListPanel />
+            <ControlPanel
+              onSave={() => onSave(nodes, edges)}
+              onRun={onRun}
+              isRunning={isRunning}
+              onAutoLayout={handleAutoLayout}
+              layoutDirection={layoutDirection}
+              onToggleDirection={handleToggleDirection}
             />
-          )}
-        </ReactFlow>
+            {selectedNode && (
+              <NodeConfigPanel
+                node={selectedNode}
+                onClose={onUnselectNode}
+              />
+            )}
+          </ReactFlow>
+        </LayoutDirectionContext.Provider>
 
         {/* 右键菜单 */}
         {contextMenu && createPortal(

@@ -55,6 +55,24 @@ async function migrateLLMConfigColumns(): Promise<void> {
   }
 }
 
+/**
+ * 执行增量迁移：给 workflows 表添加 layoutDirection 列（如不存在）
+ */
+async function migrateWorkflowColumns(): Promise<void> {
+  try {
+    const queryInterface = sequelize.getQueryInterface()
+    const tableInfo = await queryInterface.describeTable('workflows') as Record<string, unknown>
+
+    if (!tableInfo.layoutDirection) {
+      console.log('[Migration] workflows 表缺少 layoutDirection 列，执行迁移...')
+      await sequelize.query(`ALTER TABLE workflows ADD COLUMN layoutDirection TEXT;`)
+      console.log('[Migration] layoutDirection 列添加成功')
+    }
+  } catch (error) {
+    console.log('[Migration] 跳过 workflows 列迁移:', (error as Error).message)
+  }
+}
+
 // 测试数据库连接
 export const initDatabase = async (): Promise<void> => {
   try {
@@ -66,6 +84,7 @@ export const initDatabase = async (): Promise<void> => {
     // 执行增量迁移
     await migrateKnowledgeBaseColumns()
     await migrateLLMConfigColumns()
+    await migrateWorkflowColumns()
   } catch (error) {
     console.error('数据库连接失败:', error)
     throw error

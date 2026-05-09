@@ -36,6 +36,7 @@ export interface Workflow {
   description: string
   nodes: WorkflowNode[]
   edges: WorkflowEdge[]
+  layoutDirection?: 'horizontal' | 'vertical'
   createdAt: Date
   updatedAt: Date
 }
