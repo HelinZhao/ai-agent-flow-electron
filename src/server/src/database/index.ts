@@ -1,14 +1,13 @@
 import { Sequelize } from 'sequelize'
-import { getDataDir } from '../utils/file'
+import { getResourcesDir } from '../utils/file'
 import { DB_FILENAME } from '../config'
 
 // 创建Sequelize实例，使用SQLite数据库
 const sequelize = new Sequelize({
   dialect: 'sqlite',
-  storage: getDataDir(DB_FILENAME), // 数据库文件存储路径
+  storage: getResourcesDir(DB_FILENAME), // 数据库文件存储路径
   logging: false // 禁用SQL日志，生产环境中可以设置为false
 })
-
 /**
  * 执行增量迁移：给 knowledge_bases 表添加新列（如不存在）
  */
@@ -28,8 +27,31 @@ async function migrateKnowledgeBaseColumns(): Promise<void> {
       await sequelize.query(`ALTER TABLE knowledge_bases ADD COLUMN providerConfig TEXT;`)
       console.log('[Migration] providerConfig 列添加成功')
     }
+
+    if (!tableInfo.vectorStore) {
+      console.log('[Migration] knowledge_bases 表缺少 vectorStore 列，执行迁移...')
+      await sequelize.query(`ALTER TABLE knowledge_bases ADD COLUMN vectorStore TEXT NOT NULL DEFAULT 'sqlite-vec';`)
+      console.log('[Migration] vectorStore 列添加成功')
+    }
+
+    if (!tableInfo.vectorConfig) {
+      console.log('[Migration] knowledge_bases 表缺少 vectorConfig 列，执行迁移...')
+      await sequelize.query(`ALTER TABLE knowledge_bases ADD COLUMN vectorConfig TEXT;`)
+      console.log('[Migration] vectorConfig 列添加成功')
+    }
   } catch (error) {
     console.log('[Migration] 跳过 knowledge_bases 列迁移:', (error as Error).message)
+  }
+}
+
+/**
+ * 执行增量迁移：给 llm_configs 表添加新列（如不存在）
+ */
+async function migrateLLMConfigColumns(): Promise<void> {
+  try {
+    await sequelize.getQueryInterface().describeTable('llm_configs')
+  } catch (error) {
+    console.log('[Migration] 跳过 llm_configs 列迁移:', (error as Error).message)
   }
 }
 
@@ -43,6 +65,7 @@ export const initDatabase = async (): Promise<void> => {
     console.log('数据库同步成功')
     // 执行增量迁移
     await migrateKnowledgeBaseColumns()
+    await migrateLLMConfigColumns()
   } catch (error) {
     console.error('数据库连接失败:', error)
     throw error

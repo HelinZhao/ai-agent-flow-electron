@@ -481,10 +481,10 @@ export const knowledgeBaseApi = {
 
 // 数据管理 API
 export const dataApi = {
-  getDbStats: (): Promise<{ database: { path: string; size: number }; knowledge: { path: string; size: number }; total: number }> =>
+  getDbStats: (): Promise<{ base: { path: string; size: number }; knowledge: { path: string; size: number }; total: number }> =>
     api.get('/data/db-stats'),
 
-  vacuum: (): Promise<{ message: string; database: { size: number }; knowledge: { size: number }; total: number }> =>
+  vacuum: (): Promise<{ message: string; base: { size: number }; knowledge: { size: number }; total: number }> =>
     api.post('/data/vacuum'),
 }
 

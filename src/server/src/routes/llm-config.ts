@@ -65,8 +65,12 @@ router.post('/', async (req, res) => {
   try {
     const { name, provider, apiKey, model, baseUrl, temperature, maxTokens, isActive } = req.body
 
-    if (!name || !provider || !apiKey || !model) {
-      return res.status(400).json({ error: '配置名称、提供商、API密钥和模型不能为空' })
+    if (!name || !provider || !model) {
+      return res.status(400).json({ error: '配置名称、提供商和模型不能为空' })
+    }
+    // Ollama 本地模型不需要 API Key，其他提供商需要
+    if (provider !== 'ollama' && !apiKey) {
+      return res.status(400).json({ error: 'API密钥不能为空' })
     }
 
     // 如果要设置为活跃配置，先将其他配置设为非活跃
@@ -184,6 +188,19 @@ router.post('/:id/activate', async (req, res) => {
 router.post('/test-connection', async (req, res) => {
   try {
     const { provider, apiKey, model } = req.body
+
+    // Ollama 本地模型测试
+    if (provider === 'ollama') {
+      const { isOllamaRunning, tryStartOllama } = await import('../utils/ollama')
+      let running = await isOllamaRunning()
+      if (!running) {
+        running = await tryStartOllama()
+      }
+      if (!running) {
+        return res.status(400).json({ error: 'Ollama 服务未启动，请先安装并运行 Ollama: https://ollama.com' })
+      }
+      return res.status(200).json({ success: true, message: `Ollama 服务运行中，模型: ${model || '未指定'}`, response: 'OK' })
+    }
 
     if (!apiKey || !model) {
       return res.status(400).json({ error: 'API Key和模型名称不能为空' })

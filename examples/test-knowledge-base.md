@@ -129,7 +129,7 @@ CLI 节点支持两种模式：
 
 ### 数据存储
 
-所有数据保存在本地 SQLite 数据库中，路径为用户数据目录下的 database.sqlite、knowledge.sqlite。包括：
+所有数据保存在本地 SQLite 数据库中，路径为用户数据目录下的 base、knowledge。包括：
 
 - 工作流定义（节点、边、配置）
 - 技能和智能体配置

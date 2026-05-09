@@ -209,10 +209,11 @@ export interface KnowledgeBase {
   description: string
   type: 'internal' | 'external'
   provider?: string
-  embeddingModel: string
   chunkSize: number
   chunkOverlap: number
   topK: number
+  vectorStore?: string
+  vectorConfig?: string
   apiUrl: string
   apiKey: string
   providerConfig?: string

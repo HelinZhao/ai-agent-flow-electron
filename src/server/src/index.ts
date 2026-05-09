@@ -10,17 +10,24 @@ import llmConfigRouter from './routes/llm-config'
 import knowledgeBaseRouter from './routes/knowledge-base'
 import dataRouter from './routes/data'
 import executeWorkflowRouter from './routes/execute-workflow'
-import { getDataDir } from './utils'
-import { SERVER_PORT, BODY_SIZE_LIMIT, ATTACHMENT_DIR, ATTACHMENT_CONTENT_TYPES, API_VERSION, API_DISPLAY_NAME } from './config'
+import { getResourcesDir } from './utils'
+import { SERVER_PORT, BODY_SIZE_LIMIT, ATTACHMENT_DIR, ATTACHMENT_CONTENT_TYPES, API_VERSION, API_DISPLAY_NAME, OLLAMA_DEFAULT_MODEL } from './config'
+import { isOllamaRunning, tryStartOllama, pullOllamaModel, stopOllama, setOllamaBinaryPath, setOllamaRegistryMirror, downloadAndImportModel, importLocalGGUFModel } from './utils/ollama'
 import { app } from 'electron'
 
 export class LocalServer {
   private app: express.Application
   private server: any = null
   private port: number = SERVER_PORT
+  private ollamaBinaryPath: string | null = null
+  private ollamaRegistryMirror: string | null = null
+  private bundledModelPath: string | null = null
 
-  constructor() {
+  constructor(options?: { ollamaBinaryPath?: string; ollamaRegistryMirror?: string; bundledModelPath?: string }) {
     this.app = express()
+    this.ollamaBinaryPath = options?.ollamaBinaryPath || null
+    this.ollamaRegistryMirror = options?.ollamaRegistryMirror || null
+    this.bundledModelPath = options?.bundledModelPath || null
     this.setupMiddleware()
     this.setupRoutes()
   }
@@ -62,7 +69,7 @@ export class LocalServer {
     // 附件文件服务：/api/attachments/:id/:filename
     this.app.get('/api/attachments/:id/:filename', async (req, res) => {
       const { id, filename } = req.params
-      const filePath = path.resolve(getDataDir(ATTACHMENT_DIR), `${id}-${filename}`)
+      const filePath = path.resolve(getResourcesDir(ATTACHMENT_DIR), `${id}-${filename}`)
 
       try {
         const data = await fs.readFile(filePath)
@@ -108,8 +115,86 @@ export class LocalServer {
     })
   }
 
+  /** 检查 Ollama 中指定模型是否已存在 */
+  private async checkOllamaModel(model: string): Promise<boolean> {
+    try {
+      const res = await fetch('http://127.0.0.1:11434/api/tags', { signal: AbortSignal.timeout(5000) })
+      if (!res.ok) return false
+      const data = await res.json() as { models?: { name: string }[] }
+      return data.models?.some((m: { name: string }) => m.name.startsWith(model)) ?? false
+    } catch { return false }
+  }
+
+  private async initOllama(): Promise<void> {
+    try {
+      // 设置内嵌的 ollama 可执行文件路径（如有）
+      setOllamaBinaryPath(this.ollamaBinaryPath)
+      // 设置模型下载镜像源（国内加速）
+      setOllamaRegistryMirror(this.ollamaRegistryMirror || 'https://ollama.modelscope.cn')
+
+      if (await isOllamaRunning()) {
+        console.log('[Ollama] 服务已就绪')
+        return
+      }
+
+      console.log('[Ollama] 尝试启动服务...')
+      const started = await tryStartOllama()
+      if (!started) {
+        console.warn('[Ollama] 未能自动启动，请确保已安装 Ollama: https://ollama.com')
+        return
+      }
+
+      // 检查 bge-m3 模型是否存在
+      let hasModel = await this.checkOllamaModel(OLLAMA_DEFAULT_MODEL)
+      if (!hasModel) {
+        // 1. 优先导入打包的本地模型（最快）
+        if (this.bundledModelPath) {
+          console.log('[Ollama] 尝试导入打包的模型...')
+          hasModel = await importLocalGGUFModel(OLLAMA_DEFAULT_MODEL, this.bundledModelPath)
+          if (hasModel) {
+            for (let i = 0; i < 10; i++) {
+              if (await this.checkOllamaModel(OLLAMA_DEFAULT_MODEL)) break
+              await new Promise(r => setTimeout(r, 1000))
+            }
+          }
+        }
+        // 2. 打包模型不存在或导入失败，尝试 registry 拉取
+        if (!hasModel) {
+          console.log(`[Ollama] 尝试在线拉取 ${OLLAMA_DEFAULT_MODEL}...`)
+          const pulled = await pullOllamaModel(OLLAMA_DEFAULT_MODEL)
+          if (pulled) {
+            for (let i = 0; i < 10; i++) {
+              hasModel = await this.checkOllamaModel(OLLAMA_DEFAULT_MODEL)
+              if (hasModel) break
+              await new Promise(r => setTimeout(r, 1000))
+            }
+          }
+        }
+        // 3. 最后尝试从 HF 镜像下载 GGUF 导入
+        if (!hasModel) {
+          console.log('[Ollama] 尝试从 HuggingFace 镜像下载...')
+          hasModel = await downloadAndImportModel(
+            OLLAMA_DEFAULT_MODEL,
+            'gpustack/bge-m3-GGUF',
+            'bge-m3-Q4_K_M.gguf',
+            'https://hf-mirror.com'
+          )
+        }
+        if (!hasModel) {
+          console.warn(`[Ollama] 模型 ${OLLAMA_DEFAULT_MODEL} 下载失败，请手动执行: ollama pull bge-m3`)
+        }
+      }
+    } catch (error) {
+      console.warn('[Ollama] 初始化异常:', error)
+    }
+  }
+
   public async start(port?: number): Promise<number> {
     await initDatabase()
+
+    // 初始化 Ollama 服务（知识库 embedding 依赖）
+    await this.initOllama()
+
     return new Promise((resolve, reject) => {
       if (port) {
         this.port = port
@@ -135,6 +220,9 @@ export class LocalServer {
   }
 
   public stop(): Promise<void> {
+    // 清理 Ollama 进程
+    stopOllama()
+
     return new Promise((resolve, reject) => {
       if (this.server) {
         this.server.close((err: any) => {

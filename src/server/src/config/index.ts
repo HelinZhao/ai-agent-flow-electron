@@ -19,16 +19,16 @@ export const API_DISPLAY_NAME = 'AI Agent Flow Designer API Server'
 
 // ========== 数据库与存储路径 ==========
 
-/** 主 SQLite 数据库文件名（相对于 dataDir） */
-export const DB_FILENAME = '/database.sqlite'
+/** 主 SQLite 数据库文件名（相对于 resourcesDir） */
+export const DB_FILENAME = '/data/base'
 
-/** 知识库 SQLite 数据库文件名（相对于 dataDir） */
-export const KB_DB_FILENAME = '/knowledge.sqlite'
+/** 知识库 SQLite 数据库文件名（相对于 resourcesDir） */
+export const KB_DB_FILENAME = '/data/knowledge'
 
-/** 文件上传临时目录（相对于 dataDir） */
+/** 文件上传临时目录（相对于 resourcesDir） */
 export const UPLOAD_DIR = '/uploads'
 
-/** 附件存储目录（相对于 dataDir） */
+/** 附件存储目录（相对于 resourcesDir） */
 export const ATTACHMENT_DIR = '/attachments'
 
 // ========== LLM 默认参数 ==========
@@ -81,7 +81,14 @@ export const PROVIDER_DEFAULT_BASE_URLS: Record<string, string> = {
   bailian: 'https://dashscope.aliyuncs.com/compatible-mode/v1',
   longcat: 'https://api.longcat.chat/openai/v1',
   deepseek: 'https://api.deepseek.com',
+  ollama: 'http://127.0.0.1:11434',
 }
+
+/** Ollama 默认服务地址 */
+export const OLLAMA_DEFAULT_HOST = 'http://127.0.0.1:11434'
+
+/** Ollama 默认 embedding 模型 */
+export const OLLAMA_DEFAULT_MODEL = 'bge-m3'
 
 /** LLM 提供商对应的 API Key 常见前缀（用于输入校验提示） */
 export const PROVIDER_API_KEY_PREFIXES: Record<string, string> = {
@@ -120,25 +127,7 @@ export const DEFAULT_TOP_K = 3
 
 // ========== 知识库 Embedding 配置 ==========
 
-/** 各提供商默认使用的 Embedding 模型名称 */
-export const PROVIDER_EMBEDDING_MODEL: Record<string, string> = {
-  openai: 'text-embedding-3-small',
-  anthropic: 'text-embedding-3-small',
-  azure: 'text-embedding-3-small',
-  bailian: 'text-embedding-v3',
-  longcat: 'text-embedding-3-small',
-}
-
-/** 各提供商 Embedding 模型对应的向量维度 */
-export const PROVIDER_EMBEDDING_DIMS: Record<string, number> = {
-  openai: 1536,
-  anthropic: 1536,
-  azure: 1536,
-  bailian: 1024,
-  longcat: 1536,
-}
-
-/** 当无法确定提供商时使用的默认向量维度 */
+// 默认使用 Ollama + bge-m3（参见 utils/ollama.ts）
 export const DEFAULT_VECTOR_DIMS = 1024
 
 /** sqlite-vec 虚拟表名称 */
@@ -222,6 +211,87 @@ export const EXTERNAL_KB_PROVIDERS: Record<string, {
       const chunks = data.data?.chunks || data.records || data.chunks || []
       return chunks.map((c: any) => c.content || c.text || String(c)).join('\n\n---\n\n')
     }
+  },
+}
+
+// ========== 向量数据库引擎元信息 ==========
+
+/** 向量引擎元信息：显示名 + 是否需要外部连接配置 */
+export const VECTOR_STORE_META: Record<string, {
+  name: string
+  configFields: { key: string; label: string; type: 'text' | 'password' | 'number'; required: boolean; placeholder?: string }[]
+}> = {
+  'sqlite-vec': {
+    name: 'SQLite Vec（内嵌，默认）',
+    configFields: [],
+  },
+  'lancedb': {
+    name: 'LanceDB（内嵌）',
+    configFields: [],
+  },
+  'qdrant': {
+    name: 'Qdrant',
+    configFields: [
+      { key: 'url', label: 'API URL', type: 'text', required: true, placeholder: 'http://localhost:6333' },
+      { key: 'apiKey', label: 'API Key', type: 'password', required: false, placeholder: '可选' },
+      { key: 'collectionName', label: 'Collection 名称', type: 'text', required: false, placeholder: 'knowledge_chunks' },
+    ],
+  },
+  'pinecone': {
+    name: 'Pinecone',
+    configFields: [
+      { key: 'apiKey', label: 'API Key', type: 'password', required: true, placeholder: 'pcsk_...' },
+      { key: 'indexName', label: 'Index 名称', type: 'text', required: false, placeholder: 'knowledge' },
+    ],
+  },
+  'weaviate': {
+    name: 'Weaviate',
+    configFields: [
+      { key: 'url', label: 'HTTP URL', type: 'text', required: true, placeholder: 'http://localhost:8080' },
+      { key: 'apiKey', label: 'API Key', type: 'password', required: false, placeholder: '可选' },
+      { key: 'className', label: 'Class 名称', type: 'text', required: false, placeholder: 'KnowledgeChunk' },
+    ],
+  },
+  'milvus': {
+    name: 'Milvus',
+    configFields: [
+      { key: 'address', label: '地址（host:port）', type: 'text', required: true, placeholder: 'localhost:19530' },
+      { key: 'username', label: '用户名', type: 'text', required: false, placeholder: '可选' },
+      { key: 'password', label: '密码', type: 'password', required: false, placeholder: '可选' },
+      { key: 'collectionName', label: 'Collection 名称', type: 'text', required: false, placeholder: 'knowledge_chunks' },
+    ],
+  },
+  'pgvector': {
+    name: 'PostgreSQL + pgvector',
+    configFields: [
+      { key: 'connectionString', label: '数据库连接串', type: 'password', required: true, placeholder: 'postgresql://user:pass@host:5432/db' },
+      { key: 'tableName', label: '表名', type: 'text', required: false, placeholder: 'knowledge_vectors' },
+    ],
+  },
+  'mongodb-atlas': {
+    name: 'MongoDB Atlas',
+    configFields: [
+      { key: 'connectionString', label: '连接串', type: 'password', required: true, placeholder: 'mongodb+srv://...' },
+      { key: 'dbName', label: '数据库名', type: 'text', required: false, placeholder: 'knowledge' },
+      { key: 'collectionName', label: 'Collection 名称', type: 'text', required: false, placeholder: 'vectors' },
+      { key: 'indexName', label: 'Index 名称', type: 'text', required: false, placeholder: 'vector_index' },
+    ],
+  },
+  'redis': {
+    name: 'Redis + RedisSearch',
+    configFields: [
+      { key: 'url', label: 'URL', type: 'text', required: true, placeholder: 'redis://localhost:6379' },
+      { key: 'password', label: '密码', type: 'password', required: false, placeholder: '可选' },
+      { key: 'indexName', label: 'Index 名称', type: 'text', required: false, placeholder: 'idx:knowledge' },
+    ],
+  },
+  'elasticsearch': {
+    name: 'Elasticsearch',
+    configFields: [
+      { key: 'url', label: 'URL', type: 'text', required: true, placeholder: 'http://localhost:9200' },
+      { key: 'apiKey', label: 'API Key', type: 'password', required: false, placeholder: '可选' },
+      { key: 'indexName', label: 'Index 名称', type: 'text', required: false, placeholder: 'knowledge_vectors' },
+    ],
   },
 }
 

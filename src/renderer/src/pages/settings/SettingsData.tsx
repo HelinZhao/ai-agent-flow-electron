@@ -12,7 +12,7 @@ function formatSize(bytes: number): string {
 export default function SettingsData(): React.JSX.Element {
   const [isClearing, setIsClearing] = useState(false);
   const [isVacuuming, setIsVacuuming] = useState(false);
-  const [dbStats, setDbStats] = useState<{ database: { size: number }; knowledge: { size: number }; total: number } | null>(null);
+  const [dbStats, setDbStats] = useState<{ base: { size: number }; knowledge: { size: number }; total: number } | null>(null);
   const [vacuumResult, setVacuumResult] = useState<{ saved: number } | null>(null);
 
   useEffect(() => {
@@ -59,8 +59,8 @@ export default function SettingsData(): React.JSX.Element {
         <div className="p-4 bg-gray-50 dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700">
           <p className="text-sm font-medium text-gray-900 dark:text-gray-100 mb-2">数据库空间占用</p>
           <div className="space-y-1 text-xs text-gray-600 dark:text-gray-400">
-            <p>主数据库 (database.sqlite): {formatSize(dbStats.database.size)}</p>
-            <p>知识库向量 (knowledge.sqlite): {formatSize(dbStats.knowledge.size)}</p>
+            <p>主数据库 (base): {formatSize(dbStats.base.size)}</p>
+            <p>知识库向量 (knowledge): {formatSize(dbStats.knowledge.size)}</p>
             <p className="font-medium text-gray-700 dark:text-gray-300">合计: {formatSize(dbStats.total)}</p>
           </div>
           {vacuumResult && vacuumResult.saved > 0 && (

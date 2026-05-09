@@ -1,7 +1,7 @@
 import { Router } from 'express'
 import Database from 'better-sqlite3'
 import fs from 'fs/promises'
-import { getDataDir } from '../utils/file'
+import { getResourcesDir } from '../utils/file'
 import { DB_FILENAME, KB_DB_FILENAME } from '../config'
 
 const router = Router()
@@ -9,8 +9,8 @@ const router = Router()
 // 获取数据库文件大小
 router.get('/db-stats', async (_req, res) => {
   try {
-    const dbPath = getDataDir(DB_FILENAME)
-    const kbDbPath = getDataDir(KB_DB_FILENAME)
+    const dbPath = getResourcesDir(DB_FILENAME)
+    const kbDbPath = getResourcesDir(KB_DB_FILENAME)
 
     let mainSize = 0
     let knowledgeSize = 0
@@ -19,7 +19,7 @@ router.get('/db-stats', async (_req, res) => {
     try { const stat = await fs.stat(kbDbPath); knowledgeSize = stat.size } catch {}
 
     return res.status(200).json({
-      database: { path: dbPath, size: mainSize },
+      base: { path: dbPath, size: mainSize },
       knowledge: { path: kbDbPath, size: knowledgeSize },
       total: mainSize + knowledgeSize
     })
@@ -32,8 +32,8 @@ router.get('/db-stats', async (_req, res) => {
 // VACUUM 数据库释放空闲空间
 router.post('/vacuum', async (_req, res) => {
   try {
-    const dbPath = getDataDir(DB_FILENAME)
-    const kbDbPath = getDataDir(KB_DB_FILENAME)
+    const dbPath = getResourcesDir(DB_FILENAME)
+    const kbDbPath = getResourcesDir(KB_DB_FILENAME)
 
     // VACUUM 主数据库
     try {
@@ -41,7 +41,7 @@ router.post('/vacuum', async (_req, res) => {
       db.exec('VACUUM')
       db.close()
     } catch (err) {
-      console.error('VACUUM database.sqlite 失败:', err)
+      console.error('VACUUM base 失败:', err)
     }
 
     // VACUUM 知识库数据库
@@ -50,7 +50,7 @@ router.post('/vacuum', async (_req, res) => {
       kbDb.exec('VACUUM')
       kbDb.close()
     } catch (err) {
-      console.error('VACUUM knowledge.sqlite 失败:', err)
+      console.error('VACUUM knowledge 失败:', err)
     }
 
     // 返回清理后的文件大小
@@ -62,7 +62,7 @@ router.post('/vacuum', async (_req, res) => {
 
     return res.status(200).json({
       message: '数据库空间清理完成',
-      database: { size: mainSize },
+      base: { size: mainSize },
       knowledge: { size: knowledgeSize },
       total: mainSize + knowledgeSize
     })

@@ -3,18 +3,18 @@ import path from 'path'
 import { app } from 'electron'
 import { AttachmentPayload } from './shared'
 
-// 获取数据目录
-export const getDataDir = (subPath?: string): string => {
+// 获取Resources目录
+export const getResourcesDir = (subPath?: string): string => {
   if (app.isPackaged) {
-    return path.join(path.dirname(process.execPath), `data${subPath}`)
+    return path.join(path.dirname(process.execPath), `resources${subPath}`)
   } else {
-    return path.join(`./data${subPath}`) // 开发时
+    return path.join(`./resources${subPath}`) // 开发时
   }
 }
 
 // 将附件数据保存到磁盘文件
 export async function saveAttachmentToDisk(att: AttachmentPayload): Promise<string> {
-  const attachDir = getDataDir('/attachments')
+  const attachDir = getResourcesDir('/attachments')
   await fs.mkdir(attachDir, { recursive: true })
   const filePath = path.join(attachDir, `${att.id}-${att.name}`)
 

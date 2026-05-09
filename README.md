@@ -41,24 +41,35 @@ AI Agent Flow Designer 是一个基于 Electron + React + TypeScript 的可视�
 - Node.js 18+
 - npm 10+
 - Windows 10+ / macOS 10.15+ / Linux
+- **Ollama**（必需）— 知识库 Embedding 依赖，应用首次启动时会自动管理
 
 ## 快速开始
 
 ```bash
-# 安装依赖
+# 安装依赖（自动下载 Ollama 可执行文件）
 npm install
 
 # 开发模式
 npm run dev
 ```
 
+> **首次启动**：应用会自动启动 Ollama 服务并拉取 bge-m3 embedding 模型（约 1.2GB）。
+> 如果网络不畅，可先下载模型后放入 `resources/models/`，启动时自动导入跳过在线拉取。
+
 ### 构建
+
+打包前会自动下载 bge-m3 模型到 `resources/models/`，内嵌到安装包中，用户首次启动时直接本地导入，无需在线拉取。
 
 ```bash
 npm run build          # 构建当前平台
 npm run build:win      # 构建 Windows 版本
 npm run build:mac      # 构建 macOS 版本
 npm run build:linux    # 构建 Linux 版本
+```
+
+也可单独下载模型：
+```bash
+npm run download-model
 ```
 
 ### 代码质量
@@ -68,6 +79,40 @@ npm run format         # 格式化代码
 npm run lint           # 代码检查
 npm run typecheck      # 类型检查
 ```
+
+## Ollama 集成
+
+知识库 RAG 依赖 Ollama 提供本地 Embedding 服务，应用内嵌 Ollama 运行时，启动时自动管理生命周期。
+
+### 自动管理
+
+- 应用启动时自动检测并静默启动 `ollama serve` 子进程
+- 检查 bge-m3 模型是否存在，不存在则按优先级尝试：
+  1. 导入打包的本地模型文件（`resources/models/bge-m3-q8_0.gguf`）
+  2. 从 registry 在线拉取
+  3. 从 HuggingFace 镜像下载 GGUF 导入
+- 应用退出时自动清理子进程
+
+### 内嵌打包（构建时）
+
+```bash
+# 1. 下载 Ollama 可执行文件（postinstall 自动执行）
+npm install
+
+# 2. 下载 bge-m3 模型（打包前执行）
+npm run download-model
+
+# 3. 打包为安装包
+npm run build:win
+```
+
+打包后的安装包包含 ollama 可执行文件和 bge-m3 模型文件，用户安装后直接使用，无需额外下载。
+
+### 手动安装 Ollama
+
+如果自动管理失败，可手动安装：
+- 官网下载: https://ollama.com
+- 启动后运行 `ollama pull bge-m3`
 
 ## 项目结构
 
@@ -113,9 +158,13 @@ ai-agent-flow-electron/
 │       │   │   └── index.ts            # 模块导出桶文件
 │       │   └── index.ts     # 服务器入口 (Express + 路由注册)
 │       └── data/            # SQLite 数据库文件目录
-│           ├── database.sqlite   # 主数据库
-│           └── knowledge.sqlite  # 向量数据库
+│           ├── base   # 主数据库
+│           └── knowledge  # 向量数据库
 ├── resources/               # 应用资源文件
+│   ├── models/              # bge-m3 GGUF 模型文件（构建时下载）
+├── scripts/                 # 构建工具脚本
+│   ├── download-ollama.mjs  # 下载 Ollama 可执行文件
+│   └── download-model.mjs   # 下载 bge-m3 embedding 模型
 ├── tailwind.config.js       # Tailwind 配置 (含节点颜色 safelist)
 ├── electron-vite.config.ts  # Electron-Vite 配置
 └── package.json
@@ -138,8 +187,7 @@ ai-agent-flow-electron/
 
 ### 内部知识库
 
-- 上传 txt/md 文档，系统自动分块、生成 embedding 向量、存入 sqlite-vec
-- Embedding 模型根据当前活跃的 LLM 提供商自动选择（百炼→text-embedding-v3，OpenAI→text-embedding-3-small）
+- 上传 txt/md 文档，系统自动分块、使用 **Ollama + bge-m3** 生成 embedding 向量，存入 sqlite-vec
 - 检索时用向量相似度搜索返回最相关的 top-K 分块，注入 LLM 提示词
 
 ### 外部知识库
@@ -258,7 +306,6 @@ interface KnowledgeBase {
   name: string
   description: string
   type: 'internal' | 'external'
-  embeddingModel: string    // 自动根据提供商设置
   chunkSize: number         // 默认 500
   chunkOverlap: number      // 默认 50
   topK: number              // 默认 3
@@ -273,7 +320,7 @@ interface KnowledgeBase {
 
 ### 数据库
 
-Sequelize 自动同步表结构，无需手动迁移。数据库文件位于 `data/database.sqlite`，向量数据位于 `data/knowledge.sqlite`。删除数据后文件不会自动缩小，可在设置→数据管理中执行 VACUUM 回收空间。
+Sequelize 自动同步表结构，无需手动迁移。数据库文件位于 `data/database`，向量数据位于 `data/knowledge`。删除数据后文件不会自动缩小，可在设置→数据管理中执行 VACUUM 回收空间。
 
 ### 新增 API 路由
 

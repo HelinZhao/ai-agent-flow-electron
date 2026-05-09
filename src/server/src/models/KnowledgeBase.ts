@@ -7,10 +7,11 @@ export interface KnowledgeBaseAttributes {
   description: string
   type: 'internal' | 'external'
   // 内部知识库配置
-  embeddingModel: string
   chunkSize: number
   chunkOverlap: number
   topK: number
+  vectorStore: string
+  vectorConfig: string
   // 外部知识库配置
   provider: string
   apiUrl: string
@@ -33,10 +34,11 @@ export class KnowledgeBaseModel
   declare name: string
   declare description: string
   declare type: 'internal' | 'external'
-  declare embeddingModel: string
   declare chunkSize: number
   declare chunkOverlap: number
   declare topK: number
+  declare vectorStore: string
+  declare vectorConfig: string
   declare provider: string
   declare apiUrl: string
   declare apiKey: string
@@ -66,11 +68,6 @@ KnowledgeBaseModel.init(
       allowNull: false,
       defaultValue: 'internal'
     },
-    embeddingModel: {
-      type: DataTypes.STRING,
-      allowNull: false,
-      defaultValue: 'text-embedding-3-small'
-    },
     chunkSize: {
       type: DataTypes.INTEGER,
       allowNull: false,
@@ -85,6 +82,16 @@ KnowledgeBaseModel.init(
       type: DataTypes.INTEGER,
       allowNull: false,
       defaultValue: 3
+    },
+    vectorStore: {
+      type: DataTypes.STRING,
+      allowNull: false,
+      defaultValue: 'sqlite-vec'
+    },
+    vectorConfig: {
+      type: DataTypes.TEXT,
+      allowNull: true,
+      defaultValue: ''
     },
     provider: {
       type: DataTypes.STRING,

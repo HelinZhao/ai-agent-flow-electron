@@ -6,7 +6,7 @@ import CustomInput from '@renderer/components/ui/CustomInput'
 import CustomButton from '@renderer/components/ui/CustomButton'
 import CustomSelect from '@renderer/components/ui/CustomSelect'
 import KnowledgeDetail from './KnowledgeDetail'
-import { KB_DEFAULTS, CHUNK_SIZE_RANGE, CHUNK_OVERLAP_RANGE, TOP_K_RANGE, EXTERNAL_KB_PROVIDER_META } from '@renderer/config'
+import { KB_DEFAULTS, CHUNK_SIZE_RANGE, CHUNK_OVERLAP_RANGE, TOP_K_RANGE, EXTERNAL_KB_PROVIDER_META, VECTOR_STORE_OPTIONS, VECTOR_STORE_CONFIG_FIELDS, VECTOR_STORE_DEFAULTS } from '@renderer/config'
 
 export default function SettingsKnowledge(): React.JSX.Element {
   const {
@@ -30,6 +30,8 @@ export default function SettingsKnowledge(): React.JSX.Element {
       description: '',
       type: KB_DEFAULTS.type,
       provider: 'generic',
+      vectorStore: 'sqlite-vec',
+      vectorConfig: '',
       chunkSize: KB_DEFAULTS.chunkSize,
       chunkOverlap: KB_DEFAULTS.chunkOverlap,
       topK: KB_DEFAULTS.topK,
@@ -39,6 +41,24 @@ export default function SettingsKnowledge(): React.JSX.Element {
   })
 
   const kbType = watch('type')
+
+  /** 从 vectorConfig JSON 中读取某个配置值 */
+  const getVectorConfigValue = (key: string): any => {
+    try {
+      return JSON.parse(watch('vectorConfig') || '{}')[key]
+    } catch {
+      return undefined
+    }
+  }
+
+  /** 设置 vectorConfig JSON 中的某个配置值 */
+  const setVectorConfigValue = (key: string, value: any): void => {
+    const current = watch('vectorConfig') || '{}'
+    let parsed: Record<string, any> = {}
+    try { parsed = JSON.parse(current) } catch { /* ignore */ }
+    parsed[key] = value
+    setValue('vectorConfig', JSON.stringify(parsed))
+  }
 
   /** 从 providerConfig JSON 中读取某个配置值 */
   const getProviderConfigValue = (key: string): any => {
@@ -114,6 +134,8 @@ export default function SettingsKnowledge(): React.JSX.Element {
       description: '',
       type: KB_DEFAULTS.type,
       provider: 'generic',
+      vectorStore: 'sqlite-vec',
+      vectorConfig: '',
       chunkSize: KB_DEFAULTS.chunkSize,
       chunkOverlap: KB_DEFAULTS.chunkOverlap,
       topK: KB_DEFAULTS.topK,
@@ -144,13 +166,13 @@ export default function SettingsKnowledge(): React.JSX.Element {
     <div>
       {/* 提示消息 */}
       {message && (
-        <div className={`mb-4 px-4 py-2.5 rounded-lg text-sm ${
+        <div className={`mb-4 px-4 py-2.5 rounded-lg text-sm flex items-center justify-between ${
           message.type === 'success'
             ? 'bg-green-50 text-green-700 dark:bg-green-900/20 dark:text-green-400 border border-green-200 dark:border-green-800'
             : 'bg-red-50 text-red-700 dark:bg-red-900/20 dark:text-red-400 border border-red-200 dark:border-red-800'
         }`}>
-          {message.text}
-          <button onClick={() => setMessage(null)} className="ml-2 opacity-60 hover:opacity-100">
+          <span>{message.text}</span>
+          <button onClick={() => setMessage(null)} className="ml-3 opacity-60 hover:opacity-100 flex-shrink-0">
             <svg className="w-3.5 h-3.5 inline" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M18 6L6 18M6 6l12 12" /></svg>
           </button>
         </div>
@@ -330,6 +352,40 @@ export default function SettingsKnowledge(): React.JSX.Element {
 
             {kbType === 'internal' && (
               <div className="p-4 bg-gray-50 dark:bg-gray-900/50 rounded-lg border border-gray-200 dark:border-gray-700 space-y-3">
+                {/* 向量引擎选择 */}
+                <div>
+                  <label className="block text-xs font-medium text-gray-500 dark:text-gray-400 mb-1">向量引擎</label>
+                  <CustomSelect
+                    value={watch('vectorStore') || 'sqlite-vec'}
+                    onChange={(v) => { setValue('vectorStore', v); setValue('vectorConfig', '') }}
+                    options={VECTOR_STORE_OPTIONS.map(opt => ({ value: opt.value, label: opt.label }))}
+                    placeholder="选择向量引擎"
+                  />
+                  <p className="text-xs text-gray-400 dark:text-gray-500 mt-1">
+                    {VECTOR_STORE_DEFAULTS[watch('vectorStore') || 'sqlite-vec'] || ''}
+                  </p>
+                </div>
+
+                {/* 外部向量引擎连接配置 */}
+                {VECTOR_STORE_CONFIG_FIELDS[watch('vectorStore') || ''] && (
+                  <div className="border-t border-gray-200 dark:border-gray-600 pt-3 space-y-3">
+                    <p className="text-xs font-medium text-gray-500 dark:text-gray-400">连接配置</p>
+                    {VECTOR_STORE_CONFIG_FIELDS[watch('vectorStore') || ''].map(field => (
+                      <div key={field.key}>
+                        <label className="block text-xs font-medium text-gray-500 dark:text-gray-400 mb-1">
+                          {field.label}{field.required ? ' *' : ''}
+                        </label>
+                        <CustomInput
+                          type={field.type}
+                          placeholder={field.placeholder}
+                          value={getVectorConfigValue(field.key) || ''}
+                          onChange={(e) => setVectorConfigValue(field.key, e.target.value)}
+                        />
+                      </div>
+                    ))}
+                  </div>
+                )}
+
                 <p className="text-xs text-gray-400 dark:text-gray-500">Embedding 模型根据活跃 LLM 提供商自动选择</p>
                 <div className="grid grid-cols-3 gap-3">
                   <div>

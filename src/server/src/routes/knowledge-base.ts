@@ -3,16 +3,12 @@ import multer from 'multer'
 import path from 'path'
 import fs from 'fs/promises'
 import { KnowledgeBaseModel } from '../models'
-import { LLMConfigModel } from '../models'
-import { getDataDir } from '../utils/file'
+import { getResourcesDir } from '../utils/file'
 import { ingestDocument, deleteDocumentChunks, deleteAllChunks, getDocumentStats, retrieveContext, getChunksByDocument, addChunk, updateChunkContent, deleteSingleChunk, toggleChunkEnabled, reconstructDocumentFromChunks } from '../utils/knowledge'
-import { PROVIDER_EMBEDDING_MODEL, UPLOAD_DIR, KB_UPLOAD_EXTENSIONS, DEFAULT_CHUNK_SIZE, DEFAULT_CHUNK_OVERLAP, DEFAULT_TOP_K } from '../config'
-
-// 提供商 → 默认 embedding 模型名（从集中配置导入）
-// 导入自: PROVIDER_EMBEDDING_MODEL
+import { UPLOAD_DIR, KB_UPLOAD_EXTENSIONS, DEFAULT_CHUNK_SIZE, DEFAULT_CHUNK_OVERLAP, DEFAULT_TOP_K } from '../config'
 
 // 确保 uploads 目录存在
-const uploadsDir = getDataDir(UPLOAD_DIR)
+const uploadsDir = getResourcesDir(UPLOAD_DIR)
 fs.mkdir(uploadsDir, { recursive: true }).catch(() => {})
 
 const router = Router()
@@ -62,7 +58,7 @@ router.get('/', async (_req, res) => {
 // 创建知识库
 router.post('/', async (req, res) => {
   try {
-    const { name, description, type, chunkSize, chunkOverlap, topK, provider, apiUrl, apiKey, providerConfig } = req.body
+    const { name, description, type, chunkSize, chunkOverlap, topK, vectorStore, vectorConfig, provider, apiUrl, apiKey, providerConfig } = req.body
 
     if (!name) {
       return res.status(400).json({ error: '知识库名称不能为空' })
@@ -72,20 +68,15 @@ router.post('/', async (req, res) => {
       return res.status(400).json({ error: '外部知识库必须提供 API 地址' })
     }
 
-    // 根据当前活跃 LLM 提供商自动设置 embedding 模型
-    const activeConfig = await LLMConfigModel.findOne({ where: { isActive: true } })
-    const embeddingModel = activeConfig
-      ? (PROVIDER_EMBEDDING_MODEL[activeConfig.provider] || PROVIDER_EMBEDDING_MODEL.openai)
-      : PROVIDER_EMBEDDING_MODEL.openai
-
     const kb = await KnowledgeBaseModel.create({
       name,
       description: description || '',
       type: type || 'internal',
-      embeddingModel,
       chunkSize: chunkSize || DEFAULT_CHUNK_SIZE,
       chunkOverlap: chunkOverlap || DEFAULT_CHUNK_OVERLAP,
       topK: topK || DEFAULT_TOP_K,
+      vectorStore: vectorStore || 'sqlite-vec',
+      vectorConfig: vectorConfig || '',
       provider: provider || 'generic',
       providerConfig: providerConfig || '',
       apiUrl: apiUrl || '',
@@ -108,16 +99,17 @@ router.put('/:id', async (req, res) => {
       return res.status(404).json({ error: '知识库不存在' })
     }
 
-    const { name, description, type, embeddingModel, chunkSize, chunkOverlap, topK, provider, providerConfig, apiUrl, apiKey } = req.body
+    const { name, description, type, chunkSize, chunkOverlap, topK, vectorStore, vectorConfig, provider, providerConfig, apiUrl, apiKey } = req.body
 
     await kb.update({
       name,
       description,
       type,
-      embeddingModel,
       chunkSize,
       chunkOverlap,
       topK,
+      vectorStore,
+      vectorConfig,
       provider,
       providerConfig,
       apiUrl,

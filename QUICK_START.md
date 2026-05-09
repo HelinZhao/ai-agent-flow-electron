@@ -111,7 +111,7 @@ npm run dev
 ## 💾 数据存储
 
 - 所有配置保存在本地SQLite数据库
-- 位置：`data/database.sqlite`
+- 位置：`resources/data/base`
 - 配置数据自动持久化
 - 应用重启后配置保持不变
 
@@ -129,7 +129,7 @@ npm run dev
 ## 🐛 常见问题
 
 ### Q: 如何重置所有配置？
-A: 删除 `data/database.sqlite` 文件，重启应用
+A: 删除 `resources/data/base` 文件，重启应用
 
 ### Q: 配置切换不生效？
 A: 确保只有一个配置是活跃状态，重启应用尝试

@@ -1,5 +1,6 @@
 import { app, shell, BrowserWindow, ipcMain } from 'electron'
 import { join } from 'path'
+import { existsSync } from 'fs'
 import { electronApp, optimizer, is } from '@electron-toolkit/utils'
 import icon from '../../resources/icon.png?asset'
 import { LocalServer } from '../server/src'
@@ -42,6 +43,36 @@ function createWindow(): void {
   }
 }
 
+// 解析内嵌的 Ollama 可执行文件路径
+function resolveOllamaBinary(): string | undefined {
+  const binaryName = process.platform === 'win32' ? 'ollama.exe' : 'ollama'
+  const candidates: string[] = []
+  if (is.dev) {
+    candidates.push(join(__dirname, '../../resources/ollama', binaryName))
+  }
+  candidates.push(join(process.resourcesPath, 'resources/ollama', binaryName))
+  candidates.push(join(process.resourcesPath, 'ollama', binaryName))
+  for (const p of candidates) {
+    if (existsSync(p)) return p
+  }
+  return undefined
+}
+
+// 解析打包的 bge-m3 GGUF 模型文件路径
+function resolveBundledModelPath(): string | undefined {
+  const modelFile = 'bge-m3-q8_0.gguf'
+  const candidates: string[] = []
+  if (is.dev) {
+    candidates.push(join(__dirname, '../../resources/models', modelFile))
+  }
+  candidates.push(join(process.resourcesPath, 'resources/models', modelFile))
+  candidates.push(join(process.resourcesPath, 'models', modelFile))
+  for (const p of candidates) {
+    if (existsSync(p)) return p
+  }
+  return undefined
+}
+
 // 当Electron完成初始化并准备好创建浏览器窗口时，将调用此方法
 // 某些API只能在此事件发生后使用
 app.whenReady().then(() => {
@@ -67,7 +98,7 @@ app.whenReady().then(() => {
   ipcMain.handle('server:start', async (_, port?: number) => {
     try {
       if (!localServer) {
-        localServer = new LocalServer()
+        localServer = new LocalServer({ ollamaBinaryPath: resolveOllamaBinary(), bundledModelPath: resolveBundledModelPath() })
       }
       const actualPort = await localServer.start(port)
       return { success: true, port: actualPort, url: localServer.getServerUrl() }
@@ -133,7 +164,9 @@ app.whenReady().then(() => {
   })
 
   // 自动启动服务器
-  const server = new LocalServer()
+  const ollamaBinaryPath = resolveOllamaBinary()
+  const bundledModelPath = resolveBundledModelPath()
+  const server = new LocalServer({ ollamaBinaryPath, bundledModelPath })
   server
     .start()
     .then((port) => {

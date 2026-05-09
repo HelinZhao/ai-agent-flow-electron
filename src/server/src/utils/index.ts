@@ -17,7 +17,7 @@ export { executeApiCall } from './api'
 export { executeCliTemplate, executeCliCommand } from './cli'
 
 // 文件和附件操作
-export { getDataDir, saveAttachmentToDisk, loadAttachmentAsDataUrl, loadAttachmentAsText } from './file'
+export { getResourcesDir, saveAttachmentToDisk, loadAttachmentAsDataUrl, loadAttachmentAsText } from './file'
 
 // 工作流执行器
 export { MonitoredLangGraphExecutor } from './monitoredExecutor'

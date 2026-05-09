@@ -65,6 +65,11 @@ export const PROVIDER_MATES: Record<string, {
     baseUrl: 'https://api.deepseek.com',
     prefix: 'sk-'
   },
+  ollama: {
+    name: 'Ollama (本地模型)',
+    baseUrl: 'http://127.0.0.1:11434',
+    prefix: ''
+  },
 }
 
 /** Temperature 输入范围 */
@@ -75,6 +80,82 @@ export const MAX_TOKENS_RANGE = { min: 1, max: 1_024_000 }
 
 /** 不可删除最后一个 LLM 配置 */
 export const MIN_LLM_CONFIG_COUNT = 1
+
+// ========== 向量引擎选项 ==========
+
+/** 向量引擎选项（前端展示用） */
+export const VECTOR_STORE_OPTIONS: { value: string; label: string; category: string }[] = [
+  // 内嵌引擎
+  { value: 'sqlite-vec', label: 'SQLite Vec（内嵌，默认）', category: '内嵌引擎' },
+  { value: 'lancedb', label: 'LanceDB（内嵌）', category: '内嵌引擎' },
+  // 外部服务
+  { value: 'qdrant', label: 'Qdrant', category: '外部服务' },
+  { value: 'pinecone', label: 'Pinecone', category: '外部服务' },
+  { value: 'weaviate', label: 'Weaviate', category: '外部服务' },
+  { value: 'milvus', label: 'Milvus', category: '外部服务' },
+  { value: 'pgvector', label: 'PostgreSQL + pgvector', category: '外部服务' },
+  { value: 'mongodb-atlas', label: 'MongoDB Atlas', category: '外部服务' },
+  { value: 'redis', label: 'Redis + RedisSearch', category: '外部服务' },
+  { value: 'elasticsearch', label: 'Elasticsearch', category: '外部服务' },
+]
+
+/** 各向量引擎的外部连接配置字段定义 */
+export const VECTOR_STORE_CONFIG_FIELDS: Record<string, { key: string; label: string; type: 'text' | 'password' | 'number'; required: boolean; placeholder?: string }[]> = {
+  'qdrant': [
+    { key: 'url', label: 'API URL', type: 'text', required: true, placeholder: 'http://localhost:6333' },
+    { key: 'apiKey', label: 'API Key', type: 'password', required: false, placeholder: '可选' },
+    { key: 'collectionName', label: 'Collection 名称', type: 'text', required: false, placeholder: 'knowledge_chunks' },
+  ],
+  'pinecone': [
+    { key: 'apiKey', label: 'API Key', type: 'password', required: true, placeholder: 'pcsk_...' },
+    { key: 'indexName', label: 'Index 名称', type: 'text', required: false, placeholder: 'knowledge' },
+  ],
+  'weaviate': [
+    { key: 'url', label: 'HTTP URL', type: 'text', required: true, placeholder: 'http://localhost:8080' },
+    { key: 'apiKey', label: 'API Key', type: 'password', required: false, placeholder: '可选' },
+    { key: 'className', label: 'Class 名称', type: 'text', required: false, placeholder: 'KnowledgeChunk' },
+  ],
+  'milvus': [
+    { key: 'address', label: '地址（host:port）', type: 'text', required: true, placeholder: 'localhost:19530' },
+    { key: 'username', label: '用户名', type: 'text', required: false, placeholder: '可选' },
+    { key: 'password', label: '密码', type: 'password', required: false, placeholder: '可选' },
+    { key: 'collectionName', label: 'Collection 名称', type: 'text', required: false, placeholder: 'knowledge_chunks' },
+  ],
+  'pgvector': [
+    { key: 'connectionString', label: '数据库连接串', type: 'password', required: true, placeholder: 'postgresql://user:pass@host:5432/db' },
+    { key: 'tableName', label: '表名', type: 'text', required: false, placeholder: 'knowledge_vectors' },
+  ],
+  'mongodb-atlas': [
+    { key: 'connectionString', label: '连接串', type: 'password', required: true, placeholder: 'mongodb+srv://...' },
+    { key: 'dbName', label: '数据库名', type: 'text', required: false, placeholder: 'knowledge' },
+    { key: 'collectionName', label: 'Collection 名称', type: 'text', required: false, placeholder: 'vectors' },
+    { key: 'indexName', label: 'Index 名称', type: 'text', required: false, placeholder: 'vector_index' },
+  ],
+  'redis': [
+    { key: 'url', label: 'URL', type: 'text', required: true, placeholder: 'redis://localhost:6379' },
+    { key: 'password', label: '密码', type: 'password', required: false, placeholder: '可选' },
+    { key: 'indexName', label: 'Index 名称', type: 'text', required: false, placeholder: 'idx:knowledge' },
+  ],
+  'elasticsearch': [
+    { key: 'url', label: 'URL', type: 'text', required: true, placeholder: 'http://localhost:9200' },
+    { key: 'apiKey', label: 'API Key', type: 'password', required: false, placeholder: '可选' },
+    { key: 'indexName', label: 'Index 名称', type: 'text', required: false, placeholder: 'knowledge_vectors' },
+  ],
+}
+
+/** 向量引擎默认配置提示 */
+export const VECTOR_STORE_DEFAULTS: Record<string, string> = {
+  'sqlite-vec': '使用 SQLite + sqlite-vec 扩展，无需额外配置',
+  'lancedb': '使用 LanceDB 内嵌格式，数据存储在 data/lancedb 目录',
+  'qdrant': '连接已有的 Qdrant 服务',
+  'pinecone': '连接 Pinecone 服务',
+  'weaviate': '连接 Weaviate 服务',
+  'milvus': '连接 Milvus 服务',
+  'pgvector': '连接 PostgreSQL 数据库（需已安装 pgvector 扩展）',
+  'mongodb-atlas': '连接 MongoDB Atlas（需已配置 Vector Search Index）',
+  'redis': '连接 Redis 实例（需已加载 RedisSearch 模块）',
+  'elasticsearch': '连接 Elasticsearch 服务（需支持 dense_vector）',
+}
 
 // ========== 知识库配置默认值 ==========
 

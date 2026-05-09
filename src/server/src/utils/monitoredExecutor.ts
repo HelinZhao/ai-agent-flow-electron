@@ -14,12 +14,12 @@ import { callLLM } from './llm'
 import { executeApiCall } from './api'
 import { executeCliCommand, executeCliTemplate } from './cli'
 import { HITLRequest, HITLResponse, HITLDecision, CallLLMOptions } from './hitl'
-import { getDataDir, saveAttachmentToDisk } from './file'
+import { getResourcesDir, saveAttachmentToDisk } from './file'
 import { AttachmentPayload } from './shared'
 import { retrieveContext } from './knowledge'
 import { v4 as uuidv4 } from 'uuid'
 import { SqliteSaver } from "@langchain/langgraph-checkpoint-sqlite";
-import { DB_FILENAME, DANGEROUS_TOOLS, LANGGRAPH_RECURSION_LIMIT_WITH_TOOLS, LANGGRAPH_RECURSION_LIMIT_NO_TOOLS } from '../config'
+import { DB_FILENAME, DANGEROUS_TOOLS } from '../config'
 
 // 执行状态存储
 interface ExecutionState {
@@ -44,7 +44,7 @@ interface ExecutionState {
   pendingApproval: { resolve: (response: HITLResponse) => void; request: HITLRequest } | null
   attachments?: AttachmentPayload[]
 }
-const checkpointer = SqliteSaver.fromConnString(getDataDir(DB_FILENAME));
+const checkpointer = SqliteSaver.fromConnString(getResourcesDir(DB_FILENAME));
 
 // 带监控的LangGraph执行器
 export class MonitoredLangGraphExecutor {

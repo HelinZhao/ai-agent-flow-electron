@@ -30,7 +30,7 @@ export default function SettingsLLM(): React.JSX.Element {
             baseUrl: LLM_DEFAULTS.baseUrl,
             temperature: LLM_DEFAULTS.temperature,
             maxTokens: LLM_DEFAULTS.maxTokens,
-            isActive: false
+            isActive: false,
         }
     });
     const provider = watch('provider')
@@ -149,7 +149,7 @@ export default function SettingsLLM(): React.JSX.Element {
             baseUrl: LLM_DEFAULTS.baseUrl,
             temperature: LLM_DEFAULTS.temperature,
             maxTokens: LLM_DEFAULTS.maxTokens,
-            isActive: false
+            isActive: false,
         });
         setEditingConfig(null);
         setShowForm(true);
@@ -263,16 +263,22 @@ export default function SettingsLLM(): React.JSX.Element {
 
                     <div>
                         <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                            API Key *
+                            API Key {provider !== 'ollama' ? '*' : ''}
                         </label>
-                        <CustomInput
-                            type="password"
-                            {...register('apiKey', { required: '请输入API Key' })}
-                            placeholder={(PROVIDER_MATES[provider]?.prefix || "") + "..."}
-                            error={errors.apiKey?.message}
-                        />
-                        {errors.apiKey && (
-                            <p className="mt-1 text-sm text-red-600">{errors.apiKey.message}</p>
+                        {provider === 'ollama' ? (
+                            <p className="text-sm text-gray-500 dark:text-gray-400 py-2">Ollama 本地模型不需要 API Key</p>
+                        ) : (
+                            <>
+                                <CustomInput
+                                    type="password"
+                                    {...register('apiKey', { required: provider !== 'ollama' ? '请输入API Key' : false })}
+                                    placeholder={(PROVIDER_MATES[provider]?.prefix || "") + "..."}
+                                    error={errors.apiKey?.message}
+                                />
+                                {errors.apiKey && (
+                                    <p className="mt-1 text-sm text-red-600">{errors.apiKey.message}</p>
+                                )}
+                            </>
                         )}
                     </div>
 
@@ -282,49 +288,55 @@ export default function SettingsLLM(): React.JSX.Element {
                         </label>
                         <CustomInput
                             {...register('model')}
-                            placeholder="gpt-3.5-turbo"
+                            placeholder={provider === 'ollama' ? 'bge-m3（推荐中文） / nomic-embed-text' : "gpt-3.5-turbo"}
+                            helper={provider === 'ollama' ? '先在终端运行 ollama pull <模型名> 下载模型' : undefined}
                         />
                     </div>
 
-                    <div>
-                        <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                            API Base URL (可选)
-                        </label>
-                        <CustomInput
-                            {...register('baseUrl')}
-                            placeholder={(PROVIDER_MATES[provider]?.baseUrl ?? "") || 'https://api.openai.com/v1'}
-                            helper="留空使用默认地址，或使用自定义代理地址"
-                        />
-                    </div>
-
-                    <div className="grid grid-cols-2 gap-4">
+                    {provider !== 'ollama' && (
                         <div>
                             <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                                温度 ({watch('temperature') || 0.7})
-                            </label>
-                            <input
-                                type="range"
-                                min={TEMPERATURE_RANGE.min}
-                                max={TEMPERATURE_RANGE.max}
-                                step={TEMPERATURE_RANGE.step}
-                                {...register('temperature', { valueAsNumber: true })}
-                                className="w-full bg-white dark:bg-gray-700"
-                            />
-                        </div>
-
-                        <div>
-                            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                                最大Token数
+                                API Base URL (可选)
                             </label>
                             <CustomInput
+                                {...register('baseUrl')}
+                                placeholder={(PROVIDER_MATES[provider]?.baseUrl ?? "") || 'https://api.openai.com/v1'}
+                                helper="留空使用默认地址，或使用自定义代理地址"
+                            />
+                        </div>
+                    )}
+
+                    {provider !== 'ollama' && (
+                        <div className="grid grid-cols-2 gap-4">
+                            <div>
+                                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                                    温度 ({watch('temperature') || 0.7})
+                                </label>
+                                <input
+                                    type="range"
+                                    min={TEMPERATURE_RANGE.min}
+                                    max={TEMPERATURE_RANGE.max}
+                                    step={TEMPERATURE_RANGE.step}
+                                    {...register('temperature', { valueAsNumber: true })}
+                                    className="w-full bg-white dark:bg-gray-700"
+                                />
+                            </div>
+
+                            <div>
+                                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                                    最大Token数
+                                </label>
+                                <CustomInput
                                 type="number"
                                 min={MAX_TOKENS_RANGE.min}
                                 max={MAX_TOKENS_RANGE.max}
                                 {...register('maxTokens', { valueAsNumber: true })}
                             />
+                            </div>
                         </div>
-                    </div>
+                    )}
 
+                    {provider !== 'ollama' && (
                     <div className="p-4 bg-yellow-50 dark:bg-yellow-900/20 border border-yellow-200 dark:border-yellow-800 rounded-md">
                         <div className="flex">
                             <div className="flex-shrink-0">
@@ -347,6 +359,7 @@ export default function SettingsLLM(): React.JSX.Element {
                             </div>
                         </div>
                     </div>
+                    )}
 
                     <div className="flex space-x-4">
                         <CustomButton
@@ -361,7 +374,7 @@ export default function SettingsLLM(): React.JSX.Element {
                         <CustomButton
                             type="button"
                             onClick={testConnection}
-                            disabled={isLoading || !watch('apiKey')}
+                            disabled={isLoading || (provider !== 'ollama' && !watch('apiKey'))}
                             variant="secondary"
                             className="flex-1"
                         >

@@ -11,7 +11,14 @@
       "Bash(npx electron-vite:*)",
       "Bash(pnpm remove:*)",
       "Bash(pkill -f electron-vite)",
-      "Bash(pkill -f \"electron-vite|node\")"
+      "Bash(pkill -f \"electron-vite|node\")",
+      "Bash(node -e \"import\\('@lancedb/lancedb'\\).then\\(m => console.log\\('OK:', Object.keys\\(m\\).slice\\(0,5\\)\\)\\)\")",
+      "Bash(node -e \"import\\('@lancedb/lancedb'\\).then\\(m => console.log\\(Object.keys\\(m\\).sort\\(\\).join\\('\\\\n'\\)\\)\\)\")",
+      "Bash(node -e \"const pkgs = ['better-sqlite3','express','sequelize','@langchain/core','@langchain/openai','react','electron']; pkgs.forEach\\(p => { try { require.resolve\\(p\\); console.log\\('✓', p\\) } catch\\(e\\) { console.log\\('✗', p, e.message\\) } }\\)\")",
+      "Bash(curl -s -w \"\\\\n%{http_code}\" \"https://api.deepseek.com/v1/embeddings\" -H \"Content-Type: application/json\" -H \"Authorization: Bearer test\" -d '{\"model\":\"deepseek-embedding\",\"input\":\"test\"}')",
+      "Bash(curl -s -w \"\\\\n%{http_code}\" \"https://api.deepseek.com/embeddings\" -H \"Content-Type: application/json\" -H \"Authorization: Bearer test\" -d '{\"model\":\"deepseek-embedding\",\"input\":\"test\"}')",
+      "Bash(curl -s -w \"\\\\nHTTP_CODE:%{http_code}\" \"https://api.deepseek.com/embeddings\" -H \"Content-Type: application/json\" -H \"Authorization: Bearer test\" -d '{\"model\":\"deepseek-embedding-v1\",\"input\":\"test\"}')",
+      "Bash(curl -s -w \"\\\\nHTTP_CODE:%{http_code}\" \"https://api.deepseek.com/v1/embeddings\" -H \"Content-Type: application/json\" -H \"Authorization: Bearer test\" -d '{\"model\":\"deepseek-embedding-v1\",\"input\":\"test\"}')"
     ]
   }
 }
