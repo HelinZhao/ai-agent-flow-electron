@@ -199,6 +199,10 @@ export class LanceDbStore implements VectorStoreProvider {
     for (const id of chunkIds) {
       await table.delete(`id = '${id}'`)
     }
+    // 优化存储：删除 tombstone 记录，回收磁盘空间
+    await table.optimize({ cleanupOlderThan: new Date() }).catch((err: any) =>
+      console.warn(`[LanceDb] optimize 失败: ${err}`)
+    )
   }
 
   async clearAll(): Promise<void> {

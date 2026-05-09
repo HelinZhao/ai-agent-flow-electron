@@ -127,10 +127,15 @@ async function main() {
           }
         }
 
-        // 只保留 ollama.exe，清理其他多余文件
-        for (const entry of await (await import('fs/promises')).readdir(DEST_DIR)) {
-          if (entry !== info.binaryName) {
-            await rm(join(DEST_DIR, entry), { recursive: true, force: true })
+        // 删除 ZIP 解压可能产生的子目录（ollama-windows-amd64/），保留 ollama.exe + lib/
+        const entries = await (await import('fs/promises')).readdir(DEST_DIR)
+        for (const entry of entries) {
+          if (entry !== info.binaryName && entry !== 'lib') {
+            const fullPath = join(DEST_DIR, entry)
+            const stat = await (await import('fs/promises')).stat(fullPath)
+            if (stat.isDirectory() && entry.endsWith('-amd64')) {
+              await rm(fullPath, { recursive: true, force: true })
+            }
           }
         }
       } else {

@@ -29,6 +29,9 @@ let ollamaProcess: ChildProcess | null = null
 let ollamaHost = 'http://127.0.0.1:11434'
 let ollamaBinaryPath: string | null = null
 let ollamaRegistryMirror: string | null = null
+let gpuInfoLogged = false
+/** Ollama 启动时捕获的 stderr 日志，供 logGpuInfo() 解析 GPU 信息（Ollama < 0.5.3 时使用） */
+let ollamaStartupStderr: string | null = null
 
 /** 设置 Ollama 可执行文件路径（打包内嵌时使用） */
 export function setOllamaBinaryPath(path: string | null): void {
@@ -50,6 +53,65 @@ export async function isOllamaRunning(): Promise<boolean> {
   }
 }
 
+/** 检测 Ollama 版本和 GPU 状态 */
+export async function logGpuInfo(): Promise<void> {
+  try {
+    const binary = ollamaBinaryPath || 'ollama'
+
+    // 版本信息
+    try {
+      const verRes = await fetch(`${ollamaHost}/api/version`, { signal: AbortSignal.timeout(2000) })
+      if (verRes.ok) {
+        const ver = await verRes.json() as any
+        console.log(`[Ollama] 版本: ${ver.version || 'unknown'}`)
+      }
+    } catch { /* ignore */ }
+
+    // 通过 ollama ps 查看已加载模型的运行设备
+    try {
+      const { execSync } = await import('child_process')
+      const psOut = execSync(`"${binary}" ps 2>&1`, { timeout: 5000, encoding: 'utf-8' }).trim()
+      if (psOut) {
+        // ollama ps 输出格式: NAME\tID\tSIZE\tPROCESSOR\tUNTIL
+        const lines = psOut.split('\n')
+        if (lines.length > 1) {
+          console.log('[Ollama] 已加载模型:')
+          for (const line of lines) {
+            console.log(`  ${line}`)
+          }
+        } else {
+          console.log('[Ollama] 当前无已加载模型（首次 embedding 后会自动加载）')
+        }
+      }
+    } catch { /* ignore */ }
+
+    // 从 Ollama 启动日志中提取 GPU 信息
+    if (ollamaStartupStderr) {
+      const lines = ollamaStartupStderr.split('\n')
+      const gpuLine = lines.find(l => /\bmsg="inference compute"/.test(l))
+      if (gpuLine) {
+        const name = gpuLine.match(/\bdescription="([^"]+)"/)?.[1]
+        const lib = gpuLine.match(/\blibrary=(\S+)/)?.[1]
+        const compute = gpuLine.match(/\bcompute=([^\s"]+)/)?.[1]
+        const driver = gpuLine.match(/\bdriver=([^\s"]+)/)?.[1]
+        const total = gpuLine.match(/\btotal="([^"]+)"/)?.[1]
+        const available = gpuLine.match(/\bavailable="([^"]+)"/)?.[1]
+        console.log(`[Ollama] GPU: ${name || 'unknown'} | ${lib || ''} | compute ${compute || ''} | 驱动: ${driver || ''}`)
+        if (total) console.log(`[Ollama] 显存: ${total}（可用 ${available || '?'}）`)
+      } else {
+        // fallback: 直接显示最后几行原始日志
+        const summary = lines.filter(l => l.trim()).slice(-10)
+          .map(l => l.replace(/^time=\S+\s+(level=\S+\s+)?(source=\S+\s+)?/, '').trim())
+          .filter(Boolean)
+        if (summary.length > 0) {
+          console.log('[Ollama] 启动日志:')
+          for (const line of summary) console.log(`  ${line}`)
+        }
+      }
+    }
+  } catch { /* ignore */ }
+}
+
 /** 尝试启动 Ollama（仅在检测到 ollama 已安装时启动） */
 export async function tryStartOllama(): Promise<boolean> {
   if (await isOllamaRunning()) return true
@@ -57,11 +119,21 @@ export async function tryStartOllama(): Promise<boolean> {
   return new Promise((resolve) => {
     try {
       ollamaProcess = spawn(ollamaBinaryPath || 'ollama', ['serve'], {
-        stdio: 'ignore',
+        stdio: ['ignore', 'ignore', 'pipe'],
         detached: false,
         env: {
           ...process.env,
           ...(ollamaRegistryMirror ? { OLLAMA_REGISTRY_MIRROR: ollamaRegistryMirror } : {})
+        }
+      })
+
+      // 捕获 stderr 中的 GPU 检测信息
+      let stderrBuf = ''
+      ollamaProcess.stderr?.on('data', (chunk: Buffer) => {
+        stderrBuf += chunk.toString()
+        // 如果 stderr 超出 64KB，截断保留尾部
+        if (stderrBuf.length > 65536) {
+          stderrBuf = stderrBuf.slice(-32768)
         }
       })
 
@@ -77,6 +149,7 @@ export async function tryStartOllama(): Promise<boolean> {
         if (await isOllamaRunning()) {
           clearInterval(interval)
           console.log('[Ollama] 服务已启动')
+          ollamaStartupStderr = stderrBuf
           resolve(true)
         } else if (waited >= 15000) {
           clearInterval(interval)
@@ -172,7 +245,7 @@ async function importGGUFViaCLI(model: string, ggufPath: string): Promise<boolea
       proc.on('close', (code) => resolve(code === 0))
     })
   } finally {
-    await rm(tmpDir, { recursive: true, force: true }).catch(() => {})
+    await rm(tmpDir, { recursive: true, force: true }).catch(() => { })
   }
 }
 
@@ -218,7 +291,7 @@ export async function downloadAndImportModel(
     return false
   } finally {
     // 清理临时文件
-    try { await rm(tempDir, { recursive: true, force: true }) } catch {}
+    try { await rm(tempDir, { recursive: true, force: true }) } catch { }
   }
 }
 
@@ -236,6 +309,26 @@ export async function importLocalGGUFModel(model: string, ggufPath: string): Pro
   return ok
 }
 
+/** 记录已加载模型的运行设备信息（ollama ps，每个会话只执行一次） */
+async function logLoadedModelInfo(): Promise<void> {
+  if (gpuInfoLogged) return
+  gpuInfoLogged = true
+  try {
+    const binary = ollamaBinaryPath || 'ollama'
+    const { execSync } = await import('child_process')
+    const psOut = execSync(`"${binary}" ps 2>&1`, { timeout: 5000, encoding: 'utf-8' }).trim()
+    if (psOut) {
+      const lines = psOut.split('\n')
+      if (lines.length > 1) {
+        console.log('[Ollama] 模型运行设备:')
+        for (const line of lines) {
+          console.log(`  ${line}`)
+        }
+      }
+    }
+  } catch { /* ignore */ }
+}
+
 /** Ollama Embeddings 实现（兼容 LangChain Embeddings 接口） */
 export class OllamaEmbeddingsInstance extends Embeddings {
   private model: string
@@ -248,11 +341,39 @@ export class OllamaEmbeddingsInstance extends Embeddings {
   }
 
   async embedDocuments(texts: string[]): Promise<number[][]> {
+    const batchSize = 64
     const results: number[][] = []
-    for (const text of texts) {
-      const vec = await this.embedQuery(text)
-      results.push(vec)
+    const totalRequests = Math.ceil(texts.length / batchSize)
+    console.log(`[Ollama] embedding ${texts.length} 个文本，分 ${totalRequests} 批请求`)
+
+    for (let i = 0; i < texts.length; i += batchSize) {
+      const batch = texts.slice(i, i + batchSize)
+      const seq = i / batchSize + 1
+      const start = Date.now()
+      console.log(`[Ollama] 批量请求 ${seq}/${totalRequests} (${batch.length} 个文本)...`)
+
+      const res = await fetch(`${this.host}/api/embed`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ model: this.model, input: batch }),
+        signal: AbortSignal.timeout(120000),
+      })
+
+      if (!res.ok) {
+        const body = await res.text().catch(() => '')
+        throw new Error(`Ollama 批量 embedding 失败 (${res.status}): ${body || res.statusText}`)
+      }
+
+      const data = await res.json() as { embeddings: number[][] }
+      results.push(...data.embeddings)
+
+      const elapsed = ((Date.now() - start) / 1000).toFixed(1)
+      console.log(`[Ollama] 批量请求 ${seq} 完成 (${elapsed}s), 共 ${results.length}/${texts.length} 个向量`)
     }
+
+    // 首次 embedding 后记录模型运行设备
+    await logLoadedModelInfo()
+
     return results
   }
 

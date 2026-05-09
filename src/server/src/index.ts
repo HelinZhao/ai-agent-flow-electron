@@ -12,7 +12,7 @@ import dataRouter from './routes/data'
 import executeWorkflowRouter from './routes/execute-workflow'
 import { getResourcesDir } from './utils'
 import { SERVER_PORT, BODY_SIZE_LIMIT, ATTACHMENT_DIR, ATTACHMENT_CONTENT_TYPES, API_VERSION, API_DISPLAY_NAME, OLLAMA_DEFAULT_MODEL } from './config'
-import { isOllamaRunning, tryStartOllama, pullOllamaModel, stopOllama, setOllamaBinaryPath, setOllamaRegistryMirror, downloadAndImportModel, importLocalGGUFModel } from './utils/ollama'
+import { isOllamaRunning, tryStartOllama, pullOllamaModel, stopOllama, setOllamaBinaryPath, setOllamaRegistryMirror, downloadAndImportModel, importLocalGGUFModel, logGpuInfo } from './utils/ollama'
 import { app } from 'electron'
 
 export class LocalServer {
@@ -134,6 +134,7 @@ export class LocalServer {
 
       if (await isOllamaRunning()) {
         console.log('[Ollama] 服务已就绪')
+        await logGpuInfo()
         return
       }
 
@@ -184,6 +185,9 @@ export class LocalServer {
           console.warn(`[Ollama] 模型 ${OLLAMA_DEFAULT_MODEL} 下载失败，请手动执行: ollama pull bge-m3`)
         }
       }
+
+      // 记录 GPU 信息
+      await logGpuInfo()
     } catch (error) {
       console.warn('[Ollama] 初始化异常:', error)
     }
