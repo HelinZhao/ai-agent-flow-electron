@@ -123,6 +123,7 @@ export async function tryStartOllama(): Promise<boolean> {
         detached: false,
         env: {
           ...process.env,
+          OLLAMA_VULKAN: '1',
           ...(ollamaRegistryMirror ? { OLLAMA_REGISTRY_MIRROR: ollamaRegistryMirror } : {})
         }
       })

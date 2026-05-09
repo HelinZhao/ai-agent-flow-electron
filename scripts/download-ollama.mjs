@@ -23,8 +23,9 @@ const DEST_DIR = join(import.meta.dirname, '..', 'resources', 'ollama')
 const MIRROR = process.env.GITHUB_MIRROR || 'https://github.com'
 
 function getPlatformInfo() {
-  if (process.arch !== 'x64') {
-    console.warn(`[download-ollama] 不支持的架构: ${process.arch}，仅支持 x64`)
+  const supported = process.arch === 'x64' || (process.platform === 'darwin' && process.arch === 'arm64')
+  if (!supported) {
+    console.warn(`[download-ollama] 不支持的架构: ${process.arch}，仅支持 x64（macOS 支持 x64 和 arm64）`)
     return null
   }
   const base = `${MIRROR}/ollama/ollama/releases/latest/download`
