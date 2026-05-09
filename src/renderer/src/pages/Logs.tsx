@@ -7,10 +7,12 @@ interface LogEntry {
   message: string
 }
 
+type LevelFilter = 'all' | 'info' | 'warn' | 'error' | 'debug'
+
 export default function Logs(): React.JSX.Element {
   const [logs, setLogs] = useState<LogEntry[]>([])
   const [connected, setConnected] = useState(false)
-  const [filter, setFilter] = useState<string>('all')
+  const [filter, setFilter] = useState<LevelFilter>('all')
   const [searchText, setSearchText] = useState('')
   const [autoScroll, setAutoScroll] = useState(true)
   const containerRef = useRef<HTMLDivElement>(null)
@@ -56,28 +58,29 @@ export default function Logs(): React.JSX.Element {
     return true
   })
 
-  const levelColors: Record<string, string> = {
-    info: 'text-blue-400',
-    warn: 'text-yellow-400',
-    error: 'text-red-400',
-    debug: 'text-gray-400'
+  const levelTextColors: Record<LevelFilter, string> = {
+    all: '',
+    info: 'text-blue-600 dark:text-blue-400',
+    warn: 'text-amber-600 dark:text-yellow-400',
+    error: 'text-red-600 dark:text-red-400',
+    debug: 'text-gray-500 dark:text-gray-400'
   }
 
   return (
-    <div className="flex flex-col h-full bg-gray-950 text-gray-100 font-mono text-sm">
+    <div className="flex flex-col h-full text-gray-900 dark:text-gray-100 font-mono text-sm">
       {/* 工具栏 */}
-      <div className="flex items-center justify-between px-4 py-2 bg-gray-900 border-b border-gray-800 shrink-0">
+      <div className="flex items-center justify-between px-4 py-2 bg-gray-100 dark:bg-gray-900 border-b border-gray-200 dark:border-gray-800 shrink-0">
         <div className="flex items-center space-x-3">
           {/* 连接状态 */}
           <span className="flex items-center space-x-1.5">
             <span className={`w-2 h-2 rounded-full ${connected ? 'bg-green-500' : 'bg-red-500'}`} />
-            <span className="text-xs text-gray-400">{connected ? '已连接' : '未连接'}</span>
+            <span className="text-xs text-gray-500 dark:text-gray-400">{connected ? '已连接' : '未连接'}</span>
           </span>
           {/* 级别过滤 */}
           <select
             value={filter}
-            onChange={(e) => setFilter(e.target.value)}
-            className="bg-gray-800 text-xs text-gray-300 px-2 py-1 rounded border border-gray-700 outline-none focus:border-blue-500"
+            onChange={(e) => setFilter(e.target.value as LevelFilter)}
+            className="bg-gray-200 dark:bg-gray-800 text-xs text-gray-700 dark:text-gray-300 px-2 py-1 rounded border border-gray-300 dark:border-gray-700 outline-none focus:border-blue-500"
           >
             <option value="all">所有级别</option>
             <option value="info">Info</option>
@@ -91,7 +94,7 @@ export default function Logs(): React.JSX.Element {
             placeholder="搜索日志..."
             value={searchText}
             onChange={(e) => setSearchText(e.target.value)}
-            className="bg-gray-800 text-xs text-gray-300 px-2 py-1 rounded border border-gray-700 w-40 outline-none focus:border-blue-500 placeholder-gray-500"
+            className="bg-gray-200 dark:bg-gray-800 text-xs text-gray-700 dark:text-gray-300 px-2 py-1 rounded border border-gray-300 dark:border-gray-700 w-40 outline-none focus:border-blue-500 placeholder-gray-400 dark:placeholder-gray-500"
           />
           <span className="text-xs text-gray-500">{filteredLogs.length} 条</span>
         </div>
@@ -99,14 +102,16 @@ export default function Logs(): React.JSX.Element {
           <button
             onClick={() => setAutoScroll(!autoScroll)}
             className={`text-xs px-2 py-1 rounded transition-colors ${
-              autoScroll ? 'text-blue-400 bg-gray-800' : 'text-gray-400 hover:text-gray-300'
+              autoScroll
+                ? 'text-blue-600 dark:text-blue-400 bg-gray-200 dark:bg-gray-800'
+                : 'text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300'
             }`}
           >
             自动滚动
           </button>
           <button
             onClick={() => setLogs([])}
-            className="text-xs text-gray-400 hover:text-white px-2 py-1 rounded hover:bg-gray-800 transition-colors"
+            className="text-xs text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-white px-2 py-1 rounded hover:bg-gray-200 dark:hover:bg-gray-800 transition-colors"
           >
             清空
           </button>
@@ -124,20 +129,18 @@ export default function Logs(): React.JSX.Element {
         }}
       >
         {filteredLogs.map((log, i) => (
-          <div key={i} className="flex items-start space-x-2 hover:bg-gray-900/50 px-1.5 py-0.5 rounded">
-            <span className="text-gray-600 text-xs whitespace-nowrap shrink-0 w-16 text-right">
+          <div key={i} className="flex items-start space-x-2 hover:bg-gray-100 dark:hover:bg-gray-900/50 px-1.5 py-0.5 rounded">
+            <span className="text-gray-400 dark:text-gray-500 text-xs whitespace-nowrap shrink-0 w-16 text-right">
               {new Date(log.timestamp).toLocaleTimeString()}
             </span>
-            <span
-              className={`shrink-0 w-10 text-xs font-semibold uppercase ${levelColors[log.level] || 'text-gray-400'}`}
-            >
+            <span className={`shrink-0 w-10 text-xs font-semibold uppercase ${levelTextColors[log.level] || 'text-gray-500 dark:text-gray-400'}`}>
               {log.level}
             </span>
-            <span className="text-gray-300 break-all whitespace-pre-wrap leading-5">{log.message}</span>
+            <span className="text-gray-700 dark:text-gray-300 break-all whitespace-pre-wrap leading-5">{log.message}</span>
           </div>
         ))}
         {filteredLogs.length === 0 && (
-          <div className="flex items-center justify-center h-full text-gray-600 text-sm">
+          <div className="flex items-center justify-center h-full text-gray-400 dark:text-gray-600 text-sm">
             {connected ? '暂无日志' : '等待连接...'}
           </div>
         )}
