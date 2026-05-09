@@ -30,6 +30,8 @@ const LLMConfig: React.FC<LLMConfigProps> = ({ config, onConfigChange }) => {
     if (knowledgeBases.length === 0) getKnowledgeBases()
   }, [])
 
+  const llmConfigs = useWorkflowStore((s) => s.llmConfigs);
+
   // 当外部config变化时同步更新本地状态
   React.useEffect(() => {
     setVariables(config.variables || []);
@@ -72,6 +74,29 @@ const LLMConfig: React.FC<LLMConfigProps> = ({ config, onConfigChange }) => {
 
   return (
     <div className="space-y-4">
+      {/* LLM 配置选择 */}
+      <div>
+        <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+          LLM 配置
+        </label>
+        <CustomSelect
+          value={config.llmConfigId || ''}
+          onChange={(val) => onConfigChange({ ...config, llmConfigId: val })}
+          options={[
+            { value: '', label: '使用全局活跃配置' },
+            ...llmConfigs.map((cfg) => ({
+              value: cfg.id!,
+              label: `${cfg.name} (${cfg.provider}/${cfg.model})`
+            }))
+          ]}
+          placeholder="选择 LLM 配置"
+          size="sm"
+        />
+        <div className="text-xs text-gray-500 dark:text-gray-400 mt-1">
+          选择后该节点将使用指定的 LLM 配置，不选则使用页面顶部活跃的 LLM 配置
+        </div>
+      </div>
+
       <div>
         <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
           提示词模板 *

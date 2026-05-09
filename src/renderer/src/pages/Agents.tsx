@@ -143,7 +143,7 @@ export default function Agents(): React.JSX.Element {
                                     >
                                         <div className="flex justify-between items-start">
                                             <div className="flex-1 min-w-0">
-                                                <h4 className="text-sm font-semibold text-gray-900 dark:text-white truncate mb-1">
+                                                <h4 className="text-sm font-medium text-gray-900 dark:text-white truncate">
                                                     {agent.name}
                                                 </h4>
                                                 <p className="text-xs text-gray-500 dark:text-gray-400 truncate">

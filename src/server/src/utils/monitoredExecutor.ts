@@ -20,6 +20,7 @@ import { retrieveContext } from './knowledge'
 import { v4 as uuidv4 } from 'uuid'
 import { SqliteSaver } from "@langchain/langgraph-checkpoint-sqlite";
 import { DB_FILENAME, DANGEROUS_TOOLS } from '../config'
+import { LLMConfigModel } from '../models'
 
 // 执行状态存储
 interface ExecutionState {
@@ -686,6 +687,24 @@ export class MonitoredLangGraphExecutor {
     attachments?: AttachmentPayload[]
   ) {
     try {
+      // 如果节点指定了 LLM 配置 ID，从数据库读取并覆盖
+      const nodeLlmConfigId = node.data.config?.llmConfigId as string | undefined
+      if (nodeLlmConfigId) {
+        const dbConfig = await LLMConfigModel.findByPk(nodeLlmConfigId)
+        if (dbConfig) {
+          llmConfig = {
+            provider: dbConfig.provider,
+            apiKey: dbConfig.apiKey,
+            model: dbConfig.model,
+            baseUrl: dbConfig.baseUrl,
+            temperature: dbConfig.temperature,
+            maxTokens: dbConfig.maxTokens
+          }
+        } else {
+          console.warn(`[executeLLM] 节点 ${node.data?.label || node.id} 指定的 LLM 配置 ${nodeLlmConfigId} 不存在，使用全局活跃配置`)
+        }
+      }
+
       let promptTemplate = node.data.config?.prompt || ''
       const variables = node.data.config?.variables || []
 
