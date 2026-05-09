@@ -17,7 +17,8 @@ const Layout: React.FC<LayoutProps> = ({ children, currentPage, onNavigate }: La
     { path: '/', label: '工作流设计器', icon: '🔄' },
     { path: '/agents', label: 'Agent管理', icon: '🤖' },
     { path: '/skills', label: '技能管理', icon: '⚡' },
-    { path: '/settings', label: '设置', icon: '⚙️' }
+    { path: '/settings', label: '设置', icon: '⚙️' },
+    { path: '/logs', label: '日志', icon: '📋' }
   ]
 
   return (

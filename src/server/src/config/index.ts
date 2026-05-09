@@ -295,6 +295,11 @@ export const VECTOR_STORE_META: Record<string, {
   },
 }
 
+// ========== 日志流 ==========
+
+/** 日志流环形缓冲区最大条数，新连接可回放此数量的历史日志 */
+export const LOG_MAX_ENTRIES = 2000
+
 // ========== 文件上传 ==========
 
 /** 知识库文档上传允许的文件扩展名 */

@@ -10,6 +10,7 @@ import llmConfigRouter from './routes/llm-config'
 import knowledgeBaseRouter from './routes/knowledge-base'
 import dataRouter from './routes/data'
 import executeWorkflowRouter from './routes/execute-workflow'
+import logsRouter from './routes/logs'
 import { getResourcesDir } from './utils'
 import { SERVER_PORT, BODY_SIZE_LIMIT, ATTACHMENT_DIR, ATTACHMENT_CONTENT_TYPES, API_VERSION, API_DISPLAY_NAME, OLLAMA_DEFAULT_MODEL } from './config'
 import { isOllamaRunning, tryStartOllama, pullOllamaModel, stopOllama, setOllamaBinaryPath, setOllamaRegistryMirror, downloadAndImportModel, importLocalGGUFModel, logGpuInfo } from './utils/ollama'
@@ -65,6 +66,7 @@ export class LocalServer {
     this.app.use('/api/knowledge-base', knowledgeBaseRouter)
     this.app.use('/api/data', dataRouter)
     this.app.use('/api/execute-workflow', executeWorkflowRouter)
+    this.app.use('/api/logs', logsRouter)
 
     // 附件文件服务：/api/attachments/:id/:filename
     this.app.get('/api/attachments/:id/:filename', async (req, res) => {
@@ -103,8 +105,8 @@ export class LocalServer {
       })
     })
 
-    // 错误处理中间件
-    this.app.use((err: any, _req: express.Request, res: express.Response) => {
+    // 错误处理中间件（Express 5 要求 4 个参数才能被识别为错误处理器）
+    this.app.use((err: any, _req: express.Request, res: express.Response, _next: express.NextFunction) => {
       console.error('Unhandled error:', err)
       res.status(500).json({ error: 'Internal server error' })
     })

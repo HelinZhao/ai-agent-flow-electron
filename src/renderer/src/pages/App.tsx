@@ -9,6 +9,7 @@ import Skills from "./Skills";
 import Settings from "./Settings";
 import Agents from "./Agents";
 import Chat from "./Chat";
+import Logs from "./Logs";
 
 const pages: Record<string, React.ReactNode> = {
     '/': <Workflow />,
@@ -16,6 +17,7 @@ const pages: Record<string, React.ReactNode> = {
     '/skills': <Skills />,
     '/settings': <Settings />,
     '/chat': <Chat />,
+    '/logs': <Logs />,
 };
 
 let init = false
