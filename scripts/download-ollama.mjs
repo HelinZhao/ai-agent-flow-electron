@@ -17,6 +17,8 @@
 import { existsSync, mkdirSync } from 'fs'
 import { unlink, rm } from 'fs/promises'
 import { join } from 'path'
+import dotenv from 'dotenv'
+dotenv.config()
 import { spawnSync, spawn } from 'child_process'
 
 const DEST_DIR = join(import.meta.dirname, '..', 'resources', 'ollama')
@@ -29,6 +31,7 @@ function getPlatformInfo() {
     return null
   }
   const base = `${MIRROR}/ollama/ollama/releases/latest/download`
+  console.log(base)
   if (process.platform === 'win32') {
     return { url: `${base}/ollama-windows-amd64.zip`, binaryName: 'ollama.exe', isZip: true }
   }

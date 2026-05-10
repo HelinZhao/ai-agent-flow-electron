@@ -5,6 +5,8 @@ import { electronApp, optimizer, is } from '@electron-toolkit/utils'
 import icon from '../../resources/icon.png?asset'
 import { LocalServer } from '../server/src'
 import { setupChatHistoryIPC } from './ipc/chatHistory'
+import dotenv from 'dotenv'
+dotenv.config()
 
 function createWindow(): void {
   // 创建浏览器窗口
@@ -98,7 +100,11 @@ app.whenReady().then(() => {
   ipcMain.handle('server:start', async (_, port?: number) => {
     try {
       if (!localServer) {
-        localServer = new LocalServer({ ollamaBinaryPath: resolveOllamaBinary(), bundledModelPath: resolveBundledModelPath() })
+        localServer = new LocalServer({
+          ollamaBinaryPath: resolveOllamaBinary(),
+          bundledModelPath: resolveBundledModelPath(),
+          ollamaRegistryMirror: process.env.MODEL_MIRROR
+        })
       }
       const actualPort = await localServer.start(port)
       return { success: true, port: actualPort, url: localServer.getServerUrl() }

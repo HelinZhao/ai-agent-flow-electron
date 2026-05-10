@@ -11,7 +11,7 @@ const OLLAMA_KNOWN_DIMS: Record<string, number> = {
   'all-minilm': 384,
   'mxbai-embed-large': 1024,
   'snowflake-arctic-embed': 1024,
-  'llama3.1': 4096, // 部分用户用 llama 做 embedding
+  'llama3.1': 4096 // 部分用户用 llama 做 embedding
 }
 
 /** 获取 Ollama embedding 模型的向量维度（未知模型默认 768） */
@@ -26,7 +26,7 @@ export function getOllamaDim(model: string): number {
 
 // 全局 Ollama 进程引用
 let ollamaProcess: ChildProcess | null = null
-let ollamaHost = 'http://127.0.0.1:11434'
+const ollamaHost = 'http://127.0.0.1:11434'
 let ollamaBinaryPath: string | null = null
 let ollamaRegistryMirror: string | null = null
 let gpuInfoLogged = false
@@ -62,10 +62,12 @@ export async function logGpuInfo(): Promise<void> {
     try {
       const verRes = await fetch(`${ollamaHost}/api/version`, { signal: AbortSignal.timeout(2000) })
       if (verRes.ok) {
-        const ver = await verRes.json() as any
+        const ver = (await verRes.json()) as any
         console.log(`[Ollama] 版本: ${ver.version || 'unknown'}`)
       }
-    } catch { /* ignore */ }
+    } catch {
+      /* ignore */
+    }
 
     // 通过 ollama ps 查看已加载模型的运行设备
     try {
@@ -83,12 +85,14 @@ export async function logGpuInfo(): Promise<void> {
           console.log('[Ollama] 当前无已加载模型（首次 embedding 后会自动加载）')
         }
       }
-    } catch { /* ignore */ }
+    } catch {
+      /* ignore */
+    }
 
     // 从 Ollama 启动日志中提取 GPU 信息
     if (ollamaStartupStderr) {
       const lines = ollamaStartupStderr.split('\n')
-      const gpuLine = lines.find(l => /\bmsg="inference compute"/.test(l))
+      const gpuLine = lines.find((l) => /\bmsg="inference compute"/.test(l))
       if (gpuLine) {
         const name = gpuLine.match(/\bdescription="([^"]+)"/)?.[1]
         const lib = gpuLine.match(/\blibrary=(\S+)/)?.[1]
@@ -96,12 +100,16 @@ export async function logGpuInfo(): Promise<void> {
         const driver = gpuLine.match(/\bdriver=([^\s"]+)/)?.[1]
         const total = gpuLine.match(/\btotal="([^"]+)"/)?.[1]
         const available = gpuLine.match(/\bavailable="([^"]+)"/)?.[1]
-        console.log(`[Ollama] GPU: ${name || 'unknown'} | ${lib || ''} | compute ${compute || ''} | 驱动: ${driver || ''}`)
+        console.log(
+          `[Ollama] GPU: ${name || 'unknown'} | ${lib || ''} | compute ${compute || ''} | 驱动: ${driver || ''}`
+        )
         if (total) console.log(`[Ollama] 显存: ${total}（可用 ${available || '?'}）`)
       } else {
         // fallback: 直接显示最后几行原始日志
-        const summary = lines.filter(l => l.trim()).slice(-10)
-          .map(l => l.replace(/^time=\S+\s+(level=\S+\s+)?(source=\S+\s+)?/, '').trim())
+        const summary = lines
+          .filter((l) => l.trim())
+          .slice(-10)
+          .map((l) => l.replace(/^time=\S+\s+(level=\S+\s+)?(source=\S+\s+)?/, '').trim())
           .filter(Boolean)
         if (summary.length > 0) {
           console.log('[Ollama] 启动日志:')
@@ -109,7 +117,9 @@ export async function logGpuInfo(): Promise<void> {
         }
       }
     }
-  } catch { /* ignore */ }
+  } catch {
+    /* ignore */
+  }
 }
 
 /** 尝试启动 Ollama（仅在检测到 ollama 已安装时启动） */
@@ -173,7 +183,9 @@ export function stopOllama(): void {
       } else {
         ollamaProcess.kill('SIGTERM')
       }
-    } catch { /* ignore */ }
+    } catch {
+      /* ignore */
+    }
     ollamaProcess = null
   }
 }
@@ -184,13 +196,23 @@ export async function pullOllamaModel(model: string): Promise<boolean> {
     console.log(`[Ollama] 拉取模型 ${model}...`)
     const res = await fetch(`${ollamaHost}/api/pull`, {
       method: 'POST',
-      body: JSON.stringify({ name: model }),
+      body: JSON.stringify({ name: model })
     })
     if (!res.ok) throw new Error(`pull failed: ${res.status}`)
 
     // 消费完整响应体，等待拉取完成（/api/pull 返回 NDJSON 流）
     const body = await res.text()
-    const lines = body.trim().split('\n').map(l => { try { return JSON.parse(l) } catch { return null } }).filter(Boolean)
+    const lines = body
+      .trim()
+      .split('\n')
+      .map((l) => {
+        try {
+          return JSON.parse(l)
+        } catch {
+          return null
+        }
+      })
+      .filter(Boolean)
     const lastLine = lines[lines.length - 1]
     if (lastLine?.status === 'success') {
       console.log(`[Ollama] 模型 ${model} 拉取完成`)
@@ -220,7 +242,8 @@ async function importGGUFViaCLI(model: string, ggufPath: string): Promise<boolea
   // 1. ollama import --model <name> <path> (Ollama 0.5+)
   const imported = await new Promise<boolean>((resolve) => {
     const proc = spawn(binary, ['import', '--model', model, normalizedPath], {
-      stdio: 'ignore', env
+      stdio: 'ignore',
+      env
     })
     proc.on('error', () => resolve(false))
     proc.on('close', (code) => resolve(code === 0))
@@ -240,7 +263,8 @@ async function importGGUFViaCLI(model: string, ggufPath: string): Promise<boolea
   try {
     return await new Promise<boolean>((resolve) => {
       const proc = spawn(binary, ['create', '-f', modelfilePath, model], {
-        stdio: 'ignore', env
+        stdio: 'ignore',
+        env
       })
       proc.on('error', () => resolve(false))
       proc.on('close', (code) => resolve(code === 0))
@@ -292,7 +316,11 @@ export async function downloadAndImportModel(
     return false
   } finally {
     // 清理临时文件
-    try { await rm(tempDir, { recursive: true, force: true }) } catch { }
+    try {
+      await rm(tempDir, { recursive: true, force: true })
+    } catch (e) {
+      console.error(e)
+    }
   }
 }
 
@@ -327,7 +355,9 @@ async function logLoadedModelInfo(): Promise<void> {
         }
       }
     }
-  } catch { /* ignore */ }
+  } catch {
+    /* ignore */
+  }
 }
 
 /** Ollama Embeddings 实现（兼容 LangChain Embeddings 接口） */
@@ -357,7 +387,7 @@ export class OllamaEmbeddingsInstance extends Embeddings {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ model: this.model, input: batch }),
-        signal: AbortSignal.timeout(120000),
+        signal: AbortSignal.timeout(120000)
       })
 
       if (!res.ok) {
@@ -365,11 +395,13 @@ export class OllamaEmbeddingsInstance extends Embeddings {
         throw new Error(`Ollama 批量 embedding 失败 (${res.status}): ${body || res.statusText}`)
       }
 
-      const data = await res.json() as { embeddings: number[][] }
+      const data = (await res.json()) as { embeddings: number[][] }
       results.push(...data.embeddings)
 
       const elapsed = ((Date.now() - start) / 1000).toFixed(1)
-      console.log(`[Ollama] 批量请求 ${seq} 完成 (${elapsed}s), 共 ${results.length}/${texts.length} 个向量`)
+      console.log(
+        `[Ollama] 批量请求 ${seq} 完成 (${elapsed}s), 共 ${results.length}/${texts.length} 个向量`
+      )
     }
 
     // 首次 embedding 后记录模型运行设备
@@ -383,7 +415,7 @@ export class OllamaEmbeddingsInstance extends Embeddings {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ model: this.model, prompt: text }),
-      signal: AbortSignal.timeout(60000),
+      signal: AbortSignal.timeout(60000)
     })
 
     if (!res.ok) {
@@ -391,7 +423,7 @@ export class OllamaEmbeddingsInstance extends Embeddings {
       throw new Error(`Ollama embedding 失败 (${res.status}): ${body || res.statusText}`)
     }
 
-    const data = await res.json() as { embedding: number[] }
+    const data = (await res.json()) as { embedding: number[] }
     return data.embedding
   }
 }

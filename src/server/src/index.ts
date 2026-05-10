@@ -12,8 +12,26 @@ import dataRouter from './routes/data'
 import executeWorkflowRouter from './routes/execute-workflow'
 import logsRouter from './routes/logs'
 import { getResourcesDir } from './utils'
-import { SERVER_PORT, BODY_SIZE_LIMIT, ATTACHMENT_DIR, ATTACHMENT_CONTENT_TYPES, API_VERSION, API_DISPLAY_NAME, OLLAMA_DEFAULT_MODEL } from './config'
-import { isOllamaRunning, tryStartOllama, pullOllamaModel, stopOllama, setOllamaBinaryPath, setOllamaRegistryMirror, downloadAndImportModel, importLocalGGUFModel, logGpuInfo } from './utils/ollama'
+import {
+  SERVER_PORT,
+  BODY_SIZE_LIMIT,
+  ATTACHMENT_DIR,
+  ATTACHMENT_CONTENT_TYPES,
+  API_VERSION,
+  API_DISPLAY_NAME,
+  OLLAMA_DEFAULT_MODEL
+} from './config'
+import {
+  isOllamaRunning,
+  tryStartOllama,
+  pullOllamaModel,
+  stopOllama,
+  setOllamaBinaryPath,
+  setOllamaRegistryMirror,
+  downloadAndImportModel,
+  importLocalGGUFModel,
+  logGpuInfo
+} from './utils/ollama'
 import { app } from 'electron'
 
 export class LocalServer {
@@ -24,7 +42,11 @@ export class LocalServer {
   private ollamaRegistryMirror: string | null = null
   private bundledModelPath: string | null = null
 
-  constructor(options?: { ollamaBinaryPath?: string; ollamaRegistryMirror?: string; bundledModelPath?: string }) {
+  constructor(options?: {
+    ollamaBinaryPath?: string
+    ollamaRegistryMirror?: string
+    bundledModelPath?: string
+  }) {
     this.app = express()
     this.ollamaBinaryPath = options?.ollamaBinaryPath || null
     this.ollamaRegistryMirror = options?.ollamaRegistryMirror || null
@@ -79,7 +101,7 @@ export class LocalServer {
         res.setHeader('Content-Type', ATTACHMENT_CONTENT_TYPES[ext] || 'application/octet-stream')
         res.setHeader('Content-Disposition', `inline; filename="${filename}"`)
         res.end(data)
-      } catch (err) {
+      } catch {
         res.status(404).json({ error: '附件文件不存在' })
       }
     })
@@ -106,7 +128,7 @@ export class LocalServer {
     })
 
     // 错误处理中间件（Express 5 要求 4 个参数才能被识别为错误处理器）
-    this.app.use((err: any, _req: express.Request, res: express.Response, _next: express.NextFunction) => {
+    this.app.use((err: any, _req: express.Request, res: express.Response) => {
       console.error('Unhandled error:', err)
       res.status(500).json({ error: 'Internal server error' })
     })
@@ -120,11 +142,15 @@ export class LocalServer {
   /** 检查 Ollama 中指定模型是否已存在 */
   private async checkOllamaModel(model: string): Promise<boolean> {
     try {
-      const res = await fetch('http://127.0.0.1:11434/api/tags', { signal: AbortSignal.timeout(5000) })
+      const res = await fetch('http://127.0.0.1:11434/api/tags', {
+        signal: AbortSignal.timeout(5000)
+      })
       if (!res.ok) return false
-      const data = await res.json() as { models?: { name: string }[] }
+      const data = (await res.json()) as { models?: { name: string }[] }
       return data.models?.some((m: { name: string }) => m.name.startsWith(model)) ?? false
-    } catch { return false }
+    } catch {
+      return false
+    }
   }
 
   private async initOllama(): Promise<void> {
@@ -157,7 +183,7 @@ export class LocalServer {
           if (hasModel) {
             for (let i = 0; i < 10; i++) {
               if (await this.checkOllamaModel(OLLAMA_DEFAULT_MODEL)) break
-              await new Promise(r => setTimeout(r, 1000))
+              await new Promise((r) => setTimeout(r, 1000))
             }
           }
         }
@@ -169,7 +195,7 @@ export class LocalServer {
             for (let i = 0; i < 10; i++) {
               hasModel = await this.checkOllamaModel(OLLAMA_DEFAULT_MODEL)
               if (hasModel) break
-              await new Promise(r => setTimeout(r, 1000))
+              await new Promise((r) => setTimeout(r, 1000))
             }
           }
         }
@@ -184,7 +210,9 @@ export class LocalServer {
           )
         }
         if (!hasModel) {
-          console.warn(`[Ollama] 模型 ${OLLAMA_DEFAULT_MODEL} 下载失败，请手动执行: ollama pull bge-m3`)
+          console.warn(
+            `[Ollama] 模型 ${OLLAMA_DEFAULT_MODEL} 下载失败，请手动执行: ollama pull bge-m3`
+          )
         }
       }
 

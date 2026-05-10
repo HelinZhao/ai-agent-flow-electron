@@ -17,6 +17,8 @@ import { existsSync, mkdirSync } from 'fs'
 import { unlink } from 'fs/promises'
 import { join } from 'path'
 import { spawn } from 'child_process'
+import dotenv from 'dotenv'
+dotenv.config()
 
 const DEST_DIR = join(import.meta.dirname, '..', 'resources', 'models')
 const GGUF_FILE = 'bge-m3-q8_0.gguf'
