@@ -17,7 +17,7 @@ export default function AttachmentPreview({ attachments, onRemove }: AttachmentP
   if (attachments.length === 0) return <></>
 
   return (
-    <div className="flex flex-wrap gap-2 px-4 py-2 border-b border-gray-200/30 dark:border-gray-600/30">
+    <div className="flex flex-wrap gap-2 pb-2">
       {attachments.map(att => (
         <div
           key={att.id}

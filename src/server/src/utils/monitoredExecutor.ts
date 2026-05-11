@@ -805,7 +805,7 @@ export class MonitoredLangGraphExecutor {
     } catch (error) {
       const errorMsg = error instanceof Error ? error.message : 'LLM调用失败'
       return {
-        output: input,
+        output: errorMsg,
         metadata: {
           nodeId: node.id,
           label: node.data?.label,

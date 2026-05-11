@@ -387,7 +387,7 @@ export class OllamaEmbeddingsInstance extends Embeddings {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ model: this.model, input: batch }),
-        signal: AbortSignal.timeout(120000)
+        // signal: AbortSignal.timeout(120000)
       })
 
       if (!res.ok) {

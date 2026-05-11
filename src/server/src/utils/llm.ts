@@ -116,7 +116,11 @@ const callLLMOnce = async (
   if (hasImages) {
     console.log(`[LLM Agent] 模型 ${llmConfig.model} 支持vision，注入${imageDataUrls.size}张图片`)
   } else if (imageAttachments.length > 0) {
-    console.log(`[LLM Agent] 模型 ${llmConfig.model} 不支持vision，图片附件将以文本标注形式传递`)
+    const imageNames = imageAttachments.map(att => att.name).join('、')
+    throw new Error(
+      `当前配置的模型「${llmConfig.model}」不支持图像识别，无法处理图片附件（${imageNames}）。` +
+      `请更换支持多模态的模型（如 gpt-4o、claude-3.5-sonnet、gemini-pro-vision 等）后再试。`
+    )
   }
 
   const userMessage = hasImages

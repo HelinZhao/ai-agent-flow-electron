@@ -305,6 +305,9 @@ export default function Chat(): React.JSX.Element {
         }
 
         setPendingAttachments(prev => [...prev, ...newAttachments]);
+
+        // 重置 input value，确保下次选择同一文件时仍能触发 onChange
+        e.target.value = '';
     };
 
     const handleTerminate = async (): Promise<void> => {
