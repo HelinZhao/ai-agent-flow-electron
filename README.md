@@ -47,7 +47,7 @@ AI Agent Flow Designer 是一个基于 Electron + React + TypeScript 的可视�
 
 ```bash
 # 安装依赖（自动下载 Ollama 可执行文件）
-npm install
+npm install --legacy-peer-deps
 
 # 开发模式
 npm run dev

@@ -106,7 +106,7 @@ export default function Skills(): React.JSX.Element {
     };
 
     // ========== 二级页面：技能详情/编辑 ==========
-    if (selectedSkill) {
+    if (selectedSkillId) {
         return (
             <div className="mx-auto py-6 px-4 sm:px-6 lg:px-8">
                 {/* 顶部导航 */}
@@ -123,10 +123,10 @@ export default function Skills(): React.JSX.Element {
                         </div>
                         <div>
                             <h3 className="text-base font-semibold text-gray-900 dark:text-white">
-                                {isEditing ? (selectedSkill ? '编辑技能' : '创建新技能') : selectedSkill.name}
+                                {isEditing ? (selectedSkill ? '编辑技能' : '创建新技能') : selectedSkill!.name}
                             </h3>
-                            {!isEditing && selectedSkill.description && (
-                                <p className="text-xs text-gray-500 dark:text-gray-400">{selectedSkill.description}</p>
+                            {!isEditing && selectedSkill!.description && (
+                                <p className="text-xs text-gray-500 dark:text-gray-400">{selectedSkill!.description}</p>
                             )}
                         </div>
                     </div>
