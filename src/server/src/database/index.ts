@@ -1,11 +1,15 @@
 import { Sequelize } from 'sequelize'
 import { getResourcesDir } from '../utils/file'
 import { DB_FILENAME } from '../config'
+import fs from 'fs'
+import path from 'path'
+const datPath = getResourcesDir(DB_FILENAME)  // 数据库文件存储路径
+fs.mkdirSync(path.dirname(datPath), { recursive: true })
 
 // 创建Sequelize实例，使用SQLite数据库
 const sequelize = new Sequelize({
   dialect: 'sqlite',
-  storage: getResourcesDir(DB_FILENAME), // 数据库文件存储路径
+  storage: datPath,
   logging: false // 禁用SQL日志，生产环境中可以设置为false
 })
 /**

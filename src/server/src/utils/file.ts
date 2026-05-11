@@ -1,4 +1,3 @@
-import fs from 'fs'
 import fsp from 'fs/promises'
 import path from 'path'
 import { app } from 'electron'
@@ -11,9 +10,6 @@ export const getResourcesDir = (subPath?: string): string => {
     dir = path.join(path.dirname(process.execPath), `resources${subPath}`)
   } else {
     dir = path.join(`./resources${subPath}`) // 开发时
-  }
-  if (subPath) {
-    fs.mkdirSync(dir, { recursive: true })
   }
   return dir
 }
