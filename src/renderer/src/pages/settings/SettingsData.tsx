@@ -82,6 +82,7 @@ export default function SettingsData(): React.JSX.Element {
             variant="secondary"
             onClick={handleVacuum}
             disabled={isVacuuming}
+            size='sm'
           >
             {isVacuuming ? '清理中...' : '清理空间'}
           </CustomButton>
@@ -97,6 +98,7 @@ export default function SettingsData(): React.JSX.Element {
             variant="danger"
             onClick={handleClearChatHistory}
             disabled={isClearing}
+            size='sm'
           >
             {isClearing ? '清除中...' : '清除'}
           </CustomButton>

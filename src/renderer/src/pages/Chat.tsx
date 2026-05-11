@@ -36,6 +36,9 @@ export default function Chat(): React.JSX.Element {
     const [pendingAttachments, setPendingAttachments] = useState<AttachmentData[]>([]);
     const [previewImage, setPreviewImage] = useState<AttachmentMetadata | null>(null);
     const messagesEndRef = useRef<HTMLDivElement>(null);
+    const chatAreaRef = useRef<HTMLDivElement>(null);
+    const inputWrapperRef = useRef<HTMLDivElement>(null);
+    const [inputHeight, setInputHeight] = useState(160);
 
     // 过滤agents基于搜索词
     const filteredAgents = agents.filter(agent =>
@@ -45,6 +48,38 @@ export default function Chat(): React.JSX.Element {
 
     const scrollToBottom = (): void => {
         messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+    };
+
+    const MIN_INPUT = 100;
+    const MAX_INPUT_RATIO = 0.6;
+
+    const handleResizeStart = (e: React.MouseEvent): void => {
+        e.preventDefault();
+        const startY = e.clientY;
+        const startHeight = inputHeight;
+        const container = chatAreaRef.current;
+        const wrapper = inputWrapperRef.current;
+        if (!container || !wrapper) return;
+        const maxHeight = container.getBoundingClientRect().height * MAX_INPUT_RATIO;
+
+        const onMouseMove = (ev: MouseEvent) => {
+            const delta = startY - ev.clientY;
+            const height = Math.min(maxHeight, Math.max(MIN_INPUT, startHeight + delta));
+            wrapper.style.height = `${height}px`;
+        };
+
+        const onMouseUp = () => {
+            document.removeEventListener('mousemove', onMouseMove);
+            document.removeEventListener('mouseup', onMouseUp);
+            document.body.style.cursor = '';
+            document.body.style.userSelect = '';
+            setInputHeight(parseInt(wrapper.style.height) || startHeight);
+        };
+
+        document.addEventListener('mousemove', onMouseMove);
+        document.addEventListener('mouseup', onMouseUp);
+        document.body.style.cursor = 'ns-resize';
+        document.body.style.userSelect = 'none';
     };
 
     useEffect(() => {
@@ -403,14 +438,9 @@ export default function Chat(): React.JSX.Element {
             <div className="bg-white/80 dark:bg-gray-800/80 backdrop-blur-md border-b border-gray-200/50 dark:border-gray-700/50 p-4">
                 <div className="flex justify-between items-center">
                     <div className="flex items-center space-x-4">
-                        <div className="flex items-center space-x-3">
-                            <div className="w-10 h-10 bg-gradient-to-r from-blue-500 to-purple-600 rounded-xl flex items-center justify-center">
-                                <span className="text-white font-bold text-lg">💬</span>
-                            </div>
-                            <h2 className="text-xl font-bold bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent">
-                                AI 对话
-                            </h2>
-                        </div>
+                        <h2 className="text-xl font-bold bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent">
+                            AI 对话
+                        </h2>
                     </div>
 
                     {selectedAgent && (
@@ -518,11 +548,11 @@ export default function Chat(): React.JSX.Element {
                 </div>
 
                 {/* 右侧聊天区域 */}
-                <div className="flex-1 flex flex-col min-w-0">
+                <div ref={chatAreaRef} className="flex-1 flex flex-col min-w-0 overflow-hidden">
                     {selectedAgent ? (
                         <>
                             {/* 消息列表 */}
-                            <div className="flex-1 overflow-y-auto overflow-x-hidden p-6 space-y-6 bg-gradient-to-b from-white/50 to-gray-50/30 dark:from-gray-800/50 dark:to-gray-900/30">
+                            <div className="overflow-y-auto overflow-x-hidden p-6 space-y-6 bg-gradient-to-b from-white/50 to-gray-50/30 dark:from-gray-800/50 dark:to-gray-900/30" style={{ flex: 1, minHeight: 0 }}>
                                 {messages.length === 0 && (
                                     <div className="flex flex-col items-center justify-center py-16">
                                         <div className="text-6xl mb-4 animate-bounce">💬</div>
@@ -654,10 +684,18 @@ export default function Chat(): React.JSX.Element {
                                 <div ref={messagesEndRef} />
                             </div>
 
+                            {/* 拖拽分隔条 */}
+                            <div
+                                className="h-2 cursor-ns-resize relative flex items-center justify-center group hover:bg-blue-500/10 active:bg-blue-500/20 transition-colors shrink-0"
+                                onMouseDown={handleResizeStart}
+                            >
+                                <div className="w-8 h-0.5 rounded-full bg-gray-300 dark:bg-gray-600 group-hover:bg-blue-400 transition-colors" />
+                            </div>
+
                             {/* 输入区域 */}
-                            <div className="p-4 pt-0">
-                                <div className="bg-white dark:bg-gray-700/80 rounded-2xl border border-gray-200/50 dark:border-gray-600/50 overflow-hidden backdrop-blur-sm">
-                                    <div className="p-4 pb-0">
+                            <div ref={inputWrapperRef} className="p-4 pt-0 shrink-0" style={{ height: inputHeight, minHeight: MIN_INPUT }}>
+                                <div className="bg-white dark:bg-gray-700/80 rounded-2xl border border-gray-200/50 dark:border-gray-600/50 overflow-hidden backdrop-blur-sm h-full flex flex-col">
+                                    <div className="p-4 pb-0 flex-1 flex flex-col min-h-0">
                                         <AttachmentPreview
                                             attachments={pendingAttachments}
                                             onRemove={(id) => setPendingAttachments(prev => prev.filter(a => a.id !== id))}
@@ -667,8 +705,7 @@ export default function Chat(): React.JSX.Element {
                                             onChange={(e) => setInputMessage(e.target.value)}
                                             onKeyDown={handleKeyPress}
                                             placeholder={`向 ${selectedAgent.name} 发送消息...`}
-                                            className="w-full resize-none bg-transparent border-none outline-none text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-gray-400 min-h-[52px] max-h-[140px] text-sm leading-relaxed"
-                                            rows={1}
+                                            className="w-full resize-none bg-transparent border-none outline-none text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-gray-400 text-sm leading-relaxed flex-1 min-h-0"
                                             disabled={isLoading}
                                             style={{
                                                 overflow: 'auto',
@@ -677,7 +714,7 @@ export default function Chat(): React.JSX.Element {
                                         />
                                     </div>
 
-                                    <div className="flex items-center justify-between px-3 pb-2 pt-0.5">
+                                    <div className="flex items-center justify-between px-3 pb-2 pt-0.5 shrink-0">
                                         <div className="flex items-center space-x-3 text-xs text-gray-500 dark:text-gray-400">
                                             <CustomFileUpload
                                                 onChange={handleFileSelect}
