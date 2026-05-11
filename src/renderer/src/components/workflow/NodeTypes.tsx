@@ -154,6 +154,28 @@ export function CliNode({ data, selected }: { data: any; selected: boolean }): R
   );
 }
 
+export function TextNode({ data, selected }: { data: any; selected: boolean }): React.JSX.Element {
+  const direction = useContext(LayoutDirectionContext)
+  const def = NODE_DEFS_MAP['text']
+  const targetPos = direction === 'vertical' ? Position.Top : Position.Left
+  const sourcePos = direction === 'vertical' ? Position.Bottom : Position.Right
+  return (
+    <div className={`react-flow__node node-text px-4 py-2 min-w-[140px] bg-${def.color}-100 ${selected ? 'selected' : ''}`}>
+      <Handle type="target" position={targetPos} />
+      <Handle type="source" position={sourcePos} />
+      <div className="text-center">
+        <div className={`font-medium text-${def.color}-800`}>{def.defaultLabel}</div>
+        <div className={`text-xs text-${def.color}-600 mt-1`}>{data.label}</div>
+        {data.config?.text && (
+          <div className={`text-xs text-${def.color}-500 mt-1 max-w-[120px] truncate`}>
+            文本: {data.config.text.substring(0, 20)}...
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
+
 export function EndNode({ data }: { data: any }): React.JSX.Element {
   const direction = useContext(LayoutDirectionContext)
   const def = NODE_DEFS_MAP['end']

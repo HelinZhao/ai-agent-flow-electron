@@ -488,6 +488,9 @@ export class MonitoredLangGraphExecutor {
       case 'cli':
         return await this.executeCli(node, input, llmConfig)
 
+      case 'text':
+        return await this.executeText(node, input)
+
       case 'end':
         return {
           output: input,
@@ -917,6 +920,30 @@ export class MonitoredLangGraphExecutor {
           type: 'cli',
           error: errorMsg,
         }
+      }
+    }
+  }
+
+  private async executeText(node: WorkflowNode, _input: string) {
+    let textTemplate = node.data.config?.text || ''
+    const variables = node.data.config?.variables || []
+
+    const variablesMap: Record<string, any> = {}
+    variables.forEach((variable: any) => {
+      variablesMap[variable.name] = variable.defaultValue || ''
+    })
+
+    Object.keys(variablesMap).forEach((key) => {
+      const placeholder = `{{${key}}}`
+      textTemplate = textTemplate.replace(new RegExp(placeholder, 'g'), variablesMap[key])
+    })
+
+    return {
+      output: textTemplate,
+      metadata: {
+        nodeId: node.id,
+        label: node.data?.label,
+        type: 'text',
       }
     }
   }

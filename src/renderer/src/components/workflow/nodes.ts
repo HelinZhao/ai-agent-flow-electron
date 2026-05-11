@@ -16,6 +16,7 @@ export const NODE_DEFS: NodeDef[] = [
   { type: 'api', shortLabel: 'API', defaultLabel: 'API节点', color: 'purple', category: 'integration', hasTargetHandle: true, hasSourceHandle: true },
   { type: 'agent', shortLabel: 'Agent', defaultLabel: 'Agent节点', color: 'red', category: 'integration', hasTargetHandle: true, hasSourceHandle: true },
   { type: 'cli', shortLabel: 'CLI', defaultLabel: 'CLI节点', color: 'orange', category: 'integration', hasTargetHandle: true, hasSourceHandle: true },
+  { type: 'text', shortLabel: '文本', defaultLabel: '文本节点', color: 'teal', category: 'logic', hasTargetHandle: true, hasSourceHandle: true },
   { type: 'end', shortLabel: '结束', defaultLabel: '结束节点', color: 'gray', category: 'basic', hasTargetHandle: true, hasSourceHandle: false },
 ]
 

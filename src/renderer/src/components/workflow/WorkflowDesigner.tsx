@@ -13,7 +13,7 @@ import {
 import '@xyflow/react/dist/style.css';
 import { createPortal } from 'react-dom';
 
-import { StartNode, SkillNode, BranchNode, ApiNode, AgentNode, EndNode, LLMNode, CliNode } from './NodeTypes';
+import { StartNode, SkillNode, BranchNode, ApiNode, AgentNode, EndNode, LLMNode, CliNode, TextNode } from './NodeTypes';
 import NodeConfigPanel from './NodeConfigPanel';
 import { Workflow, WorkflowBranch, WorkflowEdge, WorkflowNode } from '@renderer/types';
 import NodeListPanel from './NodeListPanel';
@@ -32,6 +32,7 @@ const nodeTypes = {
   llm: LLMNode,
   agent: AgentNode,
   cli: CliNode,
+  text: TextNode,
   end: EndNode,
 };
 

@@ -7,6 +7,7 @@ import LLMConfig from './config/LLMConfig';
 import ApiConfig from './config/ApiConfig';
 import AgentConfig from './config/AgentConfig';
 import CLIConfig from './config/CliConfig';
+import TextConfig from './config/TextConfig';
 import CustomInput from '../ui/CustomInput';
 import CustomButton from '../ui/CustomButton';
 import { getNodeDefaultLabel } from './nodes';
@@ -61,6 +62,9 @@ const NodeConfigPanel: React.FC<NodeConfigPanelProps> = ({ node, onClose }: Node
 
       case 'cli':
         return <CLIConfig config={config} onConfigChange={setConfig} />;
+
+      case 'text':
+        return <TextConfig config={config} onConfigChange={setConfig} />;
 
       default:
         return null;
