@@ -5,8 +5,8 @@ import MdEditor from 'react-markdown-editor-lite';
 import 'react-markdown-editor-lite/lib/index.css';
 import MarkdownIt from 'markdown-it';
 import MarkdownPreview from '@renderer/components/MarkdownPreview';
-import CustomButton from '@renderer/components/ui/CustomButton';
 import CustomInput from '@renderer/components/ui/CustomInput';
+import CustomButton from '@renderer/components/ui/CustomButton';
 import CustomFileUpload from '@renderer/components/ui/CustomFileUpload';
 import { SKILL_IMPORT_ACCEPT } from '@renderer/config';
 
@@ -14,10 +14,11 @@ const mdParser = new MarkdownIt(/* Markdown-it options */);
 
 export default function Skills(): React.JSX.Element {
     const { skills, addSkill, updateSkill, deleteSkill } = useWorkflowStore();
-    const [selectedSkill, setSelectedSkill] = useState<Skill | null>(null);
+    const [selectedSkillId, setSelectedSkillId] = useState<string | null>(null);
     const [searchTerm, setSearchTerm] = useState('');
 
-    // 过滤skills基于搜索词
+    const selectedSkill = selectedSkillId ? skills.find(s => s.id === selectedSkillId) ?? null : null;
+
     const filteredSkills = skills.filter(skill =>
         skill.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
         (skill.description && skill.description.toLowerCase().includes(searchTerm.toLowerCase()))
@@ -32,13 +33,13 @@ export default function Skills(): React.JSX.Element {
     const [isLoading, setIsLoading] = useState(false);
 
     const handleCreate = (): void => {
-        setSelectedSkill(null);
+        setSelectedSkillId('__create__');
         setFormData({ name: '', description: '', content: '' });
         setIsEditing(true);
     };
 
     const handleEdit = (skill: Skill): void => {
-        setSelectedSkill(skill);
+        setSelectedSkillId(skill.id);
         setFormData({
             name: skill.name,
             description: skill.description,
@@ -53,12 +54,12 @@ export default function Skills(): React.JSX.Element {
         setIsLoading(true);
         try {
             if (selectedSkill) {
-                updateSkill(selectedSkill.id, formData);
+                await updateSkill(selectedSkill.id, formData);
             } else {
-                addSkill(formData);
+                await addSkill(formData);
             }
             setIsEditing(false);
-            setSelectedSkill(null);
+            setSelectedSkillId(null);
             setFormData({ name: '', description: '', content: '' });
         } catch (error) {
             console.error('保存失败:', error);
@@ -70,11 +71,16 @@ export default function Skills(): React.JSX.Element {
     const handleDelete = (skill: Skill): void => {
         if (window.confirm(`确定要删除技能 "${skill.name}" 吗？`)) {
             deleteSkill(skill.id);
-            if (selectedSkill?.id === skill.id) {
-                setSelectedSkill(null);
+            if (selectedSkillId === skill.id) {
+                setSelectedSkillId(null);
                 setIsEditing(false);
             }
         }
+    };
+
+    const handleBack = (): void => {
+        setSelectedSkillId(null);
+        setIsEditing(false);
     };
 
     const handleImportFromFile = async (event: React.ChangeEvent<HTMLInputElement>): Promise<void> => {
@@ -90,227 +96,279 @@ export default function Skills(): React.JSX.Element {
                 description: `从文件 ${file.name} 导入`,
                 content: content
             });
-            setSelectedSkill(null);
             setIsEditing(true);
         } catch (error) {
-            console.error(error)
+            console.error(error);
             alert('文件读取失败');
         }
 
-        // 清空input
         event.target.value = '';
     };
 
+    // ========== 二级页面：技能详情/编辑 ==========
+    if (selectedSkill) {
+        return (
+            <div className="mx-auto py-6 px-4 sm:px-6 lg:px-8">
+                {/* 顶部导航 */}
+                <div className="flex items-center space-x-3 mb-6">
+                    <button
+                        onClick={handleBack}
+                        className="flex items-center justify-center w-8 h-8 rounded-lg text-gray-500 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors"
+                    >
+                        <svg className="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M15 19l-7-7 7-7" /></svg>
+                    </button>
+                    <div className="flex items-center space-x-2">
+                        <div className="w-8 h-8 bg-gradient-to-r from-blue-500 to-purple-600 rounded-lg flex items-center justify-center flex-shrink-0">
+                            <span className="text-white font-bold text-sm">⚡</span>
+                        </div>
+                        <div>
+                            <h3 className="text-base font-semibold text-gray-900 dark:text-white">
+                                {isEditing ? (selectedSkill ? '编辑技能' : '创建新技能') : selectedSkill.name}
+                            </h3>
+                            {!isEditing && selectedSkill.description && (
+                                <p className="text-xs text-gray-500 dark:text-gray-400">{selectedSkill.description}</p>
+                            )}
+                        </div>
+                    </div>
+                </div>
+
+                <div className="bg-white/80 dark:bg-gray-800/80 backdrop-blur-md shadow-lg rounded-lg border border-gray-200/50 dark:border-gray-700/50">
+                    <div className="px-6 py-6">
+                        {isEditing ? (
+                            <div className="space-y-6">
+                                <div>
+                                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                                        技能名称 *
+                                    </label>
+                                    <CustomInput
+                                        type="text"
+                                        value={formData.name}
+                                        onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+                                        placeholder="输入技能名称"
+                                    />
+                                </div>
+
+                                <div>
+                                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                                        描述
+                                    </label>
+                                    <CustomInput
+                                        type="text"
+                                        value={formData.description}
+                                        onChange={(e) => setFormData({ ...formData, description: e.target.value })}
+                                        placeholder="输入技能描述"
+                                    />
+                                </div>
+
+                                <div>
+                                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                                        技能内容 *
+                                    </label>
+                                    <div className="border border-gray-200/50 dark:border-gray-600/50 rounded-xl overflow-hidden">
+                                        <MdEditor
+                                            style={{ height: '400px' }}
+                                            renderHTML={text => mdParser.render(text)}
+                                            value={formData.content}
+                                            onChange={(value) => setFormData(prev => ({ ...prev, content: value.text }))}
+                                        />
+                                    </div>
+                                </div>
+
+                                <div className="flex justify-end space-x-4 pt-4">
+                                    <CustomButton
+                                        onClick={() => {
+                                            setIsEditing(false);
+                                            if (!selectedSkill) handleBack();
+                                        }}
+                                        variant="secondary"
+                                    >
+                                        取消
+                                    </CustomButton>
+                                    <CustomButton
+                                        onClick={handleSave}
+                                        disabled={isLoading || !formData.name.trim() || !formData.content.trim()}
+                                        className="px-6 py-3 bg-gradient-to-r from-blue-500 to-blue-600 text-white rounded-xl hover:from-blue-600 hover:to-blue-700 transition-all duration-200 shadow-lg font-medium disabled:opacity-50 disabled:cursor-not-allowed flex items-center space-x-2"
+                                    >
+                                        {isLoading ? (
+                                            <>
+                                                <span className="animate-spin">⚡</span>
+                                                <span>保存中...</span>
+                                            </>
+                                        ) : (
+                                            <>
+                                                <span>💾</span>
+                                                <span>保存</span>
+                                            </>
+                                        )}
+                                    </CustomButton>
+                                </div>
+                            </div>
+                        ) : (
+                            <div>
+                                <div className="flex justify-between items-start mb-6">
+                                    <div>
+                                        <h3 className="text-2xl font-semibold text-gray-900 dark:text-white mb-2">
+                                            {selectedSkill!.name}
+                                        </h3>
+                                        <p className="text-gray-600 dark:text-gray-300">{selectedSkill!.description || '暂无描述'}</p>
+                                    </div>
+                                    <div className="flex space-x-2">
+                                        <button
+                                            onClick={() => handleEdit(selectedSkill!)}
+                                            className="px-3 py-1.5 text-sm text-blue-600 dark:text-blue-400 hover:bg-blue-50 dark:hover:bg-blue-900/20 rounded-lg transition-colors flex items-center space-x-1.5"
+                                        >
+                                            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+                                            </svg>
+                                            <span>编辑</span>
+                                        </button>
+                                        <button
+                                            onClick={() => handleDelete(selectedSkill!)}
+                                            className="px-3 py-1.5 text-sm text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-lg transition-colors flex items-center space-x-1.5"
+                                        >
+                                            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                                            </svg>
+                                            <span>删除</span>
+                                        </button>
+                                    </div>
+                                </div>
+                                <MarkdownPreview content={selectedSkill!.content} className="border border-gray-200/50 dark:border-gray-600/50 rounded-xl p-4" />
+                            </div>
+                        )}
+                    </div>
+                </div>
+            </div>
+        );
+    }
+
+    // ========== 一级页面：技能列表（卡片式） ==========
     return (
         <div className="mx-auto py-6 px-4 sm:px-6 lg:px-8">
+            {/* 标题栏 */}
             <div className="flex justify-between items-center mb-6">
-                <div className="flex items-center space-x-3">
-                    <div className="w-10 h-10 bg-gradient-to-r from-blue-500 to-purple-600 rounded-xl flex items-center justify-center">
-                        <span className="text-white font-bold text-lg">⚡</span>
-                    </div>
-                    <h1 className="text-xl font-bold bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent">
-                        技能管理
-                    </h1>
-                </div>
-                <div className="flex space-x-2">
+                <h1 className="text-xl font-bold bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent">
+                    技能管理
+                </h1>
+                <div className="flex space-x-2 items-center">
+                    <CustomInput
+                        value={searchTerm}
+                        onChange={(e) => setSearchTerm(e.target.value)}
+                        placeholder="搜索技能..."
+                        size="sm"
+                        hidden={skills.length === 0}
+                        className='rounded-xl'
+                        leftIcon={(
+                            <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                                <path d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+                            </svg>
+                        )}
+                    />
                     <CustomFileUpload
                         accept={SKILL_IMPORT_ACCEPT}
                         onChange={handleImportFromFile}
+                        size='sm'
                     >
                         从文件导入
                     </CustomFileUpload>
                     <CustomButton
                         onClick={handleCreate}
                         variant="primary"
+                        size="sm"
                     >
-                        创建新技能
+                        <span>✨</span>
+                        <span>创建新技能</span>
                     </CustomButton>
                 </div>
             </div>
 
-            <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 h-[calc(100vh-200px)]">
-                {/* 技能列表 */}
-                <div className="lg:col-span-1 flex flex-col overflow-auto">
-                    <div className="bg-white/80 dark:bg-gray-800/80 backdrop-blur-md shadow-lg rounded-lg border border-gray-200/50 dark:border-gray-700/50 flex-1 flex flex-col">
-                        <div className="p-4 pb-2">
-                            <div className="flex items-center space-x-2 mb-4">
-                                <span className="text-white font-bold text-lg">📋</span>
-                                <h3 className="font-semibold text-gray-900 dark:text-white">技能列表</h3>
-                                <span className="text-xs bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300 px-2 py-0.5 rounded-full">
-                                    {filteredSkills.length}
-                                </span>
-                            </div>
-                            {/* 搜索框 */}
-                            <div className="relative">
-                                <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                                    <span className="text-gray-400">🔍</span>
-                                </div>
-                                <input
-                                    type="text"
-                                    placeholder="搜索技能..."
-                                    value={searchTerm}
-                                    onChange={(e) => setSearchTerm(e.target.value)}
-                                    className="w-full pl-10 pr-4 py-2 bg-white dark:bg-gray-700 border border-gray-200 dark:border-gray-600 rounded-lg text-sm text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500/50 focus:border-blue-500/50 transition-all duration-200"
-                                />
-                            </div>
-                        </div>
-                        <div className="flex-1 overflow-y-auto p-4 pt-0">
-                            <div className="space-y-2">
-                                {filteredSkills.map((skill) => (
-                                    <div
-                                        key={skill.id}
-                                        className={`p-3 border rounded-lg cursor-pointer transition-all duration-200 ${selectedSkill?.id === skill.id
-                                            ? 'border-blue-500/50 bg-gradient-to-r from-blue-50 to-purple-50 dark:from-blue-900/20 dark:to-purple-900/20'
-                                            : 'border-gray-200/50 dark:border-gray-600/50 hover:border-gray-300/50 dark:hover:border-gray-500/50 hover:shadow-sm bg-white/50 dark:bg-gray-700/30'
-                                            }`}
-                                        onClick={() => {
-                                            setSelectedSkill(skill);
-                                            setIsEditing(false);
-                                        }}
-                                    >
-                                        <div className="flex justify-between items-start">
-                                            <div className="flex-1 min-w-0">
-                                                <h4 className="text-sm font-medium text-gray-900 dark:text-white truncate">
-                                                    {skill.name}
-                                                </h4>
-                                                <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
-                                                    {skill.description}
-                                                </p>
-                                            </div>
-                                            <div className="flex space-x-1 ml-3">
-                                                <button
-                                                    onClick={(e) => {
-                                                        e.stopPropagation();
-                                                        handleEdit(skill);
-                                                    }}
-                                                    className="text-blue-500 hover:text-blue-700 dark:text-blue-400 dark:hover:text-blue-300 p-1 hover:bg-blue-50 dark:hover:bg-blue-900/30 rounded transition-all"
-                                                    title="编辑"
-                                                >
-                                                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
-                                                    </svg>
-                                                </button>
-                                                <button
-                                                    onClick={(e) => {
-                                                        e.stopPropagation();
-                                                        handleDelete(skill);
-                                                    }}
-                                                    className="text-red-500 hover:text-red-700 dark:text-red-400 dark:hover:text-red-300 p-1 hover:bg-red-50 dark:hover:bg-red-900/30 rounded transition-all"
-                                                    title="删除"
-                                                >
-                                                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
-                                                    </svg>
-                                                </button>
-                                            </div>
+            {/* 卡片网格 */}
+            {filteredSkills.length > 0 ? (
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+                    {filteredSkills.map((skill) => (
+                        <div
+                            key={skill.id}
+                            className="group/skill relative bg-white dark:bg-gray-800 rounded-xl border border-gray-200/80 dark:border-gray-700/50 hover:border-blue-300 dark:hover:border-blue-600/50 hover:shadow-md transition-all duration-200 cursor-pointer overflow-hidden"
+                            onClick={() => setSelectedSkillId(skill.id)}
+                        >
+                            {/* 卡片顶部色带 */}
+                            <div className="h-1.5 rounded-t-xl bg-gradient-to-r from-blue-400 to-purple-500" />
+
+                            {/* 卡片内容 */}
+                            <div className="p-4">
+                                <div className="flex items-start justify-between mb-3">
+                                    <div className="flex items-start space-x-2.5 min-w-0">
+                                        <div className="flex items-center justify-center w-9 h-9 rounded-lg bg-blue-50 dark:bg-blue-900/20 flex-shrink-0">
+                                            <span className="text-base">⚡</span>
+                                        </div>
+                                        <div className="min-w-0">
+                                            <h4 className="text-sm font-semibold text-gray-900 dark:text-white truncate">
+                                                {skill.name}
+                                            </h4>
+                                            <p className="text-xs text-gray-400 dark:text-gray-500 mt-0.5">
+                                                {skill.description || '暂无描述'}
+                                            </p>
                                         </div>
                                     </div>
-                                ))}
-                                {filteredSkills.length === 0 && (
-                                    <div className="text-center py-12">
-                                        {searchTerm ? (
-                                            <>
-                                                <div className="text-4xl mb-3">🔍</div>
-                                                <p className="text-gray-500 dark:text-gray-400 text-sm  mb-1">未找到匹配的技能</p>
-                                                <p className="text-sm text-gray-400 dark:text-gray-500">尝试使用其他关键词搜索</p>
-                                            </>
-                                        ) : (
-                                            <>
-                                                <div className="text-4xl mb-3">⚡</div>
-                                                <p className="text-gray-500 dark:text-gray-400 text-sm mb-1">还没有技能</p>
-                                                <p className="text-sm text-gray-400 dark:text-gray-500">点击上方按钮创建您的第一个AI Agent</p>
-                                            </>
-                                        )}
-                                    </div>
-                                )}
+                                </div>
+
+                                {/* 内容摘要 */}
+                                <p className="text-xs text-gray-400 dark:text-gray-500 line-clamp-2">
+                                    {skill.content ? skill.content.replace(/[#*\n]/g, ' ').substring(0, 100) + (skill.content.length > 100 ? '...' : '') : '暂无内容'}
+                                </p>
+                            </div>
+
+                            {/* 悬浮操作栏 */}
+                            <div className="absolute top-3 right-3 z-10 hidden group-hover/skill:flex items-center gap-1 px-2 py-1.5 rounded-xl border border-gray-200 dark:border-gray-600 bg-white dark:bg-gray-800 shadow-lg">
+                                <button
+                                    onClick={(e) => { e.stopPropagation(); handleEdit(skill) }}
+                                    className="flex items-center justify-center w-6 h-6 rounded-lg text-gray-400 hover:text-blue-600 dark:hover:text-blue-400 hover:bg-blue-50 dark:hover:bg-blue-900/20 transition-colors"
+                                    title="编辑"
+                                >
+                                    <svg className="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" /></svg>
+                                </button>
+                                <div className="w-px h-4 bg-gray-200 dark:bg-gray-600" />
+                                <button
+                                    onClick={(e) => { e.stopPropagation(); handleDelete(skill) }}
+                                    className="flex items-center justify-center w-6 h-6 rounded-lg text-gray-400 hover:text-red-600 dark:hover:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors"
+                                    title="删除"
+                                >
+                                    <svg className="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" /></svg>
+                                </button>
+                            </div>
+
+                            {/* 进入箭头 */}
+                            <div className="absolute bottom-4 right-4 text-gray-300 dark:text-gray-600 group-hover/skill:text-blue-400 dark:group-hover/skill:text-blue-500 transition-colors">
+                                <svg className="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M9 5l7 7-7 7" /></svg>
                             </div>
                         </div>
-                    </div>
+                    ))}
                 </div>
-
-                {/* 技能编辑/预览 */}
-                <div className="lg:col-span-2 flex flex-col overflow-auto">
-                    <div className="bg-white/80 dark:bg-gray-800/80 backdrop-blur-md shadow-lg rounded-lg border border-gray-200/50 dark:border-gray-700/50 flex-1 flex flex-col">
-                        <div className="flex-1 overflow-y-auto px-4 py-5 sm:p-6">
-                            {isEditing ? (
-                                <div className="space-y-4">
-                                    <h3 className="text-lg font-medium text-gray-900 dark:text-white">
-                                        {selectedSkill ? '编辑技能' : '创建新技能'}
-                                    </h3>
-
-                                    <div>
-                                        <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                                            技能名称 *
-                                        </label>
-                                        <CustomInput
-                                            type="text"
-                                            value={formData.name}
-                                            onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-                                            placeholder="输入技能名称"
-                                        />
-                                    </div>
-
-                                    <div>
-                                        <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                                            描述
-                                        </label>
-                                        <CustomInput
-                                            type="text"
-                                            value={formData.description}
-                                            onChange={(e) => setFormData({ ...formData, description: e.target.value })}
-                                            placeholder="输入技能描述"
-                                        />
-                                    </div>
-
-                                    <div>
-                                        <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                                            技能内容 *
-                                        </label>
-                                        <MdEditor
-                                            className="border border-gray-300 dark:border-gray-600 rounded-md overflow-hidden" style={{ height: '400px' }}
-                                            renderHTML={text => mdParser.render(text)}
-                                            value={formData.content}
-                                            onChange={(value) => setFormData(prev => ({ ...prev, content: value.text }))}
-                                        />
-                                    </div>
-
-                                    <div className="flex justify-end space-x-3">
-                                        <CustomButton
-                                            onClick={() => {
-                                                setIsEditing(false);
-                                                setSelectedSkill(null);
-                                                setFormData({ name: '', description: '', content: '' });
-                                            }}
-                                            variant="secondary"
-                                        >
-                                            取消
-                                        </CustomButton>
-                                        <CustomButton
-                                            onClick={handleSave}
-                                            disabled={isLoading || !formData.name.trim() || !formData.content.trim()}
-                                            variant="primary"
-                                        >
-                                            {isLoading ? '保存中...' : '保存'}
-                                        </CustomButton>
-                                    </div>
-                                </div>
-                            ) : selectedSkill ? (
-                                <div>
-                                    <h3 className="text-2xl font-semibold text-gray-900 dark:text-white mb-2">
-                                        {selectedSkill.name}
-                                    </h3>
-                                    <p className="text-gray-600 dark:text-gray-300">{selectedSkill.description || '暂无描述'}</p>
-                                    <MarkdownPreview content={selectedSkill.content} />
-                                </div>
-                            ) : (
-                                <div className="text-center py-12 text-gray-500 dark:text-gray-400">
-                                    <p>选择一个技能查看详情，或创建新技能</p>
-                                </div>
-                            )}
-                        </div>
-                    </div>
+            ) : (
+                <div className="flex flex-col items-center justify-center py-20 text-gray-400 dark:text-gray-500">
+                    {searchTerm ? (
+                        <>
+                            <svg className="w-14 h-14 mb-4 opacity-30" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5">
+                                <path d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+                            </svg>
+                            <p className="text-sm font-medium">未找到匹配的技能</p>
+                            <p className="text-xs mt-1">尝试使用其他关键词搜索</p>
+                        </>
+                    ) : (
+                        <>
+                            <div className="text-8xl mb-6">⚡</div>
+                            <h3 className="text-xl font-semibold text-gray-900 dark:text-white mb-2">还没有技能</h3>
+                            <p className="text-sm text-gray-500 dark:text-gray-400 mb-6">创建您的第一个技能或从文件导入</p>
+                            <button
+                                onClick={handleCreate}
+                                className="px-6 py-3 bg-gradient-to-r from-blue-500 to-purple-600 text-white rounded-xl hover:from-blue-600 hover:to-purple-700 transition-all duration-200 shadow-lg font-medium"
+                            >
+                                创建第一个技能
+                            </button>
+                        </>
+                    )}
                 </div>
-            </div>
+            )}
         </div>
     );
 }

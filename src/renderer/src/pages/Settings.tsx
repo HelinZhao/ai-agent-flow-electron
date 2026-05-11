@@ -33,18 +33,19 @@ export default function Settings(): React.JSX.Element {
     <div className="flex h-full">
       <div className="w-48 border-r border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-900">
         <div className="p-4">
-          <h2 className="text-lg font-semibold text-gray-900 dark:text-gray-100">设置</h2>
+          <h1 className="text-xl font-bold bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent">
+            设置
+          </h1>
         </div>
         <nav className="space-y-1 px-2">
           {SETTINGS_TABS.map(tab => (
             <button
               key={tab.id}
               onClick={() => setActiveTab(tab.id)}
-              className={`w-full flex items-center space-x-2 px-3 py-2 text-sm rounded-lg transition-colors ${
-                activeTab === tab.id
-                  ? 'bg-blue-500 text-white'
-                  : 'text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-800'
-              }`}
+              className={`w-full flex items-center space-x-2 px-3 py-2 text-sm rounded-lg transition-colors ${activeTab === tab.id
+                ? 'bg-blue-500 text-white'
+                : 'text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-800'
+                }`}
             >
               <span>{tab.icon}</span>
               <span>{tab.label}</span>

@@ -430,18 +430,29 @@ export default function Workflow(): React.JSX.Element {
         <div className="mx-auto py-6 px-4 sm:px-6 lg:px-8">
             {/* 标题栏 */}
             <div className="flex justify-between items-center mb-6">
-                <div className="flex items-center space-x-3">
-                    <div className="w-10 h-10 bg-gradient-to-r from-blue-500 to-purple-600 rounded-xl flex items-center justify-center">
-                        <span className="text-white font-bold text-lg">🔄</span>
-                    </div>
-                    <h1 className="text-xl font-bold bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent">
-                        工作流设计器
-                    </h1>
-                </div>
-                <div className="flex space-x-2">
+                <h1 className="text-xl font-bold bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent">
+                    工作流设计器
+                </h1>
+                <div className="flex space-x-2 items-center">
+                    {/* 搜索栏 */}
+                    <CustomInput
+                        type="text"
+                        placeholder="搜索工作流..."
+                        value={searchTerm}
+                        onChange={(e) => setSearchTerm(e.target.value)}
+                        size="sm"
+                        hidden={workflows.length === 0}
+                        className='rounded-xl'
+                        leftIcon={(
+                            <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                                <path d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+                            </svg>
+                        )}
+                    />
                     <CustomButton
                         onClick={() => setShowImportModal(true)}
                         variant="secondary"
+                        size="sm"
                     >
                         <span>📁</span>
                         <span>导入</span>
@@ -449,14 +460,17 @@ export default function Workflow(): React.JSX.Element {
                     <CustomFileUpload
                         accept=".json"
                         onChange={handleImportFromFile}
+                        size="sm"
                     >
                         从文件导入
                     </CustomFileUpload>
                     <CustomButton
                         onClick={() => setIsCreating(true)}
                         variant="primary"
+                        size="sm"
                     >
-                        创建工作流
+                        <span>✨</span>
+                        <span>创建工作流</span>
                     </CustomButton>
                 </div>
             </div>
@@ -532,22 +546,6 @@ export default function Workflow(): React.JSX.Element {
                 </div>
                 : (
                     <div>
-                        {/* 搜索栏 */}
-                        <div className="relative mb-5 max-w-md">
-                            <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                                <svg className="w-4 h-4 text-gray-400" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                                    <path d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
-                                </svg>
-                            </div>
-                            <input
-                                type="text"
-                                placeholder="搜索工作流..."
-                                value={searchTerm}
-                                onChange={(e) => setSearchTerm(e.target.value)}
-                                className="w-full pl-10 pr-4 py-2.5 bg-white/80 dark:bg-gray-800/80 border border-gray-200/50 dark:border-gray-600/50 rounded-xl text-sm text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500/50 focus:border-blue-500/50 transition-all duration-200"
-                            />
-                        </div>
-
                         {/* 卡片网格 */}
                         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
                             {filteredWorkflows.map((workflow) => (
@@ -562,7 +560,7 @@ export default function Workflow(): React.JSX.Element {
                                     {/* 卡片内容 */}
                                     <div className="p-4">
                                         <div className="flex items-start justify-between mb-3">
-                                            <div className="flex items-center space-x-2.5 min-w-0">
+                                            <div className="flex items-start space-x-2.5 min-w-0">
                                                 <div className="flex items-center justify-center w-9 h-9 rounded-lg bg-blue-50 dark:bg-blue-900/20 flex-shrink-0">
                                                     <span className="text-base">🔄</span>
                                                 </div>
