@@ -11,7 +11,7 @@ export function StartNode({ data }: { data: any }): React.JSX.Element {
     <div className={`react-flow__node node-start px-4 py-2 min-w-[120px] bg-${def.color}-100`}>
       <Handle type="source" position={sourcePos} />
       <div className="text-center">
-        <div className={`font-medium text-${def.color}-800`}>{def.shortLabel}</div>
+        <div className={`font-medium text-${def.color}-800`}>{def.icon} {def.shortLabel}</div>
         <div className={`text-xs text-${def.color}-600 mt-1`}>{data.label}</div>
       </div>
     </div>
@@ -28,7 +28,7 @@ export function SkillNode({ data, selected }: { data: any; selected: boolean }):
       <Handle type="target" position={targetPos} />
       <Handle type="source" position={sourcePos} />
       <div className="text-center">
-        <div className={`font-medium text-${def.color}-800`}>{def.defaultLabel}</div>
+        <div className={`font-medium text-${def.color}-800`}>{def.icon} {def.defaultLabel}</div>
         <div className={`text-xs text-${def.color}-600 mt-1`}>{data.label}</div>
         {data.config?.skillName && (
           <div className={`text-xs text-${def.color}-500 mt-1`}>技能: {data.config.skillName}</div>
@@ -53,7 +53,7 @@ export function BranchNode({ data, selected }: { data: any; selected: boolean })
       <Handle type="target" position={targetPos} />
       <Handle type="source" position={sourcePos} />
       <div className="text-center">
-        <div className={`font-medium text-${def.color}-800`}>{def.defaultLabel}</div>
+        <div className={`font-medium text-${def.color}-800`}>{def.icon} {def.defaultLabel}</div>
         <div className={`text-xs text-${def.color}-600 mt-1`}>{data.label}</div>
         <div className={`text-xs text-${def.color}-500 mt-1`}>
           {branches.length} 个分支
@@ -78,7 +78,7 @@ export function ApiNode({ data, selected }: { data: any; selected: boolean }): R
       <Handle type="target" position={targetPos} />
       <Handle type="source" position={sourcePos} />
       <div className="text-center">
-        <div className={`font-medium text-${def.color}-800`}>{def.defaultLabel}</div>
+        <div className={`font-medium text-${def.color}-800`}>{def.icon} {def.defaultLabel}</div>
         <div className={`text-xs text-${def.color}-600 mt-1`}>{data.label}</div>
         {data.config?.apiConfig?.url && (
           <div className={`text-xs text-${def.color}-500 mt-1 max-w-[120px] truncate`}>
@@ -100,7 +100,7 @@ export function LLMNode({ data, selected }: { data: any; selected: boolean }): R
       <Handle type="target" position={targetPos} />
       <Handle type="source" position={sourcePos} />
       <div className="text-center">
-        <div className={`font-medium text-${def.color}-800`}>{def.defaultLabel}</div>
+        <div className={`font-medium text-${def.color}-800`}>{def.icon} {def.defaultLabel}</div>
         <div className={`text-xs text-${def.color}-600 mt-1`}>{data.label}</div>
         {data.config?.prompt && (
           <div className={`text-xs text-${def.color}-500 mt-1 max-w-[120px] truncate`}>
@@ -122,7 +122,7 @@ export function AgentNode({ data, selected }: { data: any; selected: boolean }):
       <Handle type="target" position={targetPos} />
       <Handle type="source" position={sourcePos} />
       <div className="text-center">
-        <div className={`font-medium text-${def.color}-800`}>{def.defaultLabel}</div>
+        <div className={`font-medium text-${def.color}-800`}>{def.icon} {def.defaultLabel}</div>
         <div className={`text-xs text-${def.color}-600 mt-1`}>{data.label}</div>
         {data.config?.agentName && (
           <div className={`text-xs text-${def.color}-500 mt-1`}>Agent: {data.config.agentName}</div>
@@ -142,7 +142,7 @@ export function CliNode({ data, selected }: { data: any; selected: boolean }): R
       <Handle type="target" position={targetPos} />
       <Handle type="source" position={sourcePos} />
       <div className="text-center">
-        <div className={`font-medium text-${def.color}-800`}>{def.defaultLabel}</div>
+        <div className={`font-medium text-${def.color}-800`}>{def.icon} {def.defaultLabel}</div>
         <div className={`text-xs text-${def.color}-600 mt-1`}>{data.label}</div>
         {data.config?.cliConfig?.command && (
           <div className={`text-xs text-${def.color}-500 mt-1 max-w-[120px] truncate`}>
@@ -164,7 +164,7 @@ export function TextNode({ data, selected }: { data: any; selected: boolean }): 
       <Handle type="target" position={targetPos} />
       <Handle type="source" position={sourcePos} />
       <div className="text-center">
-        <div className={`font-medium text-${def.color}-800`}>{def.defaultLabel}</div>
+        <div className={`font-medium text-${def.color}-800`}>{def.icon} {def.defaultLabel}</div>
         <div className={`text-xs text-${def.color}-600 mt-1`}>{data.label}</div>
         {data.config?.text && (
           <div className={`text-xs text-${def.color}-500 mt-1 max-w-[120px] truncate`}>
@@ -184,7 +184,7 @@ export function EndNode({ data }: { data: any }): React.JSX.Element {
     <div className={`react-flow__node node-end px-4 py-2 min-w-[120px] bg-${def.color}-100`}>
       <Handle type="target" position={targetPos} />
       <div className="text-center">
-        <div className={`font-medium text-${def.color}-800`}>{def.shortLabel}</div>
+        <div className={`font-medium text-${def.color}-800`}>{def.icon} {def.shortLabel}</div>
         <div className={`text-xs text-${def.color}-600 mt-1`}>{data.label}</div>
       </div>
     </div>

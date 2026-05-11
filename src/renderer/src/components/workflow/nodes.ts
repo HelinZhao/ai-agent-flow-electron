@@ -6,18 +6,19 @@ export interface NodeDef {
   category: 'basic' | 'logic' | 'integration'
   hasTargetHandle: boolean
   hasSourceHandle: boolean
+  icon: string
 }
 
 export const NODE_DEFS: NodeDef[] = [
-  { type: 'start', shortLabel: '开始', defaultLabel: '开始节点', color: 'green', category: 'basic', hasTargetHandle: false, hasSourceHandle: true },
-  { type: 'skill', shortLabel: '技能', defaultLabel: '技能节点', color: 'blue', category: 'logic', hasTargetHandle: true, hasSourceHandle: true },
-  { type: 'branch', shortLabel: '分支', defaultLabel: '分支节点', color: 'yellow', category: 'logic', hasTargetHandle: true, hasSourceHandle: true },
-  { type: 'llm', shortLabel: 'LLM', defaultLabel: 'LLM节点', color: 'indigo', category: 'logic', hasTargetHandle: true, hasSourceHandle: true },
-  { type: 'api', shortLabel: 'API', defaultLabel: 'API节点', color: 'purple', category: 'integration', hasTargetHandle: true, hasSourceHandle: true },
-  { type: 'agent', shortLabel: 'Agent', defaultLabel: 'Agent节点', color: 'red', category: 'integration', hasTargetHandle: true, hasSourceHandle: true },
-  { type: 'cli', shortLabel: 'CLI', defaultLabel: 'CLI节点', color: 'orange', category: 'integration', hasTargetHandle: true, hasSourceHandle: true },
-  { type: 'text', shortLabel: '文本', defaultLabel: '文本节点', color: 'teal', category: 'logic', hasTargetHandle: true, hasSourceHandle: true },
-  { type: 'end', shortLabel: '结束', defaultLabel: '结束节点', color: 'gray', category: 'basic', hasTargetHandle: true, hasSourceHandle: false },
+  { type: 'start', shortLabel: '开始', defaultLabel: '开始节点', color: 'green', category: 'basic', hasTargetHandle: false, hasSourceHandle: true, icon: '▶️' },
+  { type: 'skill', shortLabel: '技能', defaultLabel: '技能节点', color: 'blue', category: 'logic', hasTargetHandle: true, hasSourceHandle: true, icon: '📋' },
+  { type: 'branch', shortLabel: '分支', defaultLabel: '分支节点', color: 'yellow', category: 'logic', hasTargetHandle: true, hasSourceHandle: true, icon: '🔀' },
+  { type: 'llm', shortLabel: 'LLM', defaultLabel: 'LLM节点', color: 'indigo', category: 'logic', hasTargetHandle: true, hasSourceHandle: true, icon: '🧠' },
+  { type: 'api', shortLabel: 'API', defaultLabel: 'API节点', color: 'purple', category: 'integration', hasTargetHandle: true, hasSourceHandle: true, icon: '🌐' },
+  { type: 'agent', shortLabel: 'Agent', defaultLabel: 'Agent节点', color: 'red', category: 'integration', hasTargetHandle: true, hasSourceHandle: true, icon: '🤖' },
+  { type: 'cli', shortLabel: 'CLI', defaultLabel: 'CLI节点', color: 'orange', category: 'integration', hasTargetHandle: true, hasSourceHandle: true, icon: '💻' },
+  { type: 'text', shortLabel: '文本', defaultLabel: '文本节点', color: 'teal', category: 'logic', hasTargetHandle: true, hasSourceHandle: true, icon: '📝' },
+  { type: 'end', shortLabel: '结束', defaultLabel: '结束节点', color: 'gray', category: 'basic', hasTargetHandle: true, hasSourceHandle: false, icon: '⏹️' },
 ]
 
 export const NODE_DEFS_MAP: Record<string, NodeDef> = Object.fromEntries(NODE_DEFS.map(n => [n.type, n]))
