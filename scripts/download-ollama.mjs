@@ -31,15 +31,14 @@ function getPlatformInfo() {
     return null
   }
   const base = `${MIRROR}/ollama/ollama/releases/latest/download`
-  console.log(base)
   if (process.platform === 'win32') {
-    return { url: `${base}/ollama-windows-amd64.zip`, binaryName: 'ollama.exe', isZip: true }
+    return { url: `${base}/ollama-windows-amd64.zip`, binaryName: 'ollama.exe', archiveType: 'zip' }
   }
   if (process.platform === 'darwin') {
-    return { url: `${base}/ollama-darwin`, binaryName: 'ollama', isZip: false }
+    return { url: `${base}/ollama-darwin.tgz`, binaryName: 'ollama', archiveType: 'tgz' }
   }
   if (process.platform === 'linux') {
-    return { url: `${base}/ollama-linux-amd64`, binaryName: 'ollama', isZip: false }
+    return { url: `${base}/ollama-linux-amd64.tar.zst`, binaryName: 'ollama', archiveType: 'zst' }
   }
   console.warn(`[download-ollama] 不支持的平台: ${process.platform}`)
   return null
@@ -87,6 +86,22 @@ function extractZip(zipPath, destDir) {
   })
 }
 
+function extractTgz(tgzPath, destDir) {
+  return new Promise((resolve, reject) => {
+    const proc = spawn('tar', ['-xzf', tgzPath, '-C', destDir], { stdio: 'pipe' })
+    proc.on('close', (code) => code === 0 ? resolve() : reject(new Error(`tgz 解压失败 (${code})`)))
+    proc.on('error', () => reject(new Error('tar 不可用')))
+  })
+}
+
+function extractZst(archivePath, destDir) {
+  return new Promise((resolve, reject) => {
+    const proc = spawn('tar', ['--zstd', '-xf', archivePath, '-C', destDir], { stdio: 'pipe' })
+    proc.on('close', (code) => code === 0 ? resolve() : reject(new Error(`zst 解压失败 (${code})`)))
+    proc.on('error', () => reject(new Error('tar 或 zstd 不可用')))
+  })
+}
+
 async function main() {
   // 如果系统已有 ollama，无需内嵌
   if (isOllamaOnPath()) {
@@ -113,8 +128,9 @@ async function main() {
   // 尝试所有下载方式
   for (const method of ['curl', 'fetch']) {
     try {
-      if (info.isZip) {
-        const zipPath = join(DEST_DIR, 'ollama-windows-amd64.zip')
+      if (info.archiveType === 'zip') {
+        // Windows ZIP 下载
+        const zipPath = join(DEST_DIR, info.url.split('/').pop())
         if (method === 'curl') await downloadWithCurl(info.url, zipPath)
         else await downloadWithFetch(info.url, zipPath)
 
@@ -122,7 +138,7 @@ async function main() {
         await extractZip(zipPath, DEST_DIR)
         await unlink(zipPath)
 
-        // ZIP 可能包含子目录
+        // ZIP 解压后可能产生子目录（ollama-windows-amd64/）
         if (!existsSync(destPath)) {
           const sub = join(DEST_DIR, 'ollama-windows-amd64')
           if (existsSync(join(sub, info.binaryName))) {
@@ -131,7 +147,7 @@ async function main() {
           }
         }
 
-        // 删除 ZIP 解压可能产生的子目录（ollama-windows-amd64/），保留 ollama.exe + lib/
+        // 保留 binary + lib/，删除解压产生的多余目录
         const entries = await (await import('fs/promises')).readdir(DEST_DIR)
         for (const entry of entries) {
           if (entry !== info.binaryName && entry !== 'lib') {
@@ -143,14 +159,20 @@ async function main() {
           }
         }
       } else {
-        if (method === 'curl') await downloadWithCurl(info.url, destPath)
-        else await downloadWithFetch(info.url, destPath)
+        // tgz / zst — 下载压缩包、解压、设置可执行权限
+        const archiveName = info.url.split('/').pop()
+        const archivePath = join(DEST_DIR, archiveName)
+        if (method === 'curl') await downloadWithCurl(info.url, archivePath)
+        else await downloadWithFetch(info.url, archivePath)
 
-        const { spawn } = await import('child_process')
-        await new Promise((resolve, reject) => {
-          const chmod = spawn('chmod', ['+x', destPath])
-          chmod.on('close', (code) => code === 0 ? resolve() : reject())
-        })
+        console.log('[download-ollama] 下载完成，正在解压...')
+        if (info.archiveType === 'tgz') await extractTgz(archivePath, DEST_DIR)
+        else if (info.archiveType === 'zst') await extractZst(archivePath, DEST_DIR)
+        await unlink(archivePath)
+
+        if (existsSync(destPath)) {
+          spawn('chmod', ['+x', destPath])
+        }
       }
 
       if (existsSync(destPath)) {
