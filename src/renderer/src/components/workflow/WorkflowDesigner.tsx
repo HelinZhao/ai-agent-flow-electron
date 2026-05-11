@@ -240,7 +240,6 @@ function WorkflowDesigner(props: WorkflowDesignerProps): React.JSX.Element {
 
   return (
     <div className="flex h-full w-full">
-      <NodeListPanel />
       <div className="flex-1 h-full min-h-0">
         <LayoutDirectionContext.Provider value={layoutDirection}>
           <ReactFlow
@@ -357,6 +356,7 @@ function WorkflowDesigner(props: WorkflowDesignerProps): React.JSX.Element {
           </div>
         )}
       </div>
+      <NodeListPanel />
     </div>
   );
 }

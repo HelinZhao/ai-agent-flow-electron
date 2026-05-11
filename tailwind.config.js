@@ -4,8 +4,12 @@ module.exports = {
   content: ['./src/renderer/src/**/*.{js,jsx,ts,tsx,mdx}', './index.html'],
   safelist: [
     // 节点颜色类（NODE_DEFS 使用的颜色 × 变体）
-    { pattern: /bg-(green|blue|yellow|indigo|purple|red|orange|gray|teal)-(50|100|200)/ },
-    { pattern: /text-(green|blue|yellow|indigo|purple|red|orange|gray|teal)-(400|500|600|700|800)/ },
+    { pattern: /bg-(green|blue|yellow|indigo|purple|red|orange|gray|teal|slate|amber|violet|fuchsia|rose|cyan|emerald)-(50|100|200|400|500|600|700)/ },
+    { pattern: /text-(green|blue|yellow|indigo|purple|red|orange|gray|teal|slate|amber|violet|fuchsia|rose|cyan|emerald)-(200|300|400|500|600|700|800)/ },
+    { pattern: /from-(green|blue|yellow|indigo|purple|red|orange|gray|teal|slate|amber|violet|fuchsia|rose|cyan|emerald)-(400|500|600)/ },
+    { pattern: /to-(green|blue|yellow|indigo|purple|red|orange|gray|teal|slate|amber|violet|fuchsia|rose|cyan|emerald)-(400|500|600|700)/ },
+    { pattern: /border-(green|blue|yellow|indigo|purple|red|orange|gray|teal|slate|amber|violet|fuchsia|rose|cyan|emerald)-(300|400|500|600|700)/ },
+    { pattern: /ring-(green|blue|yellow|indigo|purple|red|orange|gray|teal|slate|amber|violet|fuchsia|rose|cyan|emerald)-(300|400|500)/ },
   ],
   theme: {
     extend: {
