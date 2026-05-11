@@ -1,4 +1,4 @@
-import React, { useState, useCallback, useMemo, useEffect, memo } from 'react';
+import React, { useState, useCallback, useMemo, useEffect, useRef, memo } from 'react';
 import {
   ReactFlow,
   Controls,
@@ -7,7 +7,6 @@ import {
   useEdgesState,
   Connection,
   useReactFlow,
-  addEdge,
   Position,
 } from '@xyflow/react';
 import '@xyflow/react/dist/style.css';
@@ -23,6 +22,7 @@ import ControlPanel from './ControlPanel';
 import { autoLayout } from './layoutUtils';
 import { LayoutDirectionContext, LayoutDirection } from './LayoutDirectionContext';
 import { v4 as uuidv4 } from 'uuid';
+import { useUpdateEffect } from 'ahooks';
 
 const nodeTypes = {
   start: StartNode,
@@ -63,9 +63,9 @@ function WorkflowDesigner(props: WorkflowDesignerProps): React.JSX.Element {
   const [layoutDirection, setLayoutDirection] = useState<LayoutDirection>(workflow?.layoutDirection || 'horizontal');
 
   // 当切换工作流时，恢复其保存的布局方向
-  useEffect(() => {
+  useUpdateEffect(() => {
     setLayoutDirection(workflow?.layoutDirection || 'horizontal');
-  }, [workflow?.id, workflow?.layoutDirection]);
+  }, [workflow?.layoutDirection]);
 
   const initialNodes: WorkflowNode[] = useMemo(() => {
     return workflow?.nodes?.map((node: WorkflowNode) => ({
@@ -92,6 +92,55 @@ function WorkflowDesigner(props: WorkflowDesignerProps): React.JSX.Element {
   const [nodes, setNodes, onNodesChange] = useNodesState<WorkflowNode>(initialNodes);
   const [edges, setEdges, onEdgesChange] = useEdgesState<WorkflowEdge>(initialEdges);
 
+  // Refs for latest state (used by keyboard shortcuts and history)
+  const nodesRef = useRef(nodes);
+  const edgesRef = useRef(edges);
+  const onSaveRef = useRef(onSave);
+  useEffect(() => { nodesRef.current = nodes; }, [nodes]);
+  useEffect(() => { edgesRef.current = edges; }, [edges]);
+  useEffect(() => { onSaveRef.current = onSave; }, [onSave]);
+
+  // Undo/redo history
+  const historyRef = useRef<Array<{ nodes: WorkflowNode[]; edges: WorkflowEdge[] }>>([]);
+  const historyIndexRef = useRef(-1);
+  const skipHistoryRef = useRef(false);
+
+  const recordHistory = useCallback((ns?: WorkflowNode[], es?: WorkflowEdge[]) => {
+    if (skipHistoryRef.current) {
+      skipHistoryRef.current = false;
+      return;
+    }
+    const snapshot = {
+      nodes: ns ?? nodesRef.current,
+      edges: es ?? edgesRef.current,
+    };
+    historyRef.current = historyRef.current.slice(0, historyIndexRef.current + 1);
+    historyRef.current.push(snapshot);
+    if (historyRef.current.length > 50) {
+      historyRef.current.shift();
+    } else {
+      historyIndexRef.current++;
+    }
+  }, []);
+
+  const undo = useCallback(() => {
+    if (historyIndexRef.current <= 0) return;
+    historyIndexRef.current--;
+    const entry = historyRef.current[historyIndexRef.current];
+    skipHistoryRef.current = true;
+    setNodes(entry.nodes);
+    setEdges(entry.edges);
+  }, [setNodes, setEdges]);
+
+  const redo = useCallback(() => {
+    if (historyIndexRef.current >= historyRef.current.length - 1) return;
+    historyIndexRef.current++;
+    const entry = historyRef.current[historyIndexRef.current];
+    skipHistoryRef.current = true;
+    setNodes(entry.nodes);
+    setEdges(entry.edges);
+  }, [setNodes, setEdges]);
+
   // 根据布局方向给每个节点加上 sourcePosition/targetPosition，触发 React Flow 内部重算 handle bounds 和边缘路径
   const positionedNodes = useMemo(() => {
     return nodes.map(node => ({
@@ -105,6 +154,62 @@ function WorkflowDesigner(props: WorkflowDesignerProps): React.JSX.Element {
   useEffect(() => {
     onCanvasChange?.(nodes, edges, layoutDirection);
   }, [nodes, edges, layoutDirection, onCanvasChange]);
+
+  // 初始化历史记录（工作流切换时）
+  useEffect(() => {
+    historyRef.current = [{ nodes: initialNodes, edges: initialEdges }];
+    historyIndexRef.current = 0;
+  }, [workflow?.id]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // 快捷键：Ctrl+Z 撤销, Ctrl+Shift+Z / Ctrl+Y 重做, Ctrl+S 保存
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (
+        e.target instanceof HTMLInputElement ||
+        e.target instanceof HTMLTextAreaElement ||
+        e.target instanceof HTMLSelectElement
+      ) {
+        return;
+      }
+
+      if ((e.ctrlKey || e.metaKey) && e.key === 'z' && !e.shiftKey) {
+        e.preventDefault();
+        undo();
+      } else if ((e.ctrlKey || e.metaKey) && (e.key === 'y' || (e.key === 'z' && e.shiftKey))) {
+        e.preventDefault();
+        redo();
+      } else if ((e.ctrlKey || e.metaKey) && e.key === 's') {
+        e.preventDefault();
+        onSaveRef.current(nodesRef.current, edgesRef.current);
+      }
+    };
+
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [undo, redo]);
+
+  // 包装 onNodesChange/onEdgesChange，在删除时记录历史
+  const handleNodesChange = useCallback((changes: any[]) => {
+    onNodesChange(changes);
+    const removeIds = changes.filter((c: any) => c.type === 'remove').map((c: any) => c.id);
+    if (removeIds.length > 0) {
+      recordHistory(
+        nodesRef.current.filter(n => !removeIds.includes(n.id)),
+        edgesRef.current,
+      );
+    }
+  }, [onNodesChange, recordHistory]);
+
+  const handleEdgesChange = useCallback((changes: any[]) => {
+    onEdgesChange(changes);
+    const removeIds = changes.filter((c: any) => c.type === 'remove').map((c: any) => c.id);
+    if (removeIds.length > 0) {
+      recordHistory(
+        nodesRef.current,
+        edgesRef.current.filter(e => !removeIds.includes(e.id)),
+      );
+    }
+  }, [onEdgesChange, recordHistory]);
 
   const onConnect = useCallback(
     (params: Connection) => {
@@ -129,7 +234,9 @@ function WorkflowDesigner(props: WorkflowDesignerProps): React.JSX.Element {
             label: branches[0].label,
             condition: branches[0].condition
           };
-          setEdges((eds) => addEdge(newEdge, eds));
+          const newEdges = [...edges, newEdge];
+          setEdges(newEdges);
+          recordHistory(nodes, newEdges);
           return;
         }
       }
@@ -139,9 +246,11 @@ function WorkflowDesigner(props: WorkflowDesignerProps): React.JSX.Element {
         ...params,
         id: `edge-${uuidv4()}`
       };
-      setEdges((eds) => addEdge(newEdge, eds));
+      const newEdges = [...edges, newEdge];
+      setEdges(newEdges);
+      recordHistory(nodes, newEdges);
     },
-    [nodes, setEdges]
+    [nodes, edges, setEdges, recordHistory]
   );
 
   const handleBranchSelectionConfirm = useCallback(() => {
@@ -155,14 +264,16 @@ function WorkflowDesigner(props: WorkflowDesignerProps): React.JSX.Element {
       label: selectedBranch?.label,
       condition: selectedBranch?.id || branchSelection.selectedBranch
     };
-    setEdges((eds) => addEdge(newEdge, eds));
+    const newEdges = [...edges, newEdge];
+    setEdges(newEdges);
+    recordHistory(nodes, newEdges);
     setBranchSelection({
       isOpen: false,
       branches: [],
       connection: null,
       selectedBranch: ''
     });
-  }, [branchSelection, setEdges]);
+  }, [branchSelection, nodes, edges, setEdges, recordHistory]);
 
   const handleBranchSelectionCancel = useCallback(() => {
     setBranchSelection({
@@ -176,6 +287,10 @@ function WorkflowDesigner(props: WorkflowDesignerProps): React.JSX.Element {
   const onNodeClick = useCallback((_event: React.MouseEvent, node: WorkflowNode) => {
     setSelectedNode(node || null);
   }, []);
+
+  const onNodeDragStop = useCallback(() => {
+    recordHistory();
+  }, [recordHistory]);
 
   const onUnselectNode = useCallback(() => {
     setSelectedNode(null);
@@ -204,9 +319,11 @@ function WorkflowDesigner(props: WorkflowDesignerProps): React.JSX.Element {
         label: getNodeDefaultLabel(type),
       },
     };
-    setNodes((nds) => nds.concat(newNode));
+    const newNodes = nodes.concat(newNode);
+    setNodes(newNodes);
+    recordHistory(newNodes, edges);
     setContextMenu(null);
-  }, [setNodes]);
+  }, [nodes, edges, setNodes, recordHistory]);
 
   const handleDragOver = useCallback((event: React.DragEvent) => {
     event.preventDefault();
@@ -234,9 +351,11 @@ function WorkflowDesigner(props: WorkflowDesignerProps): React.JSX.Element {
   }, [])
 
   const handleAutoLayout = useCallback(() => {
-    setNodes(autoLayout(nodes, edges, layoutDirection))
-    fitView()
-  }, [nodes, edges, setNodes, layoutDirection, fitView]);
+    const newNodes = autoLayout(nodes, edges, layoutDirection);
+    setNodes(newNodes);
+    recordHistory(newNodes, edges);
+    fitView();
+  }, [nodes, edges, setNodes, layoutDirection, fitView, recordHistory]);
 
   return (
     <div className="flex h-full w-full">
@@ -245,8 +364,9 @@ function WorkflowDesigner(props: WorkflowDesignerProps): React.JSX.Element {
           <ReactFlow
             nodes={positionedNodes}
             edges={edges}
-            onNodesChange={onNodesChange}
-            onEdgesChange={onEdgesChange}
+            onNodesChange={handleNodesChange}
+            onEdgesChange={handleEdgesChange}
+            onNodeDragStop={onNodeDragStop}
             onConnect={onConnect}
             onNodeClick={onNodeClick}
             nodeTypes={nodeTypes}
