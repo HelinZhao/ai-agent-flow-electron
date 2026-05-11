@@ -16,7 +16,7 @@ interface CustomSelectProps {
   disabled?: boolean;
   className?: string;
   error?: boolean;
-  size?: 'sm' | 'md' | 'lg';
+  size?: 'xs' | 'sm' | 'md' | 'lg';
   variant?: 'default' | 'borderless';
   dropdownWidth?: 'equal' | 'auto' | number;
 }
@@ -49,15 +49,24 @@ const CustomSelect: React.FC<CustomSelectProps> = ({
   const selectedOption = options.find(option => option.value === value);
 
   const sizeClasses = {
+    xs: 'px-2 py-1 text-xs min-h-[24px] rounded',
     sm: 'px-3 py-1.5 text-sm min-h-[32px] rounded',
     md: 'px-4 py-2.5 text-base min-h-[44px] rounded-md',
     lg: 'px-5 py-3 text-lg min-h-[52px] rounded-xl'
   };
 
   const iconSizeClasses = {
+    xs: 'w-2.5 h-2.5',
     sm: 'w-3 h-3',
     md: 'w-4 h-4',
     lg: 'w-5 h-5'
+  };
+
+  const dropdownTextSize = {
+    xs: 'text-xs',
+    sm: 'text-sm',
+    md: 'text-base',
+    lg: 'text-lg'
   };
 
   const isBorderless = variant === 'borderless';
@@ -189,7 +198,7 @@ const CustomSelect: React.FC<CustomSelectProps> = ({
     >
       <div role="listbox">
         {options.length === 0 ? (
-          <div className="px-4 py-3 text-sm text-gray-500 dark:text-gray-400 text-center">
+          <div className={`px-4 py-3 ${dropdownTextSize[size]} text-gray-500 dark:text-gray-400 text-center`}>
             暂无选项
           </div>
         ) : (
@@ -211,7 +220,7 @@ const CustomSelect: React.FC<CustomSelectProps> = ({
               aria-selected={option.value === value}
               tabIndex={-1}
             >
-              <span className={`text-sm ${
+              <span className={`${dropdownTextSize[size]} ${
                 option.value === value
                   ? 'font-medium text-blue-700 dark:text-blue-300'
                   : 'text-gray-700 dark:text-gray-300'

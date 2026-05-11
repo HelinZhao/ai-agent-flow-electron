@@ -1,5 +1,7 @@
 import { useEffect, useRef, useState } from 'react'
 import { API_BASE_URL } from '@renderer/config'
+import CustomInput from '@renderer/components/ui/CustomInput'
+import CustomSelect from '@renderer/components/ui/CustomSelect'
 
 interface LogEntry {
   timestamp: string
@@ -77,35 +79,39 @@ export default function Logs(): React.JSX.Element {
             <span className="text-xs text-gray-500 dark:text-gray-400">{connected ? '已连接' : '未连接'}</span>
           </span>
           {/* 级别过滤 */}
-          <select
+          <div className='w-32'>
+          <CustomSelect
             value={filter}
-            onChange={(e) => setFilter(e.target.value as LevelFilter)}
-            className="bg-gray-200 dark:bg-gray-800 text-xs text-gray-700 dark:text-gray-300 px-2 py-1 rounded border border-gray-300 dark:border-gray-700 outline-none focus:border-blue-500"
-          >
-            <option value="all">所有级别</option>
-            <option value="info">Info</option>
-            <option value="warn">Warn</option>
-            <option value="error">Error</option>
-            <option value="debug">Debug</option>
-          </select>
+            onChange={(value) => setFilter(value as LevelFilter)}
+            options={[
+              { label:"所有级别",value:"all"},
+              { label:"Info",value:"info"},
+              { label:"Warn",value:"warn"},
+              { label:"Error",value:"error"},
+              { label:"Debug",value:"debug"},
+            ]}
+            size="xs"
+          />
+          </div>
           {/* 文本搜索 */}
-          <input
+          <CustomInput
             type="text"
             placeholder="搜索日志..."
             value={searchText}
             onChange={(e) => setSearchText(e.target.value)}
-            className="bg-gray-200 dark:bg-gray-800 text-xs text-gray-700 dark:text-gray-300 px-2 py-1 rounded border border-gray-300 dark:border-gray-700 w-40 outline-none focus:border-blue-500 placeholder-gray-400 dark:placeholder-gray-500"
+            leftIcon={"🔍"}
+            size="xs"
           />
+       
           <span className="text-xs text-gray-500">{filteredLogs.length} 条</span>
         </div>
         <div className="flex items-center space-x-2">
           <button
             onClick={() => setAutoScroll(!autoScroll)}
-            className={`text-xs px-2 py-1 rounded transition-colors ${
-              autoScroll
+            className={`text-xs px-2 py-1 rounded transition-colors ${autoScroll
                 ? 'text-blue-600 dark:text-blue-400 bg-gray-200 dark:bg-gray-800'
                 : 'text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300'
-            }`}
+              }`}
           >
             自动滚动
           </button>

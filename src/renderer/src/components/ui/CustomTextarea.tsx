@@ -5,7 +5,7 @@ interface CustomTextareaProps extends Omit<React.TextareaHTMLAttributes<HTMLText
   label?: string;
   error?: string;
   helper?: string;
-  size?: 'sm' | 'md' | 'lg';
+  size?: 'xs' | 'sm' | 'md' | 'lg';
   fullWidth?: boolean;
 }
 
@@ -20,6 +20,7 @@ const CustomTextarea: React.FC<CustomTextareaProps> = ({
   ...props
 }) => {
   const sizeClasses = {
+    xs: 'px-2 py-1 text-xs min-h-[40px] rounded',
     sm: 'px-3 py-1.5 text-sm min-h-[60px] rounded',
     md: 'px-4 py-2.5 text-base min-h-[80px] rounded-md',
     lg: 'px-5 py-3 text-lg min-h-[100px] rounded-xl'

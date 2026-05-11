@@ -278,11 +278,7 @@ export default function Agents(): React.JSX.Element {
                         size="sm"
                         hidden={agents.length === 0}
                         className='rounded-xl'
-                        leftIcon={(
-                            <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                                <path d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
-                            </svg>
-                        )}
+                        leftIcon={"🔍"}
                     />
                     <CustomButton
                         onClick={handleCreate}
