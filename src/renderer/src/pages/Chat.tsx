@@ -656,8 +656,8 @@ export default function Chat(): React.JSX.Element {
 
                             {/* 输入区域 */}
                             <div className="p-4 pt-0">
-                                <div className="bg-gray-50/80 dark:bg-gray-700/50 rounded-2xl border border-gray-200/50 dark:border-gray-600/50 overflow-hidden backdrop-blur-sm">
-                                    <div className="p-4">
+                                <div className="bg-white dark:bg-gray-700/80 rounded-2xl border border-gray-200/50 dark:border-gray-600/50 overflow-hidden backdrop-blur-sm">
+                                    <div className="p-4 pb-0">
                                         <AttachmentPreview
                                             attachments={pendingAttachments}
                                             onRemove={(id) => setPendingAttachments(prev => prev.filter(a => a.id !== id))}
@@ -667,17 +667,17 @@ export default function Chat(): React.JSX.Element {
                                             onChange={(e) => setInputMessage(e.target.value)}
                                             onKeyDown={handleKeyPress}
                                             placeholder={`向 ${selectedAgent.name} 发送消息...`}
-                                            className="w-full resize-none bg-transparent border-none outline-none text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-gray-400 min-h-[52px] max-h-[140px] text-base leading-relaxed"
+                                            className="w-full resize-none bg-transparent border-none outline-none text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-gray-400 min-h-[52px] max-h-[140px] text-sm leading-relaxed"
                                             rows={1}
                                             disabled={isLoading}
                                             style={{
-                                                overflow: 'hidden',
+                                                overflow: 'auto',
                                                 fontFamily: 'inherit'
                                             }}
                                         />
                                     </div>
 
-                                    <div className="flex items-center justify-between px-4 py-3 bg-white/50 dark:bg-gray-800/30 border-t border-gray-200/30 dark:border-gray-600/30">
+                                    <div className="flex items-center justify-between px-3 pb-2 pt-0.5">
                                         <div className="flex items-center space-x-3 text-xs text-gray-500 dark:text-gray-400">
                                             <CustomFileUpload
                                                 onChange={handleFileSelect}
@@ -718,7 +718,6 @@ export default function Chat(): React.JSX.Element {
                                                     disabled={!inputMessage.trim() && pendingAttachments.length === 0}
                                                     variant="primary"
                                                     size="sm"
-                                                    className="flex items-center space-x-2 px-6"
                                                 >
                                                     <span>🚀</span>
                                                     <span>发送</span>

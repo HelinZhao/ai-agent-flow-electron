@@ -30,6 +30,23 @@ export default function App(): React.JSX.Element {
         init = true
     }, [initialize]);
 
+    // 滚动检测：滚动时显示滚动条，停止滚动500ms后隐藏
+    useEffect(() => {
+        let timer: ReturnType<typeof setTimeout>;
+        const onScroll = (e) => {
+            e.target.setAttribute('data-scrolling', '');
+            clearTimeout(timer);
+            timer = setTimeout(() => {
+                e.target.removeAttribute('data-scrolling');
+            }, 500);
+        };
+        document.addEventListener('scroll', onScroll, true);
+        return () => {
+            document.removeEventListener('scroll', onScroll, true);
+            clearTimeout(timer);
+        };
+    }, []);
+
     return (
         <Layout currentPage={currentPage} onNavigate={setCurrentPage}>
             <ClickSpark />

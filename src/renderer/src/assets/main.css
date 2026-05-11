@@ -56,34 +56,46 @@ body {
   stroke: #3b82f6;
 }
 
-/* 滚动条样式 */
+/* 滚动条样式 - 默认透明，悬浮/滚动时显示 */
 ::-webkit-scrollbar {
-  width: 8px;
-  height: 8px;
+  width: 6px;
+  height: 6px;
 }
 
 ::-webkit-scrollbar-track {
-  background: rgba(0, 0, 0, 0.05);
+  background: transparent;
   border-radius: 4px;
 }
 
 ::-webkit-scrollbar-thumb {
-  background: rgba(0, 0, 0, 0.2);
+  background: transparent;
   border-radius: 4px;
-  transition: background 0.2s;
+}
+
+/* 悬浮在滚动容器上时显示 */
+.overflow-y-auto:hover::-webkit-scrollbar-thumb,
+.overflow-auto:hover::-webkit-scrollbar-thumb,
+.overflow-y-scroll:hover::-webkit-scrollbar-thumb,
+textarea:hover::-webkit-scrollbar-thumb {
+  background: rgba(0, 0, 0, 0.15);
 }
 
 ::-webkit-scrollbar-thumb:hover {
   background: rgba(0, 0, 0, 0.3);
 }
 
-/* 深色模式滚动条 */
-.dark ::-webkit-scrollbar-track {
-  background: rgba(255, 255, 255, 0.05);
+/* 滚动中显示 */
+::-webkit-scrollbar-thumb[data-scrolling] {
+  background: rgba(0, 0, 0, 0.15);
 }
 
-.dark ::-webkit-scrollbar-thumb {
-  background: rgba(255, 255, 255, 0.2);
+/* 深色模式 */
+.dark .overflow-y-auto:hover::-webkit-scrollbar-thumb,
+.dark .overflow-auto:hover::-webkit-scrollbar-thumb,
+.dark .overflow-y-scroll:hover::-webkit-scrollbar-thumb,
+.dark textarea:hover::-webkit-scrollbar-thumb,
+.dark ::-webkit-scrollbar-thumb[data-scrolling] {
+  background: rgba(255, 255, 255, 0.15);
 }
 
 .dark ::-webkit-scrollbar-thumb:hover {
@@ -93,7 +105,29 @@ body {
 /* Firefox滚动条 */
 * {
   scrollbar-width: thin;
-  scrollbar-color: rgba(0, 0, 0, 0.2) rgba(0, 0, 0, 0.2);
+  scrollbar-color: transparent transparent;
+}
+
+.overflow-y-auto:hover,
+.overflow-auto:hover,
+.overflow-y-scroll:hover,
+textarea:hover,
+.overflow-y-auto[data-scrolling],
+.overflow-auto[data-scrolling],
+.overflow-y-scroll[data-scrolling] ,
+textarea[data-scrolling]  {
+  scrollbar-color: rgba(0, 0, 0, 0.15) transparent;
+}
+
+.dark .overflow-y-auto:hover,
+.dark .overflow-auto:hover,
+.dark .overflow-y-scroll:hover,
+.dark textarea:hover,
+.dark .overflow-y-auto[data-scrolling] ,
+.dark .overflow-auto[data-scrolling] ,
+.dark .overflow-y-scroll[data-scrolling] ,
+.dark textarea[data-scrolling]  {
+  scrollbar-color: rgba(255, 255, 255, 0.15) transparent;
 }
 
 /* 选择文本样式 */
@@ -104,10 +138,6 @@ body {
 
 .dark ::selection {
   background: rgba(99, 102, 241, 0.3);
-}
-
-.dark * {
-  scrollbar-color: #6b7280 #374151;
 }
 
 /* Markdown渲染样式 — 与编辑器预览一致 */
