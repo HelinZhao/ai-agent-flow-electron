@@ -15,7 +15,7 @@
  */
 
 import { existsSync, mkdirSync } from 'fs'
-import { unlink, rm } from 'fs/promises'
+import { unlink, rm, rename, stat, readdir } from 'fs/promises'
 import { join } from 'path'
 import dotenv from 'dotenv'
 dotenv.config()
@@ -48,19 +48,6 @@ function getPlatformInfo() {
 function isOllamaOnPath() {
   const r = spawnSync('ollama', ['--version'], { stdio: 'pipe', timeout: 5000 })
   return r.status === 0
-}
-
-function downloadWithCurl(url, destPath) {
-  return new Promise((resolve, reject) => {
-    const proc = spawn('curl', ['-fsSL', '--retry', '2', '-o', destPath, url], { stdio: 'pipe' })
-    let stderr = ''
-    proc.stderr.on('data', (c) => { stderr += c })
-    proc.on('close', (code) => {
-      if (code === 0) resolve()
-      else reject(new Error(`curl 下载失败 (${code})`))
-    })
-    proc.on('error', () => reject(new Error('curl 不可用')))
-  })
 }
 
 async function downloadWithFetch(url, destPath) {
@@ -102,6 +89,22 @@ function extractZst(archivePath, destDir) {
   })
 }
 
+/** 在 destDir 的子目录中搜索 binaryName，找到后移动到 destPath */
+async function findAndMoveBinary(destDir, binaryName, destPath) {
+  const dirs = (await readdir(destDir, { withFileTypes: true }))
+    .filter(d => d.isDirectory())
+    .map(d => d.name)
+  for (const dir of dirs) {
+    const candidate = join(destDir, dir, binaryName)
+    if (existsSync(candidate)) {
+      await rename(candidate, destPath)
+      await rm(join(destDir, dir), { recursive: true, force: true })
+      return true
+    }
+  }
+  return false
+}
+
 async function main() {
   // 如果系统已有 ollama，无需内嵌
   if (isOllamaOnPath()) {
@@ -125,74 +128,67 @@ async function main() {
 
   if (existsSync(destPath)) await unlink(destPath)
 
-  // 尝试所有下载方式
-  for (const method of ['curl', 'fetch']) {
-    try {
-      if (info.archiveType === 'zip') {
-        // Windows ZIP 下载
-        const zipPath = join(DEST_DIR, info.url.split('/').pop())
-        if (method === 'curl') await downloadWithCurl(info.url, zipPath)
-        else await downloadWithFetch(info.url, zipPath)
+  // 下载并解压
+  try {
+    if (info.archiveType === 'zip') {
+      const zipPath = join(DEST_DIR, info.url.split('/').pop())
+      await downloadWithFetch(info.url, zipPath)
 
-        console.log('[download-ollama] 下载完成，正在解压...')
-        await extractZip(zipPath, DEST_DIR)
-        await unlink(zipPath)
+      console.log('[download-ollama] 下载完成，正在解压...')
+      await extractZip(zipPath, DEST_DIR)
+      await unlink(zipPath)
 
-        // ZIP 解压后可能产生子目录（ollama-windows-amd64/）
-        if (!existsSync(destPath)) {
-          const sub = join(DEST_DIR, 'ollama-windows-amd64')
-          if (existsSync(join(sub, info.binaryName))) {
-            await (await import('fs/promises')).rename(join(sub, info.binaryName), destPath)
-            await rm(sub, { recursive: true, force: true })
+      // ZIP 解压后可能产生子目录（如 ollama-windows-amd64/）
+      if (!existsSync(destPath)) {
+        await findAndMoveBinary(DEST_DIR, info.binaryName, destPath)
+      }
+
+      // 保留 binary + lib/，删除解压产生的多余目录
+      const entries = await readdir(DEST_DIR)
+      for (const entry of entries) {
+        if (entry !== info.binaryName && entry !== 'lib') {
+          const fullPath = join(DEST_DIR, entry)
+          const s = await stat(fullPath)
+          if (s.isDirectory()) {
+            await rm(fullPath, { recursive: true, force: true })
           }
         }
+      }
+    } else {
+      // tgz / zst — 下载压缩包、解压、设置可执行权限
+      const archiveName = info.url.split('/').pop()
+      const archivePath = join(DEST_DIR, archiveName)
+      await downloadWithFetch(info.url, archivePath)
 
-        // 保留 binary + lib/，删除解压产生的多余目录
-        const entries = await (await import('fs/promises')).readdir(DEST_DIR)
-        for (const entry of entries) {
-          if (entry !== info.binaryName && entry !== 'lib') {
-            const fullPath = join(DEST_DIR, entry)
-            const stat = await (await import('fs/promises')).stat(fullPath)
-            if (stat.isDirectory() && entry.endsWith('-amd64')) {
-              await rm(fullPath, { recursive: true, force: true })
-            }
-          }
-        }
-      } else {
-        // tgz / zst — 下载压缩包、解压、设置可执行权限
-        const archiveName = info.url.split('/').pop()
-        const archivePath = join(DEST_DIR, archiveName)
-        if (method === 'curl') await downloadWithCurl(info.url, archivePath)
-        else await downloadWithFetch(info.url, archivePath)
+      console.log('[download-ollama] 下载完成，正在解压...')
+      if (info.archiveType === 'tgz') await extractTgz(archivePath, DEST_DIR)
+      else if (info.archiveType === 'zst') await extractZst(archivePath, DEST_DIR)
+      await unlink(archivePath)
 
-        console.log('[download-ollama] 下载完成，正在解压...')
-        if (info.archiveType === 'tgz') await extractTgz(archivePath, DEST_DIR)
-        else if (info.archiveType === 'zst') await extractZst(archivePath, DEST_DIR)
-        await unlink(archivePath)
-
-        if (existsSync(destPath)) {
-          spawn('chmod', ['+x', destPath])
-        }
+      // tgz/zst 解压后二进制可能在子目录中（如 bin/ollama）
+      if (!existsSync(destPath)) {
+        await findAndMoveBinary(DEST_DIR, info.binaryName, destPath)
       }
 
       if (existsSync(destPath)) {
-        const size = (await (await import('fs/promises')).stat(destPath)).size
-        console.log(`[download-ollama] 下载完成 (${(size / 1024 / 1024).toFixed(1)} MB): ${destPath}`)
-        return
+        spawn('chmod', ['+x', destPath])
       }
-    } catch (err) {
-      console.log(`[download-ollama] ${method} 方式下载失败: ${err.message}`)
-      // 清理残骸
-      try { await rm(DEST_DIR, { recursive: true, force: true }) } catch {}
-      mkdirSync(DEST_DIR, { recursive: true })
     }
-  }
 
-  console.error('[download-ollama] 所有下载方式均失败。')
-  console.error('[download-ollama] 请手动下载 ollama 并放置到:')
-  console.error(`  ${destPath}`)
-  console.error('[download-ollama] 下载地址: https://github.com/ollama/ollama/releases')
-  console.error('[download-ollama] 或在系统 PATH 中安装 ollama。应用仍可正常运行（回退使用系统 ollama）。')
+    if (existsSync(destPath)) {
+      const size = (await stat(destPath)).size
+      console.log(`[download-ollama] 下载完成 (${(size / 1024 / 1024).toFixed(1)} MB): ${destPath}`)
+      return
+    }
+
+    throw new Error('解压后未找到可执行文件')
+  } catch (err) {
+    console.error(`[download-ollama] 下载失败: ${err.message}`)
+    console.error('[download-ollama] 请手动下载 ollama 并放置到:')
+    console.error(`  ${destPath}`)
+    console.error('[download-ollama] 下载地址: https://github.com/ollama/ollama/releases')
+    console.error('[download-ollama] 或在系统 PATH 中安装 ollama。应用仍可正常运行（回退使用系统 ollama）。')
+  }
 }
 
 main()
