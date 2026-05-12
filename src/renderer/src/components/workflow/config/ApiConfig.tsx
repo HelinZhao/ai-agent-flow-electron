@@ -27,6 +27,7 @@ const ApiConfig: React.FC<ApiConfigProps> = ({ config, onConfigChange }) => {
           value={config.apiConfig?.url || ''}
           onChange={(e) => updateApiConfig('url', e.target.value)}
           placeholder="https://api.example.com/endpoint"
+          size="sm"
         />
       </div>
 
@@ -44,6 +45,7 @@ const ApiConfig: React.FC<ApiConfigProps> = ({ config, onConfigChange }) => {
             { value: 'DELETE', label: 'DELETE' }
           ]}
           placeholder="选择HTTP方法"
+          size="sm"
         />
       </div>
 
@@ -56,6 +58,7 @@ const ApiConfig: React.FC<ApiConfigProps> = ({ config, onConfigChange }) => {
           onChange={(e) => updateApiConfig('headers', e.target.value)}
           rows={3}
           placeholder='{"Content-Type": "application/json"}'
+          size="sm"
         />
       </div>
 
@@ -68,6 +71,7 @@ const ApiConfig: React.FC<ApiConfigProps> = ({ config, onConfigChange }) => {
             value={config.apiConfig?.body || ''}
             onChange={(e) => updateApiConfig('body', e.target.value)}
             rows={3}
+            size="sm"
           />
         </div>
       )}

@@ -1,4 +1,5 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
+import { createPortal } from 'react-dom';
 import { VariableConfig } from '@renderer/types';
 import CustomSelect from '../ui/CustomSelect';
 import CustomInput from '../ui/CustomInput';
@@ -32,7 +33,7 @@ const VariableConfigModal: React.FC<VariableConfigModalProps> = ({
   const [errors, setErrors] = useState<Record<string, string>>({});
 
   // 当initialVariable变化时更新表单数据
-  React.useEffect(() => {
+  useEffect(() => {
     if (initialVariable) {
       setFormData({
         name: initialVariable.name || '',
@@ -119,22 +120,25 @@ const VariableConfigModal: React.FC<VariableConfigModalProps> = ({
 
   if (!isOpen) return null;
 
-  return (
-    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-      <div className="bg-white dark:bg-gray-800 rounded-lg shadow-xl w-96 max-h-[90vh] overflow-y-auto">
-        <div className="flex justify-between items-center p-4 border-b border-gray-200 dark:border-gray-600">
-          <h3 className="text-lg font-medium text-gray-900 dark:text-white">
+  return createPortal(
+    <div className="fixed inset-0 bg-black/40 backdrop-blur-sm flex items-center justify-center z-50">
+      <div className="bg-white dark:bg-gray-800 rounded-xl shadow-xl w-96 max-h-[90vh] overflow-y-auto border border-gray-200 dark:border-gray-700">
+        <div className="flex items-center justify-between px-5 py-4 border-b border-gray-100 dark:border-gray-700/50">
+          <h3 className="text-sm font-semibold text-gray-900 dark:text-white">
             {initialVariable ? '编辑变量' : '添加变量'}
           </h3>
           <button
             onClick={handleClose}
-            className="text-gray-400 hover:text-gray-600 dark:hover:text-gray-300"
+            className="flex items-center justify-center w-7 h-7 rounded-lg text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors"
           >
-            ✕
+            <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <path d="M18 6 6 18" />
+              <path d="m6 6 12 12" />
+            </svg>
           </button>
         </div>
 
-        <div className="p-4 space-y-4">
+        <div className="px-5 py-4 space-y-4">
           <div>
             <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
               变量名称 *
@@ -145,6 +149,7 @@ const VariableConfigModal: React.FC<VariableConfigModalProps> = ({
               onChange={(e) => handleInputChange('name', e.target.value)}
               placeholder="variableName"
               error={errors.name}
+              size="sm"
             />
             {errors.name && <p className="text-red-500 text-xs mt-1">{errors.name}</p>}
             <p className="text-xs text-gray-500 mt-1">
@@ -162,6 +167,7 @@ const VariableConfigModal: React.FC<VariableConfigModalProps> = ({
               onChange={(e) => handleInputChange('displayName', e.target.value)}
               placeholder="变量显示名称"
               error={errors.displayName}
+              size="sm"
             />
             {errors.displayName && <p className="text-red-500 text-xs mt-1">{errors.displayName}</p>}
           </div>
@@ -180,6 +186,7 @@ const VariableConfigModal: React.FC<VariableConfigModalProps> = ({
                 { value: 'array', label: '数组' }
               ]}
               placeholder="选择变量类型"
+              size="sm"
             />
           </div>
 
@@ -192,6 +199,7 @@ const VariableConfigModal: React.FC<VariableConfigModalProps> = ({
               value={formData.defaultValue || ''}
               onChange={(e) => handleInputChange('defaultValue', e.target.value)}
               placeholder="默认值"
+              size="sm"
             />
           </div>
 
@@ -204,6 +212,7 @@ const VariableConfigModal: React.FC<VariableConfigModalProps> = ({
               onChange={(e) => handleInputChange('description', e.target.value)}
               rows={2}
               placeholder="变量描述"
+              size="sm"
             />
           </div>
 
@@ -221,7 +230,7 @@ const VariableConfigModal: React.FC<VariableConfigModalProps> = ({
           </div>
         </div>
 
-        <div className="flex justify-end space-x-2 p-4 border-t border-gray-200 dark:border-gray-600">
+        <div className="flex justify-end gap-2 px-5 py-4 border-t border-gray-100 dark:border-gray-700/50 bg-gray-50/50 dark:bg-gray-900/30">
           <CustomButton
             onClick={handleClose}
             variant="secondary"
@@ -238,7 +247,8 @@ const VariableConfigModal: React.FC<VariableConfigModalProps> = ({
           </CustomButton>
         </div>
       </div>
-    </div>
+    </div>,
+    document.body
   );
 };
 

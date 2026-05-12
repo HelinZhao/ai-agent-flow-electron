@@ -32,6 +32,7 @@ const SkillConfig: React.FC<SkillConfigProps> = ({ config, onConfigChange }) => 
             }))
           ]}
           placeholder="请选择技能"
+          size="sm"
         />
       </div>
       {config.skillId && (

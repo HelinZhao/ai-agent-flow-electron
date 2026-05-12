@@ -106,6 +106,7 @@ const LLMConfig: React.FC<LLMConfigProps> = ({ config, onConfigChange }) => {
           onChange={(e) => onConfigChange({ ...config, prompt: e.target.value })}
           rows={4}
           placeholder="输入提示词模板，可以使用 {{variableName}} 格式的变量"
+          size="sm"
         />
       </div>
 

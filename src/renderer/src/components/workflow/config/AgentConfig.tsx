@@ -31,6 +31,7 @@ const AgentConfig: React.FC<AgentConfigProps> = ({ config, onConfigChange }) => 
             }))
           ]}
           placeholder="请选择Agent"
+          size="sm"
         />
       </div>
       {config.agentId && (

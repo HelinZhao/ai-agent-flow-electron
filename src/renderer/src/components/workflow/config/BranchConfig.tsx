@@ -98,7 +98,7 @@ const BranchConfig: React.FC<BranchConfigProps> = ({ config, onConfigChange }) =
               onChange={(e) => updateBranch(branch.id, 'condition', e.target.value)}
               rows={2}
               placeholder="描述此分支的执行条件"
-              className="text-sm"
+              size="sm"
             />
           </div>
         </div>

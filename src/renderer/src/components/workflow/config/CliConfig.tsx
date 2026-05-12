@@ -84,6 +84,7 @@ const CliConfig: React.FC<CliConfigProps> = ({ config, onConfigChange }) => {
           onChange={handleTemplateChange}
           options={CLI_PRESET_TEMPLATES.map(t => ({ value: t.id, label: t.label }))}
           placeholder="选择命令模板"
+          size="sm"
         />
       </div>
 
@@ -101,6 +102,7 @@ const CliConfig: React.FC<CliConfigProps> = ({ config, onConfigChange }) => {
                   updateCliConfig('templateVariables', newVars)
                 }}
                 placeholder={`输入${variable.displayName}`}
+                size="sm"
               />
             </div>
           ))}
@@ -117,6 +119,7 @@ const CliConfig: React.FC<CliConfigProps> = ({ config, onConfigChange }) => {
             onChange={(e) => updateCliConfig('command', e.target.value)}
             rows={3}
             placeholder="输入要执行的shell命令"
+            size="sm"
           />
         </div>
       )}
@@ -135,6 +138,7 @@ const CliConfig: React.FC<CliConfigProps> = ({ config, onConfigChange }) => {
           value={cliConfig.workingDirectory || ''}
           onChange={(e) => updateCliConfig('workingDirectory', e.target.value)}
           placeholder="留空使用默认目录"
+          size="sm"
         />
       </div>
 
@@ -147,6 +151,7 @@ const CliConfig: React.FC<CliConfigProps> = ({ config, onConfigChange }) => {
           value={cliConfig.timeout || CLI_DEFAULTS.timeout}
           onChange={(e) => updateCliConfig('timeout', parseInt(e.target.value) || CLI_DEFAULTS.timeout)}
           placeholder="30"
+          size="sm"
         />
       </div>
 
@@ -162,6 +167,7 @@ const CliConfig: React.FC<CliConfigProps> = ({ config, onConfigChange }) => {
             { value: 'llm_process', label: 'LLM处理' }
           ]}
           placeholder="选择输出模式"
+          size="sm"
         />
       </div>
 
@@ -175,6 +181,7 @@ const CliConfig: React.FC<CliConfigProps> = ({ config, onConfigChange }) => {
             onChange={(e) => updateCliConfig('llmProcessPrompt', e.target.value)}
             rows={3}
             placeholder="请分析以下命令输出并提取关键信息:\n\n{{output}}"
+            size="sm"
           />
           <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">
             使用 {'{{output}'} 代替命令输出内容

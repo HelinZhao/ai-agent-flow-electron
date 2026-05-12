@@ -37,7 +37,7 @@ export function SkillNode({ data, selected }: { data: any; selected: boolean }):
           <div className="font-bold text-gray-800">{def.shortLabel}</div>
           <div className="text-xs text-black/90 font-medium mt-0.5">{data.label}</div>
           {data.config?.skillName && (
-            <div className="text-xs text-gray-700 font-medium mt-1 px-2 py-0.5 bg-white/30 rounded border border-white/40">
+            <div className="text-xs text-gray-700 font-medium mt-1 bg-white/30 rounded border border-white/40 max-w-[140px] truncate">
               技能: {data.config.skillName}
             </div>
           )}
@@ -96,7 +96,7 @@ export function ApiNode({ data, selected }: { data: any; selected: boolean }): R
           <div className="font-bold text-gray-800">{def.shortLabel}</div>
           <div className="text-xs text-gray-700 font-medium mt-0.5">{data.label}</div>
           {data.config?.apiConfig?.url && (
-            <div className="text-xs text-gray-700 font-medium mt-1 px-2 py-0.5 bg-white/30 rounded border border-white/40 max-w-[140px] truncate">
+            <div className="text-xs text-gray-700 font-medium mt-1 bg-white/30 rounded border border-white/40 max-w-[140px] truncate">
               {data.config.apiConfig.method} {data.config.apiConfig.url}
             </div>
           )}
@@ -124,7 +124,7 @@ export function LLMNode({ data, selected }: { data: any; selected: boolean }): R
           <div className="font-bold text-gray-800">{def.shortLabel}</div>
           <div className="text-xs text-gray-700 font-medium mt-0.5">{data.label}</div>
           {data.config?.prompt && (
-            <div className="text-xs text-gray-700 font-medium mt-1 px-2 py-0.5 bg-white/30 rounded border border-white/40 max-w-[140px] truncate">
+            <div className="text-xs text-gray-700 font-medium mt-1 bg-white/30 rounded border border-white/40 max-w-[140px] truncate">
               提示词: {data.config.prompt.substring(0, 20)}...
             </div>
           )}
@@ -152,7 +152,7 @@ export function AgentNode({ data, selected }: { data: any; selected: boolean }):
           <div className="font-bold text-gray-800">{def.shortLabel}</div>
           <div className="text-xs text-gray-700 font-medium mt-0.5">{data.label}</div>
           {data.config?.agentName && (
-            <div className="text-xs text-gray-700 font-medium mt-1 px-2 py-0.5 bg-white/30 rounded border border-white/40">
+            <div className="text-xs text-gray-700 font-medium mt-1 bg-white/30 rounded border border-white/40">
               Agent: {data.config.agentName}
             </div>
           )}
@@ -180,7 +180,7 @@ export function CliNode({ data, selected }: { data: any; selected: boolean }): R
           <div className="font-bold text-gray-800">{def.shortLabel}</div>
           <div className="text-xs text-gray-700 font-medium mt-0.5">{data.label}</div>
           {data.config?.cliConfig?.command && (
-            <div className="text-xs text-gray-700 font-medium mt-1 px-2 py-0.5 bg-white/30 rounded border border-white/40 max-w-[140px] truncate font-mono">
+            <div className="text-xs text-gray-700 font-medium mt-1 bg-white/30 rounded border border-white/40 max-w-[140px] truncate font-mono">
               {data.config.cliConfig.command.substring(0, 25)}...
             </div>
           )}

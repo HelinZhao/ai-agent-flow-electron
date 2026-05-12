@@ -110,7 +110,7 @@ export default function AgentListSidebar({
               )}
               {/* 头像 */}
               <span
-                className="flex items-center justify-center w-7 h-7 rounded-lg flex-shrink-0 text-[11px] font-bold transition-all"
+                className="flex items-center justify-center w-7 h-7 rounded-lg flex-shrink-0 text-md font-bold transition-all"
                 style={{ background: isActive ? color.bg : `${color.muted}33` }}
               >
                 <span className={isActive ? 'text-white' : 'text-gray-600 dark:text-gray-300 transition-colors'}>
@@ -118,11 +118,11 @@ export default function AgentListSidebar({
                 </span>
               </span>
               <div className="text-left min-w-0 flex-1">
-                <div className="text-xs font-medium truncate leading-tight">
+                <div className="text-sm font-medium truncate leading-tight">
                   {agent.name}
                 </div>
                 {agent.description && (
-                  <div className="text-[10px] mt-0.5 truncate text-gray-400 dark:text-gray-500 leading-tight">{agent.description}</div>
+                  <div className="text-xs mt-0.5 truncate text-gray-400 dark:text-gray-500 leading-tight">{agent.description}</div>
                 )}
               </div>
             </button>

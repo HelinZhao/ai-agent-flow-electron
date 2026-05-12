@@ -65,6 +65,7 @@ const TextConfig: React.FC<TextConfigProps> = ({ config, onConfigChange }) => {
           onChange={(e) => onConfigChange({ ...config, text: e.target.value })}
           rows={4}
           placeholder="输入文本内容，可以使用 {{variableName}} 格式的变量"
+          size="sm"
         />
       </div>
 
