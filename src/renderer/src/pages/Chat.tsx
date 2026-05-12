@@ -10,7 +10,7 @@ import AttachmentPreview from '@renderer/components/chat/AttachmentPreview';
 import AttachmentDisplay from '@renderer/components/chat/AttachmentDisplay';
 import CustomFileUpload from '@renderer/components/ui/CustomFileUpload';
 import { SERVER_BASE_URL } from '@renderer/config';
-import CustomInput from '@renderer/components/ui/CustomInput';
+import AgentListSidebar from '@renderer/components/chat/AgentListSidebar';
 
 // 工具名称中文映射
 const TOOL_LABELS: Record<string, string> = {
@@ -39,12 +39,6 @@ export default function Chat(): React.JSX.Element {
     const chatAreaRef = useRef<HTMLDivElement>(null);
     const inputWrapperRef = useRef<HTMLDivElement>(null);
     const [inputHeight, setInputHeight] = useState(160);
-
-    // 过滤agents基于搜索词
-    const filteredAgents = agents.filter(agent =>
-        agent.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        (agent.description && agent.description.toLowerCase().includes(searchTerm.toLowerCase()))
-    );
 
     const scrollToBottom = (): void => {
         messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
@@ -438,12 +432,17 @@ export default function Chat(): React.JSX.Element {
     return (
         <div className="h-full flex flex-col overflow-hidden bg-gray-50/50 dark:bg-gray-900/50">
             {/* 顶部工具栏 */}
-            <div className="bg-white/80 dark:bg-gray-800/80 backdrop-blur-md border-b border-gray-200/50 dark:border-gray-700/50 p-4">
+            <div className="bg-white/80 dark:bg-gray-800/80 backdrop-blur-md border-b border-gray-200/40 dark:border-gray-700/40 px-5 py-3 flex-shrink-0">
                 <div className="flex justify-between items-center">
                     <div className="flex items-center space-x-4">
-                        <h2 className="text-xl font-bold bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent">
+                        <h2 className="text-base font-semibold text-gray-900 dark:text-gray-100 tracking-tight">
                             AI 对话
                         </h2>
+                        {selectedAgent && (
+                            <span className="text-[11px] text-gray-400 dark:text-gray-500 bg-gray-100 dark:bg-gray-700/50 px-2 py-0.5 rounded-md font-medium">
+                                {selectedAgent.name}
+                            </span>
+                        )}
                     </div>
 
                     {selectedAgent && (
@@ -480,90 +479,30 @@ export default function Chat(): React.JSX.Element {
             {/* 聊天内容区域 */}
             <div className="flex-1 flex overflow-hidden">
                 {/* 左侧Agent列表 */}
-                <div className="w-72 flex-shrink-0 bg-white/60 dark:bg-gray-800/60 backdrop-blur-sm border-r border-gray-200/50 dark:border-gray-700/50 p-4 overflow-y-auto">
-                    <div className="flex items-center space-x-2 mb-4">
-                        <span className="text-lg">🤖</span>
-                        <h3 className="font-semibold text-gray-900 dark:text-white">Agent列表</h3>
-                        <span className="text-xs bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300 px-2 py-0.5 rounded-full">
-                            {filteredAgents.length}
-                        </span>
-                    </div>
-
-                    {/* 搜索框 */}
-                    <div className="mb-4">
-                        <CustomInput
-                            type="text"
-                            placeholder="搜索Agent..."
-                            value={searchTerm}
-                            onChange={(e) => setSearchTerm(e.target.value)}
-                            size='sm'
-                            leftIcon={"🔍"}
-                        />
-                    </div>
-                    <div className="space-y-2">
-                        {filteredAgents.map(agent => (
-                            <div
-                                key={agent.id}
-                                className={`p-3 border rounded-lg cursor-pointer transition-all duration-200 ${selectedAgent?.id === agent.id
-                                    ? 'border-blue-500/50 bg-gradient-to-r from-blue-50 to-purple-50 dark:from-blue-900/20 dark:to-purple-900/20'
-                                    : 'border-gray-200/50 dark:border-gray-600/50 hover:border-gray-300/50 dark:hover:border-gray-500/50 hover:shadow-sm bg-white/50 dark:bg-gray-700/30'
-                                    }`}
-                                onClick={() => setSelectedAgent(agent)}
-                            >
-                                <div className="flex items-start space-x-3">
-                                    <div className={`w-8 h-8 rounded-full flex items-center justify-center text-sm font-medium ${selectedAgent?.id === agent.id
-                                        ? 'bg-gradient-to-r from-blue-500 to-purple-500 text-white'
-                                        : 'bg-gray-100 dark:bg-gray-600 text-gray-600 dark:text-gray-300'
-                                        }`}>
-                                        {agent.name.charAt(0).toUpperCase()}
-                                    </div>
-                                    <div className="flex-1 min-w-0">
-                                        <div className="font-medium text-gray-900 dark:text-white text-sm truncate">
-                                            {agent.name}
-                                        </div>
-                                        {agent.description && (
-                                            <div className="text-xs text-gray-500 dark:text-gray-400 mt-1 line-clamp-2">
-                                                {agent.description}
-                                            </div>
-                                        )}
-                                    </div>
-                                </div>
-                            </div>
-                        ))}
-                        {filteredAgents.length === 0 && (
-                            <div className="text-center py-12">
-                                {searchTerm ? (
-                                    <>
-                                        <div className="text-4xl mb-3">🔍</div>
-                                        <p className="text-gray-500 dark:text-gray-400 text-sm mb-1">未找到匹配的Agent</p>
-                                        <p className="text-gray-400 dark:text-gray-500 text-xs">尝试使用其他关键词搜索</p>
-                                    </>
-                                ) : (
-                                    <>
-                                        <div className="text-4xl mb-3">🤖</div>
-                                        <p className="text-gray-500 dark:text-gray-400 text-sm mb-1">暂无可用Agent</p>
-                                        <p className="text-gray-400 dark:text-gray-500 text-xs">请先在Agent管理页面创建</p>
-                                    </>
-                                )}
-                            </div>
-                        )}
-                    </div>
-                </div>
+                <AgentListSidebar
+                    agents={agents}
+                    selectedAgent={selectedAgent}
+                    searchTerm={searchTerm}
+                    onSearchChange={setSearchTerm}
+                    onSelectAgent={setSelectedAgent}
+                />
 
                 {/* 右侧聊天区域 */}
                 <div ref={chatAreaRef} className="flex-1 flex flex-col min-w-0 overflow-hidden">
                     {selectedAgent ? (
                         <>
                             {/* 消息列表 */}
-                            <div className="overflow-y-auto overflow-x-hidden p-6 space-y-6 bg-gradient-to-b from-white/50 to-gray-50/30 dark:from-gray-800/50 dark:to-gray-900/30" style={{ flex: 1, minHeight: 0 }}>
+                            <div className="overflow-y-auto overflow-x-hidden px-5 py-5 space-y-4 bg-gray-50/40 dark:bg-gray-900/30" style={{ flex: 1, minHeight: 0 }}>
                                 {messages.length === 0 && (
-                                    <div className="flex flex-col items-center justify-center py-16">
-                                        <div className="text-6xl mb-4 animate-bounce">💬</div>
-                                        <h3 className="text-xl font-semibold text-gray-700 dark:text-gray-300 mb-2">
+                                    <div className="flex flex-col items-center justify-center h-full py-20">
+                                        <div className="w-14 h-14 rounded-2xl bg-gradient-to-br from-blue-50 to-indigo-50 dark:from-blue-500/10 dark:to-indigo-500/10 flex items-center justify-center mb-5 shadow-sm">
+                                            <span className="text-2xl">💬</span>
+                                        </div>
+                                        <h3 className="text-base font-semibold text-gray-700 dark:text-gray-300 mb-1.5">
                                             开始与 {selectedAgent.name} 对话
                                         </h3>
-                                        <p className="text-gray-500 dark:text-gray-400 text-sm">
-                                            发送消息开始对话，或询问Agent相关信息
+                                        <p className="text-gray-400 dark:text-gray-500 text-xs">
+                                            发送消息开始对话，或询问 Agent 相关信息
                                         </p>
                                     </div>
                                 )}
@@ -573,21 +512,23 @@ export default function Chat(): React.JSX.Element {
                                         key={message.id}
                                         className={`flex ${message.sender === 'user' ? 'justify-end' : 'justify-start'} group`}
                                     >
-                                        <div className={`flex items-start space-x-2 ${message.sender === 'user' ? 'flex-row-reverse space-x-reverse max-w-[70%]' : 'max-w-[80%]'}`}>
+                                        <div className={`flex items-start gap-2.5 ${message.sender === 'user' ? 'flex-row-reverse max-w-[72%]' : 'max-w-[80%]'}`}>
                                             {/* 头像 */}
-                                            <div className={`w-8 h-8 rounded-full flex items-center justify-center text-white text-sm flex-shrink-0 mt-1 ${message.sender === 'user'
-                                                ? 'bg-gradient-to-r from-gray-500 to-gray-600'
-                                                : 'bg-gradient-to-r from-blue-500 to-purple-500'
-                                                }`}>
+                                            <div className={`w-7 h-7 rounded-xl flex items-center justify-center text-sm flex-shrink-0 mt-0.5 shadow-sm ${
+                                                message.sender === 'user'
+                                                    ? 'bg-gradient-to-br from-gray-500 to-gray-600'
+                                                    : 'bg-gradient-to-br from-blue-500 to-purple-500'
+                                            }`}>
                                                 {message.sender === 'user' ? '👤' : '🤖'}
                                             </div>
 
                                             {/* 消息气泡 */}
                                             <div
-                                                className={`px-4 py-3 shadow-sm min-w-0 ${message.sender === 'user'
-                                                    ? 'bg-gradient-to-r from-blue-500 to-blue-600 text-white rounded-2xl rounded-br-sm'
-                                                    : 'bg-white dark:bg-gray-700/80 text-gray-900 dark:text-white border border-gray-200/50 dark:border-gray-600/50 rounded-2xl rounded-bl-sm backdrop-blur-sm'
-                                                    }`}
+                                                className={`px-4 py-2.5 min-w-0 ${
+                                                    message.sender === 'user'
+                                                        ? 'bg-gradient-to-br from-blue-500 to-blue-600 text-white rounded-2xl rounded-br-md shadow-sm shadow-blue-500/15'
+                                                        : 'bg-white dark:bg-gray-700/80 text-gray-900 dark:text-white border border-gray-200/50 dark:border-gray-600/40 rounded-2xl rounded-bl-md shadow-sm'
+                                                }`}
                                             >
                                                 <AttachmentDisplay attachments={message.attachments} sender={message.sender} onAttachmentClick={handleAttachmentClick} />
                                                 {message.sender === 'user'
@@ -596,13 +537,14 @@ export default function Chat(): React.JSX.Element {
                                                         <MarkdownPreview content={message.content} />
                                                     </div>
                                                 }
-                                                <div className={`text-xs mt-2 flex items-center space-x-1 ${message.sender === 'user' ? 'text-blue-100' : 'text-gray-500 dark:text-gray-400'
-                                                    }`}>
+                                                <div className={`text-[11px] mt-1.5 flex items-center gap-1 ${
+                                                    message.sender === 'user' ? 'text-blue-100/80' : 'text-gray-400 dark:text-gray-500'
+                                                }`}>
                                                     <span>{formatTime(message.timestamp)}</span>
                                                     {message.sender === 'agent' && (
                                                         <>
-                                                            <span>•</span>
-                                                            <span className="opacity-75">{selectedAgent.name}</span>
+                                                            <span>·</span>
+                                                            <span>{selectedAgent.name}</span>
                                                         </>
                                                     )}
                                                 </div>
@@ -613,18 +555,18 @@ export default function Chat(): React.JSX.Element {
 
                                 {isLoading && !pendingApproval && (
                                     <div className="flex justify-start">
-                                        <div className="flex items-start space-x-2 max-w-3xl">
-                                            <div className="w-8 h-8 bg-gradient-to-r from-blue-500 to-purple-500 rounded-full flex items-center justify-center text-white text-sm flex-shrink-0 mt-1">
+                                        <div className="flex items-start gap-2.5 max-w-3xl">
+                                            <div className="w-7 h-7 bg-gradient-to-br from-blue-500 to-purple-500 rounded-xl flex items-center justify-center text-sm flex-shrink-0 mt-0.5 shadow-sm">
                                                 🤖
                                             </div>
-                                            <div className="bg-white dark:bg-gray-700/80 border border-gray-200/50 dark:border-gray-600/50 px-4 py-3 rounded-2xl rounded-bl-sm shadow-sm backdrop-blur-sm">
-                                                <div className="flex items-center space-x-3">
-                                                    <div className="flex space-x-1">
-                                                        <div className="w-2 h-2 bg-gray-400 rounded-full animate-bounce"></div>
-                                                        <div className="w-2 h-2 bg-gray-400 rounded-full animate-bounce" style={{ animationDelay: '0.1s' }}></div>
-                                                        <div className="w-2 h-2 bg-gray-400 rounded-full animate-bounce" style={{ animationDelay: '0.2s' }}></div>
+                                            <div className="bg-white dark:bg-gray-700/80 border border-gray-200/50 dark:border-gray-600/40 px-4 py-3 rounded-2xl rounded-bl-md shadow-sm">
+                                                <div className="flex items-center gap-3">
+                                                    <div className="flex gap-1">
+                                                        <div className="w-1.5 h-1.5 bg-blue-400 dark:bg-blue-500 rounded-full animate-bounce" />
+                                                        <div className="w-1.5 h-1.5 bg-blue-400 dark:bg-blue-500 rounded-full animate-bounce" style={{ animationDelay: '0.12s' }} />
+                                                        <div className="w-1.5 h-1.5 bg-blue-400 dark:bg-blue-500 rounded-full animate-bounce" style={{ animationDelay: '0.24s' }} />
                                                     </div>
-                                                    <span className="text-sm text-gray-500 dark:text-gray-400">{selectedAgent.name} 正在思考...</span>
+                                                    <span className="text-xs text-gray-400 dark:text-gray-500 font-medium">{selectedAgent.name} 正在思考...</span>
                                                 </div>
                                             </div>
                                         </div>
@@ -633,51 +575,52 @@ export default function Chat(): React.JSX.Element {
 
                                 {isLoading && pendingApproval && (
                                     <div className="flex justify-start">
-                                        <div className="flex items-start space-x-2 max-w-[80%]">
-                                            <div className="w-8 h-8 bg-gradient-to-r from-orange-500 to-red-500 rounded-full flex items-center justify-center text-white text-sm flex-shrink-0 mt-1">
+                                        <div className="flex items-start gap-2.5 max-w-[80%]">
+                                            <div className="w-7 h-7 bg-gradient-to-br from-orange-500 to-red-500 rounded-xl flex items-center justify-center text-sm flex-shrink-0 mt-0.5 shadow-sm">
                                                 ⚠️
                                             </div>
-                                            <div className="bg-white dark:bg-gray-700/80 border border-orange-300/50 dark:border-orange-600/50 px-4 py-3 rounded-2xl rounded-bl-sm shadow-sm backdrop-blur-sm">
-                                                <div className="text-sm text-gray-700 dark:text-gray-200 font-medium mb-2">
+                                            <div className="bg-white dark:bg-gray-700/80 border border-orange-200/60 dark:border-orange-600/40 px-4 py-3 rounded-2xl rounded-bl-md shadow-sm">
+                                                <div className="text-xs font-semibold text-gray-800 dark:text-gray-200 mb-2.5 flex items-center gap-1.5">
+                                                    <span className="w-1.5 h-1.5 bg-orange-400 rounded-full animate-pulse" />
                                                     工具调用需要审批
                                                 </div>
-                                                <div className="space-y-2 mb-3">
+                                                <div className="space-y-1.5 mb-3">
                                                     {pendingApproval.actionRequests.map((action, i) => (
-                                                        <div key={i} className="bg-gray-50 dark:bg-gray-600/50 rounded-lg p-2 text-xs">
-                                                            <div className="font-medium text-gray-900 dark:text-white">
+                                                        <div key={i} className="bg-gray-50/80 dark:bg-gray-600/40 rounded-lg p-2.5 text-xs border border-gray-100 dark:border-gray-600/30">
+                                                            <div className="font-medium text-gray-800 dark:text-gray-200">
                                                                 {TOOL_LABELS[action.name] || action.name}
                                                             </div>
-                                                            <div className="text-gray-600 dark:text-gray-300 mt-1 max-h-[80px] overflow-auto">
+                                                            <div className="text-gray-500 dark:text-gray-400 mt-1 max-h-[80px] overflow-auto font-mono text-[10px]">
                                                                 {JSON.stringify(action.args, null, 2)}
                                                             </div>
                                                         </div>
                                                     ))}
                                                 </div>
-                                                <div className="flex flex-wrap items-center gap-2">
+                                                <div className="flex flex-wrap items-center gap-1.5">
                                                     <CustomButton
                                                         onClick={() => handleApprove(true)}
                                                         variant="primary"
-                                                        size="sm"
+                                                        size="xs"
                                                     >
                                                         允许
                                                     </CustomButton>
                                                     <CustomButton
                                                         onClick={() => handleApprove(false)}
                                                         variant="danger"
-                                                        size="sm"
+                                                        size="xs"
                                                     >
                                                         拒绝
                                                     </CustomButton>
-                                                    {pendingApproval.actionRequests.map((action) => (
-                                                        <CustomButton
-                                                            key={action.name}
-                                                            onClick={() => handleAutoApprove(action.name)}
-                                                            variant="secondary"
-                                                            size="sm"
-                                                        >
-                                                            本会话允许{TOOL_LABELS[action.name] || action.name}
-                                                        </CustomButton>
-                                                    ))}
+                                                    <CustomButton
+                                                        onClick={() => {
+                                                            const uniqueTools = new Set(pendingApproval.actionRequests.map(a => a.name))
+                                                            uniqueTools.forEach(name => handleAutoApprove(name))
+                                                        }}
+                                                        variant="secondary"
+                                                        size="xs"
+                                                    >
+                                                        本会话允许
+                                                    </CustomButton>
                                                 </div>
                                             </div>
                                         </div>
@@ -689,16 +632,16 @@ export default function Chat(): React.JSX.Element {
 
                             {/* 拖拽分隔条 */}
                             <div
-                                className="h-2 cursor-ns-resize relative flex items-center justify-center group hover:bg-blue-500/10 active:bg-blue-500/20 transition-colors shrink-0"
+                                className="h-2 cursor-ns-resize relative flex items-center justify-center group hover:bg-blue-500/5 transition-colors shrink-0"
                                 onMouseDown={handleResizeStart}
                             >
-                                <div className="w-8 h-0.5 rounded-full bg-gray-300 dark:bg-gray-600 group-hover:bg-blue-400 transition-colors" />
+                                <div className="w-7 h-0.5 rounded-full bg-gray-300/70 dark:bg-gray-600/70 group-hover:bg-blue-400/60 transition-colors" />
                             </div>
 
                             {/* 输入区域 */}
-                            <div ref={inputWrapperRef} className="p-4 pt-0 shrink-0" style={{ height: inputHeight, minHeight: MIN_INPUT }}>
-                                <div className="bg-white dark:bg-gray-700/80 rounded-2xl border border-gray-200/50 dark:border-gray-600/50 overflow-hidden backdrop-blur-sm h-full flex flex-col">
-                                    <div className="p-4 pb-0 flex-1 flex flex-col min-h-0">
+                            <div ref={inputWrapperRef} className="px-4 pb-4 pt-0 shrink-0" style={{ height: inputHeight, minHeight: MIN_INPUT }}>
+                                <div className="bg-white dark:bg-gray-700/80 rounded-2xl border border-gray-200/50 dark:border-gray-600/40 overflow-hidden shadow-sm h-full flex flex-col">
+                                    <div className="px-4 pt-3.5 pb-0 flex-1 flex flex-col min-h-0">
                                         <AttachmentPreview
                                             attachments={pendingAttachments}
                                             onRemove={(id) => setPendingAttachments(prev => prev.filter(a => a.id !== id))}
@@ -708,7 +651,7 @@ export default function Chat(): React.JSX.Element {
                                             onChange={(e) => setInputMessage(e.target.value)}
                                             onKeyDown={handleKeyPress}
                                             placeholder={`向 ${selectedAgent.name} 发送消息...`}
-                                            className="w-full resize-none bg-transparent border-none outline-none text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-gray-400 text-sm leading-relaxed flex-1 min-h-0"
+                                            className="w-full resize-none bg-transparent border-none outline-none text-gray-900 dark:text-white placeholder-gray-400 dark:placeholder-gray-500 text-sm leading-relaxed flex-1 min-h-0"
                                             disabled={isLoading}
                                             style={{
                                                 overflow: 'auto',
@@ -717,37 +660,37 @@ export default function Chat(): React.JSX.Element {
                                         />
                                     </div>
 
-                                    <div className="flex items-center justify-between px-3 pb-2 pt-0.5 shrink-0">
-                                        <div className="flex items-center space-x-3 text-xs text-gray-500 dark:text-gray-400">
+                                    <div className="flex items-center justify-between px-3 pb-2.5 pt-1 shrink-0">
+                                        <div className="flex items-center gap-3 text-[11px] text-gray-400 dark:text-gray-500">
                                             <CustomFileUpload
                                                 onChange={handleFileSelect}
                                                 multiple
                                                 disabled={isLoading}
-                                                size='sm'
+                                                size='xs'
                                                 variant='ghost'
                                             >
                                                 附件
                                             </CustomFileUpload>
-                                            <div className="flex items-center space-x-1">
-                                                <kbd className="px-1.5 py-0.5 bg-gray-100 dark:bg-gray-600 rounded text-xs">Enter</kbd>
+                                            <div className="flex items-center gap-1">
+                                                <kbd className="px-1 py-0.5 bg-gray-100 dark:bg-gray-600/60 rounded text-[10px] font-medium">Enter</kbd>
                                                 <span>发送</span>
                                             </div>
-                                            <div className="flex items-center space-x-1">
-                                                <kbd className="px-1.5 py-0.5 bg-gray-100 dark:bg-gray-600 rounded text-xs">Shift+Enter</kbd>
+                                            <div className="flex items-center gap-1">
+                                                <kbd className="px-1 py-0.5 bg-gray-100 dark:bg-gray-600/60 rounded text-[10px] font-medium">Shift+Enter</kbd>
                                                 <span>换行</span>
                                             </div>
                                         </div>
 
-                                        <div className="flex items-center space-x-3">
-                                            <div className="text-xs text-gray-400 dark:text-gray-500">
+                                        <div className="flex items-center gap-2">
+                                            <span className="text-[11px] text-gray-400 dark:text-gray-500 tabular-nums">
                                                 {inputMessage.length}/2000
-                                            </div>
+                                            </span>
                                             {isLoading ? (
                                                 <CustomButton
                                                     onClick={handleTerminate}
                                                     variant="danger"
-                                                    size="sm"
-                                                    className="flex items-center space-x-2 px-6"
+                                                    size="xs"
+                                                    className="flex items-center gap-1.5"
                                                 >
                                                     <span>⏹</span>
                                                     <span>终止</span>
@@ -757,9 +700,9 @@ export default function Chat(): React.JSX.Element {
                                                     onClick={handleSendMessage}
                                                     disabled={!inputMessage.trim() && pendingAttachments.length === 0}
                                                     variant="primary"
-                                                    size="sm"
+                                                    size="xs"
+                                                    className="flex items-center gap-1.5"
                                                 >
-                                                    <span>🚀</span>
                                                     <span>发送</span>
                                                 </CustomButton>
                                             )}
@@ -769,34 +712,33 @@ export default function Chat(): React.JSX.Element {
                             </div>
                         </>
                     ) : (
-                        <div className="flex-1 flex items-center justify-center bg-gradient-to-br from-blue-50/30 via-purple-50/20 to-pink-50/30 dark:from-gray-800/50 dark:via-gray-700/30 dark:to-gray-600/50">
-                            <div className="text-center max-w-lg mx-auto px-6">
-                                <div className="relative mb-8">
-                                    <div className="text-8xl mb-4 animate-pulse">🤖</div>
-                                    <div className="absolute -top-2 -right-2 text-2xl animate-bounce">✨</div>
+                        <div className="flex-1 flex items-center justify-center bg-gradient-to-br from-blue-50/30 via-purple-50/20 to-pink-50/30 dark:from-gray-800/50 dark:via-gray-700/30 dark:to-gray-900/50">
+                            <div className="text-center max-w-xs mx-auto px-6">
+                                <div className="w-20 h-20 rounded-2xl bg-gradient-to-br from-blue-500/10 to-indigo-500/10 dark:from-blue-400/10 dark:to-indigo-400/10 flex items-center justify-center mx-auto mb-6 shadow-sm">
+                                    <span className="text-4xl">🤖</span>
                                 </div>
-                                <h2 className="text-3xl font-bold bg-gradient-to-r from-blue-600 via-purple-600 to-pink-600 bg-clip-text text-transparent mb-4">
+                                <h2 className="text-xl font-semibold text-gray-800 dark:text-gray-200 mb-2 tracking-tight">
                                     AI Agent 对话助手
                                 </h2>
-                                <p className="text-gray-600 dark:text-gray-300 text-lg mb-8">
-                                    选择一个Agent开始智能对话，体验AI的强大能力
+                                <p className="text-sm text-gray-500 dark:text-gray-400 mb-8 leading-relaxed">
+                                    选择一个 Agent 开始智能对话，体验 AI 的强大能力
                                 </p>
 
-                                <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-8">
-                                    <div className="bg-white/60 dark:bg-gray-800/60 backdrop-blur-sm p-4 rounded-xl border border-gray-200/50 dark:border-gray-700/50">
-                                        <div className="text-2xl mb-2">🎯</div>
-                                        <h3 className="font-semibold text-gray-900 dark:text-white mb-1">精准回答</h3>
-                                        <p className="text-sm text-gray-600 dark:text-gray-400">基于专业工作流提供准确回复</p>
+                                <div className="flex flex-col gap-3 mb-8">
+                                    <div className="bg-white/70 dark:bg-gray-800/50 backdrop-blur-sm px-4 py-3 rounded-xl border border-gray-200/50 dark:border-gray-700/40 text-left">
+                                        <span className="text-base mr-2">🎯</span>
+                                        <span className="text-sm font-medium text-gray-700 dark:text-gray-300">精准回答</span>
+                                        <p className="text-xs text-gray-400 dark:text-gray-500 mt-0.5 pl-8">基于专业工作流提供准确回复</p>
                                     </div>
-                                    <div className="bg-white/60 dark:bg-gray-800/60 backdrop-blur-sm p-4 rounded-xl border border-gray-200/50 dark:border-gray-700/50">
-                                        <div className="text-2xl mb-2">💡</div>
-                                        <h3 className="font-semibold text-gray-900 dark:text-white mb-1">智能分析</h3>
-                                        <p className="text-sm text-gray-600 dark:text-gray-400">深度理解问题并提供洞察</p>
+                                    <div className="bg-white/70 dark:bg-gray-800/50 backdrop-blur-sm px-4 py-3 rounded-xl border border-gray-200/50 dark:border-gray-700/40 text-left">
+                                        <span className="text-base mr-2">💡</span>
+                                        <span className="text-sm font-medium text-gray-700 dark:text-gray-300">智能分析</span>
+                                        <p className="text-xs text-gray-400 dark:text-gray-500 mt-0.5 pl-8">深度理解问题并提供洞察</p>
                                     </div>
                                 </div>
 
-                                <p className="text-gray-500 dark:text-gray-400 text-sm">
-                                    💡 提示：从左侧选择一个Agent开始对话，或先在Agent管理页面创建新的Agent
+                                <p className="text-xs text-gray-400 dark:text-gray-500">
+                                    从左侧选择一个 Agent 开始对话
                                 </p>
                             </div>
                         </div>

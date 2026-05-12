@@ -130,6 +130,75 @@ textarea[data-scrolling] {
   scrollbar-color: rgba(255, 255, 255, 0.15) transparent;
 }
 
+/* 自定义 range slider 样式 */
+input[type='range'] {
+  -webkit-appearance: none;
+  appearance: none;
+  height: 6px;
+  border-radius: 3px;
+  outline: none;
+  cursor: pointer;
+}
+
+input[type='range']::-webkit-slider-runnable-track {
+  height: 6px;
+  border-radius: 3px;
+  background: linear-gradient(to right, #3b82f6 var(--range-progress, 0%), #e5e7eb var(--range-progress, 0%));
+}
+
+.dark input[type='range']::-webkit-slider-runnable-track {
+  background: linear-gradient(to right, #3b82f6 var(--range-progress, 0%), #4b5563 var(--range-progress, 0%));
+}
+
+input[type='range']::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  background: white;
+  border: 2px solid #3b82f6;
+  box-shadow: 0 1px 3px rgba(0,0,0,0.15);
+  margin-top: -5px;
+  transition: transform 0.15s, box-shadow 0.15s;
+}
+
+input[type='range']::-webkit-slider-thumb:hover {
+  transform: scale(1.15);
+  box-shadow: 0 2px 6px rgba(59,130,246,0.3);
+}
+
+input[type='range']::-webkit-slider-thumb:active {
+  transform: scale(1.2);
+}
+
+input[type='range']::-moz-range-track {
+  height: 6px;
+  border-radius: 3px;
+  background: #e5e7eb;
+  border: none;
+}
+
+.dark input[type='range']::-moz-range-track {
+  background: #4b5563;
+}
+
+input[type='range']::-moz-range-thumb {
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  background: white;
+  border: 2px solid #3b82f6;
+  box-shadow: 0 1px 3px rgba(0,0,0,0.15);
+  cursor: pointer;
+}
+
+input[type='range']::-moz-range-progress {
+  height: 6px;
+  border-radius: 3px;
+  background: #3b82f6;
+}
+
 /* 选择文本样式 */
 ::selection {
   background: rgba(59, 130, 246, 0.2);
