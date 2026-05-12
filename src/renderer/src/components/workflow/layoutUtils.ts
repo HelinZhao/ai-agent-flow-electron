@@ -7,7 +7,7 @@ const NODE_HEIGHT = 60
 
 export function autoLayout(nodes: WorkflowNode[], edges: WorkflowEdge[], direction: LayoutDirection = 'horizontal'): WorkflowNode[] {
   const g = new dagre.graphlib.Graph()
-  g.setGraph({ rankdir: direction === 'vertical' ? 'TB' : 'LR', nodesep: 50, ranksep: 80 })
+  g.setGraph({ rankdir: direction === 'vertical' ? 'TB' : 'LR', nodesep: 100, ranksep: 160 })
   g.setDefaultEdgeLabel(() => ({}))
 
   for (const node of nodes) {

@@ -17,6 +17,7 @@ export default function Logs(): React.JSX.Element {
   const [filter, setFilter] = useState<LevelFilter>('all')
   const [searchText, setSearchText] = useState('')
   const [autoScroll, setAutoScroll] = useState(true)
+  const [fontSize, setFontSize] = useState(14)
   const containerRef = useRef<HTMLDivElement>(null)
 
   // 自动滚动
@@ -69,7 +70,7 @@ export default function Logs(): React.JSX.Element {
   }
 
   return (
-    <div className="flex flex-col h-full text-gray-900 dark:text-gray-100 font-mono text-sm">
+    <div className="flex flex-col h-full text-gray-900 dark:text-gray-100 font-mono">
       {/* 工具栏 */}
       <div className="flex items-center justify-between px-4 py-2 bg-gray-100 dark:bg-gray-900 border-b border-gray-200 dark:border-gray-800 shrink-0">
         <div className="flex items-center space-x-3">
@@ -106,6 +107,21 @@ export default function Logs(): React.JSX.Element {
           <span className="text-xs text-gray-500">{filteredLogs.length} 条</span>
         </div>
         <div className="flex items-center space-x-2">
+          <div className="w-20">
+            <CustomSelect
+              value={String(fontSize)}
+              onChange={(val) => setFontSize(Number(val))}
+              options={[
+                { label: '11px', value: '11' },
+                { label: '12px', value: '12' },
+                { label: '13px', value: '13' },
+                { label: '14px', value: '14' },
+                { label: '15px', value: '15' },
+                { label: '16px', value: '16' },
+              ]}
+              size="xs"
+            />
+          </div>
           <button
             onClick={() => setAutoScroll(!autoScroll)}
             className={`text-xs px-2 py-1 rounded transition-colors ${autoScroll
@@ -128,6 +144,7 @@ export default function Logs(): React.JSX.Element {
       <div
         ref={containerRef}
         className="flex-1 overflow-auto p-3 space-y-0.5"
+        style={{ fontSize: `${fontSize}px` }}
         onScroll={(e) => {
           const el = e.currentTarget
           const atBottom = el.scrollHeight - el.scrollTop - el.clientHeight < 50
