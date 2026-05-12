@@ -1,0 +1,77 @@
+import React from 'react'
+import { ChatMessage as ChatMessageType, AttachmentMetadata } from '@renderer/types'
+import MarkdownPreview from '@renderer/components/MarkdownPreview'
+import AttachmentDisplay from '@renderer/components/chat/AttachmentDisplay'
+
+function formatTime(timestamp: string): string {
+  const date = new Date(timestamp)
+  return date.toLocaleTimeString('zh-CN', { hour: '2-digit', minute: '2-digit' })
+}
+
+interface ChatMessageProps {
+  message: ChatMessageType
+  agentName: string
+  onAttachmentClick: (att: AttachmentMetadata) => void
+}
+
+const ChatMessage = React.memo(function ChatMessage({
+  message,
+  agentName,
+  onAttachmentClick,
+}: ChatMessageProps) {
+  const isUser = message.sender === 'user'
+
+  return (
+    <div className={`flex ${isUser ? 'justify-end' : 'justify-start'} group`}>
+      <div className={`flex items-start gap-2.5 ${isUser ? 'flex-row-reverse max-w-[72%]' : 'max-w-[80%]'}`}>
+        {/* 头像 */}
+        <div className={`w-7 h-7 rounded-xl flex items-center justify-center text-sm flex-shrink-0 mt-0.5 shadow-sm ${
+          isUser
+            ? 'bg-gradient-to-br from-gray-500 to-gray-600'
+            : 'bg-gradient-to-br from-blue-500 to-purple-500'
+        }`}>
+          {isUser
+            ? <svg className="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M20 21v-2a4 4 0 00-4-4H8a4 4 0 00-4 4v2" />
+                <circle cx="12" cy="7" r="4" />
+              </svg>
+            : '🤖'}
+        </div>
+
+        {/* 消息气泡 */}
+        <div
+          className={`px-4 py-2.5 min-w-0 ${
+            isUser
+              ? 'bg-gradient-to-br from-blue-500 to-blue-600 text-white rounded-2xl rounded-br-md shadow-sm shadow-blue-500/15'
+              : 'bg-white dark:bg-gray-700/80 text-gray-900 dark:text-white border border-gray-200/50 dark:border-gray-600/40 rounded-2xl rounded-bl-md shadow-sm'
+          }`}
+        >
+          <AttachmentDisplay
+            attachments={message.attachments}
+            sender={message.sender}
+            onAttachmentClick={onAttachmentClick}
+          />
+          {isUser
+            ? <div className="text-sm leading-relaxed" style={{ whiteSpace: 'pre-wrap' }}>{message.content}</div>
+            : <div className="text-sm leading-relaxed">
+                <MarkdownPreview content={message.content} />
+              </div>
+          }
+          <div className={`text-[11px] mt-1.5 flex items-center gap-1 ${
+            isUser ? 'text-blue-100/80' : 'text-gray-400 dark:text-gray-500'
+          }`}>
+            <span>{formatTime(message.timestamp)}</span>
+            {!isUser && (
+              <>
+                <span>·</span>
+                <span>{agentName}</span>
+              </>
+            )}
+          </div>
+        </div>
+      </div>
+    </div>
+  )
+})
+
+export default ChatMessage

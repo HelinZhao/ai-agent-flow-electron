@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react'
+import React, { useEffect, useRef, useState } from 'react'
 import { API_BASE_URL } from '@renderer/config'
 import CustomInput from '@renderer/components/ui/CustomInput'
 import CustomSelect from '@renderer/components/ui/CustomSelect'
@@ -7,7 +7,37 @@ interface LogEntry {
   timestamp: string
   level: 'info' | 'warn' | 'error' | 'debug'
   message: string
+  timeStr: string
 }
+
+function formatLogTime(timestamp: string): string {
+  const date = new Date(timestamp)
+  return date.toLocaleTimeString()
+}
+
+const LogEntryRow = React.memo(function LogEntryRow({
+  timeStr,
+  level,
+  message,
+  levelColor,
+}: {
+  timeStr: string
+  level: string
+  message: string
+  levelColor: string
+}) {
+  return (
+    <div className="flex items-start space-x-2 hover:bg-gray-100 dark:hover:bg-gray-900/50 px-1.5 py-0.5 rounded">
+      <span className="text-gray-400 dark:text-gray-500 text-xs whitespace-nowrap shrink-0 w-16 text-right">
+        {timeStr}
+      </span>
+      <span className={`shrink-0 w-10 text-xs font-semibold uppercase ${levelColor}`}>
+        {level}
+      </span>
+      <span className="text-gray-700 dark:text-gray-300 break-all whitespace-pre-wrap leading-5">{message}</span>
+    </div>
+  )
+})
 
 type LevelFilter = 'all' | 'info' | 'warn' | 'error' | 'debug'
 
@@ -37,9 +67,19 @@ export default function Logs(): React.JSX.Element {
       try {
         const data = JSON.parse(event.data)
         if (data.type === 'init') {
-          setLogs(data.logs || [])
+          const logs = (data.logs || []).map((log: any) => ({
+            ...log,
+            timeStr: formatLogTime(log.timestamp),
+          }))
+          setLogs(logs)
         } else if (data.type === 'log') {
-          setLogs((prev) => [...prev.slice(-999), { timestamp: data.timestamp, level: data.level, message: data.message }])
+          const entry: LogEntry = {
+            timestamp: data.timestamp,
+            level: data.level,
+            message: data.message,
+            timeStr: formatLogTime(data.timestamp),
+          }
+          setLogs((prev) => [...prev.slice(-999), entry])
         }
       } catch {
         // 忽略解析失败的消息
@@ -152,15 +192,13 @@ export default function Logs(): React.JSX.Element {
         }}
       >
         {filteredLogs.map((log, i) => (
-          <div key={i} className="flex items-start space-x-2 hover:bg-gray-100 dark:hover:bg-gray-900/50 px-1.5 py-0.5 rounded">
-            <span className="text-gray-400 dark:text-gray-500 text-xs whitespace-nowrap shrink-0 w-16 text-right">
-              {new Date(log.timestamp).toLocaleTimeString()}
-            </span>
-            <span className={`shrink-0 w-10 text-xs font-semibold uppercase ${levelTextColors[log.level] || 'text-gray-500 dark:text-gray-400'}`}>
-              {log.level}
-            </span>
-            <span className="text-gray-700 dark:text-gray-300 break-all whitespace-pre-wrap leading-5">{log.message}</span>
-          </div>
+          <LogEntryRow
+            key={i}
+            timeStr={log.timeStr}
+            level={log.level}
+            message={log.message}
+            levelColor={levelTextColors[log.level] || 'text-gray-500 dark:text-gray-400'}
+          />
         ))}
         {filteredLogs.length === 0 && (
           <div className="flex items-center justify-center h-full text-gray-400 dark:text-gray-600 text-sm">

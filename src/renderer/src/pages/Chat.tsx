@@ -1,13 +1,13 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { useWorkflowStore } from '@renderer/store/workflowStore';
-import { Agent, AttachmentMetadata, ChatHistory, ChatMessage, ToolApprovalRequest } from '@renderer/types';
+import { Agent, AttachmentMetadata, ChatHistory, ToolApprovalRequest } from '@renderer/types';
+import type { ChatMessage as ChatMessageType } from '@renderer/types';
 import { chatHistoryApi } from '@renderer/lib/chatHistory';
 import { workflowExecutionApi } from '@renderer/lib/api';
 import { AttachmentData, processFileAttachment, stripAttachmentForHistory, formatFileSize } from '@renderer/lib/attachmentUtils';
 import CustomButton from '@renderer/components/ui/CustomButton';
-import MarkdownPreview from '@renderer/components/MarkdownPreview';
 import AttachmentPreview from '@renderer/components/chat/AttachmentPreview';
-import AttachmentDisplay from '@renderer/components/chat/AttachmentDisplay';
+import ChatMessage from '@renderer/components/chat/ChatMessage';
 import CustomFileUpload from '@renderer/components/ui/CustomFileUpload';
 import { SERVER_BASE_URL } from '@renderer/config';
 import AgentListSidebar from '@renderer/components/chat/AgentListSidebar';
@@ -25,7 +25,7 @@ const TOOL_LABELS: Record<string, string> = {
 export default function Chat(): React.JSX.Element {
     const { agents, workflows, activeLLMConfig } = useWorkflowStore();
     const [selectedAgent, setSelectedAgent] = useState<Agent | null>(null);
-    const [messages, setMessages] = useState<ChatMessage[]>([]);
+    const [messages, setMessages] = useState<ChatMessageType[]>([]);
     const [inputMessage, setInputMessage] = useState('');
     const [searchTerm, setSearchTerm] = useState('');
     const [isLoading, setIsLoading] = useState(false);
@@ -90,7 +90,7 @@ export default function Chat(): React.JSX.Element {
     }, [selectedAgent?.id]);
 
     // 保存对话历史到文件
-    const saveChatHistory = async (messagesToSave?: ChatMessage[]) => {
+    const saveChatHistory = async (messagesToSave?: ChatMessageType[]) => {
         if (selectedAgent && (messagesToSave || messages).length > 0) {
             try {
                 const messagesToStore = messagesToSave || messages;
@@ -134,7 +134,7 @@ export default function Chat(): React.JSX.Element {
         }
 
         const attachmentsMetadata: AttachmentMetadata[] = pendingAttachments.map(stripAttachmentForHistory);
-        const userMessage: ChatMessage = {
+        const userMessage: ChatMessageType = {
             id: `msg-${Date.now()}`,
             content: inputMessage || (pendingAttachments.length > 0 ? '(附件)' : ''),
             sender: 'user',
@@ -211,7 +211,7 @@ export default function Chat(): React.JSX.Element {
                 throw new Error(`AI Agent 对话执行失败: ${message}`)
             }
 
-            const agentMessage: ChatMessage = {
+            const agentMessage: ChatMessageType = {
                 id: `msg-${Date.now() + 1}`,
                 content: message,
                 sender: 'agent',
@@ -242,7 +242,7 @@ export default function Chat(): React.JSX.Element {
         } catch (error) {
             console.error('消息发送失败:', error);
             console.log(error)
-            const errorMessage: ChatMessage = {
+            const errorMessage: ChatMessageType = {
                 id: `msg-${Date.now() + 1}`,
                 content: `抱歉，处理您的消息时出现了错误: ${error instanceof Error ? error.message : '未知错误'}`,
                 sender: 'agent',
@@ -379,11 +379,6 @@ export default function Chat(): React.JSX.Element {
         }
     };
 
-    const formatTime = (timestamp: string): string => {
-        const date = new Date(timestamp);
-        return date.toLocaleTimeString('zh-CN', { hour: '2-digit', minute: '2-digit' });
-    };
-
     const handleApprove = async (approved: boolean): Promise<void> => {
         if (!currentExecutionId || !pendingApproval) return;
         try {
@@ -508,49 +503,12 @@ export default function Chat(): React.JSX.Element {
                                 )}
 
                                 {messages.map(message => (
-                                    <div
+                                    <ChatMessage
                                         key={message.id}
-                                        className={`flex ${message.sender === 'user' ? 'justify-end' : 'justify-start'} group`}
-                                    >
-                                        <div className={`flex items-start gap-2.5 ${message.sender === 'user' ? 'flex-row-reverse max-w-[72%]' : 'max-w-[80%]'}`}>
-                                            {/* 头像 */}
-                                            <div className={`w-7 h-7 rounded-xl flex items-center justify-center text-sm flex-shrink-0 mt-0.5 shadow-sm ${
-                                                message.sender === 'user'
-                                                    ? 'bg-gradient-to-br from-gray-500 to-gray-600'
-                                                    : 'bg-gradient-to-br from-blue-500 to-purple-500'
-                                            }`}>
-                                                {message.sender === 'user' ? '👤' : '🤖'}
-                                            </div>
-
-                                            {/* 消息气泡 */}
-                                            <div
-                                                className={`px-4 py-2.5 min-w-0 ${
-                                                    message.sender === 'user'
-                                                        ? 'bg-gradient-to-br from-blue-500 to-blue-600 text-white rounded-2xl rounded-br-md shadow-sm shadow-blue-500/15'
-                                                        : 'bg-white dark:bg-gray-700/80 text-gray-900 dark:text-white border border-gray-200/50 dark:border-gray-600/40 rounded-2xl rounded-bl-md shadow-sm'
-                                                }`}
-                                            >
-                                                <AttachmentDisplay attachments={message.attachments} sender={message.sender} onAttachmentClick={handleAttachmentClick} />
-                                                {message.sender === 'user'
-                                                    ? <div className="text-sm leading-relaxed" style={{ whiteSpace: "pre-wrap" }}>{message.content}</div>
-                                                    : <div className="text-sm leading-relaxed">
-                                                        <MarkdownPreview content={message.content} />
-                                                    </div>
-                                                }
-                                                <div className={`text-[11px] mt-1.5 flex items-center gap-1 ${
-                                                    message.sender === 'user' ? 'text-blue-100/80' : 'text-gray-400 dark:text-gray-500'
-                                                }`}>
-                                                    <span>{formatTime(message.timestamp)}</span>
-                                                    {message.sender === 'agent' && (
-                                                        <>
-                                                            <span>·</span>
-                                                            <span>{selectedAgent.name}</span>
-                                                        </>
-                                                    )}
-                                                </div>
-                                            </div>
-                                        </div>
-                                    </div>
+                                        message={message}
+                                        agentName={selectedAgent.name}
+                                        onAttachmentClick={handleAttachmentClick}
+                                    />
                                 ))}
 
                                 {isLoading && !pendingApproval && (

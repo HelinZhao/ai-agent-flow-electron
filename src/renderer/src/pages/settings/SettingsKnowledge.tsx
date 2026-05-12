@@ -1,4 +1,4 @@
-import React, { useState } from 'react'
+import React, { useState, useCallback } from 'react'
 import { useForm } from 'react-hook-form'
 import { useWorkflowStore } from '@renderer/store/workflowStore'
 import { KnowledgeBase } from '@renderer/types'
@@ -7,6 +7,100 @@ import CustomButton from '@renderer/components/ui/CustomButton'
 import CustomSelect from '@renderer/components/ui/CustomSelect'
 import KnowledgeDetail from './KnowledgeDetail'
 import { KB_DEFAULTS, CHUNK_SIZE_RANGE, CHUNK_OVERLAP_RANGE, TOP_K_RANGE, EXTERNAL_KB_PROVIDER_META, VECTOR_STORE_OPTIONS, VECTOR_STORE_CONFIG_FIELDS, VECTOR_STORE_DEFAULTS } from '@renderer/config'
+
+const KBCard = React.memo(function KBCard({
+  kb,
+  onEdit,
+  onDeleteClick,
+  onSelect,
+}: {
+  kb: KnowledgeBase
+  onEdit: (kb: KnowledgeBase) => void
+  onDeleteClick: (id: string) => void
+  onSelect: (id: string) => void
+}) {
+  const isInternal = kb.type === 'internal'
+
+  return (
+    <div
+      className="group/kb relative bg-white dark:bg-gray-800 rounded-xl border border-gray-200/80 dark:border-gray-700/50 hover:border-blue-300 dark:hover:border-blue-600/50 hover:shadow-md transition-all duration-200 cursor-pointer overflow-hidden"
+      onClick={() => onSelect(kb.id)}
+    >
+      <div className={`h-1.5 rounded-t-xl ${isInternal
+          ? 'bg-gradient-to-r from-purple-400 to-purple-500'
+          : 'bg-gradient-to-r from-orange-400 to-orange-500'
+        }`} />
+
+      <div className="p-4">
+        <div className="flex items-start justify-between mb-3">
+          <div className="flex items-center space-x-2.5">
+            <div className={`flex items-center justify-center w-9 h-9 rounded-lg ${isInternal
+                ? 'bg-purple-50 dark:bg-purple-900/20'
+                : 'bg-orange-50 dark:bg-orange-900/20'
+              }`}>
+              <svg className={`w-5 h-5 ${isInternal ? 'text-purple-600 dark:text-purple-400' : 'text-orange-600 dark:text-orange-400'
+                }`} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                {isInternal
+                  ? <path d="M4 19.5A2.5 2.5 0 016.5 17H20a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v13.5zM8 7h8m-8 4h5" />
+                  : <path d="M13 10V3L4 14h7v7l9-11h-7z" />
+                }
+              </svg>
+            </div>
+            <div className="min-w-0">
+              <h4 className="text-sm font-semibold text-gray-900 dark:text-white truncate">{kb.name}</h4>
+              <span className={`inline-block text-xs px-1.5 py-0.5 rounded-md font-medium mt-0.5 ${isInternal
+                  ? 'bg-purple-100 text-purple-700 dark:bg-purple-900/30 dark:text-purple-300'
+                  : 'bg-orange-100 text-orange-700 dark:bg-orange-900/30 dark:text-orange-300'
+                }`}>
+                {isInternal ? '内部' : '外部'}
+              </span>
+            </div>
+          </div>
+        </div>
+
+        {kb.description ? (
+          <p className="text-xs text-gray-500 dark:text-gray-400 line-clamp-2 mb-3">{kb.description}</p>
+        ) : (
+          <p className="text-xs text-gray-300 dark:text-gray-600 mb-3">暂无描述</p>
+        )}
+
+        <div className="flex items-center space-x-3 text-xs text-gray-400 dark:text-gray-500">
+          {isInternal ? (
+            <>
+              <span>{kb.documentCount || 0} 文档</span>
+              <span className="text-gray-300 dark:text-gray-600">·</span>
+              <span>{kb.totalChunks || 0} 分块</span>
+            </>
+          ) : (
+            <span>API: {kb.apiUrl ? kb.apiUrl.replace(/^https?:\/\//, '').split('/')[0] : '未配置'}</span>
+          )}
+        </div>
+      </div>
+
+      <div className="absolute top-3 right-3 z-10 hidden group-hover/kb:flex items-center gap-1 px-2 py-1.5 rounded-xl border border-gray-200 dark:border-gray-600 bg-white dark:bg-gray-800 shadow-lg">
+        <button
+          onClick={(e) => { e.stopPropagation(); onEdit(kb) }}
+          className="flex items-center justify-center w-6 h-6 rounded-lg text-gray-400 hover:text-blue-600 dark:hover:text-blue-400 hover:bg-blue-50 dark:hover:bg-blue-900/20 transition-colors"
+          title="编辑"
+        >
+          <svg className="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" /></svg>
+        </button>
+        <div className="w-px h-4 bg-gray-200 dark:bg-gray-600" />
+        <button
+          onClick={(e) => { e.stopPropagation(); onDeleteClick(kb.id) }}
+          className="flex items-center justify-center w-6 h-6 rounded-lg text-gray-400 hover:text-red-600 dark:hover:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors"
+          title="删除"
+        >
+          <svg className="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" /></svg>
+        </button>
+      </div>
+
+      <div className="absolute bottom-4 right-4 text-gray-300 dark:text-gray-600 group-hover/kb:text-blue-400 dark:group-hover/kb:text-blue-500 transition-colors">
+        <svg className="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M9 5l7 7-7 7" /></svg>
+      </div>
+    </div>
+  )
+})
 
 export default function SettingsKnowledge(): React.JSX.Element {
   const {
@@ -230,91 +324,13 @@ export default function SettingsKnowledge(): React.JSX.Element {
       {/* 卡片网格 */}
       <div className="grid grid-cols-2 gap-4">
         {filteredKbList.map((kb) => (
-          <div
+          <KBCard
             key={kb.id}
-            className="group/kb relative bg-white dark:bg-gray-800 rounded-xl border border-gray-200/80 dark:border-gray-700/50 hover:border-blue-300 dark:hover:border-blue-600/50 hover:shadow-md transition-all duration-200 cursor-pointer overflow-hidden"
-            onClick={() => setSelectedKbId(kb.id)}
-          >
-            {/* 卡片顶部色带 */}
-            <div className={`h-1.5 rounded-t-xl ${kb.type === 'internal'
-                ? 'bg-gradient-to-r from-purple-400 to-purple-500'
-                : 'bg-gradient-to-r from-orange-400 to-orange-500'
-              }`} />
-
-            {/* 卡片内容 */}
-            <div className="p-4">
-              <div className="flex items-start justify-between mb-3">
-                <div className="flex items-center space-x-2.5">
-                  <div className={`flex items-center justify-center w-9 h-9 rounded-lg ${kb.type === 'internal'
-                      ? 'bg-purple-50 dark:bg-purple-900/20'
-                      : 'bg-orange-50 dark:bg-orange-900/20'
-                    }`}>
-                    <svg className={`w-5 h-5 ${kb.type === 'internal' ? 'text-purple-600 dark:text-purple-400' : 'text-orange-600 dark:text-orange-400'
-                      }`} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                      {kb.type === 'internal'
-                        ? <path d="M4 19.5A2.5 2.5 0 016.5 17H20a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v13.5zM8 7h8m-8 4h5" />
-                        : <path d="M13 10V3L4 14h7v7l9-11h-7z" />
-                      }
-                    </svg>
-                  </div>
-                  <div className="min-w-0">
-                    <h4 className="text-sm font-semibold text-gray-900 dark:text-white truncate">{kb.name}</h4>
-                    <span className={`inline-block text-xs px-1.5 py-0.5 rounded-md font-medium mt-0.5 ${kb.type === 'internal'
-                        ? 'bg-purple-100 text-purple-700 dark:bg-purple-900/30 dark:text-purple-300'
-                        : 'bg-orange-100 text-orange-700 dark:bg-orange-900/30 dark:text-orange-300'
-                      }`}>
-                      {kb.type === 'internal' ? '内部' : '外部'}
-                    </span>
-                  </div>
-                </div>
-              </div>
-
-              {/* 描述 */}
-              {kb.description ? (
-                <p className="text-xs text-gray-500 dark:text-gray-400 line-clamp-2 mb-3">{kb.description}</p>
-              ) : (
-                <p className="text-xs text-gray-300 dark:text-gray-600 mb-3">暂无描述</p>
-              )}
-
-              {/* 统计 */}
-              <div className="flex items-center space-x-3 text-xs text-gray-400 dark:text-gray-500">
-                {kb.type === 'internal' && (
-                  <>
-                    <span>{kb.documentCount || 0} 文档</span>
-                    <span className="text-gray-300 dark:text-gray-600">·</span>
-                    <span>{kb.totalChunks || 0} 分块</span>
-                  </>
-                )}
-                {kb.type === 'external' && (
-                  <span>API: {kb.apiUrl ? kb.apiUrl.replace(/^https?:\/\//, '').split('/')[0] : '未配置'}</span>
-                )}
-              </div>
-            </div>
-
-            {/* 悬浮操作栏 */}
-            <div className="absolute top-3 right-3 z-10 hidden group-hover/kb:flex items-center gap-1 px-2 py-1.5 rounded-xl border border-gray-200 dark:border-gray-600 bg-white dark:bg-gray-800 shadow-lg">
-              <button
-                onClick={(e) => { e.stopPropagation(); handleEdit(kb) }}
-                className="flex items-center justify-center w-6 h-6 rounded-lg text-gray-400 hover:text-blue-600 dark:hover:text-blue-400 hover:bg-blue-50 dark:hover:bg-blue-900/20 transition-colors"
-                title="编辑"
-              >
-                <svg className="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" /></svg>
-              </button>
-              <div className="w-px h-4 bg-gray-200 dark:bg-gray-600" />
-              <button
-                onClick={(e) => { e.stopPropagation(); setDeleteKbTarget(kb.id) }}
-                className="flex items-center justify-center w-6 h-6 rounded-lg text-gray-400 hover:text-red-600 dark:hover:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors"
-                title="删除"
-              >
-                <svg className="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" /></svg>
-              </button>
-            </div>
-
-            {/* 进入箭头 */}
-            <div className="absolute bottom-4 right-4 text-gray-300 dark:text-gray-600 group-hover/kb:text-blue-400 dark:group-hover/kb:text-blue-500 transition-colors">
-              <svg className="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M9 5l7 7-7 7" /></svg>
-            </div>
-          </div>
+            kb={kb}
+            onSelect={setSelectedKbId}
+            onEdit={handleEdit}
+            onDeleteClick={setDeleteKbTarget}
+          />
         ))}
       </div>
 
