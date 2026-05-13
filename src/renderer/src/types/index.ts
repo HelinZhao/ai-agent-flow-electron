@@ -93,7 +93,7 @@ export interface AttachmentMetadata {
   url?: string          // Express服务URL（/api/attachments/:id/:filename，不存入历史）
 }
 
-// 对话历史相关类型
+// 对话记录相关类型
 export interface ChatMessage {
   id: string
   content: string
@@ -103,7 +103,7 @@ export interface ChatMessage {
   attachments?: AttachmentMetadata[]
 }
 
-export interface ChatHistory {
+export interface chatRecord {
   id: string
   agentId: string
   agentName: string

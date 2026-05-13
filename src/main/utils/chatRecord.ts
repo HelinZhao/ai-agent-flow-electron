@@ -22,7 +22,7 @@ export interface ChatMessage {
   attachments?: AttachmentMetadata[]
 }
 
-export interface ChatHistory {
+export interface chatRecord {
   id: string
   agentId: string
   agentName: string
@@ -32,9 +32,9 @@ export interface ChatHistory {
   updatedAt: string
 }
 
-export class ChatHistoryManager {
-  private static instance: ChatHistoryManager
-  private historyDir: string
+export class ChatRecordManager {
+  private static instance: ChatRecordManager
+  private recordDir: string
 
   private constructor() {
     // 获取应用同级目录
@@ -43,30 +43,30 @@ export class ChatHistoryManager {
       ? process.cwd() // 打包后使用当前工作目录
       : appPath // 开发环境使用应用目录
 
-    this.historyDir = join(exeDir, 'chat_history')
-    this.ensureHistoryDir()
+    this.recordDir = join(exeDir, 'chat_records')
+    this.ensureRecordDir()
   }
 
-  public static getInstance(): ChatHistoryManager {
-    if (!ChatHistoryManager.instance) {
-      ChatHistoryManager.instance = new ChatHistoryManager()
+  public static getInstance(): ChatRecordManager {
+    if (!ChatRecordManager.instance) {
+      ChatRecordManager.instance = new ChatRecordManager()
     }
-    return ChatHistoryManager.instance
+    return ChatRecordManager.instance
   }
 
-  private async ensureHistoryDir(): Promise<void> {
+  private async ensureRecordDir(): Promise<void> {
     try {
-      if (!existsSync(this.historyDir)) {
-        await fs.mkdir(this.historyDir, { recursive: true })
+      if (!existsSync(this.recordDir)) {
+        await fs.mkdir(this.recordDir, { recursive: true })
       }
     } catch (error) {
       console.error('创建历史记录目录失败:', error)
     }
   }
 
-  private getHistoryFilePath(agentId: string): string {
+  private getRecordFilePath(agentId: string): string {
     const safeAgentId = agentId.replace(/[^a-zA-Z0-9_-]/g, '_')
-    return join(this.historyDir, `chat_${safeAgentId}.json`)
+    return join(this.recordDir, `chat_${safeAgentId}.json`)
   }
 
   // 生成对话标题
@@ -78,24 +78,24 @@ export class ChatHistoryManager {
     return firstUserMessage.substring(0, 20) + (firstUserMessage.length > 20 ? '...' : '')
   }
 
-  // 保存对话历史
-  public async saveChatHistory(
+  // 保存对话记录
+  public async saveChatRecord(
     agentId: string,
     agentName: string,
     messages: ChatMessage[]
   ): Promise<void> {
     try {
       if (messages.length === 0) return
-      const filePath = this.getHistoryFilePath(agentId)
+      const filePath = this.getRecordFilePath(agentId)
 
-      let existingHistory: ChatHistory
+      let existingRecord: chatRecord
 
       try {
         const existingData = await fs.readFile(filePath, 'utf-8')
-        existingHistory = JSON.parse(existingData)
+        existingRecord = JSON.parse(existingData)
       } catch {
         // 文件不存在或解析失败，创建新的历史记录
-        existingHistory = {
+        existingRecord = {
           id: `chat_${agentId}_${Date.now()}`,
           agentId,
           agentName,
@@ -107,7 +107,7 @@ export class ChatHistoryManager {
       }
 
       // 更新消息（剥离previewUrl等大体积字段，避免JSON膨胀）
-      existingHistory.messages = messages.map(msg => ({
+      existingRecord.messages = messages.map(msg => ({
         ...msg,
         attachments: msg.attachments?.map(att => ({
           id: att.id,
@@ -119,63 +119,63 @@ export class ChatHistoryManager {
           // previewUrl(base64)不存入历史文件，前端从Express URL加载图片
         }))
       }))
-      existingHistory.updatedAt = new Date().toISOString()
+      existingRecord.updatedAt = new Date().toISOString()
 
       // 如果有用户消息，生成标题
-      if (!existingHistory.title && messages.length > 0) {
+      if (!existingRecord.title && messages.length > 0) {
         const firstUserMessage = messages.find((msg) => msg.sender === 'user')
         if (firstUserMessage) {
-          existingHistory.title = this.generateChatTitle(firstUserMessage.content, firstUserMessage.attachments)
+          existingRecord.title = this.generateChatTitle(firstUserMessage.content, firstUserMessage.attachments)
         }
       }
 
       // 保存到文件
-      await fs.writeFile(filePath, JSON.stringify(existingHistory, null, 2), 'utf-8')
-      console.log(`对话历史已保存到: ${filePath}`)
+      await fs.writeFile(filePath, JSON.stringify(existingRecord, null, 2), 'utf-8')
+      console.log(`对话记录已保存到: ${filePath}`)
     } catch (error) {
-      console.error('保存对话历史失败:', error)
+      console.error('保存对话记录失败:', error)
     }
   }
 
-  // 读取对话历史
-  public async loadChatHistory(agentId: string): Promise<ChatHistory | null> {
+  // 读取对话记录
+  public async loadChatRecord(agentId: string): Promise<chatRecord | null> {
     try {
-      const filePath = this.getHistoryFilePath(agentId)
+      const filePath = this.getRecordFilePath(agentId)
 
       if (!existsSync(filePath)) {
         return null
       }
 
       const data = await fs.readFile(filePath, 'utf-8')
-      const history: ChatHistory = JSON.parse(data)
+      const history: chatRecord = JSON.parse(data)
 
-      console.log(`从 ${filePath} 加载对话历史`)
+      console.log(`从 ${filePath} 加载对话记录`)
       return history
     } catch (error) {
-      console.error('读取对话历史失败:', error)
+      console.error('读取对话记录失败:', error)
       return null
     }
   }
 
-  // 获取所有对话历史列表
-  public async getAllChatHistories(): Promise<ChatHistory[]> {
+  // 获取所有对话记录列表
+  public async getAllChatRecords(): Promise<chatRecord[]> {
     try {
-      if (!existsSync(this.historyDir)) {
+      if (!existsSync(this.recordDir)) {
         return []
       }
 
-      const files = await fs.readdir(this.historyDir)
-      const histories: ChatHistory[] = []
+      const files = await fs.readdir(this.recordDir)
+      const histories: chatRecord[] = []
 
       for (const file of files) {
         if (file.startsWith('chat_') && file.endsWith('.json')) {
           try {
-            const filePath = join(this.historyDir, file)
+            const filePath = join(this.recordDir, file)
             const data = await fs.readFile(filePath, 'utf-8')
-            const history: ChatHistory = JSON.parse(data)
+            const history: chatRecord = JSON.parse(data)
             histories.push(history)
           } catch (error) {
-            console.error(`解析对话历史文件失败 ${file}:`, error)
+            console.error(`解析对话记录文件失败 ${file}:`, error)
           }
         }
       }
@@ -185,43 +185,43 @@ export class ChatHistoryManager {
 
       return histories
     } catch (error) {
-      console.error('获取所有对话历史失败:', error)
+      console.error('获取所有对话记录失败:', error)
       return []
     }
   }
 
-  // 删除对话历史
-  public async deleteChatHistory(agentId: string): Promise<boolean> {
+  // 删除对话记录
+  public async deleteChatRecord(agentId: string): Promise<boolean> {
     try {
-      const filePath = this.getHistoryFilePath(agentId)
+      const filePath = this.getRecordFilePath(agentId)
 
       if (existsSync(filePath)) {
         await fs.unlink(filePath)
-        console.log(`对话历史已删除: ${filePath}`)
+        console.log(`对话记录已删除: ${filePath}`)
         return true
       }
 
       return false
     } catch (error) {
-      console.error('删除对话历史失败:', error)
+      console.error('删除对话记录失败:', error)
       return false
     }
   }
 
-  // 清除所有对话历史
-  public async clearAllChatHistories(): Promise<void> {
+  // 清除所有对话记录
+  public async clearAllChatRecords(): Promise<void> {
     try {
-      if (existsSync(this.historyDir)) {
-        await fs.rm(this.historyDir, { recursive: true })
-        console.log('所有对话历史已清除')
+      if (existsSync(this.recordDir)) {
+        await fs.rm(this.recordDir, { recursive: true })
+        console.log('所有对话记录已清除')
       }
     } catch (error) {
-      console.error('清除所有对话历史失败:', error)
+      console.error('清除所有对话记录失败:', error)
     }
   }
 
   // 获取历史记录目录路径（用于调试）
-  public getHistoryDirectory(): string {
-    return this.historyDir
+  public getRecordDirectory(): string {
+    return this.recordDir
   }
 }

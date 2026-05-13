@@ -8,13 +8,13 @@ interface ServerAPI {
   status: () => Promise<{ running: boolean; port: number | null; url: string | null }>
 }
 
-interface ChatHistoryAPI {
-  saveHistory: (agentId: string, agentName: string, messages: any[]) => Promise<any>
-  loadHistory: (agentId: string) => Promise<any>
-  getAllHistories: () => Promise<any>
-  deleteHistory: (agentId: string) => Promise<any>
-  clearAllHistories: () => Promise<any>
-  getHistoryDirectory: () => Promise<any>
+interface ChatRecordAPI {
+  saveRecord: (agentId: string, agentName: string, messages: any[]) => Promise<any>
+  loadRecord: (agentId: string) => Promise<any>
+  getAllRecords: () => Promise<any>
+  deleteRecord: (agentId: string) => Promise<any>
+  clearAllRecords: () => Promise<any>
+  getRecordDirectory: () => Promise<any>
 }
 
 interface NotifyAPI {
@@ -30,7 +30,7 @@ interface WindowAPI {
 
 interface CustomAPI {
   server: ServerAPI
-  chatHistory: ChatHistoryAPI
+  chatRecord: ChatRecordAPI
   notify: NotifyAPI
   window: WindowAPI
 }

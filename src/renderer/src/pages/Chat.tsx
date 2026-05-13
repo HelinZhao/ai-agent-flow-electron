@@ -1,8 +1,8 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { useWorkflowStore } from '@renderer/store/workflowStore';
-import { Agent, AttachmentMetadata, ChatHistory, ToolApprovalRequest } from '@renderer/types';
+import { Agent, AttachmentMetadata, chatRecord, ToolApprovalRequest } from '@renderer/types';
 import type { ChatMessage as ChatMessageType } from '@renderer/types';
-import { chatHistoryApi } from '@renderer/lib/chatHistory';
+import { chatRecordApi } from '@renderer/lib/chatRecord';
 import { workflowExecutionApi } from '@renderer/lib/api';
 import { AttachmentData, processFileAttachment, stripAttachmentForHistory, formatFileSize } from '@renderer/lib/attachmentUtils';
 import CustomButton from '@renderer/components/ui/CustomButton';
@@ -80,45 +80,45 @@ export default function Chat(): React.JSX.Element {
         scrollToBottom();
     }, [messages]);
 
-    // 当选中Agent变化时，加载对应的对话历史
+    // 当选中Agent变化时，加载对应的对话记录
     useEffect(() => {
         if (selectedAgent) {
-            loadChatHistory(selectedAgent.id);
+            loadchatRecord(selectedAgent.id);
         } else {
             setMessages([]);
         }
     }, [selectedAgent?.id]);
 
-    // 保存对话历史到文件
-    const saveChatHistory = async (messagesToSave?: ChatMessageType[]) => {
+    // 保存对话记录到文件
+    const savechatRecord = async (messagesToSave?: ChatMessageType[]) => {
         if (selectedAgent && (messagesToSave || messages).length > 0) {
             try {
                 const messagesToStore = messagesToSave || messages;
-                await chatHistoryApi.saveHistory(
+                await chatRecordApi.saveRecord(
                     selectedAgent.id,
                     selectedAgent.name,
                     messagesToStore
                 );
             } catch (error) {
-                console.error('保存对话历史失败:', error);
+                console.error('保存对话记录失败:', error);
             }
         }
     };
 
-    // 加载对话历史
-    const loadChatHistory = async (agentId: string) => {
+    // 加载对话记录
+    const loadchatRecord = async (agentId: string) => {
         try {
             setIsLoadingHistory(true);
-            const result = await chatHistoryApi.loadHistory(agentId);
+            const result = await chatRecordApi.loadRecord(agentId);
 
             if (result.success && result.history) {
-                const history: ChatHistory = result.history;
+                const history: chatRecord = result.history;
                 setMessages(history.messages);
             } else {
                 setMessages([]);
             }
         } catch (error) {
-            console.error('加载对话历史失败:', error);
+            console.error('加载对话记录失败:', error);
             setMessages([]);
         } finally {
             setIsLoadingHistory(false);
@@ -227,16 +227,16 @@ export default function Chat(): React.JSX.Element {
                 window.api.notify.flashFrame()
             }
 
-            // 自动保存对话历史（此时finalMessages已包含所有最新消息）
+            // 自动保存对话记录（此时finalMessages已包含所有最新消息）
             if (selectedAgent && finalMessages.length > 0) {
                 try {
-                    await chatHistoryApi.saveHistory(
+                    await chatRecordApi.saveRecord(
                         selectedAgent.id,
                         selectedAgent.name,
                         finalMessages
                     );
                 } catch (error) {
-                    console.error('保存对话历史失败:', error);
+                    console.error('保存对话记录失败:', error);
                 }
             }
         } catch (error) {
@@ -257,16 +257,16 @@ export default function Chat(): React.JSX.Element {
                 window.api.notify.flashFrame()
             }
 
-            // 自动保存对话历史（此时finalMessages已包含所有最新消息）
+            // 自动保存对话记录（此时finalMessages已包含所有最新消息）
             if (selectedAgent && finalMessages.length > 0) {
                 try {
-                    await chatHistoryApi.saveHistory(
+                    await chatRecordApi.saveRecord(
                         selectedAgent.id,
                         selectedAgent.name,
                         finalMessages
                     );
                 } catch (saveError) {
-                    console.error('保存对话历史失败:', saveError);
+                    console.error('保存对话记录失败:', saveError);
                 }
             }
         } finally {
@@ -320,13 +320,13 @@ export default function Chat(): React.JSX.Element {
 
         // 如果没有消息，直接清除无需确认
         if (messages.length === 0) {
-            saveChatHistory([]);
+            savechatRecord([]);
             setMessages([]);
             return;
         }
 
-        // 确认对话框：提示将清除对话历史和AI记忆
-        const confirmMessage = `确定要开始新对话吗？\n\n这将清除与 ${selectedAgent.name} 的所有对话历史，同时清除AI的记忆（包括之前的对话上下文）。此操作不可恢复。`;
+        // 确认对话框：提示将清除对话记录和AI记忆
+        const confirmMessage = `确定要开始新对话吗？\n\n这将清除与 ${selectedAgent.name} 的所有对话记录，同时清除AI的记忆（包括之前的对话上下文）。此操作不可恢复。`;
         if (!window.confirm(confirmMessage)) {
             return;
         }
@@ -340,42 +340,42 @@ export default function Chat(): React.JSX.Element {
 
         // 清除本地聊天历史文件
         try {
-            const result = await chatHistoryApi.deleteHistory(selectedAgent.id);
+            const result = await chatRecordApi.deleteRecord(selectedAgent.id);
             if (result.success) {
-                console.log(`已清空Agent ${selectedAgent.name} 的对话历史`);
+                console.log(`已清空Agent ${selectedAgent.name} 的对话记录`);
             } else {
-                console.error('清空对话历史文件失败:', result.error);
+                console.error('清空对话记录文件失败:', result.error);
             }
         } catch (error) {
-            console.error('清空对话历史文件时发生错误:', error);
+            console.error('清空对话记录文件时发生错误:', error);
         }
 
         setMessages([]);
     };
 
-    // 清空当前对话历史（删除文件）
-    const clearCurrentChatHistory = async (): Promise<void> => {
+    // 清空当前对话记录（删除文件）
+    const clearCurrentchatRecord = async (): Promise<void> => {
         if (!selectedAgent) return;
 
         // 确认对话框
-        const confirmMessage = `确定要清空 ${selectedAgent.name} 的所有对话历史吗？此操作不可恢复。`;
+        const confirmMessage = `确定要清空 ${selectedAgent.name} 的所有对话记录吗？此操作不可恢复。`;
         if (!window.confirm(confirmMessage)) {
             return;
         }
 
         try {
-            const result = await chatHistoryApi.deleteHistory(selectedAgent.id);
+            const result = await chatRecordApi.deleteRecord(selectedAgent.id);
             if (result.success) {
-                console.log(`已清空Agent ${selectedAgent.name} 的对话历史`);
+                console.log(`已清空Agent ${selectedAgent.name} 的对话记录`);
                 // 清空当前消息显示
                 setMessages([]);
             } else {
-                console.error('清空对话历史失败:', result.error);
-                alert('清空对话历史失败，请检查控制台了解详情');
+                console.error('清空对话记录失败:', result.error);
+                alert('清空对话记录失败，请检查控制台了解详情');
             }
         } catch (error) {
-            console.error('清空对话历史时发生错误:', error);
-            alert('清空对话历史时发生错误，请检查控制台了解详情');
+            console.error('清空对话记录时发生错误:', error);
+            alert('清空对话记录时发生错误，请检查控制台了解详情');
         }
     };
 
@@ -445,7 +445,7 @@ export default function Chat(): React.JSX.Element {
                             {isLoadingHistory && (
                                 <div className="flex items-center space-x-2 text-sm text-gray-500 dark:text-gray-400 bg-gray-100/50 dark:bg-gray-700/50 px-3 py-1.5 rounded-full">
                                     <div className="animate-spin rounded-full h-3 w-3 border-b-2 border-gray-500"></div>
-                                    <span>加载历史...</span>
+                                    <span>加载对话记录...</span>
                                 </div>
                             )}
                             <CustomButton
@@ -458,13 +458,19 @@ export default function Chat(): React.JSX.Element {
                                 <span>新对话</span>
                             </CustomButton>
                             <CustomButton
-                                onClick={clearCurrentChatHistory}
+                                onClick={clearCurrentchatRecord}
                                 variant="danger"
                                 size="sm"
                                 className="flex items-center space-x-1"
                             >
-                                <span>🗑️</span>
-                                <span>清空历史</span>
+                                <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                                    <path d="M3 6h18" />
+                                    <path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6" />
+                                    <path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2" />
+                                    <line x1="10" y1="11" x2="10" y2="17" />
+                                    <line x1="14" y1="11" x2="14" y2="17" />
+                                </svg>
+                                <span>对话记录</span>
                             </CustomButton>
                         </div>
                     )}

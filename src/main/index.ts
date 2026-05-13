@@ -4,7 +4,7 @@ import { existsSync } from 'fs'
 import { electronApp, optimizer, is } from '@electron-toolkit/utils'
 import icon from '../../resources/icon.png?asset'
 import { LocalServer } from '../server/src'
-import { setupChatHistoryIPC } from './ipc/chatHistory'
+import { setupChatRecordIPC } from './ipc/chatRecord'
 import dotenv from 'dotenv'
 dotenv.config()
 
@@ -79,7 +79,7 @@ function resolveBundledModelPath(): string | undefined {
 // 某些API只能在此事件发生后使用
 app.whenReady().then(() => {
   // 设置IPC处理程序
-  setupChatHistoryIPC()
+  setupChatRecordIPC()
 
   // 为Windows设置应用程序用户模型ID
   electronApp.setAppUserModelId('com.electron')

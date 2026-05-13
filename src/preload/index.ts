@@ -9,15 +9,15 @@ const api = {
     stop: () => ipcRenderer.invoke('server:stop'),
     status: () => ipcRenderer.invoke('server:status')
   },
-  // 对话历史API
-  chatHistory: {
-    saveHistory: (agentId: string, agentName: string, messages: any[]) =>
-      ipcRenderer.invoke('chat:saveHistory', agentId, agentName, messages),
-    loadHistory: (agentId: string) => ipcRenderer.invoke('chat:loadHistory', agentId),
-    getAllHistories: () => ipcRenderer.invoke('chat:getAllHistories'),
-    deleteHistory: (agentId: string) => ipcRenderer.invoke('chat:deleteHistory', agentId),
-    clearAllHistories: () => ipcRenderer.invoke('chat:clearAllHistories'),
-    getHistoryDirectory: () => ipcRenderer.invoke('chat:getHistoryDirectory')
+  // 对话记录API
+  chatRecord: {
+    saveRecord: (agentId: string, agentName: string, messages: any[]) =>
+      ipcRenderer.invoke('chat:saveRecord', agentId, agentName, messages),
+    loadRecord: (agentId: string) => ipcRenderer.invoke('chat:loadRecord', agentId),
+    getAllRecords: () => ipcRenderer.invoke('chat:getAllRecords'),
+    deleteRecord: (agentId: string) => ipcRenderer.invoke('chat:deleteRecord', agentId),
+    clearAllRecords: () => ipcRenderer.invoke('chat:clearAllRecords'),
+    getRecordDirectory: () => ipcRenderer.invoke('chat:getRecordDirectory')
   },
   // 通知提醒API
   notify: {

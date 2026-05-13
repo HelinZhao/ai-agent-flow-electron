@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { chatHistoryApi } from '@renderer/lib/chatHistory';
+import { chatRecordApi } from '@renderer/lib/chatRecord';
 import { dataApi } from '@renderer/lib/api';
 import CustomButton from '@renderer/components/ui/CustomButton';
 
@@ -19,11 +19,11 @@ export default function SettingsData(): React.JSX.Element {
     dataApi.getDbStats().then(setDbStats).catch(() => {});
   }, []);
 
-  const handleClearChatHistory = async () => {
+  const handleClearchatRecord = async () => {
     if (!window.confirm('确定要清除所有聊天历史吗？此操作不可恢复。')) return;
     setIsClearing(true);
     try {
-      await chatHistoryApi.clearAllHistories();
+      await chatRecordApi.clearAllRecords();
     } catch (error) {
       console.error('清除聊天历史失败:', error);
     } finally {
@@ -152,7 +152,7 @@ export default function SettingsData(): React.JSX.Element {
           </div>
           <CustomButton
             variant="danger"
-            onClick={handleClearChatHistory}
+            onClick={handleClearchatRecord}
             disabled={isClearing}
             size="sm"
           >

@@ -140,7 +140,7 @@ export default function Logs(): React.JSX.Element {
             placeholder="搜索日志..."
             value={searchText}
             onChange={(e) => setSearchText(e.target.value)}
-            leftIcon={"🔍"}
+            leftIcon={<svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="11" cy="11" r="8" /><path d="m21 21-4.35-4.35" /></svg>}
             size="xs"
           />
        

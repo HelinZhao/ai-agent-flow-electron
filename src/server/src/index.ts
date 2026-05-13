@@ -239,9 +239,7 @@ export class LocalServer {
           }
           this.modelExists = await checkOllamaModel(OLLAMA_DEFAULT_MODEL)
         }
-        if (this.modelExists) {
-          console.log(`[Ollama] 模型 ${OLLAMA_DEFAULT_MODEL} 导入成功`)
-        } else {
+        if (!this.modelExists) {
           console.log(`[Ollama] 模型 ${OLLAMA_DEFAULT_MODEL} 未安装，等待用户在线下载`)
         }
       }

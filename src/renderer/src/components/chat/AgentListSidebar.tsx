@@ -1,5 +1,6 @@
 import React from 'react'
 import { Agent } from '@renderer/types'
+import CustomInput from '@renderer/components/ui/CustomInput'
 
 interface AgentListSidebarProps {
   agents: Agent[]
@@ -58,33 +59,18 @@ export default function AgentListSidebar({
         </div>
 
         {/* 搜索框 */}
-        <div className="relative">
-          <svg
-            className="absolute left-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-gray-400 pointer-events-none"
-            viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"
-          >
-            <circle cx="11" cy="11" r="8" />
-            <path d="m21 21-4.35-4.35" />
-          </svg>
-          <input
-            type="text"
-            placeholder="搜索 Agent..."
-            value={searchTerm}
-            onChange={(e) => onSearchChange(e.target.value)}
-            className="w-full pl-8 pr-7 py-1.5 text-xs bg-gray-100 dark:bg-gray-800/80 border border-transparent focus:border-blue-500/30 rounded-lg text-gray-900 dark:text-white placeholder-gray-400 dark:placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-blue-500/20 transition-all"
-          />
-          {searchTerm && (
-            <button
-              onClick={() => onSearchChange('')}
-              className="absolute right-1.5 top-1/2 -translate-y-1/2 p-0.5 rounded-sm text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors"
-            >
-              <svg className="w-3 h-3" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                <path d="M18 6 6 18" />
-                <path d="m6 6 12 12" />
-              </svg>
-            </button>
-          )}
-        </div>
+        <CustomInput
+          placeholder="搜索 Agent..."
+          value={searchTerm}
+          onChange={(e) => onSearchChange(e.target.value)}
+          size="xs"
+          leftIcon={
+            <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <circle cx="11" cy="11" r="8" />
+              <path d="m21 21-4.35-4.35" />
+            </svg>
+          }
+        />
       </div>
 
       <div className="mx-4 h-px bg-gradient-to-r from-transparent via-gray-200/60 dark:via-gray-700/50 to-transparent flex-shrink-0" />
@@ -98,11 +84,10 @@ export default function AgentListSidebar({
           return (
             <button
               key={agent.id}
-              className={`w-full flex items-center gap-2.5 px-2.5 py-2.5 text-sm rounded-lg transition-all duration-150 group relative ${
-                isActive
+              className={`w-full flex items-center gap-2.5 px-2.5 py-2.5 text-sm rounded-lg transition-all duration-150 group relative ${isActive
                   ? 'bg-blue-50/80 dark:bg-blue-500/10 text-blue-700 dark:text-blue-300 shadow-sm'
                   : 'text-gray-700 dark:text-gray-300 bg-transparent hover:bg-gray-100 dark:hover:bg-gray-800/70'
-              }`}
+                }`}
               onClick={() => onSelectAgent(agent)}
             >
               {isActive && (
