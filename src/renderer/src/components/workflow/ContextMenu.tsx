@@ -2,6 +2,7 @@ import { WorkflowNode } from '@renderer/types'
 import { memo, useRef, useState } from 'react'
 import { NODE_DEFS, NODE_CATEGORIES } from './nodes'
 import { createPortal } from 'react-dom'
+import { useClickAway } from 'ahooks'
 
 interface ContextMenuProps {
   x: number
@@ -17,20 +18,21 @@ const groupedNodes = NODE_CATEGORIES.map(cat => ({
 }))
 
 const NODE_ICON_GRADIENTS: Record<string, string> = {
-  green:  'from-green-400 to-emerald-600',
-  blue:   'from-blue-400 to-blue-600',
+  green: 'from-green-400 to-emerald-600',
+  blue: 'from-blue-400 to-blue-600',
   yellow: 'from-yellow-400 to-amber-600',
   indigo: 'from-indigo-400 to-indigo-600',
   purple: 'from-purple-400 to-purple-600',
-  red:    'from-red-400 to-rose-600',
+  red: 'from-red-400 to-rose-600',
   orange: 'from-orange-400 to-orange-600',
-  teal:   'from-teal-400 to-teal-600',
-  gray:   'from-gray-400 to-gray-600',
+  teal: 'from-teal-400 to-teal-600',
+  gray: 'from-gray-400 to-gray-600',
 }
 
 const ContextMenu: React.FC<ContextMenuProps> = ({ x, y, onAddNode, onClose, flowPosition }) => {
   const [hoveredCategory, setHoveredCategory] = useState<string | null>(null)
   const menuRef = useRef<HTMLDivElement>(null)
+
   const closeTimerRef = useRef<ReturnType<typeof setTimeout> | undefined>(undefined)
 
   const hoveredData = hoveredCategory
@@ -44,12 +46,17 @@ const ContextMenu: React.FC<ContextMenuProps> = ({ x, y, onAddNode, onClose, flo
     }
   }
 
+
   const scheduleClose = () => {
     clearClose()
     closeTimerRef.current = setTimeout(() => setHoveredCategory(null), 250)
   }
 
   const menuWidth = menuRef.current?.offsetWidth || 180
+  
+  useClickAway(() => {
+    onClose()
+  }, menuRef)
 
   return createPortal((
     <>
@@ -68,9 +75,8 @@ const ContextMenu: React.FC<ContextMenuProps> = ({ x, y, onAddNode, onClose, flo
             <button
               key={category.key}
               onMouseEnter={() => { clearClose(); setHoveredCategory(category.key) }}
-              className={`w-full px-3 py-2 text-left text-sm flex items-center justify-between gap-2 transition-colors hover:bg-gray-50 dark:hover:bg-gray-700 text-gray-700 dark:text-gray-300 ${
-                hoveredCategory === category.key ? 'bg-gray-50 dark:bg-gray-700' : ''
-              }`}
+              className={`w-full px-3 py-2 text-left text-sm flex items-center justify-between gap-2 transition-colors hover:bg-gray-50 dark:hover:bg-gray-700 text-gray-700 dark:text-gray-300 ${hoveredCategory === category.key ? 'bg-gray-50 dark:bg-gray-700' : ''
+                }`}
             >
               <span>{category.label}</span>
               <svg className="w-4 h-4 text-gray-400" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">

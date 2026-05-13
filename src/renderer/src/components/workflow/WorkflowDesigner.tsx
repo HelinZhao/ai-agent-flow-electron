@@ -305,7 +305,6 @@ function WorkflowDesigner(props: WorkflowDesignerProps): React.JSX.Element {
   }, []);
 
   const handlePaneClick = useCallback(() => {
-    setContextMenu(null);
     onUnselectNode();
   }, [onUnselectNode]);
 
@@ -321,7 +320,6 @@ function WorkflowDesigner(props: WorkflowDesignerProps): React.JSX.Element {
     const newNodes = nodes.concat(newNode);
     setNodes(newNodes);
     recordHistory(newNodes, edges);
-    setContextMenu(null);
   }, [nodes, edges, setNodes, recordHistory]);
 
   const handleDragOver = useCallback((event: React.DragEvent) => {
