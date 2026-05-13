@@ -1,6 +1,6 @@
-import { app, shell, BrowserWindow, ipcMain } from 'electron'
+import { app, shell, BrowserWindow, ipcMain, dialog } from 'electron'
 import { join } from 'path'
-import { existsSync } from 'fs'
+import { existsSync, writeFile } from 'fs'
 import { electronApp, optimizer, is } from '@electron-toolkit/utils'
 import icon from '../../resources/icon.png?asset'
 import { LocalServer } from '../server/src'
@@ -167,6 +167,26 @@ app.whenReady().then(() => {
   ipcMain.handle('window:isMaximized', () => {
     const win = BrowserWindow.getAllWindows()[0]
     return win ? win.isMaximized() : false
+  })
+
+  // 原生文件保存对话框
+  ipcMain.handle('dialog:showSave', async (_, options) => {
+    const win = BrowserWindow.getAllWindows()[0]
+    const result = await dialog.showSaveDialog(win, {
+      defaultPath: options?.defaultPath,
+      filters: options?.filters || [{ name: 'JSON', extensions: ['json'] }],
+    })
+    return result.canceled ? null : result.filePath
+  })
+
+  // 写入文件
+  ipcMain.handle('file:write', async (_, filePath: string, data: string) => {
+    return new Promise<{ success: boolean; error?: string }>((resolve) => {
+      writeFile(filePath, data, 'utf-8', (err) => {
+        if (err) resolve({ success: false, error: err.message })
+        else resolve({ success: true })
+      })
+    })
   })
 
   // 自动启动服务器

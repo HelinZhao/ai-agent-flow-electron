@@ -22,6 +22,7 @@ import BranchSelectionModal from './BranchSelectionModal';
 import { autoLayout } from './layoutUtils';
 import { LayoutDirectionContext, LayoutDirection } from './LayoutDirectionContext';
 import { useWorkflowHistory } from '@renderer/hooks/useWorkflowHistory';
+import { useSettingsStore } from '@renderer/store/settingsStore';
 import { v4 as uuidv4 } from 'uuid';
 import { useUpdateEffect } from 'ahooks';
 
@@ -65,13 +66,15 @@ function WorkflowDesigner(props: WorkflowDesignerProps): React.JSX.Element {
     editEdgeId: null,
   });
   const { screenToFlowPosition, fitView, } = useReactFlow();
-  const [layoutDirection, setLayoutDirection] = useState<LayoutDirection>(workflow?.layoutDirection || 'horizontal');
+  const defaultDir = useSettingsStore.getState().layoutDirection
+  const [layoutDirection, setLayoutDirection] = useState<LayoutDirection>(workflow?.layoutDirection || defaultDir || 'horizontal');
 
   const { recordHistory, undo, redo, initHistory } = useWorkflowHistory();
+  const [manualSaveVersion, setManualSaveVersion] = useState(0)
 
   // 当切换工作流时，恢复其保存的布局方向
   useUpdateEffect(() => {
-    setLayoutDirection(workflow?.layoutDirection || 'horizontal');
+    setLayoutDirection(workflow?.layoutDirection || useSettingsStore.getState().layoutDirection || 'horizontal');
   }, [workflow?.layoutDirection]);
 
   const initialNodes: WorkflowNode[] = useMemo(() => {
@@ -146,12 +149,26 @@ function WorkflowDesigner(props: WorkflowDesignerProps): React.JSX.Element {
       } else if ((e.ctrlKey || e.metaKey) && e.key === 's') {
         e.preventDefault();
         onSaveRef.current(nodesRef.current, edgesRef.current);
+        setManualSaveVersion(v => v + 1);
       }
     };
 
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, [undo, redo, setNodes, setEdges]);
+
+  // 自动保存（从 settingsStore 读取，手动保存后重置间隔）
+  useEffect(() => {
+    let timer: ReturnType<typeof setTimeout> | undefined
+    const { autoSave, autoSaveInterval } = useSettingsStore.getState()
+    if (autoSave && autoSaveInterval > 0) {
+      timer = setInterval(() => {
+        onSaveRef.current(nodesRef.current, edgesRef.current)
+      }, autoSaveInterval * 1000)
+    }
+    return () => { if (timer) clearInterval(timer) }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [workflow?.id, manualSaveVersion])
 
   // 包装 onNodesChange/onEdgesChange，在删除时记录历史
   const handleNodesChange = useCallback((changes: any[]) => {
@@ -403,7 +420,7 @@ function WorkflowDesigner(props: WorkflowDesignerProps): React.JSX.Element {
             <Background />
             <Controls />
             <ControlPanel
-              onSave={() => onSave(nodes, edges)}
+              onSave={() => { onSave(nodes, edges); setManualSaveVersion(v => v + 1) }}
               onRun={onRun}
               isRunning={isRunning}
               onAutoLayout={handleAutoLayout}

@@ -3,6 +3,15 @@ import { electronAPI } from '@electron-toolkit/preload'
 
 // 为渲染器进程定制API
 const api = {
+  // 文件操作
+  file: {
+    write: (filePath: string, data: string) => ipcRenderer.invoke('file:write', filePath, data),
+  },
+  // 文件对话框
+  dialog: {
+    showSave: (options: { defaultPath?: string; filters?: { name: string; extensions: string[] }[] }) =>
+      ipcRenderer.invoke('dialog:showSave', options),
+  },
   // 服务器控制API
   server: {
     start: (port?: number) => ipcRenderer.invoke('server:start', port),

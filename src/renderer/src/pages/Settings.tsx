@@ -2,6 +2,10 @@ import React, { useState } from 'react';
 import SettingsLLM from './settings/SettingsLLM';
 import SettingsTheme from './settings/SettingsTheme';
 import SettingsData from './settings/SettingsData';
+import SettingsShortcuts from './settings/SettingsShortcuts';
+import SettingsBackup from './settings/SettingsBackup';
+import SettingsGeneral from './settings/SettingsGeneral';
+import SettingsAbout from './settings/SettingsAbout';
 
 const TAB_ICONS: Record<string, React.ReactNode> = {
   llm: (
@@ -19,12 +23,36 @@ const TAB_ICONS: Record<string, React.ReactNode> = {
       <path d="M4 7v10c0 2.21 3.582 4 8 4s8-1.79 8-4V7M4 7c0 2.21 3.582 4 8 4s8-1.79 8-4M4 7c0-2.21 3.582-4 8-4s8 1.79 8 4m0 5c0 2.21-3.582 4-8 4s-8-1.79-8-4" />
     </svg>
   ),
+  general: (
+    <svg className="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+      <circle cx="12" cy="12" r="3" /><path d="M12 1v2m0 18v2M4.22 4.22l1.42 1.42m12.72 12.72l1.42 1.42M1 12h2m18 0h2M4.22 19.78l1.42-1.42M18.36 5.64l1.42-1.42" />
+    </svg>
+  ),
+  shortcuts: (
+    <svg className="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+      <rect x="2" y="4" width="20" height="16" rx="2" /><path d="M6 8h.01M10 8h.01M14 8h.01M18 8h.01M8 12h.01M12 12h.01M16 12h.01M7 16h10" />
+    </svg>
+  ),
+  backup: (
+    <svg className="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4m14-7l-5 5-5-5m5 5V3" /><path d="M7 10l5 5 5-5" />
+    </svg>
+  ),
+  about: (
+    <svg className="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+      <circle cx="12" cy="12" r="10" /><path d="M12 16v-4m0-4h.01" />
+    </svg>
+  ),
 }
 
 const SETTINGS_TABS = [
   { id: 'llm', label: '模型配置', desc: 'LLM API 密钥与参数' },
+  { id: 'general', label: '通用', desc: '应用偏好与默认行为' },
+  { id: 'shortcuts', label: '快捷键', desc: '键盘与鼠标操作' },
+  { id: 'backup', label: '备份', desc: '数据导入与导出' },
   { id: 'theme', label: '外观主题', desc: '界面颜色与显示' },
   { id: 'data', label: '数据管理', desc: '数据库与存储空间' },
+  { id: 'about', label: '关于', desc: '版本信息与技术栈' },
 ]
 
 export default function Settings(): React.JSX.Element {
@@ -34,10 +62,18 @@ export default function Settings(): React.JSX.Element {
     switch (activeTab) {
       case 'llm':
         return <SettingsLLM />;
+      case 'general':
+        return <SettingsGeneral />;
+      case 'shortcuts':
+        return <SettingsShortcuts />;
+      case 'backup':
+        return <SettingsBackup />;
       case 'theme':
         return <SettingsTheme />;
       case 'data':
         return <SettingsData />;
+      case 'about':
+        return <SettingsAbout />;
       default:
         return <SettingsLLM />;
     }
@@ -65,7 +101,7 @@ export default function Settings(): React.JSX.Element {
         <div className="mx-5 h-px bg-gradient-to-r from-transparent via-gray-200 dark:via-gray-700 to-transparent" />
 
         {/* Navigation */}
-        <nav className="flex-1 px-3 pt-4 pb-4 space-y-1">
+        <nav className="flex-1 px-3 pt-4 pb-4 space-y-1 overflow-y-auto">
           {SETTINGS_TABS.map(tab => {
             const isActive = activeTab === tab.id
             return (
@@ -93,7 +129,7 @@ export default function Settings(): React.JSX.Element {
         </nav>
       </div>
       <div className="flex-1 flex justify-center p-6 overflow-auto bg-gray-50/50 dark:bg-gray-800/30">
-        <div className="w-full max-w-2xl">
+        <div className="w-full max-w-2xl h-fit">
           {renderContent()}
         </div>
       </div>

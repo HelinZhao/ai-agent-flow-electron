@@ -178,7 +178,7 @@ export default function SettingsLLM(): React.JSX.Element {
     };
 
     return (
-        <div className="max-w-2xl pb-4">
+        <div className="max-w-2xl">
             <div className="flex justify-between items-center mb-6">
                 <h3 className="text-lg font-bold text-gray-900 dark:text-white">大模型API配置</h3>
                 <CustomButton

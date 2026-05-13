@@ -28,11 +28,21 @@ interface WindowAPI {
   isMaximized: () => Promise<boolean>
 }
 
+interface FileAPI {
+  write: (filePath: string, data: string) => Promise<{ success: boolean; error?: string }>
+}
+
+interface DialogAPI {
+  showSave: (options?: { defaultPath?: string; filters?: { name: string; extensions: string[] }[] }) => Promise<string | null>
+}
+
 interface CustomAPI {
   server: ServerAPI
   chatRecord: ChatRecordAPI
   notify: NotifyAPI
   window: WindowAPI
+  file: FileAPI
+  dialog: DialogAPI
 }
 
 declare global {

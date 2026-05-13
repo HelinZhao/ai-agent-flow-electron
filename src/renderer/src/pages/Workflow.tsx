@@ -11,11 +11,13 @@ import CustomButton from '@renderer/components/ui/CustomButton';
 import CustomTextarea from '@renderer/components/ui/CustomTextarea';
 import CustomFileUpload from '@renderer/components/ui/CustomFileUpload';
 import ResponsiveGrid from '@renderer/components/ui/ResponsiveGrid';
+import MessageBanner from '@renderer/components/ui/MessageBanner';
 import { NODE_DEFS_MAP } from '@renderer/components/workflow/nodes';
 
 export default function Workflow(): React.JSX.Element {
     const { workflows, addWorkflow, updateWorkflow, deleteWorkflow, activeLLMConfig } = useWorkflowStore();
     const [selectedWorkflowId, setSelectedWorkflowId] = useState<string | null>(null);
+    const [saveMessage, setSaveMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
 
     // 从 store 列表中查找当前选中工作流的持久化元数据
     const selectedWorkflow = useMemo(() =>
@@ -128,9 +130,9 @@ export default function Workflow(): React.JSX.Element {
         try {
             const updated = { ...selectedWorkflow, nodes, edges, layoutDirection: canvasDataRef.current.layoutDirection, updatedAt: new Date() };
             updateWorkflow(selectedWorkflow.id, updated);
-            alert('保存成功');
+            setSaveMessage({ type: 'success', text: '已保存' });
         } catch {
-            alert('保存失败');
+            setSaveMessage({ type: 'error', text: '保存失败' });
         }
     }, [selectedWorkflow, updateWorkflow, validateStartNode]);
 
@@ -259,7 +261,7 @@ export default function Workflow(): React.JSX.Element {
         return (
             <div className="mx-auto py-6 px-4 sm:px-6 lg:px-8 h-full flex flex-col">
                 {/* 顶部导航 */}
-                <div className="flex items-center space-x-3 mb-4 flex-shrink-0">
+                <div className="flex items-center space-x-3 mb-4 flex-shrink-0 relative">
                     <button
                         onClick={handleBack}
                         className="flex items-center justify-center w-8 h-8 rounded-lg text-gray-500 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors"
@@ -277,6 +279,16 @@ export default function Workflow(): React.JSX.Element {
                             )}
                         </div>
                     </div>
+                    {saveMessage && (
+                        <div className="absolute top-0 right-0 z-50">
+                            <MessageBanner
+                                type={saveMessage.type}
+                                text={saveMessage.text}
+                                onClose={() => setSaveMessage(null)}
+                                autoCloseMs={2000}
+                            />
+                        </div>
+                    )}
                 </div>
 
                 {/* 设计画布 */}
@@ -612,7 +624,7 @@ export default function Workflow(): React.JSX.Element {
                                     </div>
                                 </div>
                             ))}
-                            </ResponsiveGrid>
+                        </ResponsiveGrid>
 
                         {/* 搜索无结果 */}
                         {filteredWorkflows.length === 0 && searchTerm && (
