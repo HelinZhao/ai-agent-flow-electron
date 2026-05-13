@@ -60,7 +60,7 @@ function resolveOllamaBinary(): string | undefined {
   return undefined
 }
 
-// 解析打包的 bge-m3 GGUF 模型文件路径
+// 解析打包的 bge-m3 GGUF 模型文件路径（用于本地快速导入）
 function resolveBundledModelPath(): string | undefined {
   const modelFile = 'bge-m3-q8_0.gguf'
   const candidates: string[] = []

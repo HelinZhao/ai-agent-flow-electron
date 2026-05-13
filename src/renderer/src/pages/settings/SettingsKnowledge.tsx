@@ -1,4 +1,4 @@
-import React, { useState, useCallback } from 'react'
+import React, { useState, useEffect } from 'react'
 import { useForm } from 'react-hook-form'
 import { useWorkflowStore } from '@renderer/store/workflowStore'
 import { KnowledgeBase } from '@renderer/types'
@@ -7,6 +7,7 @@ import CustomButton from '@renderer/components/ui/CustomButton'
 import CustomSelect from '@renderer/components/ui/CustomSelect'
 import KnowledgeDetail from './KnowledgeDetail'
 import { KB_DEFAULTS, CHUNK_SIZE_RANGE, CHUNK_OVERLAP_RANGE, TOP_K_RANGE, EXTERNAL_KB_PROVIDER_META, VECTOR_STORE_OPTIONS, VECTOR_STORE_CONFIG_FIELDS, VECTOR_STORE_DEFAULTS } from '@renderer/config'
+import { ollamaApi, PullProgress } from '@renderer/lib/api'
 
 const KBCard = React.memo(function KBCard({
   kb,
@@ -118,6 +119,30 @@ export default function SettingsKnowledge(): React.JSX.Element {
   const [selectedKbId, setSelectedKbId] = useState<string | null>(null)
   const [deleteKbTarget, setDeleteKbTarget] = useState<string | null>(null)
   const [searchTerm, setSearchTerm] = useState('')
+  const [modelExists, setModelExists] = useState<boolean | null>(null)
+  const [modelPulling, setModelPulling] = useState(false)
+  const [modelPullProgress, setModelPullProgress] = useState<PullProgress | null>(null)
+
+  // 检查 embedding 模型状态
+  useEffect(() => {
+    let cancel: (() => void) | null = null
+    ollamaApi.getStatus().then(status => {
+      setModelExists(status.modelExists)
+      if (status.pulling) {
+        setModelPulling(true)
+        cancel = ollamaApi.subscribePullProgress(progress => {
+          setModelPullProgress(progress)
+          if (progress.status === 'success') {
+            setModelExists(true)
+            setModelPulling(false)
+          } else if (progress.status === 'error') {
+            setModelPulling(false)
+          }
+        })
+      }
+    }).catch(() => setModelExists(false))
+    return () => { cancel?.() }
+  }, [])
 
   const filteredKbList = knowledgeBases.filter(kb =>
     searchTerm === '' ||
@@ -177,6 +202,31 @@ export default function SettingsKnowledge(): React.JSX.Element {
     try { parsed = JSON.parse(current) } catch { /* ignore */ }
     parsed[key] = value
     setValue('providerConfig', JSON.stringify(parsed))
+  }
+
+  const handleModelPull = async (): Promise<void> => {
+    setModelPulling(true)
+    setModelPullProgress(null)
+    try {
+      const res = await ollamaApi.pullModel()
+      if (res.success) {
+        ollamaApi.subscribePullProgress(progress => {
+          setModelPullProgress(progress)
+          if (progress.status === 'success') {
+            setModelExists(true)
+            setModelPulling(false)
+          } else if (progress.status === 'error') {
+            setModelPulling(false)
+          }
+        })
+      } else {
+        setModelPullProgress({ status: 'error', message: res.message })
+        setModelPulling(false)
+      }
+    } catch {
+      setModelPullProgress({ status: 'error', message: '请求失败' })
+      setModelPulling(false)
+    }
   }
 
   const handleProviderChange = (newProvider: string): void => {
@@ -275,6 +325,112 @@ export default function SettingsKnowledge(): React.JSX.Element {
           <button onClick={() => setMessage(null)} className="ml-3 opacity-60 hover:opacity-100 flex-shrink-0">
             <svg className="w-3.5 h-3.5 inline" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M18 6L6 18M6 6l12 12" /></svg>
           </button>
+        </div>
+      )}
+
+      {/* Embedding 模型状态卡片 */}
+      {modelExists !== null && (
+        <div className={`mb-5 p-4 rounded-xl border transition-colors ${
+          modelExists
+            ? 'bg-green-50 dark:bg-green-900/10 border-green-200 dark:border-green-800'
+            : modelPullProgress?.status === 'error'
+              ? 'bg-red-50 dark:bg-red-900/10 border-red-200 dark:border-red-800'
+              : modelPulling
+                ? 'bg-blue-50 dark:bg-blue-900/10 border-blue-200 dark:border-blue-800'
+                : 'bg-amber-50 dark:bg-amber-900/10 border-amber-200 dark:border-amber-800'
+        }`}>
+          <div className="flex items-start justify-between gap-4">
+            <div className="flex items-start gap-3 min-w-0">
+              <div className={`flex-shrink-0 w-9 h-9 rounded-lg flex items-center justify-center ${
+                modelExists
+                  ? 'bg-green-100 dark:bg-green-900/20'
+                  : modelPulling
+                    ? 'bg-blue-100 dark:bg-blue-900/20'
+                    : 'bg-amber-100 dark:bg-amber-900/20'
+              }`}>
+                {modelExists ? (
+                  <svg className="w-4 h-4 text-green-600 dark:text-green-400" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                    <path d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                  </svg>
+                ) : modelPulling ? (
+                  <svg className="w-4 h-4 text-blue-600 dark:text-blue-400 animate-spin" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                    <path d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+                  </svg>
+                ) : (
+                  <svg className="w-4 h-4 text-amber-600 dark:text-amber-400" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                    <path d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                  </svg>
+                )}
+              </div>
+              <div className="min-w-0">
+                <p className="text-sm font-semibold text-gray-900 dark:text-white">
+                  Embedding 模型
+                  <code className="ml-1.5 px-1.5 py-0.5 rounded bg-gray-100 dark:bg-gray-700 text-blue-600 dark:text-blue-400 text-xs font-mono">bge-m3-q8_0</code>
+                </p>
+                <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">
+                  {modelExists
+                    ? '模型已就绪，内部知识库可正常使用'
+                    : modelPullProgress?.status === 'error'
+                      ? modelPullProgress.message || '模型下载失败，请重试'
+                      : modelPulling
+                        ? modelPullProgress?.status || '正在下载...'
+                        : '模型未安装，内部知识库需要此模型进行文档向量化'}
+                </p>
+              </div>
+            </div>
+
+            {/* 操作按钮 */}
+            <div className="flex-shrink-0">
+              {modelExists ? (
+                <span className="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-lg bg-green-100 dark:bg-green-900/20 text-green-700 dark:text-green-300 text-xs font-medium">
+                  <span className="w-1.5 h-1.5 rounded-full bg-green-500" />
+                  已就绪
+                </span>
+              ) : modelPulling ? (
+                <span className="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-lg bg-blue-100 dark:bg-blue-900/20 text-blue-700 dark:text-blue-300 text-xs font-medium">
+                  下载中...
+                </span>
+              ) : !modelPullProgress?.status ? (
+                <CustomButton
+                  size="sm"
+                  variant="primary"
+                  onClick={handleModelPull}
+                >
+                  下载模型
+                </CustomButton>
+              ) : (
+                <CustomButton
+                  size="sm"
+                  variant="primary"
+                  onClick={handleModelPull}
+                >
+                  重新下载
+                </CustomButton>
+              )}
+            </div>
+          </div>
+
+          {/* 拉取进度条 */}
+          {modelPulling && modelPullProgress && (
+            <div className="mt-3">
+              <div className="w-full h-1.5 bg-blue-200 dark:bg-blue-800 rounded-full overflow-hidden">
+                <div
+                  className="h-full bg-gradient-to-r from-blue-500 to-purple-500 rounded-full transition-all duration-300"
+                  style={{
+                    width: `${modelPullProgress.total && modelPullProgress.completed
+                      ? Math.round((modelPullProgress.completed / modelPullProgress.total) * 100)
+                      : 30}%`
+                  }}
+                />
+              </div>
+              <p className="text-xs text-blue-600 dark:text-blue-400 mt-1">
+                {modelPullProgress.status}
+                {modelPullProgress.completed != null && modelPullProgress.total != null
+                  ? ` (${Math.round(modelPullProgress.completed / 1024 / 1024)}MB / ${Math.round(modelPullProgress.total / 1024 / 1024)}MB)`
+                  : ''}
+              </p>
+            </div>
+          )}
         </div>
       )}
 

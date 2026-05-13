@@ -507,3 +507,50 @@ export const waitForServer = async (maxRetries = 120, interval = 1000): Promise<
 }
 
 export default api
+
+// Ollama 模型管理 API
+export interface OllamaStatus {
+  ollamaRunning: boolean
+  modelExists: boolean
+  pulling: boolean
+}
+
+export interface PullProgress {
+  status: string
+  completed?: number
+  total?: number
+  message?: string
+}
+
+export const ollamaApi = {
+  getStatus: (): Promise<OllamaStatus> => api.get('/ollama/status'),
+
+  pullModel: (): Promise<{ success: boolean; message?: string }> =>
+    api.post('/ollama/pull'),
+
+  subscribePullProgress: (
+    onProgress: (progress: PullProgress) => void
+  ): (() => void) => {
+    const eventSource = new EventSource(`${API_BASE_URL}/ollama/pull-progress`)
+
+    eventSource.onmessage = (event) => {
+      try {
+        const data = JSON.parse(event.data) as PullProgress
+        onProgress(data)
+        if (data.status === 'success' || data.status === 'error') {
+          eventSource.close()
+        }
+      } catch {
+        // ignore parse errors
+      }
+    }
+
+    eventSource.onerror = () => {
+      eventSource.close()
+    }
+
+    return () => {
+      eventSource.close()
+    }
+  }
+}

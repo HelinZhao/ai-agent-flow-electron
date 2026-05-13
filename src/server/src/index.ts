@@ -2,6 +2,7 @@ import express from 'express'
 import cors from 'cors'
 import path from 'path'
 import fs from 'fs/promises'
+import { EventEmitter } from 'events'
 import { initDatabase } from './database'
 import workflowsRouter from './routes/workflows'
 import agentsRouter from './routes/agents'
@@ -24,11 +25,11 @@ import {
 import {
   isOllamaRunning,
   tryStartOllama,
-  pullOllamaModel,
   stopOllama,
   setOllamaBinaryPath,
   setOllamaRegistryMirror,
-  downloadAndImportModel,
+  checkOllamaModel,
+  pullOllamaModelStream,
   importLocalGGUFModel,
   logGpuInfo
 } from './utils/ollama'
@@ -41,6 +42,9 @@ export class LocalServer {
   private ollamaBinaryPath: string | null = null
   private ollamaRegistryMirror: string | null = null
   private bundledModelPath: string | null = null
+  private modelExists = false
+  private isPulling = false
+  private pullEmitter = new EventEmitter()
 
   constructor(options?: {
     ollamaBinaryPath?: string
@@ -89,6 +93,66 @@ export class LocalServer {
     this.app.use('/api/data', dataRouter)
     this.app.use('/api/execute-workflow', executeWorkflowRouter)
     this.app.use('/api/logs', logsRouter)
+
+    // Ollama 模型状态与拉取路由
+    this.app.get('/api/ollama/status', (_req, res) => {
+      res.json({
+        ollamaRunning: true, // 能收到请求说明 Ollama 已启动
+        modelExists: this.modelExists,
+        pulling: this.isPulling
+      })
+    })
+
+    this.app.post('/api/ollama/pull', (_req, res) => {
+      if (this.isPulling) {
+        res.json({ success: false, message: '正在拉取中，请勿重复操作' })
+        return
+      }
+      this.isPulling = true
+
+      // 后台拉取，不阻塞响应
+      pullOllamaModelStream(OLLAMA_DEFAULT_MODEL, (status, completed, total) => {
+        this.pullEmitter.emit('progress', { status, completed, total })
+      })
+        .then((success) => {
+          this.isPulling = false
+          this.modelExists = success
+          this.pullEmitter.emit('progress', {
+            status: success ? 'success' : 'error',
+            message: success ? '模型拉取完成' : '模型拉取失败'
+          })
+        })
+        .catch((error) => {
+          this.isPulling = false
+          this.pullEmitter.emit('progress', {
+            status: 'error',
+            message: error?.message || '模型拉取出错'
+          })
+        })
+
+      res.json({ success: true })
+    })
+
+    this.app.get('/api/ollama/pull-progress', (req, res) => {
+      res.writeHead(200, {
+        'Content-Type': 'text/event-stream',
+        'Cache-Control': 'no-cache',
+        Connection: 'keep-alive'
+      })
+
+      const onProgress = (data: any): void => {
+        res.write(`data: ${JSON.stringify(data)}\n\n`)
+        if (data.status === 'success' || data.status === 'error') {
+          res.end()
+        }
+      }
+
+      this.pullEmitter.on('progress', onProgress)
+
+      req.on('close', () => {
+        this.pullEmitter.off('progress', onProgress)
+      })
+    })
 
     // 附件文件服务：/api/attachments/:id/:filename
     this.app.get('/api/attachments/:id/:filename', async (req, res) => {
@@ -139,20 +203,7 @@ export class LocalServer {
     })
   }
 
-  /** 检查 Ollama 中指定模型是否已存在 */
-  private async checkOllamaModel(model: string): Promise<boolean> {
-    try {
-      const res = await fetch('http://127.0.0.1:11434/api/tags', {
-        signal: AbortSignal.timeout(5000)
-      })
-      if (!res.ok) return false
-      const data = (await res.json()) as { models?: { name: string }[] }
-      return data.models?.some((m: { name: string }) => m.name.startsWith(model)) ?? false
-    } catch {
-      return false
-    }
-  }
-
+  /** 初始化 Ollama 服务：启动进程 + 检查模型（不阻塞拉取） */
   private async initOllama(): Promise<void> {
     try {
       // 设置内嵌的 ollama 可执行文件路径（如有）
@@ -162,57 +213,36 @@ export class LocalServer {
 
       if (await isOllamaRunning()) {
         console.log('[Ollama] 服务已就绪')
-        await logGpuInfo()
-        return
-      }
-
-      console.log('[Ollama] 尝试启动服务...')
-      const started = await tryStartOllama()
-      if (!started) {
-        console.warn('[Ollama] 未能自动启动，请确保已安装 Ollama: https://ollama.com')
-        return
+      } else {
+        console.log('[Ollama] 尝试启动服务...')
+        const started = await tryStartOllama()
+        if (!started) {
+          console.warn('[Ollama] 未能自动启动，请确保已安装 Ollama: https://ollama.com')
+          return
+        }
       }
 
       // 检查 bge-m3 模型是否存在
-      let hasModel = await this.checkOllamaModel(OLLAMA_DEFAULT_MODEL)
-      if (!hasModel) {
-        // 1. 优先导入打包的本地模型（最快）
+      this.modelExists = await checkOllamaModel(OLLAMA_DEFAULT_MODEL)
+      if (this.modelExists) {
+        console.log(`[Ollama] 模型 ${OLLAMA_DEFAULT_MODEL} 已就绪`)
+      } else {
+        // 有打包的本地模型文件时直接导入（快速，不需要下载）
         if (this.bundledModelPath) {
-          console.log('[Ollama] 尝试导入打包的模型...')
-          hasModel = await importLocalGGUFModel(OLLAMA_DEFAULT_MODEL, this.bundledModelPath)
-          if (hasModel) {
+          console.log('[Ollama] 尝试导入打包的本地模型...')
+          const imported = await importLocalGGUFModel(OLLAMA_DEFAULT_MODEL, this.bundledModelPath)
+          if (imported) {
             for (let i = 0; i < 10; i++) {
-              if (await this.checkOllamaModel(OLLAMA_DEFAULT_MODEL)) break
+              if (await checkOllamaModel(OLLAMA_DEFAULT_MODEL)) break
               await new Promise((r) => setTimeout(r, 1000))
             }
           }
+          this.modelExists = await checkOllamaModel(OLLAMA_DEFAULT_MODEL)
         }
-        // 2. 打包模型不存在或导入失败，尝试 registry 拉取
-        if (!hasModel) {
-          console.log(`[Ollama] 尝试在线拉取 ${OLLAMA_DEFAULT_MODEL}...`)
-          const pulled = await pullOllamaModel(OLLAMA_DEFAULT_MODEL)
-          if (pulled) {
-            for (let i = 0; i < 10; i++) {
-              hasModel = await this.checkOllamaModel(OLLAMA_DEFAULT_MODEL)
-              if (hasModel) break
-              await new Promise((r) => setTimeout(r, 1000))
-            }
-          }
-        }
-        // 3. 最后尝试从 HF 镜像下载 GGUF 导入
-        if (!hasModel) {
-          console.log('[Ollama] 尝试从 HuggingFace 镜像下载...')
-          hasModel = await downloadAndImportModel(
-            OLLAMA_DEFAULT_MODEL,
-            'gpustack/bge-m3-GGUF',
-            'bge-m3-Q4_K_M.gguf',
-            'https://hf-mirror.com'
-          )
-        }
-        if (!hasModel) {
-          console.warn(
-            `[Ollama] 模型 ${OLLAMA_DEFAULT_MODEL} 下载失败，请手动执行: ollama pull bge-m3`
-          )
+        if (this.modelExists) {
+          console.log(`[Ollama] 模型 ${OLLAMA_DEFAULT_MODEL} 导入成功`)
+        } else {
+          console.log(`[Ollama] 模型 ${OLLAMA_DEFAULT_MODEL} 未安装，等待用户在线下载`)
         }
       }
 

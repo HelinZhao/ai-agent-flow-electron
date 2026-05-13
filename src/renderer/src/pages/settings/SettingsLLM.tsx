@@ -354,7 +354,7 @@ export default function SettingsLLM(): React.JSX.Element {
                         </label>
                         <CustomInput
                             {...register('model')}
-                            placeholder={provider === 'ollama' ? 'bge-m3（推荐中文） / nomic-embed-text' : "gpt-3.5-turbo"}
+                            placeholder={provider === 'ollama' ? 'bge-m3-q8_0（推荐中文） / nomic-embed-text' : "gpt-3.5-turbo"}
                             helper={provider === 'ollama' ? '先在终端运行 ollama pull <模型名> 下载模型' : undefined}
                             size='sm'
                         />

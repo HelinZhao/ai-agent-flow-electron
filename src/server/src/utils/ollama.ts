@@ -1,5 +1,6 @@
 import { spawn, ChildProcess } from 'child_process'
 import { Embeddings } from '@langchain/core/embeddings'
+import { OLLAMA_DEFAULT_HOST } from '../config'
 
 // 常见 Ollama embedding 模型对应的向量维度
 const OLLAMA_KNOWN_DIMS: Record<string, number> = {
@@ -26,7 +27,7 @@ export function getOllamaDim(model: string): number {
 
 // 全局 Ollama 进程引用
 let ollamaProcess: ChildProcess | null = null
-const ollamaHost = 'http://127.0.0.1:11434'
+const ollamaHost = OLLAMA_DEFAULT_HOST
 let ollamaBinaryPath: string | null = null
 let ollamaRegistryMirror: string | null = null
 let gpuInfoLogged = false
@@ -50,6 +51,84 @@ export async function isOllamaRunning(): Promise<boolean> {
     return res.ok
   } catch {
     return false
+  }
+}
+
+/** 检查 Ollama 中指定模型是否已存在 */
+export async function checkOllamaModel(model: string): Promise<boolean> {
+  try {
+    const res = await fetch(`${ollamaHost}/api/tags`, { signal: AbortSignal.timeout(5000) })
+    if (!res.ok) return false
+    const data = (await res.json()) as { models?: { name: string }[] }
+    return data.models?.some((m) => m.name.startsWith(model)) ?? false
+  } catch {
+    return false
+  }
+}
+
+/** 拉取 Ollama 模型（流式，逐行通过回调推送进度） */
+export async function pullOllamaModelStream(
+  model: string,
+  onProgress?: (status: string, completed?: number, total?: number) => void
+): Promise<boolean> {
+  try {
+    console.log(`[Ollama] 开始拉取模型 ${model}...`)
+    const res = await fetch(`${ollamaHost}/api/pull`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ name: model })
+    })
+    if (!res.ok) throw new Error(`pull failed: ${res.status}`)
+
+    const reader = res.body?.getReader()
+    if (!reader) throw new Error('no response body')
+
+    const decoder = new TextDecoder()
+    let buffer = ''
+
+    while (true) {
+      const { done, value } = await reader.read()
+      if (done) break
+
+      buffer += decoder.decode(value, { stream: true })
+      const lines = buffer.split('\n')
+
+      // Buffer 保留最后一个不完整的行
+      buffer = lines.pop() || ''
+
+      for (const line of lines) {
+        if (!line.trim()) continue
+        try {
+          const data = JSON.parse(line)
+          if (data.status && onProgress) {
+            onProgress(data.status, data.completed, data.total)
+          }
+          if (data.status === 'success') {
+            console.log(`[Ollama] 模型 ${model} 拉取完成`)
+            return true
+          }
+        } catch {
+          // 跳过解析失败的行
+        }
+      }
+    }
+
+    // 处理 buffer 中剩余的内容
+    if (buffer.trim()) {
+      try {
+        const data = JSON.parse(buffer)
+        if (data.status === 'success') {
+          console.log(`[Ollama] 模型 ${model} 拉取完成`)
+          return true
+        }
+      } catch { /* ignore */ }
+    }
+
+    console.warn(`[Ollama] 模型拉取可能未完成`)
+    return false
+  } catch (error) {
+    console.error(`[Ollama] 拉取模型失败:`, error)
+    throw error // 让调用方处理错误
   }
 }
 

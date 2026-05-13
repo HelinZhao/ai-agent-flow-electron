@@ -13,7 +13,7 @@ async function getEmbeddingsInstance(): Promise<{ embeddings: Embeddings; dims: 
   // 确保 Ollama 已就绪
   if (!(await isOllamaRunning())) {
     if (!(await tryStartOllama())) {
-      throw new Error('Ollama 服务未启动。请先安装 Ollama: https://ollama.com\n然后运行: ollama pull bge-m3')
+      throw new Error(`Ollama 服务未启动。请先安装 Ollama: https://ollama.com\n然后运行: ollama pull ${OLLAMA_DEFAULT_MODEL}`)
     }
   }
 

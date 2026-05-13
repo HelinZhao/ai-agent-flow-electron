@@ -87,8 +87,8 @@ export const PROVIDER_DEFAULT_BASE_URLS: Record<string, string> = {
 /** Ollama 默认服务地址 */
 export const OLLAMA_DEFAULT_HOST = 'http://127.0.0.1:11434'
 
-/** Ollama 默认 embedding 模型 */
-export const OLLAMA_DEFAULT_MODEL = 'bge-m3'
+/** Ollama 默认 embedding 模型（使用 Q8_0 量化版本，体积约 605MB） */
+export const OLLAMA_DEFAULT_MODEL = 'bge-m3:q8_0'
 
 /** LLM 提供商对应的 API Key 常见前缀（用于输入校验提示） */
 export const PROVIDER_API_KEY_PREFIXES: Record<string, string> = {
