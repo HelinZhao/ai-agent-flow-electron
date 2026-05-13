@@ -1,6 +1,7 @@
 import { memo, useEffect, useRef, useState } from 'react'
 import { ExecutionSummary, WorkflowExecutionProgress, NodeExecutionResult } from '@renderer/types'
 import { workflowExecutionApi } from '@renderer/lib/api'
+import { useWorkflowStore } from '@renderer/store/workflowStore'
 
 type StatusFilter = 'all' | 'running' | 'paused' | 'completed' | 'failed'
 
@@ -48,10 +49,14 @@ const ExecutionMonitor = () => {
   const [detailId, setDetailId] = useState<string | null>(null)
   const pollingRef = useRef<ReturnType<typeof setInterval>>(null)
   const intervalRef = useRef(2000)
+  const currentPage = useWorkflowStore(s => s.currentPage)
 
   const statusParam = filter === 'all' ? undefined : filter
 
   useEffect(() => {
+    // 不在监控页时停止轮询
+    if (currentPage !== '/monitor') return
+
     let cancelled = false
 
     const poll = async () => {
@@ -77,7 +82,7 @@ const ExecutionMonitor = () => {
       cancelled = true
       if (pollingRef.current) clearTimeout(pollingRef.current)
     }
-  }, [statusParam])
+  }, [statusParam, currentPage])
 
   const handleStop = async (id: string) => {
     try {
