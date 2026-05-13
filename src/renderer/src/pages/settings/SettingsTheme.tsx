@@ -1,4 +1,5 @@
 import React, { useState } from 'react'
+import MessageBanner from '@renderer/components/ui/MessageBanner'
 import { useThemeStore, Theme } from '@renderer/store/themeStore'
 
 const THEME_OPTIONS: { value: Theme; label: string; icon: string; description: string; preview: string }[] = [
@@ -32,7 +33,6 @@ export default function SettingsTheme(): React.JSX.Element {
   const handleSetTheme = (value: Theme) => {
     setTheme(value)
     setMessage({ type: 'success', text: `已切换到${THEME_OPTIONS.find(o => o.value === value)?.label}` })
-    setTimeout(() => setMessage(null), 2000)
   }
 
   return (
@@ -78,10 +78,12 @@ export default function SettingsTheme(): React.JSX.Element {
       </div>
 
       {message && (
-        <div className="flex items-center gap-2 px-4 py-3 rounded-lg text-sm bg-green-50 text-green-700 dark:bg-green-900/20 dark:text-green-400 border border-green-200 dark:border-green-800">
-          <svg className="w-4 h-4 flex-shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
-          {message.text}
-        </div>
+        <MessageBanner
+          type="success"
+          text={message.text}
+          onClose={() => setMessage(null)}
+          autoCloseMs={2000}
+        />
       )}
     </div>
   )

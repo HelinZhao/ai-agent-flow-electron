@@ -3,6 +3,7 @@ import { useWorkflowStore } from '@renderer/store/workflowStore'
 import { KnowledgeBase } from '@renderer/types'
 import { knowledgeBaseApi } from '@renderer/lib/api'
 import CustomButton from '@renderer/components/ui/CustomButton'
+import MessageBanner from '@renderer/components/ui/MessageBanner'
 import ChunkViewer from '@renderer/components/workflow/config/ChunkViewer'
 import { KB_UPLOAD_ACCEPT, EXTERNAL_KB_PROVIDER_META } from '@renderer/config'
 
@@ -72,16 +73,11 @@ export default function KnowledgeDetail({ kb, onBack }: KnowledgeDetailProps): R
     <div>
       {/* 提示消息 */}
       {message && (
-        <div className={`mb-4 px-4 py-2.5 rounded-lg text-sm ${
-          message.type === 'success'
-            ? 'bg-green-50 text-green-700 dark:bg-green-900/20 dark:text-green-400 border border-green-200 dark:border-green-800'
-            : 'bg-red-50 text-red-700 dark:bg-red-900/20 dark:text-red-400 border border-red-200 dark:border-red-800'
-        }`}>
-          {message.text}
-          <button onClick={() => setMessage(null)} className="ml-2 opacity-60 hover:opacity-100">
-            <svg className="w-3.5 h-3.5 inline" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M18 6L6 18M6 6l12 12" /></svg>
-          </button>
-        </div>
+        <MessageBanner
+          type={message.type}
+          text={message.text}
+          onClose={() => setMessage(null)}
+        />
       )}
 
       {/* ========== 顶部导航 ========== */}

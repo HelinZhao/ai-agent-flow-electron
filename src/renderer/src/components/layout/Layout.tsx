@@ -38,10 +38,11 @@ const Layout: React.FC<LayoutProps> = ({ children, currentPage, onNavigate }: La
           </div>
           <div className="flex items-center space-x-3 app-no-drag">
             {loading && (
-              <div className="flex items-center space-x-1.5 px-2 py-1 rounded-lg bg-blue-50 dark:bg-blue-900/30">
-                <div className="w-2 h-2 bg-blue-500 rounded-full animate-bounce" style={{ animationDelay: '0ms' }} />
-                <div className="w-2 h-2 bg-blue-500 rounded-full animate-bounce" style={{ animationDelay: '150ms' }} />
-                <div className="w-2 h-2 bg-blue-500 rounded-full animate-bounce" style={{ animationDelay: '300ms' }} />
+              <div className="flex items-center justify-center w-6 h-6">
+                <svg className="w-4 h-4 text-blue-500 animate-spin" viewBox="0 0 24 24" fill="none">
+                  <circle cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="3" className="opacity-20" />
+                  <path d="M12 2a10 10 0 0 1 10 10" stroke="currentColor" strokeWidth="3" strokeLinecap="round" />
+                </svg>
               </div>
             )}
             <LLMConfigSwitcher />

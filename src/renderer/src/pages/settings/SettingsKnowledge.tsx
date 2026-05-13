@@ -8,6 +8,7 @@ import CustomSelect from '@renderer/components/ui/CustomSelect'
 import KnowledgeDetail from './KnowledgeDetail'
 import { KB_DEFAULTS, CHUNK_SIZE_RANGE, CHUNK_OVERLAP_RANGE, TOP_K_RANGE, EXTERNAL_KB_PROVIDER_META, VECTOR_STORE_OPTIONS, VECTOR_STORE_CONFIG_FIELDS, VECTOR_STORE_DEFAULTS } from '@renderer/config'
 import { ollamaApi, PullProgress } from '@renderer/lib/api'
+import MessageBanner from '@renderer/components/ui/MessageBanner'
 
 const KBCard = React.memo(function KBCard({
   kb,
@@ -317,15 +318,11 @@ export default function SettingsKnowledge(): React.JSX.Element {
     <div>
       {/* 提示消息 */}
       {message && (
-        <div className={`mb-4 px-4 py-2.5 rounded-lg text-sm flex items-center justify-between ${message.type === 'success'
-            ? 'bg-green-50 text-green-700 dark:bg-green-900/20 dark:text-green-400 border border-green-200 dark:border-green-800'
-            : 'bg-red-50 text-red-700 dark:bg-red-900/20 dark:text-red-400 border border-red-200 dark:border-red-800'
-          }`}>
-          <span>{message.text}</span>
-          <button onClick={() => setMessage(null)} className="ml-3 opacity-60 hover:opacity-100 flex-shrink-0">
-            <svg className="w-3.5 h-3.5 inline" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M18 6L6 18M6 6l12 12" /></svg>
-          </button>
-        </div>
+        <MessageBanner
+          type={message.type}
+          text={message.text}
+          onClose={() => setMessage(null)}
+        />
       )}
 
       {/* Embedding 模型状态卡片 */}

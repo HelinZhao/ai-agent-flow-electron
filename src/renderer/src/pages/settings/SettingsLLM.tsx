@@ -7,6 +7,7 @@ import CustomSelect from '@renderer/components/ui/CustomSelect';
 import CustomInput from '@renderer/components/ui/CustomInput';
 import CustomButton from '@renderer/components/ui/CustomButton';
 import { LLM_DEFAULTS, PROVIDER_MATES, TEMPERATURE_RANGE, MAX_TOKENS_RANGE, MIN_LLM_CONFIG_COUNT } from '@renderer/config';
+import MessageBanner from '@renderer/components/ui/MessageBanner';
 
 function TemperatureSlider({ value, onChange, min, max, step }: {
     value: number; onChange: (v: number) => void; min: number; max: number; step: number
@@ -190,22 +191,11 @@ export default function SettingsLLM(): React.JSX.Element {
             </div>
 
             {message && (
-                <div className={`mb-4 px-4 py-3 rounded-lg text-sm flex items-center justify-between border ${message.type === 'success'
-                    ? 'bg-green-50 text-green-700 dark:bg-green-900/20 dark:text-green-400 border-green-200 dark:border-green-800'
-                    : 'bg-red-50 text-red-700 dark:bg-red-900/20 dark:text-red-400 border-red-200 dark:border-red-800'
-                    }`}>
-                    <div className="flex items-center space-x-2">
-                        {message.type === 'success' ? (
-                            <svg className="w-4 h-4 flex-shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
-                        ) : (
-                            <svg className="w-4 h-4 flex-shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
-                        )}
-                        <span>{message.text}</span>
-                    </div>
-                    <button onClick={() => setMessage(null)} className="ml-3 opacity-60 hover:opacity-100 flex-shrink-0 p-0.5 rounded hover:bg-black/5 dark:hover:bg-white/10">
-                        <svg className="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M18 6L6 18M6 6l12 12" /></svg>
-                    </button>
-                </div>
+                <MessageBanner
+                    type={message.type}
+                    text={message.text}
+                    onClose={() => setMessage(null)}
+                />
             )}
 
             {/* 配置列表 */}
