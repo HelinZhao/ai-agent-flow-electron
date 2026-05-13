@@ -2,17 +2,11 @@ import React, { useState } from 'react';
 import SettingsLLM from './settings/SettingsLLM';
 import SettingsTheme from './settings/SettingsTheme';
 import SettingsData from './settings/SettingsData';
-import SettingsKnowledge from './settings/SettingsKnowledge';
 
 const TAB_ICONS: Record<string, React.ReactNode> = {
   llm: (
     <svg className="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
       <path d="M9 3H5a2 2 0 00-2 2v4m6-6h10a2 2 0 012 2v4M9 3v18m0 0h10a2 2 0 002-2V9M9 21H5a2 2 0 01-2-2V9m0 0h18" />
-    </svg>
-  ),
-  knowledge: (
-    <svg className="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
-      <path d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253" />
     </svg>
   ),
   theme: (
@@ -29,7 +23,6 @@ const TAB_ICONS: Record<string, React.ReactNode> = {
 
 const SETTINGS_TABS = [
   { id: 'llm', label: '模型配置', desc: 'LLM API 密钥与参数' },
-  { id: 'knowledge', label: '知识库', desc: '文档与向量检索' },
   { id: 'theme', label: '外观主题', desc: '界面颜色与显示' },
   { id: 'data', label: '数据管理', desc: '数据库与存储空间' },
 ]
@@ -41,8 +34,6 @@ export default function Settings(): React.JSX.Element {
     switch (activeTab) {
       case 'llm':
         return <SettingsLLM />;
-      case 'knowledge':
-        return <SettingsKnowledge />;
       case 'theme':
         return <SettingsTheme />;
       case 'data':

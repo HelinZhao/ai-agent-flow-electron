@@ -12,6 +12,7 @@ import Agents from "./Agents";
 import Chat from "./Chat";
 import Logs from "./Logs";
 import ExecutionMonitor from "./ExecutionMonitor";
+import Knowledge from "./Knowledge";
 
 const pages: Record<string, React.ReactNode> = {
     '/': <Workflow />,
@@ -21,6 +22,7 @@ const pages: Record<string, React.ReactNode> = {
     '/chat': <Chat />,
     '/logs': <Logs />,
     '/monitor': <ExecutionMonitor />,
+    '/knowledge': <Knowledge />,
 };
 
 let init = false

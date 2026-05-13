@@ -46,7 +46,7 @@ const ExecutionMonitor = () => {
   const [isLoading, setIsLoading] = useState(true)
   const [expandedId, setExpandedId] = useState<string | null>(null)
   const [detailId, setDetailId] = useState<string | null>(null)
-  const pollingRef = useRef<ReturnType<typeof setInterval>>()
+  const pollingRef = useRef<ReturnType<typeof setInterval>>(null)
   const intervalRef = useRef(2000)
 
   const statusParam = filter === 'all' ? undefined : filter

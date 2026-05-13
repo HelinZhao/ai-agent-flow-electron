@@ -70,8 +70,7 @@ export default function KnowledgeDetail({ kb, onBack }: KnowledgeDetailProps): R
   const docs = kb.documents || []
 
   return (
-    <div>
-      {/* 提示消息 */}
+    <div className='py-6 px-4 sm:px-6 lg:px-8'>
       {message && (
         <MessageBanner
           type={message.type}
@@ -80,7 +79,6 @@ export default function KnowledgeDetail({ kb, onBack }: KnowledgeDetailProps): R
         />
       )}
 
-      {/* ========== 顶部导航 ========== */}
       <div className="flex items-center justify-between mb-5">
         <div className="flex items-center space-x-3">
           <button
@@ -123,7 +121,6 @@ export default function KnowledgeDetail({ kb, onBack }: KnowledgeDetailProps): R
         </div>
       </div>
 
-      {/* ========== 统计概览 ========== */}
       <div className="grid grid-cols-3 gap-3 mb-5">
         <div className="bg-white dark:bg-gray-800 rounded-xl border border-gray-200/80 dark:border-gray-700/50 p-4 text-center">
           <p className="text-2xl font-bold text-gray-900 dark:text-white">{kb.documentCount || 0}</p>
@@ -139,7 +136,6 @@ export default function KnowledgeDetail({ kb, onBack }: KnowledgeDetailProps): R
         </div>
       </div>
 
-      {/* ========== 文档管理 ========== */}
       {kb.type === 'internal' && (
         <>
           <div className="flex items-center justify-between mb-3">
@@ -200,7 +196,6 @@ export default function KnowledgeDetail({ kb, onBack }: KnowledgeDetailProps): R
                     <span className="text-sm text-gray-700 dark:text-gray-300 truncate">{doc}</span>
                   </div>
 
-                  {/* 悬浮操作栏 — absolute + opacity 避免高度跳跃 */}
                   <div className="absolute right-3 top-1/2 -translate-y-1/2 z-10 flex items-center gap-1 px-2 py-1.5 rounded-xl border border-gray-200 dark:border-gray-600 bg-white dark:bg-gray-800 shadow-lg backdrop-blur-sm opacity-0 group-hover/doc:opacity-100 transition-opacity pointer-events-none group-hover/doc:pointer-events-auto">
                     <button
                       onClick={() => setChunkViewerState({ kbId: kb.id, docName: doc })}
@@ -233,7 +228,6 @@ export default function KnowledgeDetail({ kb, onBack }: KnowledgeDetailProps): R
         </>
       )}
 
-      {/* ========== 外部知识库配置信息 ========== */}
       {kb.type === 'external' && (
         <div className="bg-white dark:bg-gray-800 rounded-xl border border-gray-200/80 dark:border-gray-700/50 p-4">
           <h4 className="text-sm font-medium text-gray-900 dark:text-white mb-3">外部配置</h4>
@@ -262,7 +256,6 @@ export default function KnowledgeDetail({ kb, onBack }: KnowledgeDetailProps): R
         </div>
       )}
 
-      {/* ========== 删除文档确认 ========== */}
       {deleteDocTarget && (
         <div className="fixed inset-0 bg-black/40 backdrop-blur-sm flex items-center justify-center z-50">
           <div className="bg-white dark:bg-gray-800 rounded-xl shadow-xl border border-gray-200 dark:border-gray-700 p-5 mx-4 max-w-sm">
@@ -278,7 +271,6 @@ export default function KnowledgeDetail({ kb, onBack }: KnowledgeDetailProps): R
         </div>
       )}
 
-      {/* 分块查看弹窗 */}
       {chunkViewerState && (
         <ChunkViewer
           kbId={chunkViewerState.kbId}
