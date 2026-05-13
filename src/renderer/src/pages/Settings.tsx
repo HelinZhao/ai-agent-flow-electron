@@ -5,6 +5,7 @@ import SettingsData from './settings/SettingsData';
 import SettingsShortcuts from './settings/SettingsShortcuts';
 import SettingsBackup from './settings/SettingsBackup';
 import SettingsGeneral from './settings/SettingsGeneral';
+import SettingsProxy from './settings/SettingsProxy';
 import SettingsAbout from './settings/SettingsAbout';
 
 const TAB_ICONS: Record<string, React.ReactNode> = {
@@ -26,6 +27,11 @@ const TAB_ICONS: Record<string, React.ReactNode> = {
   general: (
     <svg className="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
       <circle cx="12" cy="12" r="3" /><path d="M12 1v2m0 18v2M4.22 4.22l1.42 1.42m12.72 12.72l1.42 1.42M1 12h2m18 0h2M4.22 19.78l1.42-1.42M18.36 5.64l1.42-1.42" />
+    </svg>
+  ),
+  proxy: (
+    <svg className="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10zM12 8v4m0 4h.01" />
     </svg>
   ),
   shortcuts: (
@@ -50,6 +56,7 @@ const SETTINGS_TABS = [
   { id: 'general', label: '通用', desc: '应用偏好与默认行为' },
   { id: 'shortcuts', label: '快捷键', desc: '键盘与鼠标操作' },
   { id: 'backup', label: '备份', desc: '数据导入与导出' },
+  { id: 'proxy', label: '代理', desc: 'HTTP 代理配置' },
   { id: 'theme', label: '外观主题', desc: '界面颜色与显示' },
   { id: 'data', label: '数据管理', desc: '数据库与存储空间' },
   { id: 'about', label: '关于', desc: '版本信息与技术栈' },
@@ -68,6 +75,8 @@ export default function Settings(): React.JSX.Element {
         return <SettingsShortcuts />;
       case 'backup':
         return <SettingsBackup />;
+      case 'proxy':
+        return <SettingsProxy />;
       case 'theme':
         return <SettingsTheme />;
       case 'data':

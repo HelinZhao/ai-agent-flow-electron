@@ -489,6 +489,13 @@ export const knowledgeBaseApi = {
 }
 
 // 数据管理 API
+export const proxyApi = {
+  getConfig: (): Promise<{ enabled: boolean; protocol: string; host: string; port: number; username?: string; password?: string }> =>
+    api.get('/proxy'),
+  saveConfig: (config: any): Promise<{ success: boolean; message: string }> =>
+    api.put('/proxy', config),
+}
+
 export const dataApi = {
   getDbStats: (): Promise<{ base: { path: string; size: number }; knowledge: { path: string; size: number }; total: number }> =>
     api.get('/data/db-stats'),

@@ -12,6 +12,7 @@ import knowledgeBaseRouter from './routes/knowledge-base'
 import dataRouter from './routes/data'
 import executeWorkflowRouter from './routes/execute-workflow'
 import logsRouter from './routes/logs'
+import proxyRouter from './routes/proxy'
 import { getResourcesDir } from './utils'
 import {
   SERVER_PORT,
@@ -93,6 +94,7 @@ export class LocalServer {
     this.app.use('/api/data', dataRouter)
     this.app.use('/api/execute-workflow', executeWorkflowRouter)
     this.app.use('/api/logs', logsRouter)
+    this.app.use('/api', proxyRouter)
 
     // Ollama 模型状态与拉取路由
     this.app.get('/api/ollama/status', (_req, res) => {
