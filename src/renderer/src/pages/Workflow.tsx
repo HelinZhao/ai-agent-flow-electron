@@ -10,6 +10,7 @@ import CustomInput from '@renderer/components/ui/CustomInput';
 import CustomButton from '@renderer/components/ui/CustomButton';
 import CustomTextarea from '@renderer/components/ui/CustomTextarea';
 import CustomFileUpload from '@renderer/components/ui/CustomFileUpload';
+import ResponsiveGrid from '@renderer/components/ui/ResponsiveGrid';
 import { NODE_DEFS_MAP } from '@renderer/components/workflow/nodes';
 
 export default function Workflow(): React.JSX.Element {
@@ -543,7 +544,7 @@ export default function Workflow(): React.JSX.Element {
                 : (
                     <div>
                         {/* 卡片网格 */}
-                        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+                        <ResponsiveGrid>
                             {filteredWorkflows.map((workflow) => (
                                 <div
                                     key={workflow.id}
@@ -611,7 +612,7 @@ export default function Workflow(): React.JSX.Element {
                                     </div>
                                 </div>
                             ))}
-                        </div>
+                            </ResponsiveGrid>
 
                         {/* 搜索无结果 */}
                         {filteredWorkflows.length === 0 && searchTerm && (

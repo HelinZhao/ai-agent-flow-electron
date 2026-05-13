@@ -9,6 +9,7 @@ import KnowledgeDetail from './KnowledgeDetail'
 import { KB_DEFAULTS, CHUNK_SIZE_RANGE, CHUNK_OVERLAP_RANGE, TOP_K_RANGE, EXTERNAL_KB_PROVIDER_META, VECTOR_STORE_OPTIONS, VECTOR_STORE_CONFIG_FIELDS, VECTOR_STORE_DEFAULTS } from '@renderer/config'
 import { ollamaApi, PullProgress } from '@renderer/lib/api'
 import MessageBanner from '@renderer/components/ui/MessageBanner'
+import ResponsiveGrid from '@renderer/components/ui/ResponsiveGrid'
 
 const KBCard = React.memo(function KBCard({
   kb,
@@ -473,7 +474,7 @@ export default function SettingsKnowledge(): React.JSX.Element {
       )}
 
       {/* 卡片网格 */}
-      <div className="grid grid-cols-2 gap-4">
+      <ResponsiveGrid>
         {filteredKbList.map((kb) => (
           <KBCard
             key={kb.id}
@@ -483,7 +484,7 @@ export default function SettingsKnowledge(): React.JSX.Element {
             onDeleteClick={setDeleteKbTarget}
           />
         ))}
-      </div>
+      </ResponsiveGrid>
 
       {/* ========== 编辑/创建表单 ========== */}
       {showForm && (

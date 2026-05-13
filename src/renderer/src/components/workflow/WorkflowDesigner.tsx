@@ -54,11 +54,15 @@ function WorkflowDesigner(props: WorkflowDesignerProps): React.JSX.Element {
     branches: WorkflowBranch[];
     connection: Connection | null;
     selectedBranch: string;
+    isEditing: boolean;
+    editEdgeId: string | null;
   }>({
     isOpen: false,
     branches: [],
     connection: null,
-    selectedBranch: ''
+    selectedBranch: '',
+    isEditing: false,
+    editEdgeId: null,
   });
   const { screenToFlowPosition, fitView, } = useReactFlow();
   const [layoutDirection, setLayoutDirection] = useState<LayoutDirection>(workflow?.layoutDirection || 'horizontal');
@@ -184,7 +188,9 @@ function WorkflowDesigner(props: WorkflowDesignerProps): React.JSX.Element {
             isOpen: true,
             branches,
             connection: params,
-            selectedBranch: branches[0]?.id || ''
+            selectedBranch: branches[0]?.id || '',
+            isEditing: false,
+            editEdgeId: null,
           });
           return;
         } else if (branches.length === 1) {
@@ -217,20 +223,39 @@ function WorkflowDesigner(props: WorkflowDesignerProps): React.JSX.Element {
     const selectedBranch = branchSelection.branches.find(
       (b) => b.id === branchSelection.selectedBranch
     );
-    const newEdge: WorkflowEdge = {
-      ...branchSelection.connection!,
-      id: `edge-${uuidv4()}`,
-      label: selectedBranch?.label,
-      condition: selectedBranch?.id || branchSelection.selectedBranch
-    };
-    const newEdges = [...edges, newEdge];
-    setEdges(newEdges);
-    recordHistory(nodes, newEdges);
+
+    if (branchSelection.isEditing && branchSelection.editEdgeId) {
+      // 编辑已有分支边的标签
+      const newEdges = edges.map(edge => {
+        if (edge.id !== branchSelection.editEdgeId) return edge;
+        return {
+          ...edge,
+          label: selectedBranch?.label,
+          condition: selectedBranch?.id || branchSelection.selectedBranch
+        };
+      });
+      setEdges(newEdges);
+      recordHistory(nodes, newEdges);
+    } else {
+      // 创建新分支边
+      const newEdge: WorkflowEdge = {
+        ...branchSelection.connection!,
+        id: `edge-${uuidv4()}`,
+        label: selectedBranch?.label,
+        condition: selectedBranch?.id || branchSelection.selectedBranch
+      };
+      const newEdges = [...edges, newEdge];
+      setEdges(newEdges);
+      recordHistory(nodes, newEdges);
+    }
+
     setBranchSelection({
       isOpen: false,
       branches: [],
       connection: null,
-      selectedBranch: ''
+      selectedBranch: '',
+      isEditing: false,
+      editEdgeId: null,
     });
   }, [branchSelection, nodes, edges, setEdges, recordHistory]);
 
@@ -239,7 +264,9 @@ function WorkflowDesigner(props: WorkflowDesignerProps): React.JSX.Element {
       isOpen: false,
       branches: [],
       connection: null,
-      selectedBranch: ''
+      selectedBranch: '',
+      isEditing: false,
+      editEdgeId: null,
     });
   }, []);
 
@@ -305,6 +332,43 @@ function WorkflowDesigner(props: WorkflowDesignerProps): React.JSX.Element {
     fitView();
   }, [nodes, edges, setNodes, layoutDirection, fitView, recordHistory]);
 
+  // 保存节点配置时同步分支边的标签
+  const handleSaveNode = useCallback((nodeId: string, label: string, config: Record<string, any>) => {
+    const newNodes = nodes.map(n =>
+      n.id === nodeId ? { ...n, data: { ...n.data, label, config } } : n
+    );
+    setNodes(newNodes);
+
+    const sourceNode = newNodes.find(n => n.id === nodeId);
+    let newEdges = edges;
+    if (sourceNode?.type === 'branch') {
+      const branches: WorkflowBranch[] = config.branches || [];
+      newEdges = edges.map(edge => {
+        if (edge.source !== nodeId) return edge;
+        const m = branches.find(b => b.id === edge.condition);
+        return m ? { ...edge, label: m.label, condition: m.id } : edge;
+      });
+    }
+    if (newEdges !== edges) setEdges(newEdges);
+    recordHistory(newNodes, newEdges);
+  }, [nodes, edges, setNodes, setEdges, recordHistory]);
+
+  // 双击分支边重新选择分支
+  const onEdgeDoubleClick = useCallback((_event: React.MouseEvent, edge: any) => {
+    const sourceNode = nodes.find(n => n.id === edge.source);
+    if (sourceNode?.type !== 'branch') return;
+    const branches: WorkflowBranch[] = sourceNode.data.config?.branches || [];
+    if (branches.length < 1) return;
+    setBranchSelection({
+      isOpen: true,
+      branches,
+      connection: { source: edge.source, target: edge.target, sourceHandle: null, targetHandle: null },
+      selectedBranch: edge.condition || branches[0]?.id || '',
+      isEditing: true,
+      editEdgeId: edge.id,
+    });
+  }, [nodes]);
+
   return (
     <div className="flex h-full w-full">
       <div className="flex-1 h-full min-h-0">
@@ -332,6 +396,7 @@ function WorkflowDesigner(props: WorkflowDesignerProps): React.JSX.Element {
             onNodesDelete={() => setSelectedNode(null)}
             onPaneClick={handlePaneClick}
             onContextMenu={handlePaneContextMenu}
+            onEdgeDoubleClick={onEdgeDoubleClick}
             onDragOver={handleDragOver}
             onDrop={handleDrop}
           >
@@ -349,6 +414,7 @@ function WorkflowDesigner(props: WorkflowDesignerProps): React.JSX.Element {
               <NodeConfigPanel
                 node={selectedNode}
                 onClose={onUnselectNode}
+                onSave={handleSaveNode}
               />
             )}
           </ReactFlow>

@@ -15,6 +15,7 @@ import { getNodeDefaultLabel, NODE_DEFS_MAP } from './nodes';
 interface NodeConfigPanelProps {
   node: WorkflowNode | null;
   onClose: () => void;
+  onSave?: (nodeId: string, label: string, config: Record<string, any>) => void;
 }
 
 const BG_COLORS: Record<string, string> = {
@@ -29,7 +30,7 @@ const BG_COLORS: Record<string, string> = {
   end: 'bg-gray-500',
 }
 
-const NodeConfigPanel: React.FC<NodeConfigPanelProps> = ({ node, onClose }: NodeConfigPanelProps) => {
+const NodeConfigPanel: React.FC<NodeConfigPanelProps> = ({ node, onClose, onSave }: NodeConfigPanelProps) => {
   const { updateNode } = useReactFlow()
   const [config, setConfig] = useState<Record<string, any>>(node?.data.config || {});
   const [label, setLabel] = useState(node?.data.label || '');
@@ -44,12 +45,13 @@ const NodeConfigPanel: React.FC<NodeConfigPanelProps> = ({ node, onClose }: Node
 
   const handleSave = (): void => {
     if (!node) return;
-    updateNode(node.id, (node) => ({
-      data: {
-        ...node.data,
-        label, config
-      }
-    }));
+    if (onSave) {
+      onSave(node.id, label, config);
+    } else {
+      updateNode(node.id, (node) => ({
+        data: { ...node.data, label, config }
+      }));
+    }
     onClose();
   };
 

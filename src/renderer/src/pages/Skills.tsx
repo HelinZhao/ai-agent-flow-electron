@@ -8,6 +8,7 @@ import MarkdownPreview from '@renderer/components/MarkdownPreview';
 import CustomInput from '@renderer/components/ui/CustomInput';
 import CustomButton from '@renderer/components/ui/CustomButton';
 import CustomFileUpload from '@renderer/components/ui/CustomFileUpload';
+import ResponsiveGrid from '@renderer/components/ui/ResponsiveGrid';
 import { SKILL_IMPORT_ACCEPT } from '@renderer/config';
 
 const mdParser = new MarkdownIt(/* Markdown-it options */);
@@ -339,7 +340,7 @@ export default function Skills(): React.JSX.Element {
 
             {/* 卡片网格 */}
             {filteredSkills.length > 0 ? (
-                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+                <ResponsiveGrid>
                     {filteredSkills.map((skill) => (
                         <SkillCard
                             key={skill.id}
@@ -349,7 +350,7 @@ export default function Skills(): React.JSX.Element {
                             onDelete={handleDelete}
                         />
                     ))}
-                </div>
+                </ResponsiveGrid>
             ) : (
                 <div className="flex flex-col items-center justify-center py-20 text-gray-400 dark:text-gray-500">
                     {searchTerm ? (
