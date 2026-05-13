@@ -999,6 +999,58 @@ ${conditionText}
     return this.executionStates.get(executionId)
   }
 
+  // 获取所有执行摘要（监控列表用）
+  getAllExecutions(statusFilter?: string): Array<{
+    executionId: string
+    workflowName: string
+    status: 'running' | 'paused' | 'completed' | 'failed'
+    startTime: string
+    endTime?: string
+    duration?: number
+    progress: number
+    totalNodes: number
+    completedNodes: number
+    failedNodes: number
+    currentNodeLabel?: string
+    agentId?: string
+  }> {
+    const allStates = Array.from(this.executionStates.values())
+
+    const filtered = statusFilter
+      ? allStates.filter(s => s.status === statusFilter)
+      : allStates
+
+    return filtered
+      .map(state => {
+        const nodeResultsArr = Array.from(state.nodeResults.values())
+        const totalNodes = state.workflow.nodes.length
+        const completedNodes = nodeResultsArr.filter((n: any) => n.status === 'completed').length
+        const failedNodes = nodeResultsArr.filter((n: any) => n.status === 'failed').length
+        let currentNodeLabel: string | undefined
+        if (state.currentNodeId) {
+          const node = nodeResultsArr.find((n: any) => n.nodeId === state.currentNodeId)
+          currentNodeLabel = node?.metadata?.label || node?.nodeLabel || state.currentNodeId
+        }
+        return {
+          executionId: state.executionId,
+          workflowName: state.workflow.name,
+          status: state.status,
+          startTime: state.startTime.toISOString(),
+          endTime: state.endTime?.toISOString(),
+          duration: state.endTime
+            ? state.endTime.getTime() - state.startTime.getTime()
+            : Date.now() - state.startTime.getTime(),
+          progress: state.progress,
+          totalNodes,
+          completedNodes,
+          failedNodes,
+          currentNodeLabel,
+          agentId: state.agentId
+        }
+      })
+      .sort((a, b) => new Date(b.startTime).getTime() - new Date(a.startTime).getTime())
+  }
+
   // 停止执行
   stopExecution(executionId: string): void {
     const state = this.executionStates.get(executionId)

@@ -7,6 +7,7 @@ import {
   WorkflowExecutionProgress,
   WorkflowExecutionMetrics,
   NodeExecutionResult,
+  ExecutionSummary,
   KnowledgeBase,
   KnowledgeChunk
 } from '@renderer/types'
@@ -208,6 +209,14 @@ export const workflowExecutionApi = {
   // 获取节点执行结果
   getNodeResults: (executionId: string): Promise<NodeExecutionResult[]> =>
     api.get(`/execute-workflow/node-results/${executionId}`),
+
+  // 获取所有执行记录列表
+  listExecutions: (status?: string, limit?: number): Promise<ExecutionSummary[]> => {
+    const params = new URLSearchParams()
+    if (status) params.append('status', status)
+    if (limit) params.append('limit', limit.toString())
+    return api.get(`/execute-workflow/list?${params.toString()}`)
+  },
 
   // 停止工作流执行
   stopExecution: (executionId: string): Promise<{ message: string }> =>

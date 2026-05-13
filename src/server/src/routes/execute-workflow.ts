@@ -224,6 +224,28 @@ router.get('/progress-sse/:executionId', (req, res) => {
   })
 })
 
+// 获取所有执行记录列表
+router.get('/list', (req, res) => {
+  try {
+    const { status, limit } = req.query
+    let executions = monitoredExecutor.getAllExecutions(status as string | undefined)
+
+    if (limit) {
+      const limitNum = parseInt(limit as string, 10)
+      if (!isNaN(limitNum) && limitNum > 0) {
+        executions = executions.slice(0, limitNum)
+      }
+    }
+
+    return res.status(200).json(executions)
+  } catch (error) {
+    console.error('获取执行列表错误:', error)
+    return res.status(500).json({
+      error: error instanceof Error ? error.message : '获取执行列表失败'
+    })
+  }
+})
+
 // 停止执行
 router.post('/stop/:executionId', async (req, res) => {
   try {

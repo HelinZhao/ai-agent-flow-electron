@@ -186,6 +186,22 @@ export interface CliNodeConfig {
   llmProcessPrompt?: string
 }
 
+// 执行列表摘要（轻量，不含 nodeResults/logs）
+export interface ExecutionSummary {
+  executionId: string
+  workflowName: string
+  status: 'running' | 'paused' | 'completed' | 'failed'
+  startTime: string
+  endTime?: string
+  duration?: number
+  progress: number
+  totalNodes: number
+  completedNodes: number
+  failedNodes: number
+  currentNodeLabel?: string
+  agentId?: string
+}
+
 // 工具审批相关类型
 export interface ToolApprovalAction {
   name: string
