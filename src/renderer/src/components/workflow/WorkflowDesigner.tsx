@@ -10,7 +10,6 @@ import {
   Position,
 } from '@xyflow/react';
 import '@xyflow/react/dist/style.css';
-import { createPortal } from 'react-dom';
 
 import { StartNode, SkillNode, BranchNode, ApiNode, AgentNode, EndNode, LLMNode, CliNode, TextNode } from './NodeTypes';
 import NodeConfigPanel from './NodeConfigPanel';
@@ -407,7 +406,7 @@ function WorkflowDesigner(props: WorkflowDesignerProps): React.JSX.Element {
         </LayoutDirectionContext.Provider>
 
         {/* 右键菜单 */}
-        {contextMenu && createPortal(
+        {contextMenu && (
           <ContextMenu
             x={contextMenu.x}
             y={contextMenu.y}
@@ -417,8 +416,7 @@ function WorkflowDesigner(props: WorkflowDesignerProps): React.JSX.Element {
               x: contextMenu.x,
               y: contextMenu.y,
             })}
-          />,
-          document.body
+          />
         )}
 
         {/* 分支选择模态框 */}

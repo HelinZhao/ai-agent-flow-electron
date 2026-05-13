@@ -21,7 +21,7 @@ const WindowControls: React.FC = () => {
     <div className="flex items-center h-full app-no-drag">
       <button
         onClick={handleMinimize}
-        className="w-11 h-full flex items-center justify-center text-gray-500 dark:text-gray-400 hover:bg-gray-200/60 dark:hover:bg-gray-600/60 transition-colors"
+        className="w-11 h-full flex items-center justify-center text-gray-500 dark:text-gray-400 hover:bg-gray-200/60 dark:hover:bg-gray-600/60 dark:hover:text-white transition-colors"
         title="最小化"
       >
         <svg width="10" height="1" viewBox="0 0 10 1">
@@ -30,7 +30,7 @@ const WindowControls: React.FC = () => {
       </button>
       <button
         onClick={handleMaximize}
-        className="w-11 h-full flex items-center justify-center text-gray-500 dark:text-gray-400 hover:bg-gray-200/60 dark:hover:bg-gray-600/60 transition-colors"
+        className="w-11 h-full flex items-center justify-center text-gray-500 dark:text-gray-400 hover:bg-gray-200/60 dark:hover:bg-gray-600/60 dark:hover:text-white transition-colors"
         title={isMaximized ? '还原' : '最大化'}
       >
         {isMaximized ? (
@@ -54,7 +54,7 @@ const WindowControls: React.FC = () => {
       </button>
       <button
         onClick={handleClose}
-        className="w-11 h-full flex items-center justify-center text-gray-500 dark:text-gray-400 hover:bg-red-500 hover:text-white transition-colors"
+        className="w-11 h-full flex items-center justify-center text-gray-500 dark:text-gray-400 hover:bg-red-500 hover:text-white dark:hover:text-white transition-colors"
         title="关闭"
       >
         <svg width="10" height="10" viewBox="0 0 10 10">
