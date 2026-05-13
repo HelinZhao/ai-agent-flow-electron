@@ -1,7 +1,7 @@
 import { create } from 'zustand'
 import { persist } from 'zustand/middleware'
 import { Workflow, Skill, Agent, LLMConfig, KnowledgeBase } from '@renderer/types'
-import { workflowApi, skillApi, agentApi, llmConfigApi, knowledgeBaseApi } from '@renderer/lib/api'
+import { workflowApi, skillApi, agentApi, llmConfigApi, knowledgeBaseApi, waitForServer } from '@renderer/lib/api'
 import { STORAGE_KEY, STORAGE_PERSIST_FIELDS } from '@renderer/config'
 
 interface WorkflowState {
@@ -82,6 +82,10 @@ export const useWorkflowStore = create<WorkflowState>()(
         try {
           state.setLoading(true)
           state.setError(null)
+
+          // 等待服务器就绪
+          await waitForServer()
+
           // 并行加载所有数据
           const [workflowsRes, skillsRes, agentsRes] = await Promise.all([
             workflowApi.getAll().catch(() => [] as Workflow[]),
@@ -95,9 +99,9 @@ export const useWorkflowStore = create<WorkflowState>()(
 
           // 加载LLM配置
           await state.getLLMConfigs()
-        } catch (error) {
-          console.error('初始化数据失败:', error)
-          state.setError('初始化数据失败')
+        } catch (error: any) {
+          console.error('初始化失败:', error)
+          state.setError(error?.message || '初始化数据失败')
         } finally {
           state.setLoading(false)
         }

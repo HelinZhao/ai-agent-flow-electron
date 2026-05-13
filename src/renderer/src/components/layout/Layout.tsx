@@ -2,6 +2,7 @@ import ThemeToggle from './ThemeToggle'
 import LLMConfigSwitcher from './LLMConfigSwitcher'
 import WindowControls from './WindowControls'
 import { useState } from 'react'
+import { useWorkflowStore } from '@renderer/store/workflowStore'
 
 interface LayoutProps {
   children: React.ReactNode
@@ -11,6 +12,7 @@ interface LayoutProps {
 const isElectron = Boolean(window.electron || window.api)
 const Layout: React.FC<LayoutProps> = ({ children, currentPage, onNavigate }: LayoutProps) => {
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false)
+  const loading = useWorkflowStore((s) => s.loading)
 
   const navItems = [
     { path: '/chat', label: 'AI对话', icon: '💬' },
@@ -35,6 +37,13 @@ const Layout: React.FC<LayoutProps> = ({ children, currentPage, onNavigate }: La
             </span>
           </div>
           <div className="flex items-center space-x-3 app-no-drag">
+            {loading && (
+              <div className="flex items-center space-x-1.5 px-2 py-1 rounded-lg bg-blue-50 dark:bg-blue-900/30">
+                <div className="w-2 h-2 bg-blue-500 rounded-full animate-bounce" style={{ animationDelay: '0ms' }} />
+                <div className="w-2 h-2 bg-blue-500 rounded-full animate-bounce" style={{ animationDelay: '150ms' }} />
+                <div className="w-2 h-2 bg-blue-500 rounded-full animate-bounce" style={{ animationDelay: '300ms' }} />
+              </div>
+            )}
             <LLMConfigSwitcher />
             <ThemeToggle />
           </div>

@@ -3,7 +3,7 @@ import Layout from "@renderer/components/layout/Layout";
 import '@renderer/assets/react-flow-custom.css';
 import '@renderer/assets/iconfont.css';
 import { useWorkflowStore } from "@renderer/store/workflowStore";
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import Workflow from "./Workflow";
 import Skills from "./Skills";
 import Settings from "./Settings";
@@ -22,12 +22,13 @@ const pages: Record<string, React.ReactNode> = {
 
 let init = false
 export default function App(): React.JSX.Element {
-    const { initialize, currentPage, setCurrentPage } = useWorkflowStore();
+    const { initialize, currentPage, setCurrentPage, error } = useWorkflowStore();
+    const [initializing, setInitializing] = useState(true);
 
     useEffect(() => {
         if (init) return
-        initialize();
         init = true
+        initialize().finally(() => setInitializing(false))
     }, [initialize]);
 
     // 滚动检测：滚动时显示滚动条，停止滚动500ms后隐藏
@@ -46,6 +47,49 @@ export default function App(): React.JSX.Element {
             clearTimeout(timer);
         };
     }, []);
+
+    if (initializing) {
+        return (
+            <div className="fixed inset-0 bg-gradient-to-br from-slate-50 to-blue-50 dark:from-gray-900 dark:to-slate-800 flex items-center justify-center z-50">
+                <div className="flex flex-col items-center space-y-6">
+                    {/* Logo */}
+                    <div className="w-16 h-16 bg-gradient-to-r from-blue-500 to-purple-600 rounded-2xl flex items-center justify-center shadow-lg animate-pulse">
+                        <span className="text-white font-bold text-2xl">AI</span>
+                    </div>
+                    {/* 加载动画 */}
+                    <div className="flex items-center space-x-3">
+                        <div className="w-3 h-3 bg-blue-500 rounded-full animate-bounce" style={{ animationDelay: '0ms' }} />
+                        <div className="w-3 h-3 bg-purple-500 rounded-full animate-bounce" style={{ animationDelay: '150ms' }} />
+                        <div className="w-3 h-3 bg-blue-500 rounded-full animate-bounce" style={{ animationDelay: '300ms' }} />
+                    </div>
+                    {/* 文字 */}
+                    <div className="text-center">
+                        <p className="text-lg font-medium text-gray-700 dark:text-gray-200">
+                            {error ? '服务启动失败' : '正在启动服务...'}
+                        </p>
+                        <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">
+                            {error
+                                ? '服务器未能及时响应，请检查网络连接后重试'
+                                : '正在初始化数据库和服务组件，请稍候'}
+                        </p>
+                    </div>
+                    {/* 错误重试按钮 */}
+                    {error && (
+                        <button
+                            onClick={() => {
+                                init = false
+                                setInitializing(true)
+                                initialize().finally(() => setInitializing(false))
+                            }}
+                            className="px-6 py-2.5 bg-gradient-to-r from-blue-500 to-purple-600 text-white rounded-xl font-medium shadow-lg hover:shadow-xl transition-all duration-200 hover:scale-105"
+                        >
+                            重新连接
+                        </button>
+                    )}
+                </div>
+            </div>
+        )
+    }
 
     return (
         <Layout currentPage={currentPage} onNavigate={setCurrentPage}>

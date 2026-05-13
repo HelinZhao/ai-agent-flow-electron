@@ -488,4 +488,22 @@ export const dataApi = {
     api.post('/data/vacuum'),
 }
 
+// Health check
+export const checkHealth = async (): Promise<{ status: string; timestamp: string }> => {
+  return api.get('/health')
+}
+
+export const waitForServer = async (maxRetries = 120, interval = 1000): Promise<void> => {
+  for (let i = 0; i < maxRetries; i++) {
+    try {
+      const res = await checkHealth()
+      if (res?.status === 'ok') return
+    } catch {
+      // server not ready yet
+    }
+    await new Promise(resolve => setTimeout(resolve, interval))
+  }
+  throw new Error('启动服务超时')
+}
+
 export default api
