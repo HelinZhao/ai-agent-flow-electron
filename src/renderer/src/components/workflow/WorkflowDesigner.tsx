@@ -58,7 +58,7 @@ function WorkflowDesigner(props: WorkflowDesignerProps): React.JSX.Element {
     connection: null,
     selectedBranch: ''
   });
-  const { screenToFlowPosition, fitView } = useReactFlow();
+  const { screenToFlowPosition, fitView, } = useReactFlow();
   const [layoutDirection, setLayoutDirection] = useState<LayoutDirection>(workflow?.layoutDirection || 'horizontal');
 
   // 当切换工作流时，恢复其保存的布局方向
@@ -297,11 +297,7 @@ function WorkflowDesigner(props: WorkflowDesignerProps): React.JSX.Element {
 
   const handlePaneContextMenu = useCallback((event: React.MouseEvent) => {
     event.preventDefault();
-    const rect = event.currentTarget.getBoundingClientRect();
-    setContextMenu({
-      x: event.clientX - rect.left,
-      y: event.clientY - rect.top,
-    });
+    setContextMenu({ x: event.pageX, y: event.pageY });
   }, []);
 
   const handlePaneClick = useCallback(() => {
