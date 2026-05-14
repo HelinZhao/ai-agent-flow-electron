@@ -11,6 +11,7 @@ import ChatInput from '@renderer/components/chat/ChatInput';
 export default function Chat(): React.JSX.Element {
   const { agents, workflows, activeLLMConfig } = useWorkflowStore();
   const [searchTerm, setSearchTerm] = useState('');
+  const [messageSearch, setMessageSearch] = useState('');
   const [previewImage, setPreviewImage] = useState<AttachmentMetadata | null>(null);
   const chatAreaRef = useRef<HTMLDivElement>(null);
   const inputWrapperRef = useRef<HTMLDivElement>(null);
@@ -138,26 +139,73 @@ export default function Chat(): React.JSX.Element {
             <>
               {/* 消息列表 */}
               <div className="overflow-y-auto overflow-x-hidden px-5 py-5 space-y-4 bg-gray-50/40 dark:bg-gray-900/30" style={{ flex: 1, minHeight: 0 }}>
-                {conv.messages.length === 0 && (
-                  <div className="flex flex-col items-center justify-center h-full py-20">
-                    <div className="w-14 h-14 rounded-2xl bg-gradient-to-br from-blue-50 to-indigo-50 dark:from-blue-500/10 dark:to-indigo-500/10 flex items-center justify-center mb-5 shadow-sm">
-                      <span className="text-2xl">💬</span>
+                {/* 消息搜索 */}
+                {conv.messages.length > 0 && (
+                  <div className="sticky top-0 z-10 pb-2">
+                    <div className="relative max-w-xs">
+                      <svg className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-gray-400" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                        <circle cx="11" cy="11" r="8" /><path d="m21 21-4.35-4.35" />
+                      </svg>
+                      <input
+                        type="text"
+                        value={messageSearch}
+                        onChange={(e) => setMessageSearch(e.target.value)}
+                        placeholder="搜索消息..."
+                        className="w-full pl-8 pr-3 py-1.5 text-xs rounded-lg border border-gray-200 dark:border-gray-600 bg-white/80 dark:bg-gray-800/80 text-gray-900 dark:text-white placeholder-gray-400 outline-none focus:border-blue-400 dark:focus:border-blue-500 transition-colors"
+                      />
+                      {messageSearch && (
+                        <button onClick={() => setMessageSearch('')}
+                          className="absolute right-2 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300">
+                          <svg className="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M18 6L6 18M6 6l12 12" /></svg>
+                        </button>
+                      )}
                     </div>
-                    <h3 className="text-base font-semibold text-gray-700 dark:text-gray-300 mb-1.5">
-                      开始与 {conv.selectedAgent.name} 对话
-                    </h3>
-                    <p className="text-gray-400 dark:text-gray-500 text-xs">发送消息开始对话，或询问 Agent 相关信息</p>
                   </div>
                 )}
 
-                {conv.messages.map((message) => (
-                  <ChatMessage
-                    key={message.id}
-                    message={message}
-                    agentName={conv.selectedAgent!.name}
-                    onAttachmentClick={handleAttachmentClick}
-                  />
-                ))}
+                {(() => {
+                  const filtered = messageSearch
+                    ? conv.messages.filter(m => m.content.toLowerCase().includes(messageSearch.toLowerCase()))
+                    : conv.messages
+
+                  // 定位最后一条 agent 消息的索引（在过滤后的数组中的位置）
+                  let lastAgentIdx = -1
+                  if (!messageSearch) {
+                    for (let i = filtered.length - 1; i >= 0; i--) {
+                      if (filtered[i].sender === 'agent' && !conv.isLoading) {
+                        lastAgentIdx = i; break
+                      }
+                    }
+                  }
+
+                  return filtered.length === 0 && conv.messages.length > 0 ? (
+                    <div className="flex flex-col items-center justify-center py-16 text-gray-400 dark:text-gray-500">
+                      <svg className="w-10 h-10 mb-3 opacity-50" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5">
+                        <circle cx="11" cy="11" r="8" /><path d="m21 21-4.35-4.35" />
+                      </svg>
+                      <p className="text-sm">未找到匹配的消息</p>
+                    </div>
+                  ) : filtered.length === 0 ? (
+                    <div className="flex flex-col items-center justify-center h-full py-20">
+                      <div className="w-14 h-14 rounded-2xl bg-gradient-to-br from-blue-50 to-indigo-50 dark:from-blue-500/10 dark:to-indigo-500/10 flex items-center justify-center mb-5 shadow-sm">
+                        <span className="text-2xl">💬</span>
+                      </div>
+                      <h3 className="text-base font-semibold text-gray-700 dark:text-gray-300 mb-1.5">
+                        开始与 {conv.selectedAgent.name} 对话
+                      </h3>
+                      <p className="text-gray-400 dark:text-gray-500 text-xs">发送消息开始对话，或询问 Agent 相关信息</p>
+                    </div>
+                  ) : filtered.map((message, idx) => (
+                    <ChatMessage
+                      key={message.id}
+                      message={message}
+                      agentName={conv.selectedAgent!.name}
+                      onAttachmentClick={handleAttachmentClick}
+                      isLastAgent={idx === lastAgentIdx}
+                      onRegenerate={idx === lastAgentIdx ? () => conv.regenerate(workflows, activeLLMConfig) : undefined}
+                    />
+                  ))
+                })()}
 
                 {conv.isLoading && !conv.pendingApproval && (
                   <div className="flex justify-start">
@@ -202,6 +250,7 @@ export default function Chat(): React.JSX.Element {
                 inputHeight={inputHeight}
                 onResizeStart={handleResizeStart}
                 inputWrapperRef={inputWrapperRef}
+                sentHistory={conv.sentHistory}
               />
             </>
           ) : (

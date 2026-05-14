@@ -1,4 +1,4 @@
-import React from 'react'
+import React, { useState } from 'react'
 import { ChatMessage as ChatMessageType, AttachmentMetadata } from '@renderer/types'
 import MarkdownPreview from '@renderer/components/MarkdownPreview'
 import AttachmentDisplay from '@renderer/components/chat/AttachmentDisplay'
@@ -12,12 +12,56 @@ interface ChatMessageProps {
   message: ChatMessageType
   agentName: string
   onAttachmentClick: (att: AttachmentMetadata) => void
+  isLastAgent?: boolean
+  onRegenerate?: () => void
+}
+
+function CopyButton({ text }: { text: string }) {
+  const [copied, setCopied] = useState(false)
+
+  const handleCopy = async () => {
+    try {
+      await navigator.clipboard.writeText(text)
+      setCopied(true)
+      setTimeout(() => setCopied(false), 1500)
+    } catch {
+      const ta = document.createElement('textarea')
+      ta.value = text
+      document.body.appendChild(ta)
+      ta.select()
+      document.execCommand('copy')
+      document.body.removeChild(ta)
+      setCopied(true)
+      setTimeout(() => setCopied(false), 1500)
+    }
+  }
+
+  return (
+    <button
+      onClick={handleCopy}
+      className="p-1 rounded-md hover:bg-gray-200 dark:hover:bg-gray-600 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 transition-colors"
+      title="复制"
+    >
+      {copied ? (
+        <svg className="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+          <path d="M20 6L9 17l-5-5" />
+        </svg>
+      ) : (
+        <svg className="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+          <rect x="9" y="9" width="13" height="13" rx="2" ry="2" />
+          <path d="M5 15H4a2 2 0 01-2-2V4a2 2 0 012-2h9a2 2 0 012 2v1" />
+        </svg>
+      )}
+    </button>
+  )
 }
 
 const ChatMessage = React.memo(function ChatMessage({
   message,
   agentName,
   onAttachmentClick,
+  isLastAgent,
+  onRegenerate,
 }: ChatMessageProps) {
   const isUser = message.sender === 'user'
 
@@ -38,34 +82,53 @@ const ChatMessage = React.memo(function ChatMessage({
             : '🤖'}
         </div>
 
-        {/* 消息气泡 */}
-        <div
-          className={`px-4 py-2.5 min-w-0 ${
-            isUser
-              ? 'bg-gradient-to-br from-blue-500 to-blue-600 text-white rounded-2xl rounded-br-md shadow-sm shadow-blue-500/15'
-              : 'bg-white dark:bg-gray-700/80 text-gray-900 dark:text-white border border-gray-200/50 dark:border-gray-600/40 rounded-2xl rounded-bl-md shadow-sm'
-          }`}
-        >
-          <AttachmentDisplay
-            attachments={message.attachments}
-            sender={message.sender}
-            onAttachmentClick={onAttachmentClick}
-          />
-          {isUser
-            ? <div className="text-sm leading-relaxed" style={{ whiteSpace: 'pre-wrap' }}>{message.content}</div>
-            : <div className="text-sm leading-relaxed">
-                <MarkdownPreview content={message.content} />
-              </div>
-          }
-          <div className={`text-[11px] mt-1.5 flex items-center gap-1 ${
-            isUser ? 'text-blue-100/80' : 'text-gray-400 dark:text-gray-500'
-          }`}>
-            <span>{formatTime(message.timestamp)}</span>
-            {!isUser && (
-              <>
-                <span>·</span>
-                <span>{agentName}</span>
-              </>
+        <div className="flex flex-col gap-1">
+          {/* 消息气泡 */}
+          <div
+            className={`px-4 py-2.5 min-w-0 ${
+              isUser
+                ? 'bg-gradient-to-br from-blue-500 to-blue-600 text-white rounded-2xl rounded-br-md shadow-sm shadow-blue-500/15'
+                : 'bg-white dark:bg-gray-700/80 text-gray-900 dark:text-white border border-gray-200/50 dark:border-gray-600/40 rounded-2xl rounded-bl-md shadow-sm'
+            }`}
+          >
+            <AttachmentDisplay
+              attachments={message.attachments}
+              sender={message.sender}
+              onAttachmentClick={onAttachmentClick}
+            />
+            {isUser
+              ? <div className="text-sm leading-relaxed" style={{ whiteSpace: 'pre-wrap' }}>{message.content}</div>
+              : <div className="text-sm leading-relaxed">
+                  <MarkdownPreview content={message.content} />
+                </div>
+            }
+            <div className={`text-[11px] mt-1.5 flex items-center gap-1 ${
+              isUser ? 'text-blue-100/80' : 'text-gray-400 dark:text-gray-500'
+            }`}>
+              <span>{formatTime(message.timestamp)}</span>
+              {!isUser && (
+                <>
+                  <span>·</span>
+                  <span>{agentName}</span>
+                </>
+              )}
+            </div>
+          </div>
+
+          {/* 底部操作按钮（hover 显示） */}
+          <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity ml-1">
+            <CopyButton text={message.content} />
+            {isLastAgent && onRegenerate && (
+              <button
+                onClick={onRegenerate}
+                title="重新生成"
+                className="p-1 rounded-md hover:bg-gray-200 dark:hover:bg-gray-600 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 transition-colors"
+              >
+                <svg className="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <polyline points="23 4 23 10 17 10" />
+                  <path d="M20.49 15a9 9 0 11-2.12-9.36L23 10" />
+                </svg>
+              </button>
             )}
           </div>
         </div>

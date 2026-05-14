@@ -1,3 +1,4 @@
+import { useState } from 'react'
 import { ToolApprovalRequest } from '@renderer/types'
 import type { AttachmentData } from '@renderer/lib/attachmentUtils'
 import CustomButton from '@renderer/components/ui/CustomButton'
@@ -21,6 +22,7 @@ interface ChatInputProps {
   inputHeight: number
   onResizeStart: (e: React.MouseEvent) => void
   inputWrapperRef: React.RefObject<HTMLDivElement | null>
+  sentHistory: string[]
 }
 
 const TOOL_LABELS: Record<string, string> = {
@@ -49,11 +51,44 @@ export default function ChatInput({
   inputHeight,
   onResizeStart,
   inputWrapperRef,
+  sentHistory,
 }: ChatInputProps) {
+  const [historyIdx, setHistoryIdx] = useState(-1)
+
+  const historyPlaceholder = historyIdx >= 0 && historyIdx < sentHistory.length
+    ? sentHistory[sentHistory.length - 1 - historyIdx]
+    : ''
+
   const handleKeyPress = (e: React.KeyboardEvent) => {
+    // 发送（Enter）
     if (e.key === 'Enter' && !e.shiftKey) {
       e.preventDefault()
       if (inputMessage.trim() || attachments.length > 0) onSend()
+      return
+    }
+
+    // 方向键回溯历史（输入框为空时）
+    if ((e.key === 'ArrowUp' || e.key === 'ArrowDown') && !inputMessage && sentHistory.length > 0) {
+      e.preventDefault()
+      if (e.key === 'ArrowUp') {
+        setHistoryIdx((prev) => Math.min(prev + 1, sentHistory.length - 1))
+      } else {
+        setHistoryIdx((prev) => Math.max(prev - 1, -1))
+      }
+      return
+    }
+
+    // Tab 填入选中的历史消息
+    if (e.key === 'Tab' && historyIdx >= 0 && historyPlaceholder) {
+      e.preventDefault()
+      onInputChange(historyPlaceholder)
+      setHistoryIdx(-1)
+      return
+    }
+
+    // 用户开始输入时清除历史选择
+    if (historyIdx >= 0 && e.key.length === 1) {
+      setHistoryIdx(-1)
     }
   }
 
@@ -70,7 +105,7 @@ export default function ChatInput({
       {/* 输入区域 */}
       <div ref={inputWrapperRef} className="px-4 pb-4 pt-0 shrink-0" style={{ height: inputHeight, minHeight: 100 }}>
         <div className="bg-white dark:bg-gray-700/80 rounded-2xl border border-gray-200/50 dark:border-gray-600/40 overflow-hidden shadow-sm h-full flex flex-col">
-          <div className="px-4 pt-3.5 pb-0 flex-1 flex flex-col min-h-0">
+          <div className="px-4 pt-3.5 pb-0 flex-1 flex flex-col min-h-0 relative">
             {/* 审批请求 */}
             {pendingApproval && (
               <div className="mb-2 p-2.5 rounded-lg bg-orange-50 dark:bg-orange-900/20 border border-orange-200 dark:border-orange-700/50">
@@ -106,12 +141,21 @@ export default function ChatInput({
             />
             <textarea
               value={inputMessage}
-              onChange={(e) => onInputChange(e.target.value)}
+              onChange={(e) => {
+                onInputChange(e.target.value)
+                if (historyIdx >= 0) setHistoryIdx(-1)
+              }}
               onKeyDown={handleKeyPress}
-              placeholder={placeholder}
+              placeholder={historyPlaceholder || placeholder}
               className="w-full resize-none bg-transparent border-none outline-none text-gray-900 dark:text-white placeholder-gray-400 dark:placeholder-gray-500 text-sm leading-relaxed flex-1 min-h-0"
               disabled={disabled}
             />
+            {/* 历史浏览指示 */}
+            {historyIdx >= 0 && (
+              <div className="absolute bottom-1 right-2 text-[10px] text-blue-400 font-medium bg-white/90 dark:bg-gray-800/90 px-1.5 py-0.5 rounded shadow-sm border border-gray-100 dark:border-gray-700">
+                {historyIdx + 1}/{sentHistory.length} · Tab 填入
+              </div>
+            )}
           </div>
 
           <div className="flex items-center justify-between px-3 pb-2.5 pt-1 shrink-0">

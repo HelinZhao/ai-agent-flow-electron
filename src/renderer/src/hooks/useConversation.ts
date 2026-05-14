@@ -26,6 +26,8 @@ export function useConversation() {
   const activeAgentRef = useRef<string | null>(null)
   const pendingExecutionsRef = useRef<Record<string, string>>({})
   const draftsRef = useRef<Record<string, { text: string; attachments: AttachmentData[] }>>({})
+  // 每个 Agent 已发送的消息历史（用于方向键回溯）
+  const sentHistoryRef = useRef<Record<string, string[]>>({})
   const unreadRef = useRef<Set<string>>(new Set())
   const messagesEndRef = useRef<HTMLDivElement>(null)
   // SSE 回调里需要最新值，用 ref 避免闭包陈旧
@@ -170,6 +172,11 @@ export function useConversation() {
     setInputMessage('')
     setPendingAttachments([])
     delete draftsRef.current[currentAgentId]
+    // 记录发送历史（按方向键回溯用）
+    const history = sentHistoryRef.current[currentAgentId] || []
+    if (text.trim() && (history.length === 0 || history[history.length - 1] !== text.trim())) {
+      sentHistoryRef.current[currentAgentId] = [...history, text.trim()]
+    }
     setIsLoading(true)
 
     const attachmentsPayload = attachments.map((att) => ({
@@ -298,6 +305,32 @@ export function useConversation() {
     } catch { alert('清空对话记录时发生错误') }
   }, [selectedAgent])
 
+  // 从末尾向前找到最后一条用户消息，删除其后所有消息并重新发送
+  const regenerate = useCallback(async (
+    workflows: { id: string; workflowId?: string }[],
+    activeLLMConfig: unknown,
+  ) => {
+    const agent = selectedAgent
+    if (!agent || messages.length === 0) return
+
+    let lastUserIdx = -1
+    for (let i = messages.length - 1; i >= 0; i--) {
+      if (messages[i].sender === 'user') { lastUserIdx = i; break }
+    }
+    if (lastUserIdx === -1) return
+
+    const userMsg = messages[lastUserIdx]
+    const truncated = messages.slice(0, lastUserIdx + 1)
+    conversationsRef.current[agent.id] = truncated
+    setMessages(truncated)
+
+    // 截断后重新发送用户消息
+    await chatRecordApi.saveRecord(agent.id, agent.name, truncated).catch(() => {})
+    await sendMessage(userMsg.content, userMsg.attachments || [], workflows, activeLLMConfig)
+  }, [selectedAgent, messages, sendMessage])
+
+  const sentHistory = selectedAgent ? sentHistoryRef.current[selectedAgent.id] || [] : []
+
   const draftAgentIds = useMemo(
     () => new Set(Object.keys(draftsRef.current).filter((k) => draftsRef.current[k].text.length > 0)),
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -310,8 +343,9 @@ export function useConversation() {
     draftAgentIds, unreadAgentIds, pendingAgentIds,
     isLoading, isLoadingHistory, currentExecutionId,
     pendingApproval, autoApprovedTools, setAutoApprovedTools,
+    sentHistory,
     sendMessage, handleApprove, handleAutoApprove, handleTerminate,
-    startNewChat, clearCurrentchatRecord,
+    startNewChat, clearCurrentchatRecord, regenerate,
     scrollToBottom, messagesEndRef,
   }
 }
