@@ -39,7 +39,8 @@ export default function SettingsLLM(): React.JSX.Element {
         activateLLMConfig,
     } = useWorkflowStore();
 
-    const [isLoading, setIsLoading] = useState(false);
+    const [isSaving, setIsSaving] = useState(false);
+    const [isTesting, setIsTesting] = useState(false);
     const [message, setMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
     const [editingConfig, setEditingConfig] = useState<string | null>(null);
     const [showForm, setShowForm] = useState(false);
@@ -58,7 +59,7 @@ export default function SettingsLLM(): React.JSX.Element {
     const provider = watch('provider')
 
     const onSubmit = async (data: LLMConfig): Promise<void> => {
-        setIsLoading(true);
+        setIsSaving(true);
         setMessage(null);
 
         try {
@@ -84,7 +85,7 @@ export default function SettingsLLM(): React.JSX.Element {
         } catch (error) {
             setMessage({ type: 'error', text: error instanceof Error ? error.message : '操作失败' });
         } finally {
-            setIsLoading(false);
+            setIsSaving(false);
         }
     };
 
@@ -97,7 +98,7 @@ export default function SettingsLLM(): React.JSX.Element {
     const handleDelete = async (id: string) => {
         if (!confirm('确定要删除这个配置吗？')) return;
 
-        setIsLoading(true);
+        setIsSaving(true);
         try {
             await deleteLLMConfig(id);
             setMessage({ type: 'success', text: '配置删除成功！' });
@@ -105,12 +106,12 @@ export default function SettingsLLM(): React.JSX.Element {
             console.error(error)
             setMessage({ type: 'error', text: '删除失败' });
         } finally {
-            setIsLoading(false);
+            setIsSaving(false);
         }
     };
 
     const handleActivate = async (id: string) => {
-        setIsLoading(true);
+        setIsSaving(true);
         try {
             await activateLLMConfig(id);
             setMessage({ type: 'success', text: '配置切换成功！' });
@@ -118,12 +119,12 @@ export default function SettingsLLM(): React.JSX.Element {
             console.error(error)
             setMessage({ type: 'error', text: '切换失败' });
         } finally {
-            setIsLoading(false);
+            setIsSaving(false);
         }
     };
 
     const testConnection = async (): Promise<void> => {
-        setIsLoading(true);
+        setIsTesting(true);
         setMessage(null);
 
         try {
@@ -158,7 +159,7 @@ export default function SettingsLLM(): React.JSX.Element {
                 text: `连接测试失败: ${error instanceof Error ? error.message : '未知错误'}`
             });
         } finally {
-            setIsLoading(false);
+            setIsTesting(false);
         }
     };
 
@@ -236,7 +237,7 @@ export default function SettingsLLM(): React.JSX.Element {
                                             onClick={() => handleActivate(config.id!)}
                                             variant="success"
                                             size="sm"
-                                            disabled={isLoading}
+                                            disabled={isSaving || isTesting}
                                         >
                                             启用
                                         </CustomButton>
@@ -418,27 +419,35 @@ export default function SettingsLLM(): React.JSX.Element {
                     <div className="flex gap-3 pt-1">
                         <CustomButton
                             type="submit"
-                            disabled={isLoading}
+                            disabled={isSaving || isTesting}
                             variant="primary"
                             className="flex-1"
                         >
-                            {isLoading ? '保存中...' : editingConfig ? '更新配置' : '创建配置'}
+                            {isSaving ? '保存中...' : editingConfig ? '更新配置' : '创建配置'}
                         </CustomButton>
 
                         <CustomButton
                             type="button"
                             onClick={testConnection}
-                            disabled={isLoading || (provider !== 'ollama' && !watch('apiKey'))}
+                            disabled={isSaving || isTesting || (provider !== 'ollama' && !watch('apiKey'))}
                             variant="secondary"
                             className="flex-1"
                         >
-                            <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M13 10V3L4 14h7v7l9-11h-7z" /></svg>
-                            测试连接
+                            {isTesting ? (
+                                <svg className="w-4 h-4 animate-spin" viewBox="0 0 24 24" fill="none">
+                                    <circle cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="3" className="opacity-20" />
+                                    <path d="M12 2a10 10 0 0 1 10 10" stroke="currentColor" strokeWidth="3" strokeLinecap="round" />
+                                </svg>
+                            ) : (
+                                <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M13 10V3L4 14h7v7l9-11h-7z" /></svg>
+                            )}
+                            {isTesting ? '测试中...' : '测试连接'}
                         </CustomButton>
 
                         <CustomButton
                             type="button"
                             onClick={() => {
+                                setIsTesting(false);
                                 setShowForm(false);
                                 setEditingConfig(null);
                                 reset();
