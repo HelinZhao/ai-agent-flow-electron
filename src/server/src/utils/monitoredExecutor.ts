@@ -53,6 +53,8 @@ export class MonitoredLangGraphExecutor {
   private sseClients = new Map<string, any[]>() // executionId -> SSE clients
   // 线程级附件存储：跨对话累积图片等附件数据，供后续对话的callLLM注入
   private threadAttachments = new Map<string, AttachmentPayload[]>()
+  // 当前正在执行的 agentId 栈，用于检测循环调用
+  private agentCallStack = new Set<string>()
   private WorkflowState = Annotation.Root({
     messages: Annotation<BaseMessage[]>({
       reducer: (x, y) => x.concat(y)
@@ -647,9 +649,18 @@ export class MonitoredLangGraphExecutor {
       return { output: input, metadata: { nodeId: node.id, type: 'agent', error: '未配置Agent ID', label: node.data?.label } }
     }
 
+    const targetAgentId = node.data.config.agentId
+
+    // 检测循环调用
+    if (this.agentCallStack.has(targetAgentId)) {
+      const chain = [...this.agentCallStack, targetAgentId].join(' → ')
+      console.warn('[循环检测] Agent:', chain)
+      return { output: input, metadata: { nodeId: node.id, type: 'agent', error: '检测到循环调用(' + chain + ')', agentId: targetAgentId } }
+    }
+
     try {
       // 查找 Agent 及其绑定的工作流
-      const agent = await AgentModel.findByPk(node.data.config.agentId)
+      const agent = await AgentModel.findByPk(targetAgentId)
       if (!agent) {
         return { output: input, metadata: { nodeId: node.id, type: 'agent', error: 'Agent不存在', agentId: node.data.config.agentId } }
       }
@@ -689,21 +700,25 @@ export class MonitoredLangGraphExecutor {
         attachments: undefined,
       })
 
-      const subGraph = await this.buildMonitoredLangGraph(subExecutionId, workflowObj, llmConfig)
-      const result = await this.executeMonitoredLangGraph(subGraph, input, subExecutionId, agent.id, undefined, attachments)
+      this.agentCallStack.add(targetAgentId)
+      try {
+        const subGraph = await this.buildMonitoredLangGraph(subExecutionId, workflowObj, llmConfig)
+        const result = await this.executeMonitoredLangGraph(subGraph, input, subExecutionId, agent.id, undefined, attachments)
+        this.executionStates.delete(subExecutionId)
 
-      this.executionStates.delete(subExecutionId)
-
-      return {
-        output: result,
-        metadata: {
-          nodeId: node.id,
-          label: node.data?.label,
-          type: 'agent',
-          agentId: agent.id,
-          agentName: agent.name,
-          workflowName: workflow.name,
-        },
+        return {
+          output: result,
+          metadata: {
+            nodeId: node.id,
+            label: node.data?.label,
+            type: 'agent',
+            agentId: agent.id,
+            agentName: agent.name,
+            workflowName: workflow.name,
+          },
+        }
+      } finally {
+        this.agentCallStack.delete(targetAgentId)
       }
     } catch (error) {
       const errorMsg = error instanceof Error ? error.message : 'Agent执行失败'
