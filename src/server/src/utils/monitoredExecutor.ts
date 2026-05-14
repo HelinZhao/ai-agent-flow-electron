@@ -683,8 +683,13 @@ export class MonitoredLangGraphExecutor {
         updatedAt: workflow.updatedAt,
       }
 
-      // 为子工作流创建独立 executionId，避免 SSE/状态干扰
+      // 为子工作流创建独立 executionId，继承父状态的放权工具列表
       const subExecutionId = `${executionId}:agent:${node.id}`
+      const parentState = this.executionStates.get(executionId)
+      const inheritedAutoApprove = parentState?.autoApprovedToolTypes
+        ? new Set(parentState.autoApprovedToolTypes)
+        : new Set<string>()
+
       this.executionStates.set(subExecutionId, {
         executionId: subExecutionId,
         workflow: workflowObj,
@@ -695,7 +700,7 @@ export class MonitoredLangGraphExecutor {
         logs: [],
         agentId: agent.id,
         threadId: undefined,
-        autoApprovedToolTypes: new Set<string>(),
+        autoApprovedToolTypes: inheritedAutoApprove,
         pendingApproval: null,
         attachments: undefined,
       })
@@ -809,17 +814,17 @@ export class MonitoredLangGraphExecutor {
               return { decisions: request.actionRequests.map(() => ({ type: 'approve' })) }
             }
 
-            // 广播 SSE 请求审批事件（只包含需要审批的工具）
+            // 先设置 pendingApproval（broadcastToSSEClients 会读取它同步到父状态）
+            const approvalPromise = new Promise<HITLResponse>((resolve) => {
+              execState.pendingApproval = { resolve, request }
+            })
+
+            // 广播 SSE 请求审批事件
             this.broadcastToSSEClients(executionId, {
               type: 'tool_approval_required',
               executionId,
               actionRequests: needApproval,
               reviewConfigs: request.reviewConfigs.filter(rc => needApproval.some(a => a.name === rc.actionName)),
-            })
-
-            // 创建 Promise 等待用户审批
-            const approvalPromise = new Promise<HITLResponse>((resolve) => {
-              execState.pendingApproval = { resolve, request }
             })
 
             const userResponse = await approvalPromise
@@ -1216,6 +1221,26 @@ ${conditionText}
 
   // 向指定执行的所有SSE客户端发送更新
   broadcastToSSEClients(executionId: string, data: any): void {
+    // 如果是子工作流的审批请求，转发到父 executionId 的 SSE 客户端
+    if (data.type === 'tool_approval_required' && executionId.includes(':agent:')) {
+      const parentId = executionId.split(':agent:')[0]
+      const subState = this.executionStates.get(executionId)
+      const parentState = this.executionStates.get(parentId)
+      // 将子工作流的 pendingApproval 同步到父状态，使 approveToolCall 能解析到
+      if (subState?.pendingApproval && parentState) {
+        parentState.pendingApproval = subState.pendingApproval
+      }
+      // 向父 execution 的 SSE 客户端发送审批事件
+      const parentClients = this.sseClients.get(parentId)
+      if (parentClients) {
+        const message = `data: ${JSON.stringify(data)}\n\n`
+        parentClients.forEach((client) => {
+          try { client.res.write(message) } catch { /* ignore */ }
+        })
+      }
+      return
+    }
+
     const clients = this.sseClients.get(executionId)
     if (!clients) return
 

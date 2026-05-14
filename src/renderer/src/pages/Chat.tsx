@@ -232,6 +232,38 @@ export default function Chat(): React.JSX.Element {
                                     </div>
                                 )}
 
+                                {conv.pendingApproval && (
+                                    <div className="flex justify-start">
+                                        <div className="flex items-start gap-2.5 max-w-[80%]">
+                                            <div className="w-7 h-7 bg-gradient-to-br from-orange-500 to-red-500 rounded-xl flex items-center justify-center text-sm flex-shrink-0 mt-0.5 shadow-sm">⚠️</div>
+                                            <div className="bg-white dark:bg-gray-700/80 border border-orange-200/60 dark:border-orange-600/40 px-4 py-3 rounded-2xl rounded-bl-md shadow-sm">
+                                                <div className="text-xs font-semibold text-gray-800 dark:text-gray-200 mb-2.5 flex items-center gap-1.5">
+                                                    <span className="w-1.5 h-1.5 bg-orange-400 rounded-full animate-pulse" />
+                                                    工具调用需要审批
+                                                </div>
+                                                <div className="space-y-1.5 mb-3">
+                                                    {conv.pendingApproval!.actionRequests.map((action, i) => (
+                                                        <div key={i} className="bg-gray-50/80 dark:bg-gray-600/40 rounded-lg p-2.5 text-xs border border-gray-100 dark:border-gray-600/30">
+                                                            <div className="font-medium text-gray-800 dark:text-gray-200">{action.name}</div>
+                                                            <div className="text-gray-500 dark:text-gray-400 mt-1 max-h-[80px] overflow-auto font-mono text-[10px]">
+                                                                {JSON.stringify(action.args, null, 2)}
+                                                            </div>
+                                                        </div>
+                                                    ))}
+                                                </div>
+                                                <div className="flex flex-wrap items-center gap-1.5">
+                                                    <CustomButton onClick={() => conv.handleApprove(true)} variant="primary" size="xs">允许</CustomButton>
+                                                    <CustomButton onClick={() => conv.handleApprove(false)} variant="danger" size="xs">拒绝</CustomButton>
+                                                    <CustomButton onClick={() => {
+                                                        const uniqueTools = new Set(conv.pendingApproval!.actionRequests.map(a => a.name))
+                                                        uniqueTools.forEach(name => conv.handleAutoApprove(name))
+                                                    }} variant="secondary" size="xs">本会话允许</CustomButton>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                )}
+
                                 <div ref={conv.messagesEndRef} />
                             </div>
 
@@ -252,9 +284,6 @@ export default function Chat(): React.JSX.Element {
                                 onFileSelect={handleFileSelect}
                                 isLoading={conv.isLoading}
                                 onTerminate={conv.handleTerminate}
-                                pendingApproval={conv.pendingApproval}
-                                onApprove={conv.handleApprove}
-                                onAutoApprove={conv.handleAutoApprove}
                                 inputHeight={inputHeight}
                                 onResizeStart={handleResizeStart}
                                 inputWrapperRef={inputWrapperRef}
