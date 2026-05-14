@@ -15,6 +15,9 @@ export interface ProxyConfig {
 
 let cachedAgent: ProxyAgent | null = null
 let cachedUrl: string | null = null
+let cachedConfig: ProxyConfig | null = null
+let configLoadTime = 0
+const CONFIG_CACHE_TTL = 30_000 // 30 秒
 
 function buildProxyUrl(config: ProxyConfig): string {
   const auth = config.username && config.password
@@ -50,4 +53,17 @@ export function getProxyFetch(config?: ProxyConfig): typeof fetch {
   }
 
   return (input, init) => fetch(input, { ...init, dispatcher: cachedAgent! })
+}
+
+/**
+ * 带内存缓存的代理配置加载，避免频繁读磁盘
+ */
+export async function getCachedProxyConfig(): Promise<ProxyConfig> {
+  const now = Date.now()
+  if (cachedConfig && now - configLoadTime < CONFIG_CACHE_TTL) {
+    return cachedConfig
+  }
+  cachedConfig = await loadProxyConfig()
+  configLoadTime = now
+  return cachedConfig
 }

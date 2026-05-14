@@ -10,6 +10,7 @@ import { HITLRequest, HITLResponse, CallLLMOptions } from './hitl'
 import { AttachmentPayload, isVisionModel } from './shared'
 import { loadAttachmentAsDataUrl } from './file'
 import { PROVIDER_DEFAULT_BASE_URLS, DEFAULT_TEMPERATURE, DEFAULT_MAX_TOKENS, MIN_MAX_TOKENS_WITH_TOOLS, LLM_MAX_RETRIES, LLM_SDK_MAX_RETRIES, LLM_RETRY_BASE_DELAY, LLM_RETRY_MAX_DELAY, LANGGRAPH_RECURSION_LIMIT_WITH_TOOLS, LANGGRAPH_RECURSION_LIMIT_NO_TOOLS, DANGEROUS_TOOLS } from '../config'
+import { getCachedProxyConfig, getProxyFetch } from './proxy'
 
 export const getLLMEndpoint = (llmConfig: LLMConfig): string => {
   const defaultUrl = PROVIDER_DEFAULT_BASE_URLS[llmConfig.provider]
@@ -69,17 +70,22 @@ const callLLMOnce = async (
     ? Math.max(llmConfig.maxTokens || DEFAULT_MAX_TOKENS, MIN_MAX_TOKENS_WITH_TOOLS)
     : (llmConfig.maxTokens || DEFAULT_MAX_TOKENS)
 
-  const llm = new ChatOpenAI({
+  // 加载代理配置，若开启则使用代理 fetch
+  const proxyConfig = await getCachedProxyConfig()
+  const proxyFetch = getProxyFetch(proxyConfig)
+  const llmOptions: ConstructorParameters<typeof ChatOpenAI>[0] = {
     model: llmConfig.model,
     temperature: llmConfig.temperature || DEFAULT_TEMPERATURE,
     maxTokens: effectiveMaxTokens,
     maxRetries: LLM_SDK_MAX_RETRIES,
     apiKey: llmConfig.apiKey,
     configuration: {
-      baseURL: getLLMEndpoint(llmConfig)
+      baseURL: getLLMEndpoint(llmConfig),
+      ...(proxyFetch !== fetch ? { fetch: proxyFetch } : {}),
     },
     ...(options?.cache ? { cache: llmCache } : {}),
-  })
+  }
+  const llm = new ChatOpenAI(llmOptions)
 
   const tools = getToolsByIds(enabledTools)
 
