@@ -13,3 +13,4 @@ resources/data/
 resources/attachments/
 resources/lancedb/
 resources/uploads/
+resources/proxy-config.json
