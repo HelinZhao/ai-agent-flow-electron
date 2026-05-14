@@ -1,18 +1,8 @@
 import { Router } from 'express'
 import { WorkflowModel } from '../models'
+import { safeJsonParse } from '../utils/shared'
 
 const router = Router()
-
-// 安全JSON解析函数
-const safeJsonParse = <T>(str: string, defaultValue: T): T => {
-  if (!str) return defaultValue
-  try {
-    return JSON.parse(str)
-  } catch (error) {
-    console.error('JSON解析失败:', error)
-    return defaultValue
-  }
-}
 
 // 获取所有工作流
 router.get('/', async (_req, res) => {

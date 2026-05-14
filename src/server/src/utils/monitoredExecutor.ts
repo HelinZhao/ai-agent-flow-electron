@@ -15,12 +15,12 @@ import { executeApiCall } from './api'
 import { executeCliCommand, executeCliTemplate } from './cli'
 import { HITLRequest, HITLResponse, HITLDecision, CallLLMOptions } from './hitl'
 import { getResourcesDir, saveAttachmentToDisk } from './file'
-import { AttachmentPayload } from './shared'
+import { AttachmentPayload, safeJsonParse } from './shared'
 import { retrieveContext } from './knowledge'
 import { v4 as uuidv4 } from 'uuid'
 import { SqliteSaver } from "@langchain/langgraph-checkpoint-sqlite";
 import { DB_FILENAME, DANGEROUS_TOOLS } from '../config'
-import { LLMConfigModel } from '../models'
+import { LLMConfigModel, AgentModel, WorkflowModel } from '../models'
 
 // 执行状态存储
 interface ExecutionState {
@@ -392,7 +392,8 @@ export class MonitoredLangGraphExecutor {
         executionPaths.push(item.metadata?.label ?? item.metadata?.id)
       })
 
-      const result = `工作流执行顺序：${executionPaths.join(' → ')}\n\n${lastMessage.content || '工作流执行完成'}`
+      // const result = `工作流执行顺序：${executionPaths.join(' → ')}\n\n${lastMessage.content || '工作流执行完成'}`
+      const result = lastMessage.content + ''
 
       if (state) {
         state.logs.push({
@@ -483,7 +484,7 @@ export class MonitoredLangGraphExecutor {
         return await this.executeLLM(executionId, node, input, llmConfig, conversationHistory, attachments)
 
       case 'agent':
-        return await this.executeAgent(node, input, llmConfig, conversationHistory, attachments)
+        return await this.executeAgent(executionId, node, input, llmConfig, conversationHistory, attachments)
 
       case 'cli':
         return await this.executeCli(node, input, llmConfig)
@@ -635,28 +636,63 @@ export class MonitoredLangGraphExecutor {
   }
 
   private async executeAgent(
+    executionId: string,
     node: WorkflowNode,
     input: string,
     llmConfig: LLMConfig,
-    conversationHistory?: BaseMessage[],
+    _conversationHistory?: BaseMessage[],
     attachments?: AttachmentPayload[]
   ) {
     if (!node.data.config?.agentId) {
-      return {
-        output: input,
-        metadata: {
-          nodeId: node.id,
-          type: 'agent',
-          error: '未配置Agent ID',
-          label: node.data?.label
-        }
-      }
+      return { output: input, metadata: { nodeId: node.id, type: 'agent', error: '未配置Agent ID', label: node.data?.label } }
     }
 
     try {
-      const agentInstructions = `Agent ID: ${node.data.config.agentId}\n这是一个Agent节点`
-      const prompt = `${agentInstructions}\n\n当前用户输入: ${input}\n\n请根据以上指令处理用户输入，只返回处理后的结果，不要重复用户输入的内容。`
-      const result = await callLLM(prompt, llmConfig, conversationHistory, [], undefined, attachments)
+      // 查找 Agent 及其绑定的工作流
+      const agent = await AgentModel.findByPk(node.data.config.agentId)
+      if (!agent) {
+        return { output: input, metadata: { nodeId: node.id, type: 'agent', error: 'Agent不存在', agentId: node.data.config.agentId } }
+      }
+      if (!agent.workflowId) {
+        return { output: input, metadata: { nodeId: node.id, type: 'agent', error: 'Agent未绑定工作流', agentId: agent.id } }
+      }
+
+      const workflow = await WorkflowModel.findByPk(agent.workflowId)
+      if (!workflow) {
+        return { output: input, metadata: { nodeId: node.id, type: 'agent', error: '工作流不存在', workflowId: agent.workflowId } }
+      }
+
+      const workflowObj: Workflow = {
+        id: workflow.id,
+        name: workflow.name,
+        description: workflow.description,
+        nodes: safeJsonParse(workflow.nodes, []),
+        edges: safeJsonParse(workflow.edges, []),
+        createdAt: workflow.createdAt,
+        updatedAt: workflow.updatedAt,
+      }
+
+      // 为子工作流创建独立 executionId，避免 SSE/状态干扰
+      const subExecutionId = `${executionId}:agent:${node.id}`
+      this.executionStates.set(subExecutionId, {
+        executionId: subExecutionId,
+        workflow: workflowObj,
+        status: 'running',
+        startTime: new Date(),
+        nodeResults: new Map(),
+        progress: 0,
+        logs: [],
+        agentId: agent.id,
+        threadId: undefined,
+        autoApprovedToolTypes: new Set<string>(),
+        pendingApproval: null,
+        attachments: undefined,
+      })
+
+      const subGraph = await this.buildMonitoredLangGraph(subExecutionId, workflowObj, llmConfig)
+      const result = await this.executeMonitoredLangGraph(subGraph, input, subExecutionId, agent.id, undefined, attachments)
+
+      this.executionStates.delete(subExecutionId)
 
       return {
         output: result,
@@ -664,20 +700,14 @@ export class MonitoredLangGraphExecutor {
           nodeId: node.id,
           label: node.data?.label,
           type: 'agent',
-          agentId: node.data.config.agentId
-        }
+          agentId: agent.id,
+          agentName: agent.name,
+          workflowName: workflow.name,
+        },
       }
     } catch (error) {
       const errorMsg = error instanceof Error ? error.message : 'Agent执行失败'
-      return {
-        output: errorMsg,
-        metadata: {
-          nodeId: node.id,
-          label: node.data?.label,
-          type: 'agent',
-          error: errorMsg
-        }
-      }
+      return { output: errorMsg, metadata: { nodeId: node.id, type: 'agent', error: errorMsg, agentId: node.data.config?.agentId } }
     }
   }
 

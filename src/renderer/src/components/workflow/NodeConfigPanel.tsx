@@ -116,7 +116,7 @@ const NodeConfigPanel: React.FC<NodeConfigPanelProps> = ({ node, onClose, onSave
             </div>
             <div className="min-w-0">
               <h3 className="text-sm font-semibold text-gray-900 dark:text-white truncate">{getNodeDefaultLabel(node.type)}</h3>
-              <p className="text-[11px] text-gray-500 dark:text-gray-400 mt-0.5">节点配置</p>
+              <p className="text-[11px] text-gray-500 dark:text-gray-400 mt-0.5">节点配置 · ID: <span className="max-w-[180px] inline-block truncate align-bottom" title={node.id}>{node.id}</span></p>
             </div>
           </div>
           <button

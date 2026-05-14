@@ -15,3 +15,15 @@ export interface AttachmentPayload {
   textContent?: string    // 文本内容（仅临时传输，不持久化）
   filePath?: string       // 磁盘文件路径（持久化）
 }
+
+
+// 安全JSON解析函数
+export const safeJsonParse = <T>(str: string, defaultValue: T): T => {
+  if (!str) return defaultValue
+  try {
+    return JSON.parse(str)
+  } catch (error) {
+    console.error('JSON解析失败:', error)
+    return defaultValue
+  }
+}
