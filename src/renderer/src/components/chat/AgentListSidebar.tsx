@@ -8,6 +8,9 @@ interface AgentListSidebarProps {
   searchTerm: string
   onSearchChange: (value: string) => void
   onSelectAgent: (agent: Agent) => void
+  draftAgentIds?: Set<string>
+  unreadAgentIds?: Set<string>
+  pendingAgentIds?: Set<string>
 }
 
 const AGENT_COLORS: { bg: string; muted: string }[] = [
@@ -35,6 +38,9 @@ export default function AgentListSidebar({
   searchTerm,
   onSearchChange,
   onSelectAgent,
+  draftAgentIds,
+  unreadAgentIds,
+  pendingAgentIds,
 }: AgentListSidebarProps): React.JSX.Element {
   const filteredAgents = agents.filter(agent =>
     agent.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -102,12 +108,26 @@ export default function AgentListSidebar({
                   {initial}
                 </span>
               </span>
-              <div className="text-left min-w-0 flex-1">
-                <div className="text-sm font-medium truncate leading-tight">
+              <div className="text-left min-w-0 flex-1 relative">
+                <div className="text-sm font-medium truncate leading-tight flex items-center gap-1.5">
                   {agent.name}
+                  {draftAgentIds?.has(agent.id) && (
+                    <span className="inline-block w-1.5 h-1.5 rounded-full bg-amber-400 shrink-0" title="有未发送的内容" />
+                  )}
                 </div>
-                {agent.description && (
+                {unreadAgentIds?.has(agent.id) && (
+                  <span className="absolute top-0 right-0 w-2 h-2 rounded-full bg-red-500 ring-2 ring-white dark:ring-gray-900" title="新消息" />
+                )}
+                {agent.description && !pendingAgentIds?.has(agent.id) && (
                   <div className="text-xs mt-0.5 truncate text-gray-400 dark:text-gray-500 leading-tight">{agent.description}</div>
+                )}
+                {pendingAgentIds?.has(agent.id) && (
+                  <div className="flex items-center gap-0.5 mt-1" title="思考中...">
+                    <span className="text-[10px] text-blue-400 font-medium">思考中</span>
+                    <span className="w-1 h-1 bg-blue-400 rounded-full animate-bounce" style={{ animationDelay: '0ms' }} />
+                    <span className="w-1 h-1 bg-blue-400 rounded-full animate-bounce" style={{ animationDelay: '150ms' }} />
+                    <span className="w-1 h-1 bg-blue-400 rounded-full animate-bounce" style={{ animationDelay: '300ms' }} />
+                  </div>
                 )}
               </div>
             </button>
