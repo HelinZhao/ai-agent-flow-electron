@@ -38,6 +38,12 @@ const api = {
     maximize: () => ipcRenderer.invoke('window:maximize'),
     close: () => ipcRenderer.invoke('window:close'),
     isMaximized: () => ipcRenderer.invoke('window:isMaximized')
+  },
+  // 应用控制API
+  app: {
+    getAutoStart: () => ipcRenderer.invoke('app:getAutoStart'),
+    setAutoStart: (openAtLogin: boolean) => ipcRenderer.invoke('app:setAutoStart', openAtLogin),
+    restart: () => ipcRenderer.invoke('app:restart')
   }
 }
 

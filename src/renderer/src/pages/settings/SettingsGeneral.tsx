@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import CustomButton from '@renderer/components/ui/CustomButton'
 import MessageBanner from '@renderer/components/ui/MessageBanner'
 import { useSettingsStore } from '@renderer/store/settingsStore'
@@ -8,13 +8,37 @@ export default function SettingsGeneral() {
     layoutDirection, setLayoutDirection,
     autoSave, setAutoSave,
     autoSaveInterval, setAutoSaveInterval,
+    autoStart, setAutoStart,
     reset,
   } = useSettingsStore()
   const [message, setMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null)
 
+  // 页面加载时从主进程同步开机自启状态
+  useEffect(() => {
+    window.api.app.getAutoStart().then((enabled) => {
+      setAutoStart(enabled)
+    }).catch(() => {
+      // 忽略错误，使用 store 中的默认值
+    })
+  }, [])
+
   const handleReset = () => {
     reset()
     setMessage({ type: 'success', text: '已恢复默认设置' })
+  }
+
+  const handleAutoStartChange = async (checked: boolean) => {
+    setAutoStart(checked)
+    try {
+      await window.api.app.setAutoStart(checked)
+    } catch {
+      setAutoStart(!checked)
+      setMessage({ type: 'error', text: '设置开机自启失败' })
+    }
+  }
+
+  const handleRestart = async () => {
+    await window.api.app.restart()
   }
 
   return (
@@ -75,9 +99,27 @@ export default function SettingsGeneral() {
             <span className="text-xs text-gray-500">秒</span>
           </div>
         </div>
+
+        <div className="px-5 py-4 border-t border-gray-100 dark:border-gray-700/50 flex items-center justify-between">
+          <div>
+            <p className="text-sm font-semibold text-gray-900 dark:text-white">开机自启</p>
+            <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">系统启动时自动运行应用（支持 Windows / macOS / Linux）</p>
+          </div>
+          <label className="relative inline-flex items-center cursor-pointer">
+            <input type="checkbox" checked={autoStart} onChange={e => handleAutoStartChange(e.target.checked)}
+              className="sr-only peer" />
+            <div className="w-9 h-5 bg-gray-200 dark:bg-gray-600 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full rtl:peer-checked:after:-translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:start-[2px] after:bg-white after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-blue-600" />
+          </label>
+        </div>
       </div>
 
-      <div className="flex justify-end">
+      <div className="flex justify-between items-center">
+        <CustomButton variant="primary" size="sm" onClick={handleRestart}>
+          <svg className="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+            <path d="M21.5 2v6h-6M2.5 22v-6h6M2 11.5a10 10 0 0118.8-4.3M22 12.5a10 10 0 01-18.8 4.2" />
+          </svg>
+          重启应用
+        </CustomButton>
         <CustomButton variant="secondary" size="sm" onClick={handleReset}>恢复默认设置</CustomButton>
       </div>
     </div>

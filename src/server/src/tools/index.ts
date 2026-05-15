@@ -6,6 +6,7 @@ import { spawn } from 'child_process'
 import * as iconv from 'iconv-lite'
 import * as jschardet from 'jschardet'
 import { DUCKDUCKGO_URL, TOOL_EXECUTION_TIMEOUT, TOOL_READ_FILE_MAX_CHARS, TOOL_HTTP_MAX_CHARS, TOOL_WEB_SEARCH_MAX_RESULTS, TOOL_WEB_SEARCH_SNIPPET_LENGTH, WEB_SEARCH_USER_AGENT } from '../config'
+import { getUserDataDir } from '../utils/file'
 
 const decodeBuffer = (buf: Buffer): string => {
   if (buf.length === 0) return ''
@@ -20,10 +21,13 @@ const decodeBuffer = (buf: Buffer): string => {
   return iconv.decode(buf, encoding)
 }
 
+// 工具执行的工作目录（用户数据目录，以保证写入权限）
+export const getToolWorkingDir = (): string => getUserDataDir('/tools')
+
 const spawnWithOutput = (cmd: string, args: string[], cwd?: string, timeout?: number): Promise<string> => {
   const timeoutMs = (timeout || TOOL_EXECUTION_TIMEOUT) * 1000
   return new Promise((resolve, reject) => {
-    const child = spawn(cmd, args, { cwd: cwd || process.cwd(), windowsHide: true })
+    const child = spawn(cmd, args, { cwd: cwd || getToolWorkingDir(), windowsHide: true })
     const chunks: Buffer[] = []
     const errChunks: Buffer[] = []
     child.stdout?.on('data', (d: Buffer) => chunks.push(d))
@@ -42,7 +46,7 @@ const spawnWithOutput = (cmd: string, args: string[], cwd?: string, timeout?: nu
 // tool() API: tool(func, { name, description, schema })
 export const readFileTool = tool(
   async ({ filePath }: { filePath: string }) => {
-    const resolved = path.resolve(filePath)
+    const resolved = path.isAbsolute(filePath) ? filePath : path.join(getToolWorkingDir(), filePath)
     const content = await fs.readFile(resolved, 'utf-8')
     return content.length > TOOL_READ_FILE_MAX_CHARS ? content.substring(0, TOOL_READ_FILE_MAX_CHARS) + '\n...(内容过长，已截断)' : content
   },
@@ -55,7 +59,7 @@ export const readFileTool = tool(
 
 export const writeFileTool = tool(
   async ({ filePath, content }: { filePath: string; content: string }) => {
-    const resolved = path.resolve(filePath)
+    const resolved = path.isAbsolute(filePath) ? filePath : path.join(getToolWorkingDir(), filePath)
     const dir = path.dirname(resolved)
     try {
       await fs.access(dir)
@@ -77,7 +81,7 @@ export const writeFileTool = tool(
 
 export const listDirectoryTool = tool(
   async ({ dirPath }: { dirPath: string }) => {
-    const resolved = path.resolve(dirPath)
+    const resolved = path.isAbsolute(dirPath) ? dirPath : path.join(getToolWorkingDir(), dirPath)
     const entries = await fs.readdir(resolved, { withFileTypes: true })
     return entries.map(e => `${e.isDirectory() ? '[目录]' : e.isFile() ? '[文件]' : '[其他]'} ${e.name}`).join('\n')
   },
@@ -97,9 +101,9 @@ export const executeCommandTool = tool(
     const effectiveTimeout = timeout || TOOL_EXECUTION_TIMEOUT
     const isWin = process.platform === 'win32'
     if (isWin) {
-      return spawnWithOutput('cmd.exe', ['/d', '/s', '/c', command], process.cwd(), effectiveTimeout)
+      return spawnWithOutput('cmd.exe', ['/d', '/s', '/c', command], undefined, effectiveTimeout)
     }
-    return spawnWithOutput('/bin/sh', ['-c', command], process.cwd(), effectiveTimeout)
+    return spawnWithOutput('/bin/sh', ['-c', command], undefined, effectiveTimeout)
   },
   {
     name: 'executeCommand',

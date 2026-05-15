@@ -28,6 +28,12 @@ interface WindowAPI {
   isMaximized: () => Promise<boolean>
 }
 
+interface AppAPI {
+  getAutoStart: () => Promise<boolean>
+  setAutoStart: (openAtLogin: boolean) => Promise<boolean>
+  restart: () => Promise<boolean>
+}
+
 interface FileAPI {
   write: (filePath: string, data: string) => Promise<{ success: boolean; error?: string }>
 }
@@ -41,6 +47,7 @@ interface CustomAPI {
   chatRecord: ChatRecordAPI
   notify: NotifyAPI
   window: WindowAPI
+  app: AppAPI
   file: FileAPI
   dialog: DialogAPI
 }

@@ -8,6 +8,12 @@ import { setupChatRecordIPC } from './ipc/chatRecord'
 import dotenv from 'dotenv'
 dotenv.config()
 
+// 禁止应用多开 — 第二次启动时聚焦已有窗口并退出
+const gotTheLock = app.requestSingleInstanceLock()
+if (!gotTheLock) {
+  app.quit()
+}
+
 function createWindow(): void {
   // 创建浏览器窗口
   const mainWindow = new BrowserWindow({
@@ -80,6 +86,15 @@ function resolveBundledModelPath(): string | undefined {
 // 当Electron完成初始化并准备好创建浏览器窗口时，将调用此方法
 // 某些API只能在此事件发生后使用
 app.whenReady().then(() => {
+  // 尝试启动第二个实例时，聚焦已有窗口
+  app.on('second-instance', () => {
+    const win = BrowserWindow.getAllWindows()[0]
+    if (win) {
+      if (win.isMinimized()) win.restore()
+      win.focus()
+    }
+  })
+
   // 设置IPC处理程序
   setupChatRecordIPC()
 
@@ -169,6 +184,22 @@ app.whenReady().then(() => {
   ipcMain.handle('window:isMaximized', () => {
     const win = BrowserWindow.getAllWindows()[0]
     return win ? win.isMaximized() : false
+  })
+
+  // 开机自启 IPC（跨平台：Windows/macOS/Linux）
+  ipcMain.handle('app:getAutoStart', () => {
+    return app.getLoginItemSettings().openAtLogin
+  })
+  ipcMain.handle('app:setAutoStart', (_, openAtLogin: boolean) => {
+    app.setLoginItemSettings({ openAtLogin })
+    return true
+  })
+
+  // 重启应用 IPC
+  ipcMain.handle('app:restart', () => {
+    app.relaunch()
+    app.exit(0)
+    return true
   })
 
   // 原生文件保存对话框
