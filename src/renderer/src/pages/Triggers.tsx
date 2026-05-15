@@ -185,14 +185,14 @@ export default function Triggers(): React.JSX.Element {
                 {/* left: info */}
                 <div className="flex-1 min-w-0">
                   <div className="flex items-center gap-2">
-                    <span className="font-medium text-gray-800 dark:text-gray-100 truncate">{t.name}</span>
-                    <span className={`px-1.5 py-0.5 rounded text-xs font-medium ${
+                    <span className={`px-1.5 py-0.5 rounded text-xs font-medium flex-shrink-0 ${
                       t.type === 'cron'
                         ? 'bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400'
                         : 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400'
                     }`}>
                       {t.type === 'cron' ? '定时' : 'Webhook'}
                     </span>
+                    <span className="font-medium text-gray-800 dark:text-gray-100 truncate">{t.name}</span>
                   </div>
                   <div className="text-sm text-gray-500 dark:text-gray-400 mt-0.5 truncate">
                     {t.type === 'cron'

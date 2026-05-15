@@ -1,22 +1,48 @@
+// ---- 动态生成 safelist（字符串数组，比正则更可靠） ----
+
+const NODE_COLORS = ['green', 'blue', 'yellow', 'indigo', 'purple', 'red', 'orange', 'gray', 'teal']
+
+function buildSafelist() {
+  const list = []
+
+  const push = (prefix, shades, important) => {
+    for (const c of NODE_COLORS) {
+      for (const s of shades) {
+        const cls = `${prefix}-${c}-${s}`
+        list.push(cls)
+        if (important) list.push(`!${cls}`)
+      }
+    }
+  }
+
+  // 主体背景 & Handle port（！覆盖 React Flow 默认样式）
+  push('bg', [50, 100, 200, 400, 500, 600, 700], true)
+  // 文字
+  push('text', [200, 300, 400, 500, 600, 700, 800], false)
+  // 渐变起止
+  push('from', [400, 500, 600], false)
+  push('to', [400, 500, 600, 700], false)
+  // 边框（！覆盖）
+  push('border', [300, 400, 500, 600, 700], true)
+  // 选中环
+  push('ring', [300, 400, 500], false)
+  // hover 发光层
+  push('via', [400], false)
+
+  return list
+}
+
 /** @type {import('tailwindcss').Config} */
 module.exports = {
   darkMode: 'class',
   content: ['./src/renderer/src/**/*.{js,jsx,ts,tsx,mdx}', './index.html'],
-  safelist: [
-    // 节点颜色类（NODE_DEFS 使用的颜色 × 变体）
-    { pattern: /bg-(green|blue|yellow|indigo|purple|red|orange|gray|teal|slate|amber|violet|fuchsia|rose|cyan|emerald)-(50|100|200|400|500|600|700)/ },
-    { pattern: /text-(green|blue|yellow|indigo|purple|red|orange|gray|teal|slate|amber|violet|fuchsia|rose|cyan|emerald)-(200|300|400|500|600|700|800)/ },
-    { pattern: /from-(green|blue|yellow|indigo|purple|red|orange|gray|teal|slate|amber|violet|fuchsia|rose|cyan|emerald)-(400|500|600)/ },
-    { pattern: /to-(green|blue|yellow|indigo|purple|red|orange|gray|teal|slate|amber|violet|fuchsia|rose|cyan|emerald)-(400|500|600|700)/ },
-    { pattern: /border-(green|blue|yellow|indigo|purple|red|orange|gray|teal|slate|amber|violet|fuchsia|rose|cyan|emerald)-(300|400|500|600|700)/ },
-    { pattern: /ring-(green|blue|yellow|indigo|purple|red|orange|gray|teal|slate|amber|violet|fuchsia|rose|cyan|emerald)-(300|400|500)/ },
-  ],
+  safelist: buildSafelist(),
   theme: {
     extend: {
       screens: {
         '3xl': '1800px',
         '4xl': '2100px',
-        '5xl': '2560px',
+        '5xl': '2560px'
       },
       colors: {
         primary: {
