@@ -8,6 +8,7 @@ import {
   WorkflowExecutionMetrics,
   NodeExecutionResult,
   ExecutionSummary,
+  PaginatedExecutions,
   KnowledgeBase,
   KnowledgeChunk
 } from '@renderer/types'
@@ -210,11 +211,12 @@ export const workflowExecutionApi = {
   getNodeResults: (executionId: string): Promise<NodeExecutionResult[]> =>
     api.get(`/execute-workflow/node-results/${executionId}`),
 
-  // 获取所有执行记录列表
-  listExecutions: (status?: string, limit?: number): Promise<ExecutionSummary[]> => {
+  // 获取所有执行记录列表（分页）
+  listExecutions: (status?: string, page?: number, pageSize?: number): Promise<{ data: ExecutionSummary[]; total: number; page: number; pageSize: number }> => {
     const params = new URLSearchParams()
     if (status) params.append('status', status)
-    if (limit) params.append('limit', limit.toString())
+    if (page) params.append('page', page.toString())
+    if (pageSize) params.append('pageSize', pageSize.toString())
     return api.get(`/execute-workflow/list?${params.toString()}`)
   },
 

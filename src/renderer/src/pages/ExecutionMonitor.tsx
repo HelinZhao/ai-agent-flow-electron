@@ -2,6 +2,9 @@ import { memo, useEffect, useRef, useState } from 'react'
 import { ExecutionSummary, WorkflowExecutionProgress, NodeExecutionResult } from '@renderer/types'
 import { workflowExecutionApi } from '@renderer/lib/api'
 import { useWorkflowStore } from '@renderer/store/workflowStore'
+import Pagination from '@renderer/components/ui/Pagination'
+
+const PAGE_SIZE = 20
 
 type StatusFilter = 'all' | 'running' | 'paused' | 'completed' | 'failed'
 
@@ -43,6 +46,8 @@ function formatTime(iso: string): string {
 
 const ExecutionMonitor = () => {
   const [executions, setExecutions] = useState<ExecutionSummary[]>([])
+  const [total, setTotal] = useState(0)
+  const [page, setPage] = useState(1)
   const [filter, setFilter] = useState<StatusFilter>('all')
   const [isLoading, setIsLoading] = useState(true)
   const [expandedId, setExpandedId] = useState<string | null>(null)
@@ -50,6 +55,8 @@ const ExecutionMonitor = () => {
   const pollingRef = useRef<ReturnType<typeof setInterval>>(null)
   const intervalRef = useRef(2000)
   const currentPage = useWorkflowStore(s => s.currentPage)
+
+  const totalPages = Math.max(1, Math.ceil(total / PAGE_SIZE))
 
   const statusParam = filter === 'all' ? undefined : filter
 
@@ -61,10 +68,11 @@ const ExecutionMonitor = () => {
 
     const poll = async () => {
       try {
-        const data = await workflowExecutionApi.listExecutions(statusParam)
+        const result = await workflowExecutionApi.listExecutions(statusParam, page, PAGE_SIZE)
         if (cancelled) return
-        setExecutions(data)
-        const hasActive = data.some(e => e.status === 'running' || e.status === 'paused')
+        setExecutions(result.data)
+        setTotal(result.total)
+        const hasActive = result.data.some(e => e.status === 'running' || e.status === 'paused')
         intervalRef.current = hasActive ? 2000 : 5000
       } catch {
         // ignore
@@ -82,7 +90,7 @@ const ExecutionMonitor = () => {
       cancelled = true
       if (pollingRef.current) clearTimeout(pollingRef.current)
     }
-  }, [statusParam, currentPage])
+  }, [statusParam, page, currentPage])
 
   const handleStop = async (id: string) => {
     try {
@@ -102,7 +110,11 @@ const ExecutionMonitor = () => {
     } catch { /* ignore */ }
   }
 
-  const filteredList = filter === 'all' ? executions : executions.filter(e => e.status === filter)
+  // 切换过滤时回到第一页
+  const handleFilterChange = (f: StatusFilter) => {
+    setFilter(f)
+    setPage(1)
+  }
 
   return (
     <div className="h-full flex flex-col">
@@ -121,7 +133,7 @@ const ExecutionMonitor = () => {
         {FILTER_TABS.map(tab => (
           <button
             key={tab.key}
-            onClick={() => setFilter(tab.key)}
+            onClick={() => handleFilterChange(tab.key)}
             className={`px-3 py-1.5 text-sm rounded-lg font-medium transition-colors ${
               filter === tab.key
                 ? 'bg-blue-500 text-white'
@@ -132,7 +144,7 @@ const ExecutionMonitor = () => {
           </button>
         ))}
         <span className="ml-auto text-xs text-gray-400 dark:text-gray-500">
-          {isLoading ? '加载中...' : `共 ${filteredList.length} 条`}
+          {isLoading ? '加载中...' : `共 ${total} 条`}
         </span>
       </div>
 
@@ -148,7 +160,7 @@ const ExecutionMonitor = () => {
           </div>
         )}
 
-        {!isLoading && filteredList.length === 0 && (
+        {!isLoading && executions.length === 0 && (
           <div className="flex flex-col items-center justify-center h-48 text-gray-400 dark:text-gray-500">
             <svg className="w-12 h-12 mb-3 opacity-50" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5">
               <path d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" />
@@ -157,7 +169,7 @@ const ExecutionMonitor = () => {
           </div>
         )}
 
-        {filteredList.map(exec => {
+        {executions.map((exec: ExecutionSummary) => {
           const badge = STATUS_BADGE[exec.status] || STATUS_BADGE.completed
           const isExpanded = expandedId === exec.executionId
 
@@ -302,6 +314,13 @@ const ExecutionMonitor = () => {
           )
         })}
       </div>
+
+      {/* 分页 */}
+      {totalPages > 1 && (
+        <div className="flex-shrink-0 px-6 py-3 border-t border-gray-200 dark:border-gray-700">
+          <Pagination page={page} totalPages={totalPages} onChange={setPage} />
+        </div>
+      )}
 
       {/* 详情模态框 */}
       {detailId && (

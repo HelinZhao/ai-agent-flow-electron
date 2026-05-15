@@ -202,6 +202,13 @@ export interface ExecutionSummary {
   agentId?: string
 }
 
+export interface PaginatedExecutions {
+  data: ExecutionSummary[]
+  total: number
+  page: number
+  pageSize: number
+}
+
 // 工具审批相关类型
 export interface ToolApprovalAction {
   name: string

@@ -227,17 +227,16 @@ router.get('/progress-sse/:executionId', (req, res) => {
 // 获取所有执行记录列表
 router.get('/list', (req, res) => {
   try {
-    const { status, limit } = req.query
-    let executions = monitoredExecutor.getAllExecutions(status as string | undefined)
+    const { status, page: pageStr, pageSize: pageSizeStr } = req.query
+    const allExecutions = monitoredExecutor.getAllExecutions(status as string | undefined)
+    const total = allExecutions.length
 
-    if (limit) {
-      const limitNum = parseInt(limit as string, 10)
-      if (!isNaN(limitNum) && limitNum > 0) {
-        executions = executions.slice(0, limitNum)
-      }
-    }
+    const page = Math.max(1, parseInt(pageStr as string, 10) || 1)
+    const pageSize = Math.min(100, Math.max(1, parseInt(pageSizeStr as string, 10) || 20))
+    const start = (page - 1) * pageSize
+    const data = allExecutions.slice(start, start + pageSize)
 
-    return res.status(200).json(executions)
+    return res.status(200).json({ data, total, page, pageSize })
   } catch (error) {
     console.error('获取执行列表错误:', error)
     return res.status(500).json({
