@@ -3,12 +3,12 @@ import multer from 'multer'
 import path from 'path'
 import fs from 'fs/promises'
 import { KnowledgeBaseModel } from '../models'
-import { getResourcesDir } from '../utils/file'
+import { getUserDataDir } from '../utils/file'
 import { ingestDocument, deleteDocumentChunks, deleteAllChunks, getDocumentStats, retrieveContext, getChunksByDocument, addChunk, updateChunkContent, deleteSingleChunk, toggleChunkEnabled, reconstructDocumentFromChunks } from '../utils/knowledge'
 import { UPLOAD_DIR, KB_UPLOAD_EXTENSIONS, DEFAULT_CHUNK_SIZE, DEFAULT_CHUNK_OVERLAP, DEFAULT_TOP_K } from '../config'
 
 // 确保 uploads 目录存在
-const uploadsDir = getResourcesDir(UPLOAD_DIR)
+const uploadsDir = getUserDataDir(UPLOAD_DIR)
 fs.mkdir(uploadsDir, { recursive: true }).catch(() => {})
 
 const router = Router()

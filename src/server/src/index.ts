@@ -13,7 +13,7 @@ import dataRouter from './routes/data'
 import executeWorkflowRouter from './routes/execute-workflow'
 import logsRouter from './routes/logs'
 import proxyRouter from './routes/proxy'
-import { getResourcesDir } from './utils'
+import { getUserDataDir, migrateOldDataDir } from './utils'
 import {
   SERVER_PORT,
   BODY_SIZE_LIMIT,
@@ -159,7 +159,7 @@ export class LocalServer {
     // 附件文件服务：/api/attachments/:id/:filename
     this.app.get('/api/attachments/:id/:filename', async (req, res) => {
       const { id, filename } = req.params
-      const filePath = path.resolve(getResourcesDir(ATTACHMENT_DIR), `${id}-${filename}`)
+      const filePath = path.resolve(getUserDataDir(ATTACHMENT_DIR), `${id}-${filename}`)
 
       try {
         const data = await fs.readFile(filePath)
@@ -254,6 +254,7 @@ export class LocalServer {
   }
 
   public async start(port?: number): Promise<number> {
+    await migrateOldDataDir()
     await initDatabase()
 
     // 初始化 Ollama 服务（知识库 embedding 依赖）

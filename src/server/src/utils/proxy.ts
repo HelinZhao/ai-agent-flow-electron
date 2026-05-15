@@ -3,7 +3,7 @@ import { SocksClient } from 'socks'
 import http from 'http'
 import tls from 'tls'
 import fs from 'fs/promises'
-import { getResourcesDir } from './file'
+import { getUserDataDir } from './file'
 
 const PROXY_CONFIG_PATH = '/proxy-config.json'
 
@@ -31,7 +31,7 @@ function buildProxyUrl(config: ProxyConfig): string {
 
 export async function loadProxyConfig(): Promise<ProxyConfig> {
   try {
-    const filePath = getResourcesDir(PROXY_CONFIG_PATH)
+    const filePath = getUserDataDir(PROXY_CONFIG_PATH)
     const data = await fs.readFile(filePath, 'utf-8')
     return JSON.parse(data)
   } catch {
@@ -40,7 +40,7 @@ export async function loadProxyConfig(): Promise<ProxyConfig> {
 }
 
 export async function saveProxyConfig(config: ProxyConfig): Promise<void> {
-  const filePath = getResourcesDir(PROXY_CONFIG_PATH)
+  const filePath = getUserDataDir(PROXY_CONFIG_PATH)
   await fs.writeFile(filePath, JSON.stringify(config, null, 2), 'utf-8')
   cachedAgent = null
   cachedUrl = null

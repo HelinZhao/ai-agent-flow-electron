@@ -6,7 +6,7 @@
  */
 import Database from 'better-sqlite3'
 import { getLoadablePath } from 'sqlite-vec'
-import { getResourcesDir } from './file'
+import { getUserDataDir } from './file'
 import { KB_DB_FILENAME, VEC_TABLE_NAME, DEFAULT_VECTOR_DIMS } from '../config'
 
 // ────────────────────────────────────────
@@ -38,7 +38,7 @@ export interface VectorStoreProvider {
 // ────────────────────────────────────────
 
 export class SqliteVecStore implements VectorStoreProvider {
-  private dbPath = getResourcesDir(KB_DB_FILENAME)
+  private dbPath = getUserDataDir(KB_DB_FILENAME)
   private db: Database.Database | null = null
 
   private async getDb(): Promise<Database.Database> {
@@ -126,7 +126,7 @@ export class LanceDbStore implements VectorStoreProvider {
   async getTable(): Promise<any> {
     if (this.table) return this.table
     const lancedb = await import('@lancedb/lancedb').catch(() => { throw new Error('请安装 @lancedb/lancedb: npm install @lancedb/lancedb') })
-    const dbDir = this.config.dataDir || getResourcesDir('/lancedb')
+    const dbDir = this.config.dataDir || getUserDataDir('/lancedb')
     const db = await lancedb.connect(dbDir)
     const tblNames = await db.tableNames()
     if (tblNames.includes(this.tableName)) {
@@ -137,7 +137,7 @@ export class LanceDbStore implements VectorStoreProvider {
 
   async init(dims: number): Promise<void> {
     const lancedb = await import('@lancedb/lancedb').catch(() => { throw new Error('请安装 @lancedb/lancedb: npm install @lancedb/lancedb') })
-    const dbDir = this.config.dataDir || getResourcesDir('/lancedb')
+    const dbDir = this.config.dataDir || getUserDataDir('/lancedb')
     const db = await lancedb.connect(dbDir)
     const tblNames = await db.tableNames()
     if (tblNames.includes(this.tableName)) {
@@ -159,7 +159,7 @@ export class LanceDbStore implements VectorStoreProvider {
 
   async ensureReady(_dims: number): Promise<void> {
     const lancedb = await import('@lancedb/lancedb').catch(() => { throw new Error('请安装 @lancedb/lancedb: npm install @lancedb/lancedb') })
-    const dbDir = this.config.dataDir || getResourcesDir('/lancedb')
+    const dbDir = this.config.dataDir || getUserDataDir('/lancedb')
     const db = await lancedb.connect(dbDir)
     const tblNames = await db.tableNames()
     if (!tblNames.includes(this.tableName)) {
@@ -207,7 +207,7 @@ export class LanceDbStore implements VectorStoreProvider {
 
   async clearAll(): Promise<void> {
     const lancedb = await import('@lancedb/lancedb').catch(() => { throw new Error('请安装 @lancedb/lancedb: npm install @lancedb/lancedb') })
-    const dbDir = this.config.dataDir || getResourcesDir('/lancedb')
+    const dbDir = this.config.dataDir || getUserDataDir('/lancedb')
     const db = await lancedb.connect(dbDir)
     try { await db.dropTable(this.tableName) } catch { /* ignore */ }
     this.table = null

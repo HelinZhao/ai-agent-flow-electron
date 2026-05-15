@@ -14,7 +14,7 @@ import { callLLM } from './llm'
 import { executeApiCall } from './api'
 import { executeCliCommand, executeCliTemplate } from './cli'
 import { HITLRequest, HITLResponse, HITLDecision, CallLLMOptions } from './hitl'
-import { getResourcesDir, saveAttachmentToDisk } from './file'
+import { getUserDataDir, saveAttachmentToDisk } from './file'
 import { AttachmentPayload, safeJsonParse } from './shared'
 import { retrieveContext } from './knowledge'
 import { v4 as uuidv4 } from 'uuid'
@@ -45,7 +45,7 @@ interface ExecutionState {
   pendingApproval: { resolve: (response: HITLResponse) => void; request: HITLRequest } | null
   attachments?: AttachmentPayload[]
 }
-const checkpointer = SqliteSaver.fromConnString(getResourcesDir(DB_FILENAME));
+const checkpointer = SqliteSaver.fromConnString(getUserDataDir(DB_FILENAME));
 
 // 带监控的LangGraph执行器
 export class MonitoredLangGraphExecutor {

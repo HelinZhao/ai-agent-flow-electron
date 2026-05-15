@@ -3,20 +3,55 @@ import path from 'path'
 import { app } from 'electron'
 import { AttachmentPayload } from './shared'
 
-// 获取Resources目录，目录不存在时自动创建
-export const getResourcesDir = (subPath?: string): string => {
-  let dir: string
-  if (app.isPackaged) {
-    dir = path.join(path.dirname(process.execPath), `resources${subPath}`)
-  } else {
-    dir = path.join(`./resources${subPath}`) // 开发时
+/** 获取运行时数据目录（用户数据，非静态资源） */
+export const getUserDataDir = (subPath?: string): string => {
+  const base = app.isPackaged
+    ? app.getPath('userData')
+    : path.join(process.cwd(), 'data')
+  return path.join(base, subPath || '')
+}
+
+/** 迁移旧的运行时数据到新的 userData 目录 */
+export async function migrateOldDataDir(): Promise<void> {
+  const subPaths = ['/data', '/attachments', '/uploads', '/lancedb', '/proxy-config.json']
+  for (const sub of subPaths) {
+    const oldPath = app.isPackaged
+      ? path.join(path.dirname(process.execPath), 'resources', sub)
+      : path.join(process.cwd(), 'resources', sub)
+    await moveIfExists(oldPath, getUserDataDir(sub))
   }
-  return dir
+
+  // 迁移旧版 chat_records（之前存在项目根目录下）
+  const oldChatRecords = app.isPackaged
+    ? path.join(process.cwd(), 'chat_records')
+    : path.join(process.cwd(), 'chat_records')
+  await moveIfExists(oldChatRecords, getUserDataDir('/chat_records'))
+}
+
+async function moveIfExists(oldPath: string, newPath: string): Promise<void> {
+  try {
+    await fsp.access(oldPath)
+  } catch {
+    return // 旧路径不存在，跳过
+  }
+  try {
+    await fsp.access(newPath)
+    return // 新路径已存在，跳过
+  } catch {
+    // 新路径不存在，执行迁移
+  }
+  try {
+    await fsp.mkdir(path.dirname(newPath), { recursive: true })
+    await fsp.rename(oldPath, newPath)
+    console.log(`[迁移] ${oldPath} → ${newPath}`)
+  } catch (err) {
+    console.error(`[迁移] 失败: ${oldPath} → ${newPath}:`, err)
+  }
 }
 
 // 将附件数据保存到磁盘文件
 export async function saveAttachmentToDisk(att: AttachmentPayload): Promise<string> {
-  const attachDir = getResourcesDir('/attachments')
+  const attachDir = getUserDataDir('/attachments')
   await fsp.mkdir(attachDir, { recursive: true })
   const filePath = path.join(attachDir, `${att.id}-${att.name}`)
 

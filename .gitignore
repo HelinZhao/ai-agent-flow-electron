@@ -1,8 +1,6 @@
 node_modules
 dist
 out
-chat_history
-chat_records
 .DS_Store
 .eslintcache
 *.log*
@@ -14,3 +12,4 @@ resources/attachments/
 resources/lancedb/
 resources/uploads/
 resources/proxy-config.json
+data/

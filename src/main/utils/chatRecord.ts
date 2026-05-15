@@ -1,7 +1,7 @@
 import { app } from 'electron'
 import { join } from 'path'
 import { promises as fs } from 'fs'
-import { existsSync } from 'fs'
+import { existsSync, renameSync } from 'fs'
 
 // 附件元数据（轻量，用于历史持久化）
 export interface AttachmentMetadata {
@@ -37,13 +37,10 @@ export class ChatRecordManager {
   private recordDir: string
 
   private constructor() {
-    // 获取应用同级目录
-    const appPath = app.getAppPath()
-    const exeDir = app.isPackaged
-      ? process.cwd() // 打包后使用当前工作目录
-      : appPath // 开发环境使用应用目录
-
-    this.recordDir = join(exeDir, 'chat_records')
+    const base = app.isPackaged
+      ? app.getPath('userData')
+      : join(process.cwd(), 'data')
+    this.recordDir = join(base, 'chat_records')
     this.ensureRecordDir()
   }
 

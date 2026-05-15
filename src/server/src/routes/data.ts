@@ -1,7 +1,7 @@
 import { Router } from 'express'
 import Database from 'better-sqlite3'
 import fs from 'fs/promises'
-import { getResourcesDir } from '../utils/file'
+import { getUserDataDir } from '../utils/file'
 import { DB_FILENAME, KB_DB_FILENAME } from '../config'
 
 const router = Router()
@@ -9,8 +9,8 @@ const router = Router()
 // 获取数据库文件大小
 router.get('/db-stats', async (_req, res) => {
   try {
-    const dbPath = getResourcesDir(DB_FILENAME)
-    const kbDbPath = getResourcesDir(KB_DB_FILENAME)
+    const dbPath = getUserDataDir(DB_FILENAME)
+    const kbDbPath = getUserDataDir(KB_DB_FILENAME)
 
     let mainSize = 0
     let knowledgeSize = 0
@@ -32,8 +32,8 @@ router.get('/db-stats', async (_req, res) => {
 // VACUUM 数据库释放空闲空间
 router.post('/vacuum', async (_req, res) => {
   try {
-    const dbPath = getResourcesDir(DB_FILENAME)
-    const kbDbPath = getResourcesDir(KB_DB_FILENAME)
+    const dbPath = getUserDataDir(DB_FILENAME)
+    const kbDbPath = getUserDataDir(KB_DB_FILENAME)
 
     // VACUUM 主数据库
     try {
