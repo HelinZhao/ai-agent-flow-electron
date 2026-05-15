@@ -7,6 +7,7 @@ import CustomButton from '@renderer/components/ui/CustomButton'
 import KnowledgeDetail from './KnowledgeDetail'
 import { KB_DEFAULTS, EXTERNAL_KB_PROVIDER_META } from '@renderer/config'
 import { ollamaApi, PullProgress } from '@renderer/lib/api'
+import OllamaInstallDialog from '@renderer/components/OllamaInstallDialog'
 import MessageBanner from '@renderer/components/ui/MessageBanner'
 import ResponsiveGrid from '@renderer/components/ui/ResponsiveGrid'
 import KnowledgeEmbeddingStatus from '@renderer/components/knowledge/KnowledgeEmbeddingStatus'
@@ -123,12 +124,18 @@ export default function Knowledge(): React.JSX.Element {
   const [deleteKbTarget, setDeleteKbTarget] = useState<string | null>(null)
   const [searchTerm, setSearchTerm] = useState('')
   const [modelExists, setModelExists] = useState<boolean | null>(null)
+  const [showOllamaDialog, setShowOllamaDialog] = useState(false)
   const [modelPulling, setModelPulling] = useState(false)
   const [modelPullProgress, setModelPullProgress] = useState<PullProgress | null>(null)
 
   useEffect(() => {
     let cancel: (() => void) | null = null
     ollamaApi.getStatus().then(status => {
+      if (!status.ollamaRunning) {
+        const dismissed = localStorage.getItem('ollama-dismissed')
+        if (dismissed !== 'true') setShowOllamaDialog(true)
+        return
+      }
       setModelExists(status.modelExists)
       if (status.pulling) {
         setModelPulling(true)
@@ -142,7 +149,10 @@ export default function Knowledge(): React.JSX.Element {
           }
         })
       }
-    }).catch(() => setModelExists(false))
+    }).catch(() => {
+      const dismissed = localStorage.getItem('ollama-dismissed')
+      if (dismissed !== 'true') setShowOllamaDialog(true)
+    })
     return () => { cancel?.() }
   }, [])
 
@@ -169,6 +179,12 @@ export default function Knowledge(): React.JSX.Element {
   })
 
   const kbType = watch('type')
+
+const handleOllamaDismissOnce = () => setShowOllamaDialog(false)
+const handleOllamaDismissPermanently = () => {
+  setShowOllamaDialog(false)
+  localStorage.setItem('ollama-dismissed', 'true')
+}
 
 const handleModelPull = async (): Promise<void> => {
     setModelPulling(true)
@@ -346,6 +362,13 @@ const handleModelPull = async (): Promise<void> => {
             </div>
           </div>
         </div>
+      )}
+
+      {showOllamaDialog && (
+        <OllamaInstallDialog
+          onDismissOnce={handleOllamaDismissOnce}
+          onDismissPermanently={handleOllamaDismissPermanently}
+        />
       )}
     </div>
   )

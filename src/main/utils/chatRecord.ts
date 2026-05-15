@@ -1,7 +1,7 @@
 import { app } from 'electron'
 import { join } from 'path'
 import { promises as fs } from 'fs'
-import { existsSync, renameSync } from 'fs'
+import { existsSync } from 'fs'
 
 // 附件元数据（轻量，用于历史持久化）
 export interface AttachmentMetadata {
@@ -22,7 +22,7 @@ export interface ChatMessage {
   attachments?: AttachmentMetadata[]
 }
 
-export interface chatRecord {
+export interface ChatRecord {
   id: string
   agentId: string
   agentName: string
@@ -85,7 +85,7 @@ export class ChatRecordManager {
       if (messages.length === 0) return
       const filePath = this.getRecordFilePath(agentId)
 
-      let existingRecord: chatRecord
+      let existingRecord: ChatRecord
 
       try {
         const existingData = await fs.readFile(filePath, 'utf-8')
@@ -135,7 +135,7 @@ export class ChatRecordManager {
   }
 
   // 读取对话记录
-  public async loadChatRecord(agentId: string): Promise<chatRecord | null> {
+  public async loadChatRecord(agentId: string): Promise<ChatRecord | null> {
     try {
       const filePath = this.getRecordFilePath(agentId)
 
@@ -144,7 +144,7 @@ export class ChatRecordManager {
       }
 
       const data = await fs.readFile(filePath, 'utf-8')
-      const history: chatRecord = JSON.parse(data)
+      const history: ChatRecord = JSON.parse(data)
 
       console.log(`从 ${filePath} 加载对话记录`)
       return history
@@ -155,21 +155,21 @@ export class ChatRecordManager {
   }
 
   // 获取所有对话记录列表
-  public async getAllChatRecords(): Promise<chatRecord[]> {
+  public async getAllChatRecords(): Promise<ChatRecord[]> {
     try {
       if (!existsSync(this.recordDir)) {
         return []
       }
 
       const files = await fs.readdir(this.recordDir)
-      const histories: chatRecord[] = []
+      const histories: ChatRecord[] = []
 
       for (const file of files) {
         if (file.startsWith('chat_') && file.endsWith('.json')) {
           try {
             const filePath = join(this.recordDir, file)
             const data = await fs.readFile(filePath, 'utf-8')
-            const history: chatRecord = JSON.parse(data)
+            const history: ChatRecord = JSON.parse(data)
             histories.push(history)
           } catch (error) {
             console.error(`解析对话记录文件失败 ${file}:`, error)

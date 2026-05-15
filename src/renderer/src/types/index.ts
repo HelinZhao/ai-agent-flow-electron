@@ -103,7 +103,7 @@ export interface ChatMessage {
   attachments?: AttachmentMetadata[]
 }
 
-export interface chatRecord {
+export interface ChatRecord {
   id: string
   agentId: string
   agentName: string

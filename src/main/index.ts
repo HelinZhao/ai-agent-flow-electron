@@ -54,6 +54,7 @@ function resolveOllamaBinary(): string | undefined {
   }
   candidates.push(join(process.resourcesPath, 'resources/ollama', binaryName))
   candidates.push(join(process.resourcesPath, 'ollama', binaryName))
+  candidates.push(join(process.cwd(), 'ollama', binaryName))
   for (const p of candidates) {
     if (existsSync(p)) return p
   }
@@ -69,6 +70,7 @@ function resolveBundledModelPath(): string | undefined {
   }
   candidates.push(join(process.resourcesPath, 'resources/models', modelFile))
   candidates.push(join(process.resourcesPath, 'models', modelFile))
+  candidates.push(join(process.cwd(), 'models', modelFile))
   for (const p of candidates) {
     if (existsSync(p)) return p
   }

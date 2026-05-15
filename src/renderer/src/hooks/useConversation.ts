@@ -1,5 +1,5 @@
 import { useState, useRef, useCallback, useMemo, useEffect } from 'react'
-import { Agent, AttachmentMetadata, chatRecord, ToolApprovalRequest } from '@renderer/types'
+import { Agent, AttachmentMetadata, ChatRecord, ToolApprovalRequest } from '@renderer/types'
 import type { ChatMessage as ChatMessageType } from '@renderer/types'
 import { chatRecordApi } from '@renderer/lib/chatRecord'
 import { workflowExecutionApi } from '@renderer/lib/api'
@@ -128,7 +128,7 @@ export function useConversation() {
     try {
       const result = await chatRecordApi.loadRecord(agentId)
       if (result.success && result.history) {
-        const history: chatRecord = result.history
+        const history: ChatRecord = result.history
         conversationsRef.current[agentId] = history.messages
         setMessages(history.messages)
       } else {

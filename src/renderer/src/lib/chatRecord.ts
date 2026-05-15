@@ -1,4 +1,4 @@
-import { chatRecord, ChatMessage } from '@renderer/types'
+import { ChatRecord, ChatMessage } from '@renderer/types'
 
 // 对话记录API封装
 export const chatRecordApi = {
@@ -94,4 +94,4 @@ export const chatRecordApi = {
 }
 
 // 导出类型
-export type { chatRecord, ChatMessage }
+export type { ChatRecord, ChatMessage }

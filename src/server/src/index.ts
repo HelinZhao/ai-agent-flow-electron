@@ -97,10 +97,11 @@ export class LocalServer {
     this.app.use('/api', proxyRouter)
 
     // Ollama 模型状态与拉取路由
-    this.app.get('/api/ollama/status', (_req, res) => {
+    this.app.get('/api/ollama/status', async (_req, res) => {
+      const running = await isOllamaRunning().catch(() => false)
       res.json({
-        ollamaRunning: true, // 能收到请求说明 Ollama 已启动
-        modelExists: this.modelExists,
+        ollamaRunning: running,
+        modelExists: running ? this.modelExists : false,
         pulling: this.isPulling
       })
     })

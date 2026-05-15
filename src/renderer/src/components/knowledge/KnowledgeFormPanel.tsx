@@ -4,7 +4,7 @@ import { KnowledgeBase } from '@renderer/types'
 import CustomInput from '@renderer/components/ui/CustomInput'
 import CustomButton from '@renderer/components/ui/CustomButton'
 import CustomSelect from '@renderer/components/ui/CustomSelect'
-import { KB_DEFAULTS, CHUNK_SIZE_RANGE, CHUNK_OVERLAP_RANGE, TOP_K_RANGE, EXTERNAL_KB_PROVIDER_META, VECTOR_STORE_OPTIONS, VECTOR_STORE_CONFIG_FIELDS, VECTOR_STORE_DEFAULTS } from '@renderer/config'
+import { CHUNK_SIZE_RANGE, CHUNK_OVERLAP_RANGE, TOP_K_RANGE, EXTERNAL_KB_PROVIDER_META, VECTOR_STORE_OPTIONS, VECTOR_STORE_CONFIG_FIELDS, VECTOR_STORE_DEFAULTS } from '@renderer/config'
 
 interface KnowledgeFormPanelProps {
   show: boolean
