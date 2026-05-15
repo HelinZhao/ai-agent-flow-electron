@@ -190,6 +190,8 @@ export function useConversation() {
     setInputMessage('')
     setPendingAttachments([])
     delete draftsRef.current[currentAgentId]
+    // 立即存盘用户消息，防止 agent 回复前关应用导致丢失
+    chatRecordApi.saveRecord(currentAgentId, currentAgentName, newMessages).catch(() => {})
     // 记录发送历史（按方向键回溯用）
     const history = sentHistoryRef.current[currentAgentId] || []
     if (text.trim() && (history.length === 0 || history[history.length - 1] !== text.trim())) {
