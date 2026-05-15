@@ -295,6 +295,26 @@ export const VECTOR_STORE_META: Record<string, {
   },
 }
 
+// ========== 时间轮调度器 ==========
+
+/** 时间轮 L1 槽位数（秒级，覆盖 60 秒） */
+export const TW_L1_SLOTS = 60
+
+/** 时间轮 L2 槽位数（分钟级，覆盖 60 分钟） */
+export const TW_L2_SLOTS = 60
+
+/** 时间轮 L3 槽位数（小时级，覆盖 24 小时） */
+export const TW_L3_SLOTS = 24
+
+/** 时间轮 tick 间隔（毫秒） */
+export const TW_TICK_INTERVAL = 1000
+
+/** Webhook 限流：同一 token 1 分钟内最大触发次数 */
+export const WEBHOOK_RATE_LIMIT = 10
+
+/** Webhook 限流窗口（毫秒） */
+export const WEBHOOK_RATE_WINDOW = 60 * 1000
+
 // ========== 日志流 ==========
 
 /** 日志流环形缓冲区最大条数，新连接可回放此数量的历史日志 */

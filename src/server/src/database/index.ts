@@ -77,6 +77,37 @@ async function migrateWorkflowColumns(): Promise<void> {
   }
 }
 
+/**
+ * 执行增量迁移：创建 triggers 表（如不存在）
+ */
+async function migrateTriggerTable(): Promise<void> {
+  try {
+    const queryInterface = sequelize.getQueryInterface()
+    await queryInterface.describeTable('triggers')
+  } catch {
+    console.log('[Migration] triggers 表不存在，创建中...')
+    await sequelize.query(`
+      CREATE TABLE IF NOT EXISTS triggers (
+        id TEXT PRIMARY KEY,
+        name TEXT NOT NULL,
+        type TEXT NOT NULL CHECK(type IN ('cron', 'webhook')),
+        cronExpression TEXT,
+        targetType TEXT NOT NULL CHECK(targetType IN ('workflow', 'agent')),
+        targetId TEXT NOT NULL,
+        input TEXT NOT NULL DEFAULT '',
+        webhookToken TEXT,
+        enabled INTEGER NOT NULL DEFAULT 1,
+        nextRunAt TEXT,
+        lastRunAt TEXT,
+        lastRunStatus TEXT CHECK(lastRunStatus IN ('success', 'failed')),
+        createdAt TEXT NOT NULL,
+        updatedAt TEXT NOT NULL
+      )
+    `)
+    console.log('[Migration] triggers 表创建成功')
+  }
+}
+
 // 测试数据库连接
 export const initDatabase = async (): Promise<void> => {
   try {
@@ -89,6 +120,7 @@ export const initDatabase = async (): Promise<void> => {
     await migrateKnowledgeBaseColumns()
     await migrateLLMConfigColumns()
     await migrateWorkflowColumns()
+    await migrateTriggerTable()
   } catch (error) {
     console.error('数据库连接失败:', error)
     throw error

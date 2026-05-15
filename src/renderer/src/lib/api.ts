@@ -8,9 +8,9 @@ import {
   WorkflowExecutionMetrics,
   NodeExecutionResult,
   ExecutionSummary,
-  PaginatedExecutions,
   KnowledgeBase,
-  KnowledgeChunk
+  KnowledgeChunk,
+  Trigger
 } from '@renderer/types'
 import { API_BASE_URL, POLL_MAX_ATTEMPTS, POLL_INTERVAL } from '@renderer/config'
 
@@ -504,6 +504,22 @@ export const dataApi = {
 
   vacuum: (): Promise<{ message: string; base: { size: number }; knowledge: { size: number }; total: number }> =>
     api.post('/data/vacuum'),
+}
+
+// 触发器 API
+export const triggerApi = {
+  getAll: (): Promise<Trigger[]> => api.get('/triggers'),
+
+  create: (data: Omit<Trigger, 'id' | 'createdAt' | 'updatedAt' | 'webhookToken' | 'nextRunAt' | 'lastRunAt' | 'lastRunStatus'>): Promise<Trigger> =>
+    api.post('/triggers', data),
+
+  update: (id: string, data: Partial<Trigger>): Promise<Trigger> =>
+    api.put(`/triggers/${id}`, data),
+
+  delete: (id: string): Promise<void> => api.delete(`/triggers/${id}`),
+
+  runManual: (id: string): Promise<{ message: string }> =>
+    api.post(`/triggers/${id}/run`),
 }
 
 // Health check

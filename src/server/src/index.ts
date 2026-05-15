@@ -11,6 +11,7 @@ import llmConfigRouter from './routes/llm-config'
 import knowledgeBaseRouter from './routes/knowledge-base'
 import dataRouter from './routes/data'
 import executeWorkflowRouter from './routes/execute-workflow'
+import triggersRouter, { webhookRouter } from './routes/triggers'
 import logsRouter from './routes/logs'
 import proxyRouter from './routes/proxy'
 import { getUserDataDir, migrateOldDataDir } from './utils'
@@ -34,6 +35,8 @@ import {
   importLocalGGUFModel,
   logGpuInfo
 } from './utils/ollama'
+import { timingWheel, cronToNextTime } from './utils/timingWheel'
+import { TriggerModel } from './models'
 import { app } from 'electron'
 
 export class LocalServer {
@@ -93,6 +96,8 @@ export class LocalServer {
     this.app.use('/api/knowledge-base', knowledgeBaseRouter)
     this.app.use('/api/data', dataRouter)
     this.app.use('/api/execute-workflow', executeWorkflowRouter)
+    this.app.use('/api/triggers', triggersRouter)
+    this.app.use('/webhook', webhookRouter)
     this.app.use('/api/logs', logsRouter)
     this.app.use('/api', proxyRouter)
 
@@ -258,6 +263,22 @@ export class LocalServer {
     await migrateOldDataDir()
     await initDatabase()
 
+    // 加载所有启用的 cron 触发器并注册到时间轮
+    const enabledCronTriggers = await TriggerModel.findAll({
+      where: { type: 'cron', enabled: true }
+    })
+    for (const trigger of enabledCronTriggers) {
+      if (trigger.cronExpression) {
+        const nextTime = cronToNextTime(trigger.cronExpression)
+        if (nextTime > 0) {
+          timingWheel.schedule(trigger.id, nextTime)
+          await trigger.update({ nextRunAt: new Date(nextTime) })
+        }
+      }
+    }
+    timingWheel.start()
+    console.log(`[TriggerScheduler] 已加载 ${enabledCronTriggers.length} 个定时触发器`)
+
     // 初始化 Ollama 服务（知识库 embedding 依赖）
     await this.initOllama()
 
@@ -286,6 +307,9 @@ export class LocalServer {
   }
 
   public stop(): Promise<void> {
+    // 停止时间轮
+    timingWheel.stop()
+
     // 清理 Ollama 进程
     stopOllama()
 

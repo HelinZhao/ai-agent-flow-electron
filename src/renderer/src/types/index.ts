@@ -259,3 +259,21 @@ export interface KnowledgeChunk {
   createdAt: Date
   updatedAt: Date
 }
+
+// 触发器类型
+export interface Trigger {
+  id: string
+  name: string
+  type: 'cron' | 'webhook'
+  cronExpression?: string
+  targetType: 'workflow' | 'agent'
+  targetId: string
+  input: string
+  webhookToken?: string
+  enabled: boolean
+  nextRunAt?: string
+  lastRunAt?: string
+  lastRunStatus?: 'success' | 'failed' | 'running'
+  createdAt: string
+  updatedAt: string
+}

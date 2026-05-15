@@ -7,7 +7,7 @@ import { WORKFLOW_POLL_MAX_ATTEMPTS, WORKFLOW_POLL_INTERVAL } from '../config'
 const router = Router()
 
 // 创建监控执行器实例
-const monitoredExecutor = new MonitoredLangGraphExecutor()
+export const monitoredExecutor = new MonitoredLangGraphExecutor()
 
 // 执行工作流的路由（带监控）
 router.post('/monitor', async (req, res) => {

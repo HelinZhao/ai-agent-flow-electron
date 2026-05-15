@@ -14,6 +14,7 @@ import Agents from "./Agents";
 import Chat from "./Chat";
 import Logs from "./Logs";
 import ExecutionMonitor from "./ExecutionMonitor";
+import Triggers from "./Triggers";
 import Knowledge from "./Knowledge";
 
 const pages: Record<string, React.ReactNode> = {
@@ -22,8 +23,9 @@ const pages: Record<string, React.ReactNode> = {
     '/skills': <Skills />,
     '/settings': <Settings />,
     '/chat': <Chat />,
-    '/logs': <Logs />,
     '/monitor': <ExecutionMonitor />,
+    '/triggers': <Triggers />,
+    '/logs': <Logs />,
     '/knowledge': <Knowledge />,
 };
 

@@ -20,8 +20,9 @@ const Layout: React.FC<LayoutProps> = ({ children, currentPage, onNavigate }: La
     { path: '/agents', label: 'Agent管理', icon: '🤖' },
     { path: '/skills', label: '技能管理', icon: '⚡' },
     { path: '/knowledge', label: '知识库', icon: '📚' },
-    { path: '/settings', label: '设置', icon: '⚙️' },
+    { path: '/triggers', label: '触发器', icon: '⏰' },
     { path: '/monitor', label: '执行监控', icon: '📊' },
+    { path: '/settings', label: '设置', icon: '⚙️' },
     { path: '/logs', label: '日志', icon: '📋' }
   ]
 
