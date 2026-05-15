@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react'
 import CustomInput from '@renderer/components/ui/CustomInput'
 import CustomButton from '@renderer/components/ui/CustomButton'
 import CustomSelect from '@renderer/components/ui/CustomSelect'
+import CustomSwitch from '@renderer/components/ui/CustomSwitch'
 import MessageBanner from '@renderer/components/ui/MessageBanner'
 import { proxyApi } from '@renderer/lib/api'
 
@@ -74,11 +75,7 @@ export default function SettingsProxy() {
             <p className="text-sm font-semibold text-gray-900 dark:text-white">启用代理</p>
             <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">开启后 LLM API 调用将通过代理转发</p>
           </div>
-          <label className="relative inline-flex items-center cursor-pointer">
-            <input type="checkbox" checked={enabled} onChange={e => setEnabled(e.target.checked)}
-              className="sr-only peer" />
-            <div className="w-9 h-5 bg-gray-200 dark:bg-gray-600 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full rtl:peer-checked:after:-translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:start-[2px] after:bg-white after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-blue-600" />
-          </label>
+          <CustomSwitch checked={enabled} onChange={setEnabled} />
         </div>
 
         <div className={`space-y-4 ${!enabled ? 'opacity-40 pointer-events-none' : ''}`}>

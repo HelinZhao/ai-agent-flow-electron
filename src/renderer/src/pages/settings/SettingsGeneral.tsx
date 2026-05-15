@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react'
 import CustomButton from '@renderer/components/ui/CustomButton'
+import CustomSwitch from '@renderer/components/ui/CustomSwitch'
 import MessageBanner from '@renderer/components/ui/MessageBanner'
 import { useSettingsStore } from '@renderer/store/settingsStore'
 
@@ -79,11 +80,7 @@ export default function SettingsGeneral() {
             <p className="text-sm font-semibold text-gray-900 dark:text-white">自动保存</p>
             <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">编辑工作流时自动保存到本地</p>
           </div>
-          <label className="relative inline-flex items-center cursor-pointer">
-            <input type="checkbox" checked={autoSave} onChange={e => setAutoSave(e.target.checked)}
-              className="sr-only peer" />
-            <div className="w-9 h-5 bg-gray-200 dark:bg-gray-600 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full rtl:peer-checked:after:-translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:start-[2px] after:bg-white after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-blue-600" />
-          </label>
+          <CustomSwitch checked={autoSave} onChange={setAutoSave} />
         </div>
 
         <div className="px-5 py-4 flex items-center justify-between">
@@ -105,11 +102,7 @@ export default function SettingsGeneral() {
             <p className="text-sm font-semibold text-gray-900 dark:text-white">开机自启</p>
             <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">系统启动时自动运行应用（支持 Windows / macOS / Linux）</p>
           </div>
-          <label className="relative inline-flex items-center cursor-pointer">
-            <input type="checkbox" checked={autoStart} onChange={e => handleAutoStartChange(e.target.checked)}
-              className="sr-only peer" />
-            <div className="w-9 h-5 bg-gray-200 dark:bg-gray-600 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full rtl:peer-checked:after:-translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:start-[2px] after:bg-white after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-blue-600" />
-          </label>
+          <CustomSwitch checked={autoStart} onChange={handleAutoStartChange} />
         </div>
       </div>
 

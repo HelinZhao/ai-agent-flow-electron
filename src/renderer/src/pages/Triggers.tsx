@@ -6,6 +6,7 @@ import { CRON_PRESETS, WEBHOOK_BASE_URL } from '@renderer/config'
 import CustomButton from '@renderer/components/ui/CustomButton'
 import CustomInput from '@renderer/components/ui/CustomInput'
 import CustomSelect from '@renderer/components/ui/CustomSelect'
+import CustomSwitch from '@renderer/components/ui/CustomSwitch'
 import CustomTextarea from '@renderer/components/ui/CustomTextarea'
 
 function formatTime(iso?: string): string {
@@ -208,17 +209,7 @@ export default function Triggers(): React.JSX.Element {
 
                 {/* right: actions */}
                 <div className="flex items-center gap-1.5 flex-shrink-0">
-                  {/* toggle */}
-                  <button
-                    onClick={() => handleToggle(t)}
-                    className={`relative w-11 h-6 rounded-full transition-colors flex-shrink-0 ${
-                      t.enabled ? 'bg-blue-500' : 'bg-gray-300 dark:bg-gray-600'
-                    }`}
-                  >
-                    <span className={`absolute top-0.5 left-0.5 w-5 h-5 rounded-full bg-white shadow transition-transform ${
-                      t.enabled ? 'translate-x-5' : 'translate-x-0'
-                    }`} />
-                  </button>
+                  <CustomSwitch checked={t.enabled} onChange={() => handleToggle(t)} />
 
                   {t.type === 'webhook' && (
                     <button

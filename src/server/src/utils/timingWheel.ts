@@ -2,7 +2,8 @@ import { TW_L1_SLOTS, TW_L2_SLOTS, TW_L3_SLOTS, TW_TICK_INTERVAL } from '../conf
 
 interface WheelTask {
   triggerId: string
-  fireAt: number // ms timestamp
+  fireAt: number  // ms timestamp
+  generation: number
 }
 
 interface TaskMeta {
@@ -22,7 +23,7 @@ export class TimingWheel {
 
   private timer: ReturnType<typeof setInterval> | null = null
   private taskMap = new Map<string, TaskMeta>()
-  private cancelledIds = new Set<string>()
+  private generations = new Map<string, number>()
 
   /** 注入回调：当任务到期时由外部调用 */
   onFire: ((triggerId: string) => Promise<void>) | null = null
@@ -51,45 +52,41 @@ export class TimingWheel {
 
   /** 调度一个任务 */
   schedule(triggerId: string, fireAt: number): void {
-    // 先取消旧的（如果有）
-    this.cancel(triggerId)
+    // 递增 generation，使该 trigger 的所有旧任务失效
+    const gen = (this.generations.get(triggerId) || 0) + 1
+    this.generations.set(triggerId, gen)
 
     const now = Date.now()
     const delaySec = Math.max(0, Math.ceil((fireAt - now) / 1000))
 
-    // 根据 delay 选择层级
+    const task: WheelTask = { triggerId, fireAt, generation: gen }
+
     if (delaySec < TW_L1_SLOTS) {
       const slot = (this.l1Idx + delaySec) % TW_L1_SLOTS
-      const task: WheelTask = { triggerId, fireAt }
       this.l1[slot].push(task)
       this.taskMap.set(triggerId, { task, level: 1, slot })
     } else if (delaySec < TW_L1_SLOTS * TW_L2_SLOTS) {
       const delayMin = Math.ceil(delaySec / 60)
       const slot = (this.l2Idx + delayMin) % TW_L2_SLOTS
-      const task: WheelTask = { triggerId, fireAt }
       this.l2[slot].push(task)
       this.taskMap.set(triggerId, { task, level: 2, slot })
     } else if (delaySec < TW_L1_SLOTS * TW_L2_SLOTS * TW_L3_SLOTS) {
       const delayHour = Math.ceil(delaySec / 3600)
       const slot = (this.l3Idx + delayHour) % TW_L3_SLOTS
-      const task: WheelTask = { triggerId, fireAt }
       this.l3[slot].push(task)
       this.taskMap.set(triggerId, { task, level: 3, slot })
     } else {
-      // 超出 24 小时范围，放入最后一个 L3 槽位
       const slot = (this.l3Idx + TW_L3_SLOTS - 1) % TW_L3_SLOTS
-      const task: WheelTask = { triggerId, fireAt }
       this.l3[slot].push(task)
       this.taskMap.set(triggerId, { task, level: 3, slot })
     }
   }
 
-  /** 取消一个任务 */
+  /** 取消一个任务：递增 generation 使该 trigger 所有旧任务失效 */
   cancel(triggerId: string): void {
-    if (this.taskMap.has(triggerId)) {
-      this.cancelledIds.add(triggerId)
-      this.taskMap.delete(triggerId)
-    }
+    const gen = (this.generations.get(triggerId) || 0) + 1
+    this.generations.set(triggerId, gen)
+    this.taskMap.delete(triggerId)
   }
 
   /** 获取所有已注册的 triggerId */
@@ -104,6 +101,11 @@ export class TimingWheel {
   }
 
   // ---- internal ----
+
+  /** 校验任务是否仍然有效（generation 匹配） */
+  private isValid(task: WheelTask): boolean {
+    return task.generation === this.generations.get(task.triggerId)
+  }
 
   private tick(): void {
     // 1. 执行 L1 当前槽位所有到期任务
@@ -132,21 +134,15 @@ export class TimingWheel {
   private cascadeSlot(tasks: (WheelTask | null)[], fromLevel: 2 | 3): void {
     const now = Date.now()
     for (const task of tasks) {
-      if (!task || this.cancelledIds.has(task.triggerId)) {
-        if (task) this.cancelledIds.delete(task.triggerId)
-        continue
-      }
+      if (!task || !this.isValid(task)) continue
       const remainingSec = Math.max(0, Math.ceil((task.fireAt - now) / 1000))
 
       if (fromLevel === 2) {
-        // L2 → L1：剩余秒数应该在 0~60 以内
         const slot = (this.l1Idx + remainingSec) % TW_L1_SLOTS
         this.l1[slot].push(task)
         this.taskMap.set(task.triggerId, { task, level: 1, slot })
       } else {
-        // L3 → L2：剩余秒数在 0~3600 以内
         if (remainingSec < TW_L1_SLOTS) {
-          // 已经可以进 L1 了
           const slot = (this.l1Idx + remainingSec) % TW_L1_SLOTS
           this.l1[slot].push(task)
           this.taskMap.set(task.triggerId, { task, level: 1, slot })
@@ -165,12 +161,8 @@ export class TimingWheel {
     if (!this.onFire) return
 
     for (const task of tasks) {
-      if (!task) continue
-      if (this.cancelledIds.has(task.triggerId)) {
-        this.cancelledIds.delete(task.triggerId)
-        continue
-      }
-      // 任务即将执行，从 taskMap 移除
+      if (!task || !this.isValid(task)) continue
+      // 从 taskMap 移除（该任务即将执行）
       this.taskMap.delete(task.triggerId)
 
       // 异步执行，不阻塞 tick
@@ -221,7 +213,6 @@ function parseCronField(field: string, [min, max]: readonly [number, number]): S
     } else {
       const v = parseInt(range, 10)
       if (v >= min && v <= max) {
-        // 对于有 step 的单值，从该值开始按 step 递增
         if (step > 1) {
           for (let i = v; i <= max; i += step) values.add(i)
         } else {
@@ -234,10 +225,6 @@ function parseCronField(field: string, [min, max]: readonly [number, number]): S
   return values
 }
 
-/**
- * 解析标准 5 段 cron 表达式，返回下次触发时间。
- * 若表达式永不匹配则返回 null。
- */
 function cronToNextTimeInner(expression: string, from: Date): Date | null {
   const fields = expression.trim().split(/\s+/)
   if (fields.length !== 5) return null
@@ -249,10 +236,10 @@ function cronToNextTimeInner(expression: string, from: Date): Date | null {
     validFields.push(values)
   }
 
-  const maxIterations = 366 * 24 * 60 // 最多搜索一年
+  const maxIterations = 366 * 24 * 60
   let current = new Date(from)
   current.setSeconds(0, 0)
-  current.setMinutes(current.getMinutes() + 1) // 从下一秒开始
+  current.setMinutes(current.getMinutes() + 1)
 
   for (let iter = 0; iter < maxIterations; iter++) {
     const minute = current.getMinutes()
@@ -271,17 +258,12 @@ function cronToNextTimeInner(expression: string, from: Date): Date | null {
       return current
     }
 
-    // 前进 1 分钟
     current = new Date(current.getTime() + 60_000)
   }
 
   return null
 }
 
-/**
- * 解析 cron 表达式，返回下一次触发的毫秒时间戳。
- * 若解析失败或永不触发，返回 0。
- */
 export function cronToNextTime(expression: string, from?: Date): number {
   try {
     const result = cronToNextTimeInner(expression, from || new Date())
@@ -291,7 +273,6 @@ export function cronToNextTime(expression: string, from?: Date): number {
   }
 }
 
-/** 人类可读的 cron 描述（简单版） */
 export function describeCron(expression: string): string {
   const fields = expression.trim().split(/\s+/)
   if (fields.length !== 5) return '无效表达式'
@@ -304,28 +285,24 @@ export function describeCron(expression: string): string {
 
   const parts: string[] = []
 
-  // 分钟
   if (min.startsWith('*/')) {
     parts.push(`每 ${min.slice(2)} 分钟`)
   } else if (min !== '*' && min !== '0') {
     parts.push(`第 ${min} 分`)
   }
 
-  // 小时
   if (hour.startsWith('*/')) {
     parts.push(`每 ${hour.slice(2)} 小时`)
   } else if (hour !== '*') {
     parts.push(`${hour}:00`)
   }
 
-  // 星期
   const dowNames = ['周日', '周一', '周二', '周三', '周四', '周五', '周六']
   if (dow !== '*' && dow !== '0,1,2,3,4,5,6' && dom === '*') {
     const days = dow.split(',').map((d) => dowNames[parseInt(d, 10)] || d)
     parts.push(days.join('、'))
   }
 
-  // 日期
   if (dom !== '*') {
     parts.push(`每月 ${dom} 号`)
   }

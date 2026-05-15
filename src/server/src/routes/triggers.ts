@@ -134,7 +134,7 @@ timingWheel.onFire = fireTrigger
 router.get('/', async (_req, res) => {
   try {
     const triggers = await TriggerModel.findAll({
-      order: [['updatedAt', 'DESC']]
+      order: [['createdAt', 'DESC']]
     })
     return res.status(200).json(triggers)
   } catch (error) {

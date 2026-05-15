@@ -3,6 +3,7 @@ import { createPortal } from 'react-dom'
 import { knowledgeBaseApi } from '@renderer/lib/api'
 import { KnowledgeChunk } from '@renderer/types'
 import CustomButton from '@renderer/components/ui/CustomButton'
+import CustomSwitch from '@renderer/components/ui/CustomSwitch'
 import { CHUNK_PAGE_SIZE, CHUNK_VIEWER_HEIGHT, CHUNK_PREVIEW_LINES } from '@renderer/config'
 
 interface ChunkViewerProps {
@@ -293,16 +294,9 @@ export default function ChunkViewer({ kbId, docName, onClose }: ChunkViewerProps
                     {/* 悬浮操作栏 — hover 时显示 */}
                     <div className="absolute top-0 right-4 z-10 hidden group-hover/card:flex items-center gap-1 px-2 py-1.5 rounded-xl border border-gray-200 dark:border-gray-600 bg-white dark:bg-gray-800 shadow-lg backdrop-blur-sm">
                       {/* 启停开关 */}
-                      <button
-                        onClick={(e) => { e.stopPropagation(); handleToggle(chunk.id) }}
-                        className={`relative inline-flex h-4 w-7 items-center rounded-full transition-colors ${
-                          chunk.enabled ? 'bg-blue-500' : 'bg-gray-300 dark:bg-gray-600'
-                        }`}
-                      >
-                        <span className={`inline-block h-3 w-3 transform rounded-full bg-white transition-transform ${
-                          chunk.enabled ? 'translate-x-3' : 'translate-x-0.5'
-                        }`} />
-                      </button>
+                      <span onClick={(e) => e.stopPropagation()}>
+                        <CustomSwitch size="sm" checked={chunk.enabled} onChange={() => handleToggle(chunk.id)} />
+                      </span>
                       <div className="w-px h-4 bg-gray-200 dark:bg-gray-600" />
                       {/* 编辑 */}
                       <button
