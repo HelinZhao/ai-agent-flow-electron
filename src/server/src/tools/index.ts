@@ -27,7 +27,7 @@ export const getToolWorkingDir = (): string => getUserDataDir('/tools')
 const spawnWithOutput = (cmd: string, args: string[], cwd?: string, timeout?: number): Promise<string> => {
   const timeoutMs = (timeout || TOOL_EXECUTION_TIMEOUT) * 1000
   return new Promise((resolve, reject) => {
-    const child = spawn(cmd, args, { cwd: cwd || getToolWorkingDir(), windowsHide: true })
+    const child = spawn(cmd, args, { cwd: cwd || process.cwd(), windowsHide: true })
     const chunks: Buffer[] = []
     const errChunks: Buffer[] = []
     child.stdout?.on('data', (d: Buffer) => chunks.push(d))
