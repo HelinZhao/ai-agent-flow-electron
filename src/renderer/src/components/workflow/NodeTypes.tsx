@@ -12,7 +12,7 @@ function nodeBorder(def: { color: string }) {
   return `border border-${def.color}-300`
 }
 function nodeRing(def: { color: string }) {
-  return `ring-2 ring-${def.color}-400 shadow-2xl`
+  return `ring-2 ring-${def.color}-400 shadow-glow-lg dark:shadow-glow-lg-w`
 }
 function handleClass(def: { color: string }) {
   return `!w-3 !h-3 !bg-${def.color}-400 !border-2 !border-white !rounded-full`
@@ -32,7 +32,7 @@ export function StartNode({ data }: { data: any }): React.JSX.Element {
   const def = NODE_DEFS_MAP['start']
   const sourcePos = direction === 'vertical' ? Position.Bottom : Position.Right
   return (
-    <div className={`react-flow__node node-start group relative px-4 py-3 min-w-[120px] ${nodeBg(def)} rounded-lg shadow-lg hover:shadow-xl transition-shadow duration-300 ${nodeBorder(def)}`}>
+    <div className={`node-start group relative px-4 py-3 min-w-[120px] ${nodeBg(def)} rounded-lg hover:shadow-glow-md dark:hover:shadow-glow-md-w transition-shadow duration-300 ${nodeBorder(def)}`}>
       <Handle type="source" position={sourcePos} className={handleClass(def)} />
       <div className="text-center">
         <div className="text-black text-lg mb-1">{def.icon}</div>
@@ -53,7 +53,7 @@ export function SkillNode({ data, selected }: { data: any; selected: boolean }):
   const targetPos = direction === 'vertical' ? Position.Top : Position.Left
   const sourcePos = direction === 'vertical' ? Position.Bottom : Position.Right
   return (
-    <div className={`react-flow__node node-skill group relative px-4 py-3 min-w-[160px] ${nodeBg(def)} rounded-lg shadow-lg hover:shadow-xl transition-shadow duration-300 ${nodeBorder(def)} ${selected ? nodeRing(def) : ''}`}>
+    <div className={`node-skill group relative px-4 py-3 min-w-[160px] ${nodeBg(def)} rounded-lg hover:shadow-glow-md dark:hover:shadow-glow-md-w transition-shadow duration-300 ${nodeBorder(def)} ${selected ? nodeRing(def) : ''}`}>
       <Handle type="target" position={targetPos} className={handleClass(def)} />
       <Handle type="source" position={sourcePos} className={handleClass(def)} />
       <div className="flex items-center space-x-3">
@@ -89,7 +89,7 @@ export function BranchNode({ data, selected }: { data: any; selected: boolean })
   ];
 
   return (
-    <div className={`react-flow__node node-branch group relative px-4 py-3 min-w-[160px] ${nodeBg(def)} rounded-lg shadow-lg hover:shadow-xl transition-shadow duration-300 ${nodeBorder(def)} ${selected ? nodeRing(def) : ''}`}>
+    <div className={`node-branch group relative px-4 py-3 min-w-[160px] ${nodeBg(def)} rounded-lg hover:shadow-glow-md dark:hover:shadow-glow-md-w transition-shadow duration-300 ${nodeBorder(def)} ${selected ? nodeRing(def) : ''}`}>
       <Handle type="target" position={targetPos} className={handleClass(def)} />
       <Handle type="source" position={sourcePos} className={handleClass(def)} />
       <div className="flex items-center space-x-3">
@@ -118,7 +118,7 @@ export function ApiNode({ data, selected }: { data: any; selected: boolean }): R
   const targetPos = direction === 'vertical' ? Position.Top : Position.Left
   const sourcePos = direction === 'vertical' ? Position.Bottom : Position.Right
   return (
-    <div className={`react-flow__node node-api group relative px-4 py-3 min-w-[160px] ${nodeBg(def)} rounded-lg shadow-lg hover:shadow-xl transition-shadow duration-300 ${nodeBorder(def)} ${selected ? nodeRing(def) : ''}`}>
+    <div className={`node-api group relative px-4 py-3 min-w-[160px] ${nodeBg(def)} rounded-lg hover:shadow-glow-md dark:hover:shadow-glow-md-w transition-shadow duration-300 ${nodeBorder(def)} ${selected ? nodeRing(def) : ''}`}>
       <Handle type="target" position={targetPos} className={handleClass(def)} />
       <Handle type="source" position={sourcePos} className={handleClass(def)} />
       <div className="flex items-center space-x-3">
@@ -149,7 +149,7 @@ export function LLMNode({ data, selected }: { data: any; selected: boolean }): R
   const targetPos = direction === 'vertical' ? Position.Top : Position.Left
   const sourcePos = direction === 'vertical' ? Position.Bottom : Position.Right
   return (
-    <div className={`react-flow__node node-llm group relative px-4 py-3 min-w-[160px] ${nodeBg(def)} rounded-lg shadow-lg hover:shadow-xl transition-shadow duration-300 ${nodeBorder(def)} ${selected ? nodeRing(def) : ''}`}>
+    <div className={`node-llm group relative px-4 py-3 min-w-[160px] ${nodeBg(def)} rounded-lg hover:shadow-glow-md dark:hover:shadow-glow-md-w transition-shadow duration-300 ${nodeBorder(def)} ${selected ? nodeRing(def) : ''}`}>
       <Handle type="target" position={targetPos} className={handleClass(def)} />
       <Handle type="source" position={sourcePos} className={handleClass(def)} />
       <div className="flex items-center space-x-3">
@@ -180,7 +180,7 @@ export function AgentNode({ data, selected }: { data: any; selected: boolean }):
   const targetPos = direction === 'vertical' ? Position.Top : Position.Left
   const sourcePos = direction === 'vertical' ? Position.Bottom : Position.Right
   return (
-    <div className={`react-flow__node node-agent group relative px-4 py-3 min-w-[160px] ${nodeBg(def)} rounded-lg shadow-lg hover:shadow-xl transition-shadow duration-300 ${nodeBorder(def)} ${selected ? nodeRing(def) : ''}`}>
+    <div className={`node-agent group relative px-4 py-3 min-w-[160px] ${nodeBg(def)} rounded-lg hover:shadow-glow-md dark:hover:shadow-glow-md-w transition-shadow duration-300 ${nodeBorder(def)} ${selected ? nodeRing(def) : ''}`}>
       <Handle type="target" position={targetPos} className={handleClass(def)} />
       <Handle type="source" position={sourcePos} className={handleClass(def)} />
       <div className="flex items-center space-x-3">
@@ -211,7 +211,7 @@ export function CliNode({ data, selected }: { data: any; selected: boolean }): R
   const targetPos = direction === 'vertical' ? Position.Top : Position.Left
   const sourcePos = direction === 'vertical' ? Position.Bottom : Position.Right
   return (
-    <div className={`react-flow__node node-cli group relative px-4 py-3 min-w-[160px] ${nodeBg(def)} rounded-lg shadow-lg hover:shadow-xl transition-shadow duration-300 ${nodeBorder(def)} ${selected ? nodeRing(def) : ''}`}>
+    <div className={`node-cli group relative px-4 py-3 min-w-[160px] ${nodeBg(def)} rounded-lg hover:shadow-glow-md dark:hover:shadow-glow-md-w transition-shadow duration-300 ${nodeBorder(def)} ${selected ? nodeRing(def) : ''}`}>
       <Handle type="target" position={targetPos} className={handleClass(def)} />
       <Handle type="source" position={sourcePos} className={handleClass(def)} />
       <div className="flex items-center space-x-3">
@@ -242,7 +242,7 @@ export function TextNode({ data, selected }: { data: any; selected: boolean }): 
   const targetPos = direction === 'vertical' ? Position.Top : Position.Left
   const sourcePos = direction === 'vertical' ? Position.Bottom : Position.Right
   return (
-    <div className={`react-flow__node node-text group relative px-4 py-3 min-w-[160px] ${nodeBg(def)} rounded-lg shadow-lg hover:shadow-xl transition-shadow duration-300 ${nodeBorder(def)} ${selected ? nodeRing(def) : ''}`}>
+    <div className={`node-text group relative px-4 py-3 min-w-[160px] ${nodeBg(def)} rounded-lg hover:shadow-glow-md dark:hover:shadow-glow-md-w transition-shadow duration-300 ${nodeBorder(def)} ${selected ? nodeRing(def) : ''}`}>
       <Handle type="target" position={targetPos} className={handleClass(def)} />
       <Handle type="source" position={sourcePos} className={handleClass(def)} />
       <div className="flex items-center space-x-3">
@@ -272,7 +272,7 @@ export function EndNode({ data }: { data: any }): React.JSX.Element {
   const def = NODE_DEFS_MAP['end']
   const targetPos = direction === 'vertical' ? Position.Top : Position.Left
   return (
-    <div className={`react-flow__node node-end group relative px-4 py-3 min-w-[120px] ${nodeBg(def)} rounded-lg shadow-lg hover:shadow-xl transition-shadow duration-300 ${nodeBorder(def)}`}>
+    <div className={`node-end group relative px-4 py-3 min-w-[120px] ${nodeBg(def)} rounded-lg hover:shadow-glow-md dark:hover:shadow-glow-md-w transition-shadow duration-300 ${nodeBorder(def)}`}>
       <Handle type="target" position={targetPos} className={handleClass(def)} />
       <div className="text-center">
         <div className="text-black text-lg mb-1">{def.icon}</div>

@@ -29,6 +29,11 @@ function buildSafelist() {
   // hover 发光层
   push('via', [400], false)
 
+  // 阴影（自定义 boxShadow，Tailwind 扫描不到函数体内的静态类名）
+  list.push('shadow-glow-sm', 'shadow-glow-md', 'shadow-glow-lg')
+  list.push('shadow-glow-sm-w', 'shadow-glow-md-w', 'shadow-glow-lg-w')
+  list.push('hover:shadow-glow-md', 'hover:shadow-glow-md-w')
+
   return list
 }
 
@@ -95,6 +100,13 @@ module.exports = {
         full: '9999px'
       },
       boxShadow: {
+        // 四周均匀阴影（灯光从正上方照下）
+        'glow-sm': '0 0 12px 0px rgba(0, 0, 0, 0.15), 0 0 4px 0px rgba(0, 0, 0, 0.08)',
+        'glow-md': '0 0 22px 0px rgba(0, 0, 0, 0.22), 0 0 8px 0px rgba(0, 0, 0, 0.12)',
+        'glow-sm-w': '0 0 12px 0px rgba(255, 255, 255, 0.15), 0 0 4px 0px rgba(255, 255, 255, 0.08)',
+        'glow-md-w': '0 0 22px 0px rgba(255, 255, 255, 0.22), 0 0 8px 0px rgba(255, 255, 255, 0.15)',
+        'glow-lg': '0 0 32px 0px rgba(0, 0, 0, 0.32), 0 0 12px 0px rgba(0, 0, 0, 0.18)',
+        'glow-lg-w': '0 0 32px 0px rgba(255, 255, 255, 0.30), 0 0 12px 0px rgba(255, 255, 255, 0.18)',
         soft: '0 2px 20px -5px rgba(0, 0, 0, 0.1), 0 1px 10px -5px rgba(0, 0, 0, 0.04)',
         glow: '0 0 20px -5px rgba(59, 130, 246, 0.3)',
         card: '0 4px 25px -5px rgba(0, 0, 0, 0.1), 0 2px 10px -6px rgba(0, 0, 0, 0.02)'
