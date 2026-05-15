@@ -29,10 +29,14 @@ export function useConversation() {
   // 每个 Agent 已发送的消息历史（用于方向键回溯）
   const sentHistoryRef = useRef<Record<string, string[]>>({})
   const unreadRef = useRef<Set<string>>(new Set())
+  const pendingApprovalRef = useRef<Record<string, ToolApprovalRequest | null>>({})
   const messagesEndRef = useRef<HTMLDivElement>(null)
   // SSE 回调里需要最新值，用 ref 避免闭包陈旧
   const autoApprovedRef = useRef<Set<string>>(new Set())
   autoApprovedRef.current = autoApprovedTools
+  // switchAgent 有 [] 依赖，闭包里的 pendingApproval 永远是初始 null，必须用 ref 读取最新值
+  const latestPendingApprovalRef = useRef<ToolApprovalRequest | null>(null)
+  latestPendingApprovalRef.current = pendingApproval
 
   const scrollToBottom = useCallback(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' })
@@ -83,7 +87,7 @@ export function useConversation() {
       return
     }
 
-    // 保存上个 Agent 的对话 + 草稿
+    // 保存上个 Agent 的对话 + 草稿 + 待审批状态
     if (prevId) {
       if (currentMessages.length > 0) {
         conversationsRef.current[prevId] = currentMessages
@@ -92,6 +96,11 @@ export function useConversation() {
         draftsRef.current[prevId] = { text: currentInput, attachments: currentAttachments }
       } else {
         delete draftsRef.current[prevId]
+      }
+      if (latestPendingApprovalRef.current) {
+        pendingApprovalRef.current[prevId] = latestPendingApprovalRef.current
+      } else {
+        delete pendingApprovalRef.current[prevId]
       }
     }
 
@@ -120,6 +129,13 @@ export function useConversation() {
     const hasPending = agent.id in pendingExecutionsRef.current
     setIsLoading(hasPending)
     if (hasPending) setCurrentExecutionId(pendingExecutionsRef.current[agent.id])
+
+    // 恢复待审批状态
+    if (agent.id in pendingApprovalRef.current) {
+      const saved = pendingApprovalRef.current[agent.id]
+      delete pendingApprovalRef.current[agent.id]
+      if (saved) setPendingApproval(saved)
+    }
   }, []) // eslint-disable-line react-hooks/exhaustive-deps
   // 故意省略依赖：switchAgent 只用 ref 读取最新值，不需要重建
 
@@ -234,6 +250,7 @@ export function useConversation() {
       })
     } finally {
       delete pendingExecutionsRef.current[currentAgentId]
+      delete pendingApprovalRef.current[currentAgentId]
       syncPending(pendingExecutionsRef.current, setPendingAgentIds)
       if (activeAgentRef.current === currentAgentId) {
         setIsLoading(false)
@@ -269,9 +286,17 @@ export function useConversation() {
     if (!currentExecutionId) return
     try {
       await workflowExecutionApi.stopExecution(currentExecutionId)
-      setIsLoading(false)
-      setCurrentExecutionId(null)
     } catch { /* ignore */ }
+    // 清理所有状态，包括 ref 中的执行和审批记录
+    const agentId = activeAgentRef.current
+    if (agentId) {
+      delete pendingExecutionsRef.current[agentId]
+      delete pendingApprovalRef.current[agentId]
+      syncPending(pendingExecutionsRef.current, setPendingAgentIds)
+    }
+    setIsLoading(false)
+    setCurrentExecutionId(null)
+    setPendingApproval(null)
   }, [currentExecutionId])
 
   const startNewChat = useCallback(async () => {

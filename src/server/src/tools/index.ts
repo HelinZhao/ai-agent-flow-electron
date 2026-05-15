@@ -8,6 +8,11 @@ import * as jschardet from 'jschardet'
 import { DUCKDUCKGO_URL, TOOL_EXECUTION_TIMEOUT, TOOL_READ_FILE_MAX_CHARS, TOOL_HTTP_MAX_CHARS, TOOL_WEB_SEARCH_MAX_RESULTS, TOOL_WEB_SEARCH_SNIPPET_LENGTH, WEB_SEARCH_USER_AGENT } from '../config'
 import { getUserDataDir } from '../utils/file'
 
+// 当前平台信息（用于工具描述，避免 LLM 用错路径格式）
+const PLATFORM_HINT = process.platform === 'win32'
+  ? '当前运行在 Windows 系统。文件路径应使用 Windows 格式（如 C:\\Users\\用户名\\Desktop\\file.txt），命令使用 cmd.exe 语法。'
+  : '当前运行在 Linux/Mac 系统。文件路径应使用 Unix 格式（如 /home/用户名/Desktop/file.txt），命令使用 sh 语法。'
+
 const decodeBuffer = (buf: Buffer): string => {
   if (buf.length === 0) return ''
   if (buf.length >= 3 && buf[0] === 0xEF && buf[1] === 0xBB && buf[2] === 0xBF) {
@@ -52,8 +57,8 @@ export const readFileTool = tool(
   },
   {
     name: 'readFile',
-    description: '读取指定文件的内容，返回 UTF-8 文本',
-    schema: z.object({ filePath: z.string().describe('文件路径') }),
+    description: `读取指定文件的内容，返回 UTF-8 文本。${PLATFORM_HINT}`,
+    schema: z.object({ filePath: z.string().describe(`文件路径。${PLATFORM_HINT}`) }),
   }
 )
 
@@ -71,9 +76,9 @@ export const writeFileTool = tool(
   },
   {
     name: 'writeFile',
-    description: '将内容写入指定文件，以 UTF-8 编码保存',
+    description: `将内容写入指定文件，以 UTF-8 编码保存。${PLATFORM_HINT}`,
     schema: z.object({
-      filePath: z.string().describe('文件路径'),
+      filePath: z.string().describe(`文件路径。${PLATFORM_HINT}`),
       content: z.string().describe('要写入的内容'),
     }),
   }
@@ -87,8 +92,8 @@ export const listDirectoryTool = tool(
   },
   {
     name: 'listDirectory',
-    description: '列出指定目录下的文件和子目录',
-    schema: z.object({ dirPath: z.string().describe('目录路径') }),
+    description: `列出指定目录下的文件和子目录。${PLATFORM_HINT}`,
+    schema: z.object({ dirPath: z.string().describe(`目录路径。${PLATFORM_HINT}`) }),
   }
 )
 
@@ -107,7 +112,7 @@ export const executeCommandTool = tool(
   },
   {
     name: 'executeCommand',
-    description: '执行一条 shell 命令并返回输出结果。可用于安装依赖、运行脚本等操作。对于耗时较长的命令（如 npm install、npx create-react-app 等），建议设置较大的 timeout 值（如 300 秒）。',
+    description: `执行一条 shell 命令并返回输出结果。可用于安装依赖、运行脚本等操作。对于耗时较长的命令（如 npm install、npx create-react-app 等），建议设置较大的 timeout 值（如 300 秒）。${PLATFORM_HINT}`,
     schema: z.object({
       command: z.string().describe('要执行的命令'),
       timeout: z.number().optional().describe(`超时秒数，默认${TOOL_EXECUTION_TIMEOUT}。耗时命令建议设为300或更大`),

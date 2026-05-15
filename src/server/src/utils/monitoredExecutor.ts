@@ -708,7 +708,7 @@ export class MonitoredLangGraphExecutor {
       this.agentCallStack.add(targetAgentId)
       try {
         const subGraph = await this.buildMonitoredLangGraph(subExecutionId, workflowObj, llmConfig)
-        const result = await this.executeMonitoredLangGraph(subGraph, input, subExecutionId, agent.id, undefined, attachments)
+        const result = await this.executeMonitoredLangGraph(subGraph, input, subExecutionId, agent.id, subExecutionId, attachments)
         this.executionStates.delete(subExecutionId)
 
         return {
