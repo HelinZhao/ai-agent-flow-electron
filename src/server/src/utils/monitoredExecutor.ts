@@ -42,10 +42,16 @@ interface ExecutionState {
   threadId?: string
   compiledGraph?: CompiledStateGraph<any, any>
   autoApprovedToolTypes: Set<string>
-  pendingApproval: { resolve: (response: HITLResponse) => void; request: HITLRequest } | null
+  pendingApproval: { resolve: (response: HITLResponse) => void; reject: (error: Error) => void; request: HITLRequest } | null
   attachments?: AttachmentPayload[]
+  abortController?: AbortController
 }
 const checkpointer = SqliteSaver.fromConnString(getUserDataDir(DB_FILENAME));
+
+// 手动终止时使用的专用错误，各 catch 块据此透传而非吞掉
+class ExecutionTerminatedError extends Error {
+  constructor() { super('执行已被手动终止') }
+}
 
 // 带监控的LangGraph执行器
 export class MonitoredLangGraphExecutor {
@@ -364,24 +370,27 @@ export class MonitoredLangGraphExecutor {
     threadId?: string,
     attachments?: AttachmentPayload[]
   ): Promise<string> {
+    const abortController = new AbortController()
+    const state = this.executionStates.get(executionId)
+    if (state) {
+      state.abortController = abortController
+      state.logs.push({
+        timestamp: new Date(),
+        level: 'info',
+        message: '开始LangGraph执行'
+      })
+    }
+
     const config = {
       configurable: {
         thread_id: threadId || agentId || 'default-thread'
-      }
+      },
+      signal: abortController.signal
     }
 
     try {
       const initialState = {
         messages: [await buildHumanMessage(input, attachments)]
-      }
-
-      const state = this.executionStates.get(executionId)
-      if (state) {
-        state.logs.push({
-          timestamp: new Date(),
-          level: 'info',
-          message: '开始LangGraph执行'
-        })
       }
 
       const finalState = (await compiledGraph.invoke(initialState, config)) as {
@@ -443,6 +452,7 @@ export class MonitoredLangGraphExecutor {
         status: (result as any).error ? 'failed' : 'completed'
       }
     } catch (error) {
+      if (error instanceof ExecutionTerminatedError) throw error
       const endTime = Date.now()
 
       return {
@@ -709,7 +719,6 @@ export class MonitoredLangGraphExecutor {
       try {
         const subGraph = await this.buildMonitoredLangGraph(subExecutionId, workflowObj, llmConfig)
         const result = await this.executeMonitoredLangGraph(subGraph, input, subExecutionId, agent.id, subExecutionId, attachments)
-        this.executionStates.delete(subExecutionId)
 
         return {
           output: result,
@@ -723,9 +732,15 @@ export class MonitoredLangGraphExecutor {
           },
         }
       } finally {
+        this.executionStates.delete(subExecutionId)
         this.agentCallStack.delete(targetAgentId)
       }
     } catch (error) {
+      // 手动终止时向上传播错误，停止整条执行链
+      const subState = this.executionStates.get(`${executionId}:agent:${node.id}`)
+      if (subState?.status !== 'running') {
+        throw error
+      }
       const errorMsg = error instanceof Error ? error.message : 'Agent执行失败'
       return { output: errorMsg, metadata: { nodeId: node.id, type: 'agent', error: errorMsg, agentId: node.data.config?.agentId } }
     }
@@ -794,8 +809,8 @@ export class MonitoredLangGraphExecutor {
         ? {
           approvalCallback: async (request: HITLRequest): Promise<HITLResponse> => {
             const execState = this.executionStates.get(executionId)
-            if (!execState) {
-              return { decisions: request.actionRequests.map(() => ({ type: 'reject', message: '执行状态不存在' })) }
+            if (!execState || execState.status !== 'running') {
+              throw new ExecutionTerminatedError()
             }
 
             // 按工具类型判断：已放行的工具自动批准，其余需要审批
@@ -815,8 +830,8 @@ export class MonitoredLangGraphExecutor {
             }
 
             // 先设置 pendingApproval（broadcastToSSEClients 会读取它同步到父状态）
-            const approvalPromise = new Promise<HITLResponse>((resolve) => {
-              execState.pendingApproval = { resolve, request }
+            const approvalPromise = new Promise<HITLResponse>((resolve, reject) => {
+              execState.pendingApproval = { resolve, reject, request }
             })
 
             // 广播 SSE 请求审批事件
@@ -856,6 +871,7 @@ export class MonitoredLangGraphExecutor {
         }
       }
     } catch (error) {
+      if (error instanceof ExecutionTerminatedError) throw error
       const errorMsg = error instanceof Error ? error.message : 'LLM调用失败'
       return {
         output: errorMsg,
@@ -1103,8 +1119,9 @@ ${conditionText}
 
   // 停止执行
   stopExecution(executionId: string): void {
-    const state = this.executionStates.get(executionId)
-    if (state) {
+    const stopOne = (id: string) => {
+      const state = this.executionStates.get(id)
+      if (!state || state.status === 'completed') return
       state.status = 'completed'
       state.endTime = new Date()
       state.logs.push({
@@ -1112,6 +1129,18 @@ ${conditionText}
         level: 'info',
         message: '执行被手动停止'
       })
+      console.log(`[LLM Agent] 执行已被用户终止 (${id})`)
+      state.abortController?.abort()
+      // 拒绝 pendingApproval Promise，让审批回调直接抛异常中断 LLM 执行链
+      state.pendingApproval?.reject(new ExecutionTerminatedError())
+    }
+
+    stopOne(executionId)
+    // 同时停止所有子 agent 执行（ID 格式：parentExecutionId:agent:nodeId）
+    for (const [id] of this.executionStates) {
+      if (id.startsWith(`${executionId}:agent:`)) {
+        stopOne(id)
+      }
     }
   }
 

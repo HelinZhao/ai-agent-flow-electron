@@ -37,6 +37,8 @@ export function useConversation() {
   // switchAgent 有 [] 依赖，闭包里的 pendingApproval 永远是初始 null，必须用 ref 读取最新值
   const latestPendingApprovalRef = useRef<ToolApprovalRequest | null>(null)
   latestPendingApprovalRef.current = pendingApproval
+  // 主动终止标记，避免 sendMessage 的 catch 产生错误回复
+  const terminatingRef = useRef(false)
 
   const scrollToBottom = useCallback(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' })
@@ -242,12 +244,18 @@ export function useConversation() {
         timestamp: new Date().toISOString(), agentId: currentAgentId,
       })
     } catch (error) {
-      await finalizeResponse(currentAgentId, currentAgentName, newMessages, {
-        id: `msg-${Date.now() + 1}`,
-        content: `抱歉，处理您的消息时出现了错误: ${error instanceof Error ? error.message : '未知错误'}`,
-        sender: 'agent',
-        timestamp: new Date().toISOString(), agentId: currentAgentId,
-      })
+      if (terminatingRef.current) {
+        terminatingRef.current = false
+        // 被主动终止，不追加错误回复，只保留已有对话
+        conversationsRef.current[currentAgentId] = newMessages
+      } else {
+        await finalizeResponse(currentAgentId, currentAgentName, newMessages, {
+          id: `msg-${Date.now() + 1}`,
+          content: `抱歉，处理您的消息时出现了错误: ${error instanceof Error ? error.message : '未知错误'}`,
+          sender: 'agent',
+          timestamp: new Date().toISOString(), agentId: currentAgentId,
+        })
+      }
     } finally {
       delete pendingExecutionsRef.current[currentAgentId]
       delete pendingApprovalRef.current[currentAgentId]
@@ -284,6 +292,7 @@ export function useConversation() {
 
   const handleTerminate = useCallback(async () => {
     if (!currentExecutionId) return
+    terminatingRef.current = true
     try {
       await workflowExecutionApi.stopExecution(currentExecutionId)
     } catch { /* ignore */ }
