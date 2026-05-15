@@ -29,11 +29,6 @@ function buildSafelist() {
   // hover 发光层
   push('via', [400], false)
 
-  // 阴影（自定义 boxShadow，Tailwind 扫描不到函数体内的静态类名）
-  list.push('shadow-glow-sm', 'shadow-glow-md', 'shadow-glow-lg')
-  list.push('shadow-glow-sm-w', 'shadow-glow-md-w', 'shadow-glow-lg-w')
-  list.push('hover:shadow-glow-md', 'hover:shadow-glow-md-w')
-
   return list
 }
 

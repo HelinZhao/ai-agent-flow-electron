@@ -27,12 +27,12 @@ function hoverGlow(def: { color: string }) {
 // ============================================================
 //  StartNode
 // ============================================================
-export function StartNode({ data }: { data: any }): React.JSX.Element {
+export function StartNode({ data, selected }: { data: any; selected: boolean }): React.JSX.Element {
   const direction = useContext(LayoutDirectionContext)
   const def = NODE_DEFS_MAP['start']
   const sourcePos = direction === 'vertical' ? Position.Bottom : Position.Right
   return (
-    <div className={`node-start group relative px-4 py-3 min-w-[120px] ${nodeBg(def)} rounded-lg hover:shadow-glow-md dark:hover:shadow-glow-md-w transition-shadow duration-300 ${nodeBorder(def)}`}>
+    <div className={`node-start group relative px-4 py-3 min-w-[120px] ${nodeBg(def)} rounded-lg hover:shadow-glow-md dark:hover:shadow-glow-md-w transition-shadow duration-300  ${nodeBorder(def)} ${selected ? nodeRing(def) : ''}`}>
       <Handle type="source" position={sourcePos} className={handleClass(def)} />
       <div className="text-center">
         <div className="text-black text-lg mb-1">{def.icon}</div>
@@ -267,12 +267,12 @@ export function TextNode({ data, selected }: { data: any; selected: boolean }): 
 // ============================================================
 //  EndNode
 // ============================================================
-export function EndNode({ data }: { data: any }): React.JSX.Element {
+export function EndNode({ data, selected }: { data: any; selected: boolean }): React.JSX.Element {
   const direction = useContext(LayoutDirectionContext)
   const def = NODE_DEFS_MAP['end']
   const targetPos = direction === 'vertical' ? Position.Top : Position.Left
   return (
-    <div className={`node-end group relative px-4 py-3 min-w-[120px] ${nodeBg(def)} rounded-lg hover:shadow-glow-md dark:hover:shadow-glow-md-w transition-shadow duration-300 ${nodeBorder(def)}`}>
+    <div className={`node-end group relative px-4 py-3 min-w-[120px] ${nodeBg(def)} rounded-lg hover:shadow-glow-md dark:hover:shadow-glow-md-w transition-shadow duration-300 ${nodeBorder(def)} ${selected ? nodeRing(def) : ''}`}>
       <Handle type="target" position={targetPos} className={handleClass(def)} />
       <div className="text-center">
         <div className="text-black text-lg mb-1">{def.icon}</div>
