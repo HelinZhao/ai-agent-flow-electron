@@ -8,10 +8,11 @@ import * as jschardet from 'jschardet'
 import { DUCKDUCKGO_URL, TOOL_EXECUTION_TIMEOUT, TOOL_READ_FILE_MAX_CHARS, TOOL_HTTP_MAX_CHARS, TOOL_WEB_SEARCH_MAX_RESULTS, TOOL_WEB_SEARCH_SNIPPET_LENGTH, WEB_SEARCH_USER_AGENT } from '../config'
 import { getUserDataDir } from '../utils/file'
 
-// 当前平台信息（用于工具描述，避免 LLM 用错路径格式）
+// 当前平台信息（用于工具描述，避免 LLM 用错路径格式和用户名）
+const CURRENT_USER = process.env.USERNAME || process.env.USER || '用户名'
 const PLATFORM_HINT = process.platform === 'win32'
-  ? '当前运行在 Windows 系统。文件路径应使用 Windows 格式（如 C:\\Users\\用户名\\Desktop\\file.txt），命令使用 cmd.exe 语法。'
-  : '当前运行在 Linux/Mac 系统。文件路径应使用 Unix 格式（如 /home/用户名/Desktop/file.txt），命令使用 sh 语法。'
+  ? `当前运行在 Windows 系统，当前用户名是 ${CURRENT_USER}。文件路径应使用 Windows 格式（如 C:\\Users\\${CURRENT_USER}\\Desktop\\file.txt），命令使用 cmd.exe 语法。`
+  : `当前运行在 Linux/Mac 系统，当前用户名是 ${CURRENT_USER}。文件路径应使用 Unix 格式（如 /home/${CURRENT_USER}/Desktop/file.txt），命令使用 sh 语法。`
 
 const decodeBuffer = (buf: Buffer): string => {
   if (buf.length === 0) return ''
@@ -24,6 +25,22 @@ const decodeBuffer = (buf: Buffer): string => {
     return buf.toString('utf-8')
   }
   return iconv.decode(buf, encoding)
+}
+
+// 路径归一化：Windows 上将 Unix 风格绝对路径转为 Windows 路径
+function normalizePath(filePath: string): string {
+  if (process.platform !== 'win32') return filePath
+  // /Users/xxx/... → C:\Users\xxx\...
+  const userMatch = filePath.match(/^\/Users\/([^/]+)\/(.+)$/)
+  if (userMatch) {
+    return path.join(process.env.USERPROFILE || `C:\\Users\\${userMatch[1]}`, userMatch[2])
+  }
+  // /home/xxx/... → C:\Users\xxx\...（WSL 兼容）
+  const homeMatch = filePath.match(/^\/home\/([^/]+)\/(.+)$/)
+  if (homeMatch) {
+    return path.join(process.env.USERPROFILE || `C:\\Users\\${homeMatch[1]}`, homeMatch[2])
+  }
+  return filePath
 }
 
 // 工具执行的工作目录（用户数据目录，以保证写入权限）
@@ -51,7 +68,8 @@ const spawnWithOutput = (cmd: string, args: string[], cwd?: string, timeout?: nu
 // tool() API: tool(func, { name, description, schema })
 export const readFileTool = tool(
   async ({ filePath }: { filePath: string }) => {
-    const resolved = path.isAbsolute(filePath) ? filePath : path.join(getToolWorkingDir(), filePath)
+    const normalized = normalizePath(filePath)
+    const resolved = path.isAbsolute(normalized) ? normalized : path.join(getToolWorkingDir(), normalized)
     const content = await fs.readFile(resolved, 'utf-8')
     return content.length > TOOL_READ_FILE_MAX_CHARS ? content.substring(0, TOOL_READ_FILE_MAX_CHARS) + '\n...(内容过长，已截断)' : content
   },
@@ -64,7 +82,8 @@ export const readFileTool = tool(
 
 export const writeFileTool = tool(
   async ({ filePath, content }: { filePath: string; content: string }) => {
-    const resolved = path.isAbsolute(filePath) ? filePath : path.join(getToolWorkingDir(), filePath)
+    const normalized = normalizePath(filePath)
+    const resolved = path.isAbsolute(normalized) ? normalized : path.join(getToolWorkingDir(), normalized)
     const dir = path.dirname(resolved)
     try {
       await fs.access(dir)
@@ -86,7 +105,8 @@ export const writeFileTool = tool(
 
 export const listDirectoryTool = tool(
   async ({ dirPath }: { dirPath: string }) => {
-    const resolved = path.isAbsolute(dirPath) ? dirPath : path.join(getToolWorkingDir(), dirPath)
+    const normalized = normalizePath(dirPath)
+    const resolved = path.isAbsolute(normalized) ? normalized : path.join(getToolWorkingDir(), normalized)
     const entries = await fs.readdir(resolved, { withFileTypes: true })
     return entries.map(e => `${e.isDirectory() ? '[目录]' : e.isFile() ? '[文件]' : '[其他]'} ${e.name}`).join('\n')
   },
