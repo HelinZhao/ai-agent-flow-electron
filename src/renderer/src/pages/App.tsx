@@ -17,22 +17,23 @@ import ExecutionMonitor from "./ExecutionMonitor";
 import Triggers from "./Triggers";
 import Knowledge from "./Knowledge";
 
-const pages: Record<string, React.ReactNode> = {
-    '/': <Workflow />,
-    '/agents': <Agents />,
-    '/skills': <Skills />,
-    '/settings': <Settings />,
-    '/chat': <Chat />,
-    '/monitor': <ExecutionMonitor />,
-    '/triggers': <Triggers />,
-    '/logs': <Logs />,
-    '/knowledge': <Knowledge />,
-};
+
+const navItems = [
+    { path: '/chat', label: 'AI对话', icon: '💬', page: <Chat /> },
+    { path: '/', label: '工作流设计器', icon: '🔄', page: <Workflow /> },
+    { path: '/agents', label: 'Agent管理', icon: '🤖', page: <Agents /> },
+    { path: '/skills', label: '技能管理', icon: '⚡', page: <Skills /> },
+    { path: '/knowledge', label: '知识库', icon: '📚', page: <Knowledge /> },
+    { path: '/triggers', label: '触发器', icon: '⏰', page: <Triggers /> },
+    { path: '/monitor', label: '执行监控', icon: '📊', page: <ExecutionMonitor /> },
+    { path: '/settings', label: '设置', icon: '⚙️', page: <Settings /> },
+    { path: '/logs', label: '日志', icon: '📋', page: <Logs /> }
+]
 
 let init = false
 
 export default function App(): React.JSX.Element {
-    const { initialize, currentPage, setCurrentPage, error } = useWorkflowStore();
+    const { initialize, currentPage, setCurrentPage, error, loading } = useWorkflowStore();
     const [initializing, setInitializing] = useState(true);
     const [showModelDialog, setShowModelDialog] = useState(false);
     const [showOllamaDialog, setShowOllamaDialog] = useState(false);
@@ -154,13 +155,9 @@ export default function App(): React.JSX.Element {
                     onDismissPermanently={handleOllamaDismissPermanently}
                 />
             )}
-            <Layout currentPage={currentPage} onNavigate={setCurrentPage}>
+
+            <Layout currentPage={currentPage} onNavigate={setCurrentPage} navItems={navItems} loading={loading}>
                 <ClickSpark />
-                {Object.entries(pages).map(([path, component]) => (
-                    <div key={path} className={currentPage === path ? '' : 'hidden'} style={{ height: '100%' }}>
-                        {component}
-                    </div>
-                ))}
             </Layout>
         </>
     );

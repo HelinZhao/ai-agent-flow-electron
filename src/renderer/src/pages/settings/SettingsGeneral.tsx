@@ -16,7 +16,7 @@ export default function SettingsGeneral() {
 
   // 页面加载时从主进程同步开机自启状态
   useEffect(() => {
-    window.api.app.getAutoStart().then((enabled) => {
+    window.api?.app.getAutoStart().then((enabled) => {
       setAutoStart(enabled)
     }).catch(() => {
       // 忽略错误，使用 store 中的默认值
