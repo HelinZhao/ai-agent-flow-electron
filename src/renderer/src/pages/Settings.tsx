@@ -90,9 +90,9 @@ export default function Settings(): React.JSX.Element {
 
   return (
     <div className="flex h-full">
-      <div className="w-60 border-r border-gray-200 dark:border-gray-700/80 bg-white dark:bg-gray-900 flex flex-col">
+      <div className="w-17 md:w-60 border-r border-gray-200 dark:border-gray-700/80 bg-white dark:bg-gray-900 flex flex-col">
         {/* Header */}
-        <div className="px-6 pt-6 pb-5 flex-shrink-0">
+        <div className="hidden md:block px-6 pt-6 pb-5 flex-shrink-0">
           <div className="flex items-center space-x-3">
             <div className="w-8 h-8 bg-gradient-to-br from-blue-500 to-indigo-600 rounded-xl flex items-center justify-center shadow-md shadow-blue-500/20">
               <svg className="w-4 h-4 text-white" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
@@ -128,7 +128,7 @@ export default function Settings(): React.JSX.Element {
                 <span className={`flex-shrink-0 ${isActive ? 'text-blue-600 dark:text-blue-400' : 'text-gray-400 dark:text-gray-500 group-hover:text-gray-600 dark:group-hover:text-gray-300'}`}>
                   {TAB_ICONS[tab.id]}
                 </span>
-                <div className="text-left">
+                <div className="text-left hidden md:block">
                   <div className={`font-medium ${isActive ? '' : ''}`}>{tab.label}</div>
                   <div className={`text-xs mt-0.5 ${isActive ? 'text-blue-500/70 dark:text-blue-400/60' : 'text-gray-400 dark:text-gray-500'}`}>{tab.desc}</div>
                 </div>

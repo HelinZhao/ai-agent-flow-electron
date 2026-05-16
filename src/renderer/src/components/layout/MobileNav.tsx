@@ -1,7 +1,6 @@
 import React from 'react'
 import WindowControls from './WindowControls'
 import ThemeToggle from './ThemeToggle'
-import { createPortal } from 'react-dom'
 
 interface NavItem {
   path: string
