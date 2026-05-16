@@ -5,7 +5,7 @@ import * as path from 'path'
 import { spawn } from 'child_process'
 import * as iconv from 'iconv-lite'
 import * as jschardet from 'jschardet'
-import { DUCKDUCKGO_URL, TOOL_EXECUTION_TIMEOUT, TOOL_READ_FILE_MAX_CHARS, TOOL_HTTP_MAX_CHARS, TOOL_WEB_SEARCH_MAX_RESULTS, TOOL_WEB_SEARCH_SNIPPET_LENGTH, WEB_SEARCH_USER_AGENT } from '../config'
+import { DUCKDUCKGO_URL, TOOL_EXECUTION_TIMEOUT, TOOL_READ_FILE_MAX_CHARS, TOOL_HTTP_MAX_CHARS, TOOL_WEB_SEARCH_MAX_RESULTS, TOOL_WEB_SEARCH_SNIPPET_LENGTH, WEB_SEARCH_USER_AGENT, SERVER_PORT } from '../config'
 import { getUserDataDir } from '../utils/file'
 
 // 当前平台信息（用于工具描述，避免 LLM 用错路径格式和用户名）
@@ -187,6 +187,125 @@ export const webSearchTool = tool(
   }
 )
 
+// ===== 内部 API 调用辅助函数 =====
+const callInternalApi = async (method: string, path: string, body?: string): Promise<string> => {
+  const opts: any = { method, headers: { 'Content-Type': 'application/json' } }
+  if (body && (method === 'POST' || method === 'PUT')) opts.body = body
+  try {
+    const resp = await fetch(`http://127.0.0.1:${SERVER_PORT}${path}`, opts)
+    const text = await resp.text()
+    return text.length > TOOL_HTTP_MAX_CHARS
+      ? text.substring(0, TOOL_HTTP_MAX_CHARS) + '\n...(响应过长，已截断)'
+      : text
+  } catch (err) {
+    return `API 调用失败: ${err instanceof Error ? err.message : String(err)}`
+  }
+}
+
+// ===== 内部 API 工具（按领域分组，使 LLM 可调用本项目的 REST API） =====
+
+export const workflowsApiTool = tool(
+  async ({ method, path, body }: { method: string; path: string; body?: string }) =>
+    callInternalApi(method, path, body),
+  {
+    name: 'workflowsApi',
+    description: `调用工作流和执行相关的内部 REST API。路径中的 {id} 需替换为实际 ID。
+
+GET  /api/workflows                              - 获取全部工作流列表
+POST /api/workflows                              - 创建工作流 body: {"name":"","description":"","nodes":[],"edges":[]}
+GET  /api/workflows/{id}                         - 获取单个工作流详情
+PUT  /api/workflows/{id}                         - 更新工作流
+DEL  /api/workflows/{id}                         - 删除工作流
+POST /api/execute-workflow/monitor               - 异步执行工作流 body: {"workflow":{},"input":""}
+GET  /api/execute-workflow/progress/{executionId} - 获取执行进度
+POST /api/execute-workflow/stop/{executionId}    - 停止执行
+POST /api/execute-workflow/pause/{executionId}   - 暂停执行
+POST /api/execute-workflow/resume/{executionId}  - 恢复执行
+GET  /api/execute-workflow/list                  - 执行记录列表（?status=&page=&pageSize=）
+POST /api/execute-workflow/agent-chat-monitor    - Agent 对话 body: {"agentId":"","input":"","threadId":"(可选)"}
+DEL  /api/execute-workflow/delete-thread/{id}    - 清除 AI 记忆`,
+    schema: z.object({
+      method: z.enum(['GET', 'POST', 'PUT', 'DELETE']).describe('HTTP 方法'),
+      path: z.string().describe('API 路径，如 /api/workflows 或 /api/workflows/some-id'),
+      body: z.string().optional().describe('JSON 请求体（POST/PUT 时需要）'),
+    }),
+  }
+)
+
+export const agentsSkillsApiTool = tool(
+  async ({ method, path, body }: { method: string; path: string; body?: string }) =>
+    callInternalApi(method, path, body),
+  {
+    name: 'agentsSkillsApi',
+    description: `调用 Agent 和技能管理相关的内部 REST API。路径中的 {id} 需替换为实际 ID。
+
+GET  /api/agents                     - 获取全部 Agent 列表
+POST /api/agents                     - 创建 Agent body: {"name":"","description":"","instructions":"","workflowId":"(可选)"}
+GET  /api/agents/{id}                - 获取单个 Agent 详情
+PUT  /api/agents/{id}                - 更新 Agent
+DEL  /api/agents/{id}                - 删除 Agent
+GET  /api/skills                     - 获取全部技能列表
+POST /api/skills                     - 创建技能 body: {"name":"","description":"","content":""}
+GET  /api/skills/{id}                - 获取技能详情
+PUT  /api/skills/{id}                - 更新技能
+DEL  /api/skills/{id}                - 删除技能`,
+    schema: z.object({
+      method: z.enum(['GET', 'POST', 'PUT', 'DELETE']).describe('HTTP 方法'),
+      path: z.string().describe('API 路径，如 /api/agents 或 /api/agents/some-id'),
+      body: z.string().optional().describe('JSON 请求体（POST/PUT 时需要）'),
+    }),
+  }
+)
+
+export const knowledgeApiTool = tool(
+  async ({ method, path, body }: { method: string; path: string; body?: string }) =>
+    callInternalApi(method, path, body),
+  {
+    name: 'knowledgeApi',
+    description: `调用知识库管理相关的内部 REST API。路径中的 {id} 需替换为实际 ID。
+
+GET  /api/knowledge-base              - 获取全部知识库列表
+POST /api/knowledge-base              - 创建知识库 body: {"name":"","type":"internal","description":""}
+GET  /api/knowledge-base/{id}/stats   - 知识库文档统计
+DEL  /api/knowledge-base/{id}         - 删除知识库
+POST /api/knowledge-base/{id}/retrieve - RAG 检索 body: {"query":"检索内容"}
+GET  /api/knowledge-base/{id}/chunks/{docName} - 文档分块列表`,
+    schema: z.object({
+      method: z.enum(['GET', 'POST', 'DELETE']).describe('HTTP 方法'),
+      path: z.string().describe('API 路径，如 /api/knowledge-base 或 /api/knowledge-base/id/retrieve'),
+      body: z.string().optional().describe('JSON 请求体（POST 时需要）'),
+    }),
+  }
+)
+
+export const configApiTool = tool(
+  async ({ method, path, body }: { method: string; path: string; body?: string }) =>
+    callInternalApi(method, path, body),
+  {
+    name: 'configApi',
+    description: `调用 LLM 配置、触发器、代理等系统设置相关的内部 REST API。路径中的 {id} 需替换为实际 ID。
+
+GET  /api/llm-config                      - 获取所有 LLM 配置
+POST /api/llm-config                      - 创建 LLM 配置 body: {"name":"","provider":"openai|anthropic|azure|bailian|deepseek|ollama","model":"","apiKey":"","baseUrl":"(可选)"}
+POST /api/llm-config/{id}/activate        - 激活指定 LLM 配置
+POST /api/llm-config/test-connection      - 测试连接 body: {"provider":"","apiKey":"","model":"","baseUrl":"(可选)"}
+DEL  /api/llm-config/{id}                 - 删除 LLM 配置
+GET  /api/proxy                           - 获取代理配置
+PUT  /api/proxy                           - 更新代理 body: {"enabled":true,"host":"","port":""}
+GET  /api/triggers                        - 获取触发器列表
+POST /api/triggers                        - 创建触发器 body: {"name":"","type":"cron|webhook","cronExpression":"","workflowId":"","enabled":true}
+POST /api/triggers/{id}/run               - 手动触发
+GET  /api/data/db-stats                   - 数据库存储统计
+POST /api/data/vacuum                     - 回收数据库空间
+GET  /api/health                          - 健康检查`,
+    schema: z.object({
+      method: z.enum(['GET', 'POST', 'PUT', 'DELETE']).describe('HTTP 方法'),
+      path: z.string().describe('API 路径'),
+      body: z.string().optional().describe('JSON 请求体（POST/PUT 时需要）'),
+    }),
+  }
+)
+
 const ALL_TOOLS: Record<string, any> = {
   readFile: readFileTool,
   writeFile: writeFileTool,
@@ -194,6 +313,10 @@ const ALL_TOOLS: Record<string, any> = {
   executeCommand: executeCommandTool,
   httpRequest: httpRequestTool,
   webSearch: webSearchTool,
+  workflowsApi: workflowsApiTool,
+  agentsSkillsApi: agentsSkillsApiTool,
+  knowledgeApi: knowledgeApiTool,
+  configApi: configApiTool,
 }
 
 export const getToolsByIds = (ids: string[]): any[] => {
@@ -207,4 +330,8 @@ export const TOOL_DEFINITIONS = [
   { id: 'executeCommand', label: '执行命令', description: '执行 shell 命令' },
   { id: 'httpRequest', label: 'HTTP请求', description: '发送 HTTP 请求' },
   { id: 'webSearch', label: '网页搜索', description: '搜索网页获取信息' },
+  { id: 'workflowsApi', label: '工作流API', description: '调用工作流和执行管理接口' },
+  { id: 'agentsSkillsApi', label: 'Agent/技能API', description: '调用 Agent 和技能管理接口' },
+  { id: 'knowledgeApi', label: '知识库API', description: '调用知识库管理接口' },
+  { id: 'configApi', label: '系统配置API', description: '调用 LLM 配置、触发器、系统设置接口' },
 ]

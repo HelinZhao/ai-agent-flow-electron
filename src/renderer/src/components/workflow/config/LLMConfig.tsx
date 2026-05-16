@@ -13,6 +13,10 @@ const AVAILABLE_TOOLS = [
   { id: 'executeCommand', label: '执行命令', description: '执行 shell 命令' },
   { id: 'httpRequest', label: 'HTTP请求', description: '发送 HTTP 请求' },
   { id: 'webSearch', label: '网页搜索', description: '搜索网页获取信息' },
+  { id: 'workflowsApi', label: '工作流API', description: '管理工作流和执行（CRUD+执行）' },
+  { id: 'agentsSkillsApi', label: 'Agent/技能API', description: '管理 Agent 和技能（CRUD）' },
+  { id: 'knowledgeApi', label: '知识库API', description: '管理知识库和 RAG 检索' },
+  { id: 'configApi', label: '系统配置API', description: 'LLM 配置、触发器、系统设置' },
 ]
 
 interface LLMConfigProps {

@@ -38,6 +38,11 @@ export default function App(): React.JSX.Element {
     const [showModelDialog, setShowModelDialog] = useState(false);
     const [showOllamaDialog, setShowOllamaDialog] = useState(false);
 
+    const handleRefresh = () => {
+        init = false
+        initialize().finally(() => setInitializing(false))
+    }
+
     useEffect(() => {
         if (init) return
         init = true
@@ -156,7 +161,7 @@ export default function App(): React.JSX.Element {
                 />
             )}
 
-            <Layout currentPage={currentPage} onNavigate={setCurrentPage} navItems={navItems} loading={loading}>
+            <Layout currentPage={currentPage} onNavigate={setCurrentPage} navItems={navItems} loading={loading} onRefresh={handleRefresh}>
                 <ClickSpark />
             </Layout>
         </>
