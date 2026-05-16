@@ -224,8 +224,24 @@ export class MonitoredLangGraphExecutor {
     const nodeResults = new Map<string, any>()
     const graph = new StateGraph(this.WorkflowState)
 
+    // 过滤游离节点：找出有连接的节点
+    const connectedNodes = new Set<string>()
+
+    // 收集所有有输入边、输出边的节点
+    for (const edge of edges) {
+      if (edge.target) {
+        connectedNodes.add(edge.target)
+      }
+      if (edge.source) {
+        connectedNodes.add(edge.source)
+      }
+    }
+
+    // 过滤掉游离节点，只保留有连接的节点
+    const validNodes = nodes.filter((node) => connectedNodes.has(node.id))
+
     // 为每个工作流节点添加LangGraph节点
-    for (const node of nodes) {
+    for (const node of validNodes) {
       const ends = edges.filter((edge) => edge.source === node.id).map((edge) => edge.target)
       graph.addNode(
         node.id,
