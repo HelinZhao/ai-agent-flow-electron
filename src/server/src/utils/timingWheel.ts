@@ -1,4 +1,5 @@
 import { TW_L1_SLOTS, TW_L2_SLOTS, TW_L3_SLOTS, TW_TICK_INTERVAL } from '../config'
+import { setAccurateTimer } from './shared'
 
 interface WheelTask {
   triggerId: string
@@ -21,7 +22,7 @@ export class TimingWheel {
   private l2Idx = 0
   private l3Idx = 0
 
-  private timer: ReturnType<typeof setInterval> | null = null
+  private timer: ReturnType<typeof setAccurateTimer> | null = null
   private taskMap = new Map<string, TaskMeta>()
   private generations = new Map<string, number>()
 
@@ -33,14 +34,14 @@ export class TimingWheel {
   /** 启动时间轮（每秒 tick） */
   start(): void {
     if (this.timer) return
-    this.timer = setInterval(() => this.tick(), TW_TICK_INTERVAL)
+    this.timer = setAccurateTimer('interval', () => this.tick(), TW_TICK_INTERVAL)
     console.log('[TimingWheel] 已启动')
   }
 
   /** 停止时间轮 */
   stop(): void {
     if (this.timer) {
-      clearInterval(this.timer)
+      this.timer.clearTimer()
       this.timer = null
     }
     console.log('[TimingWheel] 已停止')
