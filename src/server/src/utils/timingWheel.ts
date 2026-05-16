@@ -179,7 +179,16 @@ export const timingWheel = new TimingWheel()
 
 // ---- cron 解析工具 ----
 
-const CRON_FIELD_RANGES = [
+const CRON_FIELD_RANGES_5 = [
+  [0, 59], // minute
+  [0, 23], // hour
+  [1, 31], // day of month
+  [1, 12], // month
+  [0, 6],  // day of week
+] as const
+
+const CRON_FIELD_RANGES_6 = [
+  [0, 59], // second
   [0, 59], // minute
   [0, 23], // hour
   [1, 31], // day of month
@@ -226,13 +235,11 @@ function parseCronField(field: string, [min, max]: readonly [number, number]): S
   return values
 }
 
-function cronToNextTimeInner(expression: string, from: Date): Date | null {
-  const fields = expression.trim().split(/\s+/)
-  if (fields.length !== 5) return null
-
+/** 5-field Unix cron: 分 时 日 月 周 */
+function cronToNextTime5(fields: string[], from: Date): Date | null {
   const validFields: Set<number>[] = []
   for (let i = 0; i < 5; i++) {
-    const values = parseCronField(fields[i], CRON_FIELD_RANGES[i])
+    const values = parseCronField(fields[i], CRON_FIELD_RANGES_5[i])
     if (values.size === 0) return null
     validFields.push(values)
   }
@@ -265,6 +272,86 @@ function cronToNextTimeInner(expression: string, from: Date): Date | null {
   return null
 }
 
+/** 6-field Quartz cron: 秒 分 时 日 月 周 */
+function cronToNextTime6(fields: string[], from: Date): Date | null {
+  const validFields: Set<number>[] = []
+  for (let i = 0; i < 6; i++) {
+    const values = parseCronField(fields[i], CRON_FIELD_RANGES_6[i])
+    if (values.size === 0) return null
+    validFields.push(values)
+  }
+
+  const maxIterations = 366 * 24 * 60
+  const sortedSecs = Array.from(validFields[0]).sort((a, b) => a - b)
+  const firstSec = sortedSecs[0]
+
+  // 检查当前分钟的分/时/日/月/周是否匹配
+  let current = new Date(from)
+  current.setMilliseconds(0)
+  const fromSec = current.getSeconds()
+  const minute = current.getMinutes()
+  const hour = current.getHours()
+  const dom = current.getDate()
+  const month = current.getMonth() + 1
+  const dow = current.getDay()
+
+  if (
+    validFields[1].has(minute) &&
+    validFields[2].has(hour) &&
+    validFields[3].has(dom) &&
+    validFields[4].has(month) &&
+    validFields[5].has(dow)
+  ) {
+    // 当前分钟匹配，尝试找到 from 之后的下一个匹配秒
+    const nextSec = sortedSecs.find(s => s > fromSec)
+    if (nextSec !== undefined) {
+      current.setSeconds(nextSec)
+      return current
+    }
+  }
+
+  // 从下一分钟开始逐分钟迭代
+  current = new Date(from)
+  current.setSeconds(0, 0)
+  current.setMinutes(current.getMinutes() + 1)
+
+  for (let iter = 0; iter < maxIterations; iter++) {
+    const minute = current.getMinutes()
+    const hour = current.getHours()
+    const dom = current.getDate()
+    const month = current.getMonth() + 1
+    const dow = current.getDay()
+
+    if (
+      validFields[1].has(minute) &&
+      validFields[2].has(hour) &&
+      validFields[3].has(dom) &&
+      validFields[4].has(month) &&
+      validFields[5].has(dow)
+    ) {
+      // 找到匹配的分钟，设置到第一个有效的秒值
+      current.setSeconds(firstSec)
+      return current
+    }
+
+    current = new Date(current.getTime() + 60_000)
+  }
+
+  return null
+}
+
+function cronToNextTimeInner(expression: string, from: Date): Date | null {
+  const fields = expression.trim().split(/\s+/)
+
+  if (fields.length === 5) {
+    return cronToNextTime5(fields, from)
+  }
+  if (fields.length === 6) {
+    return cronToNextTime6(fields, from)
+  }
+  return null
+}
+
 export function cronToNextTime(expression: string, from?: Date): number {
   try {
     const result = cronToNextTimeInner(expression, from || new Date())
@@ -276,6 +363,22 @@ export function cronToNextTime(expression: string, from?: Date): number {
 
 export function describeCron(expression: string): string {
   const fields = expression.trim().split(/\s+/)
+
+  // 处理 6 字段 Quartz 格式
+  if (fields.length === 6) {
+    const [sec, min, hour, dom, month, dow] = fields
+
+    if (sec === '*' && min === '*' && hour === '*' && dom === '*' && month === '*' && dow === '*') {
+      return '每秒'
+    }
+    if (sec.startsWith('*/')) {
+      return `每 ${sec.slice(2)} 秒`
+    }
+
+    // 秒级固定的情况下，用5字段描述剩余部分
+    return describeCron([min, hour, dom, month, dow].join(' '))
+  }
+
   if (fields.length !== 5) return '无效表达式'
 
   const [min, hour, dom, month, dow] = fields

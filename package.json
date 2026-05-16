@@ -42,6 +42,7 @@
     "better-sqlite3": "^12.9.0",
     "clsx": "^2.1.1",
     "cors": "^2.8.6",
+    "cronstrue": "^3.14.0",
     "dagre": "^0.8.5",
     "electron-updater": "^6.3.9",
     "express": "^5.2.1",

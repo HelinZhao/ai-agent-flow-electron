@@ -8,6 +8,9 @@ import CustomInput from '@renderer/components/ui/CustomInput'
 import CustomSelect from '@renderer/components/ui/CustomSelect'
 import CustomSwitch from '@renderer/components/ui/CustomSwitch'
 import CustomTextarea from '@renderer/components/ui/CustomTextarea'
+import CronBuilder from '@renderer/components/CronBuilder'
+import cronstrue from 'cronstrue'
+import 'cronstrue/locales/zh_CN'
 
 function formatTime(iso?: string): string {
   if (!iso) return '-'
@@ -19,19 +22,18 @@ function formatTime(iso?: string): string {
 }
 
 function describeCronSimple(expr: string): string {
-  const fields = expr.trim().split(/\s+/)
-  if (fields.length !== 5) return expr
-  const [min, hour, dom, month, dow] = fields
-  if (min === '*' && hour === '*' && dom === '*' && month === '*' && dow === '*') return '每分钟'
-  if (min.startsWith('*/')) return `每 ${min.slice(2)} 分钟`
-  if (hour.startsWith('*/')) return `每 ${hour.slice(2)} 小时`
-  if (min === '0' && hour !== '*' && dom === '*' && month === '*' && dow === '*') return `每天 ${hour}:00`
-  if (min === '0' && hour !== '*' && dow !== '*' && dom === '*') {
-    const dowNames = ['周日', '周一', '周二', '周三', '周四', '周五', '周六']
-    const days = dow.split(',').map((d: string) => dowNames[parseInt(d, 10)] || d)
-    return `${hour}:00 ${days.join('、')}`
+  try {
+    // 使用cronstrue来生成更准确的描述，设置为中文
+    return cronstrue.toString(expr, {
+      locale: 'zh_CN',
+      use24HourTimeFormat: true,
+      verbose: false
+    })
+  } catch (error) {
+    // 如果出现错误，返回原始表达式
+    console.warn('Cron expression parse error:', error)
+    return expr
   }
-  return expr
 }
 
 const TARGET_TYPE_LABEL: Record<string, string> = {
@@ -322,14 +324,15 @@ export default function Triggers(): React.JSX.Element {
                       </button>
                     ))}
                   </div>
-                  <CustomInput
-                    size="sm"
-                    value={formCron}
-                    onChange={e => setFormCron(e.target.value)}
-                    placeholder="0 9 * * *"
-                  />
+                  <div className="bg-white dark:bg-gray-900/50 rounded-lg border border-gray-200 dark:border-gray-700 p-4">
+                    <CronBuilder
+                      value={formCron}
+                      onChange={setFormCron}
+                      includeSeconds={true}  // Unix格式，不包含秒
+                    />
+                  </div>
                   <p className="text-xs text-gray-400 mt-1">
-                    {describeCronSimple(formCron)} — 格式: 分 时 日 月 周
+                    {describeCronSimple(formCron)}
                   </p>
                 </div>
               )}
