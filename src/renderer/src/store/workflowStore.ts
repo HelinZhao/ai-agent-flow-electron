@@ -1,8 +1,8 @@
 import { create } from 'zustand'
 import { persist } from 'zustand/middleware'
-import { Workflow, Skill, Agent, LLMConfig, KnowledgeBase } from '@renderer/types'
-import { workflowApi, skillApi, agentApi, llmConfigApi, knowledgeBaseApi, waitForServer } from '@renderer/lib/api'
-import { STORAGE_KEY, STORAGE_PERSIST_FIELDS } from '@renderer/config'
+import { Workflow, Skill, Agent, LLMConfig, KnowledgeBase, Trigger } from '@renderer/types'
+import { workflowApi, skillApi, agentApi, llmConfigApi, knowledgeBaseApi, triggerApi, waitForServer } from '@renderer/lib/api'
+import { STORAGE_KEY, STORAGE_PERSIST_FIELDS, API_BASE_URL } from '@renderer/config'
 
 interface WorkflowState {
   workflows: Workflow[]
@@ -53,6 +53,16 @@ interface WorkflowState {
   deleteDocumentFromKB: (id: string, docName: string) => Promise<void>
   setKnowledgeBases: (kbs: KnowledgeBase[]) => void
 
+  // Trigger data
+  triggers: Trigger[]
+  setTriggers: (triggers: Trigger[]) => void
+  fetchTriggers: () => Promise<void>
+
+  // SSE 事件流
+  eventSource: EventSource | null
+  connectEventStream: () => void
+  disconnectEventStream: () => void
+
   // Internal helper methods
   setLoading: (loading: boolean) => void
   setError: (error: string | null) => void
@@ -72,6 +82,7 @@ export const useWorkflowStore = create<WorkflowState>()(
       llmConfigs: [],
       activeLLMConfig: null,
       knowledgeBases: [],
+      triggers: [],
       currentWorkflow: null,
       currentPage: '/',
       loading: false,
@@ -87,18 +98,26 @@ export const useWorkflowStore = create<WorkflowState>()(
           await waitForServer()
 
           // 并行加载所有数据
-          const [workflowsRes, skillsRes, agentsRes] = await Promise.all([
+          const [workflowsRes, skillsRes, agentsRes, triggersRes] = await Promise.all([
             workflowApi.getAll().catch(() => [] as Workflow[]),
             skillApi.getAll().catch(() => [] as Skill[]),
-            agentApi.getAll().catch(() => [] as Agent[])
+            agentApi.getAll().catch(() => [] as Agent[]),
+            triggerApi.getAll().catch(() => [] as Trigger[])
           ])
 
           set({ workflows: workflowsRes || [] })
           set({ skills: skillsRes || [] })
           set({ agents: agentsRes || [] })
+          set({ triggers: triggersRes || [] })
 
-          // 加载LLM配置
-          await state.getLLMConfigs()
+          // 加载知识库和LLM配置
+          await Promise.all([
+            state.getKnowledgeBases().catch(() => {}),
+            state.getLLMConfigs()
+          ])
+
+          // 连接 SSE 事件流，监听数据变更
+          state.connectEventStream()
         } catch (error: any) {
           console.error('初始化失败:', error)
           state.setError(error?.message || '初始化数据失败')
@@ -115,6 +134,13 @@ export const useWorkflowStore = create<WorkflowState>()(
       setLLMConfigs: (configs: LLMConfig[]) => set({ llmConfigs: configs }),
       setActiveLLMConfig: (config: LLMConfig | null) => set({ activeLLMConfig: config }),
       setKnowledgeBases: (kbs: KnowledgeBase[]) => set({ knowledgeBases: kbs }),
+
+      setTriggers: (triggers: Trigger[]) => set({ triggers }),
+
+      fetchTriggers: async () => {
+        const triggers = await triggerApi.getAll().catch(() => [] as Trigger[])
+        set({ triggers })
+      },
       addWorkflow: async (workflow) => {
         const state = get()
         try {
@@ -520,6 +546,60 @@ export const useWorkflowStore = create<WorkflowState>()(
         } finally {
           state.setLoading(false)
         }
+      },
+
+      eventSource: null,
+
+      connectEventStream: () => {
+        const state = get()
+        state.eventSource?.close()
+
+        const es = new EventSource(`${API_BASE_URL}/events`)
+        es.onmessage = async (e) => {
+          try {
+            const { resource } = JSON.parse(e.data)
+            switch (resource) {
+              case 'workflows': {
+                const workflows = await workflowApi.getAll().catch(() => [] as Workflow[])
+                set({ workflows })
+                break
+              }
+              case 'agents': {
+                const agents = await agentApi.getAll().catch(() => [] as Agent[])
+                set({ agents })
+                break
+              }
+              case 'skills': {
+                const skills = await skillApi.getAll().catch(() => [] as Skill[])
+                set({ skills })
+                break
+              }
+              case 'llm-config':
+                get().getLLMConfigs()
+                break
+              case 'knowledge-base':
+                get().getKnowledgeBases()
+                break
+              case 'triggers': {
+                const triggers = await triggerApi.getAll().catch(() => [] as Trigger[])
+                set({ triggers })
+                break
+              }
+            }
+          } catch (err) {
+            console.error('[EventStream] 解析事件失败:', err)
+          }
+        }
+        es.onerror = () => {
+          console.warn('[EventStream] 连接异常，等待重连...')
+        }
+        set({ eventSource: es })
+      },
+
+      disconnectEventStream: () => {
+        const state = get()
+        state.eventSource?.close()
+        set({ eventSource: null })
       }
     }),
     {

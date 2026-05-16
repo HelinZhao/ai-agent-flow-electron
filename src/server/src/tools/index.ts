@@ -6,6 +6,7 @@ import { spawn } from 'child_process'
 import * as iconv from 'iconv-lite'
 import * as jschardet from 'jschardet'
 import { DUCKDUCKGO_URL, TOOL_EXECUTION_TIMEOUT, TOOL_READ_FILE_MAX_CHARS, TOOL_HTTP_MAX_CHARS, TOOL_WEB_SEARCH_MAX_RESULTS, TOOL_WEB_SEARCH_SNIPPET_LENGTH, WEB_SEARCH_USER_AGENT, SERVER_PORT } from '../config'
+import { changeNotifier } from '../utils/dataChangeNotifier'
 import { getUserDataDir } from '../utils/file'
 
 // 当前平台信息（用于工具描述，避免 LLM 用错路径格式和用户名）
@@ -188,12 +189,27 @@ export const webSearchTool = tool(
 )
 
 // ===== 内部 API 调用辅助函数 =====
+const inferResource = (path: string): string | null => {
+  if (path.includes('/api/workflows') || path.includes('/api/execute-workflow')) return 'workflows'
+  if (path.includes('/api/agents')) return 'agents'
+  if (path.includes('/api/skills')) return 'skills'
+  if (path.includes('/api/knowledge-base')) return 'knowledge-base'
+  if (path.includes('/api/llm-config')) return 'llm-config'
+  if (path.includes('/api/triggers')) return 'triggers'
+  return null
+}
+
 const callInternalApi = async (method: string, path: string, body?: string): Promise<string> => {
   const opts: any = { method, headers: { 'Content-Type': 'application/json' } }
   if (body && (method === 'POST' || method === 'PUT')) opts.body = body
   try {
     const resp = await fetch(`http://127.0.0.1:${SERVER_PORT}${path}`, opts)
     const text = await resp.text()
+    // 写操作成功后通知前端数据已变更
+    if (method !== 'GET' && resp.ok) {
+      const resource = inferResource(path)
+      if (resource) changeNotifier.emitChange(resource as any)
+    }
     return text.length > TOOL_HTTP_MAX_CHARS
       ? text.substring(0, TOOL_HTTP_MAX_CHARS) + '\n...(响应过长，已截断)'
       : text

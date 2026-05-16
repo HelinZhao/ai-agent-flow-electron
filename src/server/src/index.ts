@@ -36,6 +36,7 @@ import {
   logGpuInfo
 } from './utils/ollama'
 import { timingWheel, cronToNextTime } from './utils/timingWheel'
+import { changeNotifier } from './utils/dataChangeNotifier'
 import { TriggerModel } from './models'
 import { app } from 'electron'
 
@@ -159,6 +160,25 @@ export class LocalServer {
 
       req.on('close', () => {
         this.pullEmitter.off('progress', onProgress)
+      })
+    })
+
+    // 数据变更 SSE 事件流：前端通过此端点实时获知数据变更
+    this.app.get('/api/events', (req, res) => {
+      res.writeHead(200, {
+        'Content-Type': 'text/event-stream',
+        'Cache-Control': 'no-cache',
+        Connection: 'keep-alive'
+      })
+
+      const onChange = (resource: string): void => {
+        res.write(`data: ${JSON.stringify({ resource })}\n\n`)
+      }
+
+      changeNotifier.on('change', onChange)
+
+      req.on('close', () => {
+        changeNotifier.off('change', onChange)
       })
     })
 

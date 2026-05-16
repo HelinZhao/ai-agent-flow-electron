@@ -42,7 +42,6 @@ const TARGET_TYPE_LABEL: Record<string, string> = {
 }
 
 export default function Triggers(): React.JSX.Element {
-  const [triggers, setTriggers] = useState<Trigger[]>([])
   const [loading, setLoading] = useState(true)
   const [showModal, setShowModal] = useState(false)
   const [editingId, setEditingId] = useState<string | null>(null)
@@ -56,6 +55,8 @@ export default function Triggers(): React.JSX.Element {
   const [formInput, setFormInput] = useState('')
   const [saving, setSaving] = useState(false)
 
+  const triggers = useWorkflowStore(s => s.triggers)
+  const setTriggers = useWorkflowStore(s => s.setTriggers)
   const workflows = useWorkflowStore(s => s.workflows)
   const agents = useWorkflowStore(s => s.agents)
 
