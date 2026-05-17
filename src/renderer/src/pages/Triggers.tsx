@@ -158,9 +158,11 @@ export default function Triggers(): React.JSX.Element {
   return (
     <div className="h-full flex flex-col">
       {/* header */}
-      <div className="flex items-center justify-between px-6 py-4 flex-shrink-0">
+      <div className="flex items-center justify-between px-6 py-4 flex-shrink-0 border-b border-gray-200 dark:border-gray-700">
         <div>
-          <h1 className="text-xl font-bold text-gray-800 dark:text-gray-100">触发器</h1>
+          <h1 className="text-xl font-bold bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent">
+            触发器
+          </h1>
           <p className="text-sm text-gray-500 dark:text-gray-400 mt-0.5">
             定时或 Webhook 自动执行工作流
           </p>
@@ -171,28 +173,61 @@ export default function Triggers(): React.JSX.Element {
       </div>
 
       {/* list */}
-      <div className="flex-1 overflow-auto px-6 pb-6">
+      <div className="flex-1 overflow-auto px-6 py-6">
         {loading ? (
-          <div className="flex items-center justify-center h-40 text-gray-400">加载中...</div>
+          <div className="flex flex-col items-center justify-center h-48 text-gray-400 dark:text-gray-500">
+            <div className="flex items-center justify-center w-16 h-16 rounded-2xl bg-gradient-to-br from-blue-100 to-purple-100 dark:from-blue-900/30 dark:to-purple-900/30 mb-4">
+              <svg className="w-8 h-8 text-blue-500 dark:text-blue-400 animate-spin opacity-60" viewBox="0 0 24 24" fill="none">
+                <circle cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="3" className="opacity-20" />
+                <path d="M12 2a10 10 0 0 1 10 10" stroke="currentColor" strokeWidth="3" strokeLinecap="round" />
+              </svg>
+            </div>
+            <p className="text-sm font-medium text-gray-500 dark:text-gray-400">加载中...</p>
+          </div>
         ) : triggers.length === 0 ? (
-          <div className="flex flex-col items-center justify-center h-40 text-gray-400 gap-2">
-            <span className="text-4xl">⏰</span>
-            <span>暂无触发器，点击上方按钮创建</span>
+          <div className="flex flex-col items-center justify-center h-48 text-gray-400 dark:text-gray-500">
+            <div className="flex items-center justify-center w-16 h-16 rounded-2xl bg-gradient-to-br from-blue-100 to-purple-100 dark:from-blue-900/30 dark:to-purple-900/30 mb-4">
+              <svg className="w-8 h-8 text-blue-500 dark:text-blue-400 opacity-60" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5">
+                <circle cx="12" cy="12" r="10" />
+                <path d="M12 6v6l4 2" />
+              </svg>
+            </div>
+            <p className="text-sm font-medium text-gray-500 dark:text-gray-400 mb-1">暂无触发器</p>
+            <p className="text-xs text-gray-400 dark:text-gray-500">点击上方按钮创建</p>
           </div>
         ) : (
           <div className="space-y-3">
             {triggers.map((t) => (
               <div
                 key={t.id}
-                className="bg-white/70 dark:bg-gray-800/70 backdrop-blur-sm rounded-xl border border-gray-200/50 dark:border-gray-700/50 p-4 flex items-center gap-4"
+                className="group/trigger bg-white/80 dark:bg-gray-800/80 backdrop-blur-sm rounded-xl border border-gray-200/50 dark:border-gray-700/50 p-4 flex items-center gap-4 hover:border-blue-300 dark:hover:border-blue-600/50 hover:shadow-lg hover:-translate-y-0.5 transition-all duration-200"
               >
+                {/* type icon */}
+                <div className={`flex items-center justify-center w-10 h-10 rounded-lg flex-shrink-0 ${
+                  t.type === 'cron'
+                    ? 'bg-blue-50 dark:bg-blue-900/20'
+                    : 'bg-green-50 dark:bg-green-900/20'
+                }`}>
+                  {t.type === 'cron' ? (
+                    <svg className="w-5 h-5 text-blue-500" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                      <circle cx="12" cy="12" r="10" />
+                      <path d="M12 6v6l4 2" />
+                    </svg>
+                  ) : (
+                    <svg className="w-5 h-5 text-green-500" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                      <path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71" />
+                      <path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71" />
+                    </svg>
+                  )}
+                </div>
                 {/* left: info */}
                 <div className="flex-1 min-w-0">
                   <div className="flex items-center gap-2">
-                    <span className={`px-1.5 py-0.5 rounded text-xs font-medium flex-shrink-0 ${t.type === 'cron'
-                      ? 'bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400'
-                      : 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400'
-                      }`}>
+                    <span className={`inline-flex items-center px-2 py-0.5 text-xs font-medium rounded-full border ${
+                      t.type === 'cron'
+                        ? 'bg-blue-50 dark:bg-blue-900/20 text-blue-600 dark:text-blue-400 border-blue-200 dark:border-blue-800'
+                        : 'bg-green-50 dark:bg-green-900/20 text-green-600 dark:text-green-400 border-green-200 dark:border-green-800'
+                    }`}>
                       {t.type === 'cron' ? '定时' : 'Webhook'}
                     </span>
                     <span className="font-medium text-gray-800 dark:text-gray-100 truncate">{t.name}</span>
@@ -211,53 +246,55 @@ export default function Triggers(): React.JSX.Element {
                 </div>
 
                 {/* right: actions */}
-                <div className="flex items-center gap-1.5 flex-shrink-0">
+                <div className="flex items-center gap-1 flex-shrink-0">
                   <CustomSwitch checked={t.enabled} onChange={() => handleToggle(t)} />
 
-                  {t.type === 'webhook' && (
+                  <div className="flex items-center gap-0.5 ml-1 p-0.5 rounded-lg border border-gray-200/50 dark:border-gray-700/50 bg-white dark:bg-gray-800">
+                    {t.type === 'webhook' && (
+                      <button
+                        onClick={() => handleCopyWebhook(t.webhookToken || '')}
+                        className="p-1.5 rounded-lg text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors"
+                        title="复制 Webhook URL"
+                      >
+                        <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                          <rect x="9" y="9" width="13" height="13" rx="2" ry="2" />
+                          <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1" />
+                        </svg>
+                      </button>
+                    )}
+
                     <button
-                      onClick={() => handleCopyWebhook(t.webhookToken || '')}
-                      className="p-1.5 rounded-lg text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors"
-                      title="复制 Webhook URL"
+                      onClick={() => handleRun(t)}
+                      className="p-1.5 rounded-lg text-gray-400 hover:text-green-600 dark:hover:text-green-400 hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors"
+                      title="手动执行"
                     >
-                      <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                        <rect x="9" y="9" width="13" height="13" rx="2" ry="2" />
-                        <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1" />
+                      <svg className="w-4 h-4" viewBox="0 0 24 24" fill="currentColor">
+                        <path d="M8 5v14l11-7z" />
                       </svg>
                     </button>
-                  )}
 
-                  <button
-                    onClick={() => handleRun(t)}
-                    className="p-1.5 rounded-lg text-gray-400 hover:text-green-600 dark:hover:text-green-400 hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors"
-                    title="手动执行"
-                  >
-                    <svg className="w-4 h-4" viewBox="0 0 24 24" fill="currentColor">
-                      <path d="M8 5v14l11-7z" />
-                    </svg>
-                  </button>
+                    <button
+                      onClick={() => openEdit(t)}
+                      className="p-1.5 rounded-lg text-gray-400 hover:text-blue-600 dark:hover:text-blue-400 hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors"
+                      title="编辑"
+                    >
+                      <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                        <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7" />
+                        <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z" />
+                      </svg>
+                    </button>
 
-                  <button
-                    onClick={() => openEdit(t)}
-                    className="p-1.5 rounded-lg text-gray-400 hover:text-blue-600 dark:hover:text-blue-400 hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors"
-                    title="编辑"
-                  >
-                    <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                      <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7" />
-                      <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z" />
-                    </svg>
-                  </button>
-
-                  <button
-                    onClick={() => handleDelete(t)}
-                    className="p-1.5 rounded-lg text-gray-400 hover:text-red-600 dark:hover:text-red-400 hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors"
-                    title="删除"
-                  >
-                    <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                      <polyline points="3 6 5 6 21 6" />
-                      <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2" />
-                    </svg>
-                  </button>
+                    <button
+                      onClick={() => handleDelete(t)}
+                      className="p-1.5 rounded-lg text-gray-400 hover:text-red-600 dark:hover:text-red-400 hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors"
+                      title="删除"
+                    >
+                      <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                        <polyline points="3 6 5 6 21 6" />
+                        <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2" />
+                      </svg>
+                    </button>
+                  </div>
                 </div>
               </div>
             ))}

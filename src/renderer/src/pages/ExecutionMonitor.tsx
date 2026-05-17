@@ -120,7 +120,7 @@ const ExecutionMonitor = () => {
     <div className="h-full flex flex-col">
       {/* 头部 */}
       <div className="flex-shrink-0 px-6 py-5 border-b border-gray-200 dark:border-gray-700">
-        <h1 className="text-xl font-bold text-gray-900 dark:text-white flex items-center gap-2">
+        <h1 className="text-xl font-bold bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent flex items-center gap-2">
           <svg className="w-6 h-6 text-blue-500" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
             <path d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4" />
           </svg>
@@ -136,7 +136,7 @@ const ExecutionMonitor = () => {
             onClick={() => handleFilterChange(tab.key)}
             className={`px-3 py-1.5 text-sm rounded-lg font-medium transition-colors ${
               filter === tab.key
-                ? 'bg-blue-500 text-white'
+                ? 'bg-blue-500 text-white shadow-sm'
                 : 'text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700'
             }`}
           >
@@ -151,21 +151,25 @@ const ExecutionMonitor = () => {
       {/* 列表 */}
       <div className="flex-1 overflow-auto px-6 py-4 space-y-3">
         {isLoading && executions.length === 0 && (
-          <div className="flex items-center justify-center h-32 text-gray-400 dark:text-gray-500">
-            <svg className="w-5 h-5 animate-spin mr-2" viewBox="0 0 24 24" fill="none">
-              <circle cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="3" className="opacity-20" />
-              <path d="M12 2a10 10 0 0 1 10 10" stroke="currentColor" strokeWidth="3" strokeLinecap="round" />
-            </svg>
-            加载中...
+          <div className="flex flex-col items-center justify-center h-48 text-gray-400 dark:text-gray-500">
+            <div className="flex items-center justify-center w-16 h-16 rounded-2xl bg-gradient-to-br from-blue-100 to-purple-100 dark:from-blue-900/30 dark:to-purple-900/30 mb-4">
+              <svg className="w-8 h-8 text-blue-500 dark:text-blue-400 animate-spin opacity-60" viewBox="0 0 24 24" fill="none">
+                <circle cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="3" className="opacity-20" />
+                <path d="M12 2a10 10 0 0 1 10 10" stroke="currentColor" strokeWidth="3" strokeLinecap="round" />
+              </svg>
+            </div>
+            <p className="text-sm font-medium text-gray-500 dark:text-gray-400">加载中...</p>
           </div>
         )}
 
         {!isLoading && executions.length === 0 && (
           <div className="flex flex-col items-center justify-center h-48 text-gray-400 dark:text-gray-500">
-            <svg className="w-12 h-12 mb-3 opacity-50" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5">
-              <path d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" />
-            </svg>
-            <p className="text-sm">暂无执行记录</p>
+            <div className="flex items-center justify-center w-16 h-16 rounded-2xl bg-gradient-to-br from-blue-100 to-purple-100 dark:from-blue-900/30 dark:to-purple-900/30 mb-4">
+              <svg className="w-8 h-8 text-blue-500 dark:text-blue-400 opacity-60" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5">
+                <path d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" />
+              </svg>
+            </div>
+            <p className="text-sm font-medium text-gray-500 dark:text-gray-400">暂无执行记录</p>
           </div>
         )}
 
@@ -176,7 +180,7 @@ const ExecutionMonitor = () => {
           return (
             <div
               key={exec.executionId}
-              className="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 shadow-sm hover:shadow-md transition-shadow"
+              className="bg-white/80 dark:bg-gray-800/80 backdrop-blur-sm rounded-xl border border-gray-200/50 dark:border-gray-700/50 shadow-sm hover:border-blue-300 dark:hover:border-blue-600/50 hover:shadow-lg hover:-translate-y-0.5 transition-all duration-200"
             >
               {/* 主行 */}
               <div className="px-5 py-4">
@@ -209,10 +213,10 @@ const ExecutionMonitor = () => {
                   </div>
 
                   {/* 右侧操作 */}
-                  <div className="flex items-center gap-2 flex-shrink-0">
+                  <div className="flex items-center gap-1.5 flex-shrink-0">
                     <button
                       onClick={() => setDetailId(exec.executionId)}
-                      className="px-3 py-1.5 text-xs font-medium rounded-lg bg-gray-50 text-gray-600 hover:bg-gray-100 dark:bg-gray-700/50 dark:text-gray-400 dark:hover:bg-gray-600/50 transition-colors"
+                      className="px-2.5 py-1.5 text-xs font-medium rounded-lg bg-white dark:bg-gray-700/50 text-gray-600 dark:text-gray-400 border border-gray-200 dark:border-gray-600 hover:bg-gray-50 dark:hover:bg-gray-600/50 transition-colors"
                     >
                       详情
                     </button>
@@ -220,13 +224,13 @@ const ExecutionMonitor = () => {
                       <>
                         <button
                           onClick={() => handlePause(exec.executionId)}
-                          className="px-3 py-1.5 text-xs font-medium rounded-lg bg-amber-50 text-amber-700 hover:bg-amber-100 dark:bg-amber-900/20 dark:text-amber-400 dark:hover:bg-amber-900/30 transition-colors"
+                          className="px-2.5 py-1.5 text-xs font-medium rounded-lg bg-amber-50 dark:bg-amber-900/20 text-amber-700 dark:text-amber-400 border border-amber-200 dark:border-amber-800/50 hover:bg-amber-100 dark:hover:bg-amber-900/30 transition-colors"
                         >
                           暂停
                         </button>
                         <button
                           onClick={() => handleStop(exec.executionId)}
-                          className="px-3 py-1.5 text-xs font-medium rounded-lg bg-red-50 text-red-700 hover:bg-red-100 dark:bg-red-900/20 dark:text-red-400 dark:hover:bg-red-900/30 transition-colors"
+                          className="px-2.5 py-1.5 text-xs font-medium rounded-lg bg-red-50 dark:bg-red-900/20 text-red-700 dark:text-red-400 border border-red-200 dark:border-red-800/50 hover:bg-red-100 dark:hover:bg-red-900/30 transition-colors"
                         >
                           停止
                         </button>
@@ -236,13 +240,13 @@ const ExecutionMonitor = () => {
                       <>
                         <button
                           onClick={() => handleResume(exec.executionId)}
-                          className="px-3 py-1.5 text-xs font-medium rounded-lg bg-green-50 text-green-700 hover:bg-green-100 dark:bg-green-900/20 dark:text-green-400 dark:hover:bg-green-900/30 transition-colors"
+                          className="px-2.5 py-1.5 text-xs font-medium rounded-lg bg-green-50 dark:bg-green-900/20 text-green-700 dark:text-green-400 border border-green-200 dark:border-green-800/50 hover:bg-green-100 dark:hover:bg-green-900/30 transition-colors"
                         >
                           恢复
                         </button>
                         <button
                           onClick={() => handleStop(exec.executionId)}
-                          className="px-3 py-1.5 text-xs font-medium rounded-lg bg-red-50 text-red-700 hover:bg-red-100 dark:bg-red-900/20 dark:text-red-400 dark:hover:bg-red-900/30 transition-colors"
+                          className="px-2.5 py-1.5 text-xs font-medium rounded-lg bg-red-50 dark:bg-red-900/20 text-red-700 dark:text-red-400 border border-red-200 dark:border-red-800/50 hover:bg-red-100 dark:hover:bg-red-900/30 transition-colors"
                         >
                           停止
                         </button>
@@ -266,16 +270,16 @@ const ExecutionMonitor = () => {
                 <div className="mt-3">
                   <div className="flex justify-between text-xs text-gray-500 dark:text-gray-400 mb-1">
                     <span>{exec.completedNodes}/{exec.totalNodes} 节点</span>
-                    <span>{exec.progress}%</span>
+                    <span className="font-medium">{exec.progress}%</span>
                   </div>
-                  <div className="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-1.5">
+                  <div className="w-full bg-gray-100 dark:bg-gray-700/50 rounded-full h-2 overflow-hidden">
                     <div
-                      className={`h-1.5 rounded-full transition-all duration-500 ${
+                      className={`h-full rounded-full transition-all duration-500 ${
                         exec.status === 'failed'
-                          ? 'bg-red-500'
+                          ? 'bg-gradient-to-r from-red-500 to-red-400'
                           : exec.status === 'completed'
-                            ? 'bg-green-500'
-                            : 'bg-blue-500'
+                            ? 'bg-gradient-to-r from-green-500 to-emerald-400'
+                            : 'bg-gradient-to-r from-blue-500 to-blue-400'
                       }`}
                       style={{ width: `${Math.max(exec.progress, exec.status === 'running' ? 2 : 0)}%` }}
                     />
@@ -286,22 +290,50 @@ const ExecutionMonitor = () => {
               {/* 展开详情 */}
               {isExpanded && (
                 <div className="px-5 pb-4 pt-0 border-t border-gray-100 dark:border-gray-700">
-                  <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 mt-3">
-                    <div className="p-3 rounded-lg bg-gray-50 dark:bg-gray-900/50">
-                      <div className="text-xs text-gray-500 dark:text-gray-400 mb-0.5">总节点数</div>
-                      <div className="text-lg font-semibold text-gray-900 dark:text-white">{exec.totalNodes}</div>
+                  <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mt-3">
+                    <div className="bg-white dark:bg-gray-800 rounded-xl border border-gray-200/50 dark:border-gray-700/50 p-3">
+                      <div className="flex items-start gap-3">
+                        <div className="w-10 h-10 rounded-lg bg-gray-100 dark:bg-gray-700 flex items-center justify-center flex-shrink-0">
+                          <svg className="w-6 h-6 text-gray-500" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M4 6h16M4 10h16M4 14h16M4 18h16" /></svg>
+                        </div>
+                        <div className="flex flex-col justify-between h-10">
+                          <div className="text-xs leading-none text-gray-500 dark:text-gray-400">总节点</div>
+                          <div className="text-lg font-bold leading-none text-gray-900 dark:text-white">{exec.totalNodes}</div>
+                        </div>
+                      </div>
                     </div>
-                    <div className="p-3 rounded-lg bg-green-50 dark:bg-green-900/10">
-                      <div className="text-xs text-green-600 dark:text-green-400 mb-0.5">已完成</div>
-                      <div className="text-lg font-semibold text-green-700 dark:text-green-300">{exec.completedNodes}</div>
+                    <div className="bg-white dark:bg-gray-800 rounded-xl border border-gray-200/50 dark:border-gray-700/50 p-3">
+                      <div className="flex items-start gap-3">
+                        <div className="w-10 h-10 rounded-lg bg-green-50 dark:bg-green-900/20 flex items-center justify-center flex-shrink-0">
+                          <svg className="w-6 h-6 text-green-500" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M5 13l4 4L19 7" /></svg>
+                        </div>
+                        <div className="flex flex-col justify-between h-10">
+                          <div className="text-xs leading-none text-gray-500 dark:text-gray-400">已完成</div>
+                          <div className="text-lg font-bold leading-none text-gray-900 dark:text-white">{exec.completedNodes}</div>
+                        </div>
+                      </div>
                     </div>
-                    <div className="p-3 rounded-lg bg-red-50 dark:bg-red-900/10">
-                      <div className="text-xs text-red-600 dark:text-red-400 mb-0.5">已失败</div>
-                      <div className="text-lg font-semibold text-red-700 dark:text-red-300">{exec.failedNodes}</div>
+                    <div className="bg-white dark:bg-gray-800 rounded-xl border border-gray-200/50 dark:border-gray-700/50 p-3">
+                      <div className="flex items-start gap-3">
+                        <div className="w-10 h-10 rounded-lg bg-red-50 dark:bg-red-900/20 flex items-center justify-center flex-shrink-0">
+                          <svg className="w-6 h-6 text-red-500" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M6 6l12 12M6 18L18 6" /></svg>
+                        </div>
+                        <div className="flex flex-col justify-between h-10">
+                          <div className="text-xs leading-none text-gray-500 dark:text-gray-400">失败</div>
+                          <div className="text-lg font-bold leading-none text-gray-900 dark:text-white">{exec.failedNodes}</div>
+                        </div>
+                      </div>
                     </div>
-                    <div className="p-3 rounded-lg bg-blue-50 dark:bg-blue-900/10">
-                      <div className="text-xs text-blue-600 dark:text-blue-400 mb-0.5">耗时</div>
-                      <div className="text-lg font-semibold text-blue-700 dark:text-blue-300">{formatDuration(exec.duration || 0)}</div>
+                    <div className="bg-white dark:bg-gray-800 rounded-xl border border-gray-200/50 dark:border-gray-700/50 p-3">
+                      <div className="flex items-start gap-3">
+                        <div className="w-10 h-10 rounded-lg bg-blue-50 dark:bg-blue-900/20 flex items-center justify-center flex-shrink-0">
+                          <svg className="w-6 h-6 text-blue-500" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><circle cx="12" cy="12" r="10" /><path d="M12 6v6l4 2" /></svg>
+                        </div>
+                        <div className="flex flex-col justify-between h-10">
+                          <div className="text-xs leading-none text-gray-500 dark:text-gray-400">耗时</div>
+                          <div className="text-lg font-bold leading-none text-gray-900 dark:text-white">{formatDuration(exec.duration || 0)}</div>
+                        </div>
+                      </div>
                     </div>
                   </div>
                   <div className="mt-2 text-xs text-gray-400 dark:text-gray-500">
@@ -349,21 +381,28 @@ const NodeResultItem: React.FC<{ node: NodeExecutionResult }> = ({ node }) => {
   const statusText: Record<string, string> = { completed: '已完成', failed: '失败', running: '运行中', pending: '等待中' }
 
   return (
-    <div className="border border-gray-200 dark:border-gray-700 rounded-lg p-3">
+    <div className="bg-white/80 dark:bg-gray-800/80 backdrop-blur-sm rounded-xl border border-gray-200/50 dark:border-gray-700/50 p-4">
       <div className="flex items-center justify-between mb-2">
-        <div className="font-medium text-gray-900 dark:text-white">{node.nodeLabel}</div>
-        <span className={`px-2 py-1 rounded text-xs font-medium ${statusColor}`}>
+        <div className="flex items-center gap-2">
+          <div className={`w-2 h-2 rounded-full ${
+            node.status === 'completed' ? 'bg-green-500' :
+            node.status === 'failed' ? 'bg-red-500' :
+            node.status === 'running' ? 'bg-blue-500' : 'bg-gray-300 dark:bg-gray-600'
+          }`} />
+          <span className="font-medium text-sm text-gray-900 dark:text-white">{node.nodeLabel || '--'}</span>
+        </div>
+        <span className={`px-2 py-0.5 rounded-full text-xs font-medium ${statusColor}`}>
           {statusText[node.status] || node.status}
         </span>
       </div>
-      <div className="text-sm text-gray-600 dark:text-gray-400 space-y-1">
-        <div>节点ID: {node.nodeId}</div>
+      <div className="text-xs text-gray-500 dark:text-gray-400 space-y-0.5 ml-4">
+        <div>节点ID: {node.nodeId || '--'}</div>
         {node.duration ? <div>耗时: {Math.round(node.duration / 1000)}秒</div> : null}
-        {node.error && <div className="text-red-600 dark:text-red-400">错误: {node.error}</div>}
+        {node.error && <div className="text-red-600 dark:text-red-400 mt-1">错误: {node.error}</div>}
       </div>
       {node.output && (
-        <div className="mt-2 p-2 bg-gray-50 dark:bg-gray-800 rounded text-xs">
-          <div className="font-medium mb-1 text-gray-700 dark:text-gray-300">输出:</div>
+        <div className="mt-2 p-2.5 bg-gray-50 dark:bg-gray-900/30 rounded-lg border border-gray-100 dark:border-gray-700/30 text-xs">
+          <div className="font-medium mb-1 text-gray-600 dark:text-gray-400">输出:</div>
           <pre className="whitespace-pre-wrap break-words text-gray-600 dark:text-gray-400">
             {typeof node.output === 'string' ? node.output : JSON.stringify(node.output, null, 2)}
           </pre>
@@ -377,15 +416,15 @@ const NodeResultItem: React.FC<{ node: NodeExecutionResult }> = ({ node }) => {
 const LogItem: React.FC<{ log: any }> = ({ log }) => {
   const levelColor: Record<string, string> = { error: 'text-red-600', warn: 'text-yellow-600', info: 'text-gray-600' }
   return (
-    <div className="flex items-start gap-2 text-sm py-1">
-      <span className="text-gray-400 text-xs whitespace-nowrap shrink-0">
+    <div className="flex items-start gap-2 text-sm py-1.5 px-2 -mx-2 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700/30 transition-colors">
+      <span className="text-gray-400 text-xs whitespace-nowrap shrink-0 font-mono">
         {new Date(log.timestamp).toLocaleTimeString()}
       </span>
-      <span className={`font-medium shrink-0 ${levelColor[log.level] || ''}`}>
+      <span className={`font-medium shrink-0 text-xs ${levelColor[log.level] || ''}`}>
         {log.level.toUpperCase()}
       </span>
-      <span className="text-gray-900 dark:text-white flex-1">{log.message}</span>
-      {log.nodeId && <span className="text-gray-500 text-xs shrink-0">[{log.nodeId}]</span>}
+      <span className="text-gray-900 dark:text-white flex-1 text-xs">{log.message}</span>
+      {log.nodeId && <span className="text-gray-500 text-xs shrink-0 font-mono">[{log.nodeId}]</span>}
     </div>
   )
 }
@@ -425,7 +464,7 @@ const DetailModal: React.FC<DetailModalProps> = ({ executionId, onClose, onStop,
     return (
       <>
         <div className="fixed inset-0 bg-black/20 dark:bg-black/40 z-40" onClick={onClose} />
-        <div className="fixed right-0 top-14 bottom-0 w-[600px] max-w-[90vw] bg-white dark:bg-gray-800 shadow-xl z-50 flex items-center justify-center border-l border-gray-200 dark:border-gray-700">
+        <div className="fixed right-0 top-14 bottom-0 w-[600px] max-w-[90vw] bg-white/95 dark:bg-gray-800/95 backdrop-blur-md shadow-xl z-50 flex items-center justify-center border-l border-gray-200 dark:border-gray-700">
           <div className="flex items-center gap-2 text-gray-400 dark:text-gray-500">
             <svg className="w-5 h-5 animate-spin" viewBox="0 0 24 24" fill="none">
               <circle cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="3" className="opacity-20" />
@@ -445,7 +484,7 @@ const DetailModal: React.FC<DetailModalProps> = ({ executionId, onClose, onStop,
   return (
     <>
       <div className="fixed inset-0 bg-black/20 dark:bg-black/40 z-40" onClick={onClose} />
-      <div className="fixed right-0 top-14 bottom-0 w-[600px] max-w-[90vw] bg-white dark:bg-gray-800 shadow-xl z-50 flex flex-col border-l border-gray-200 dark:border-gray-700">
+      <div className="fixed right-0 top-14 bottom-0 w-[600px] max-w-[90vw] bg-white/95 dark:bg-gray-800/95 backdrop-blur-md shadow-xl z-50 flex flex-col border-l border-gray-200 dark:border-gray-700">
         {/* 头部 */}
         <div className="shrink-0 px-5 py-4 border-b border-gray-200 dark:border-gray-700">
           <div className="flex items-center justify-between">
@@ -462,18 +501,18 @@ const DetailModal: React.FC<DetailModalProps> = ({ executionId, onClose, onStop,
                 <>
                   {metrics.status === 'paused' && (
                     <button onClick={() => onResume(executionId)}
-                      className="px-3 py-1.5 text-xs font-medium rounded-lg bg-green-50 text-green-700 hover:bg-green-100 dark:bg-green-900/20 dark:text-green-400 dark:hover:bg-green-900/30 transition-colors">
+                      className="px-2.5 py-1.5 text-xs font-medium rounded-lg bg-green-50 dark:bg-green-900/20 text-green-700 dark:text-green-400 border border-green-200 dark:border-green-800/50 hover:bg-green-100 dark:hover:bg-green-900/30 transition-colors">
                       恢复
                     </button>
                   )}
                   {isRunning && (
                     <button onClick={() => onPause(executionId)}
-                      className="px-3 py-1.5 text-xs font-medium rounded-lg bg-amber-50 text-amber-700 hover:bg-amber-100 dark:bg-amber-900/20 dark:text-amber-400 dark:hover:bg-amber-900/30 transition-colors">
+                      className="px-2.5 py-1.5 text-xs font-medium rounded-lg bg-amber-50 dark:bg-amber-900/20 text-amber-700 dark:text-amber-400 border border-amber-200 dark:border-amber-800/50 hover:bg-amber-100 dark:hover:bg-amber-900/30 transition-colors">
                       暂停
                     </button>
                   )}
                   <button onClick={() => onStop(executionId)}
-                    className="px-3 py-1.5 text-xs font-medium rounded-lg bg-red-50 text-red-700 hover:bg-red-100 dark:bg-red-900/20 dark:text-red-400 dark:hover:bg-red-900/30 transition-colors">
+                    className="px-2.5 py-1.5 text-xs font-medium rounded-lg bg-red-50 dark:bg-red-900/20 text-red-700 dark:text-red-400 border border-red-200 dark:border-red-800/50 hover:bg-red-100 dark:hover:bg-red-900/30 transition-colors">
                     停止
                   </button>
                 </>
@@ -489,10 +528,16 @@ const DetailModal: React.FC<DetailModalProps> = ({ executionId, onClose, onStop,
           <div className="mt-3">
             <div className="flex justify-between text-xs text-gray-500 dark:text-gray-400 mb-1">
               <span>整体进度</span>
-              <span>{metrics.progress}%</span>
+              <span className="font-medium">{metrics.progress}%</span>
             </div>
-            <div className="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-2">
-              <div className={`h-2 rounded-full transition-all duration-500 ${metrics.status === 'failed' ? 'bg-red-500' : metrics.status === 'completed' ? 'bg-green-500' : 'bg-blue-500'}`}
+            <div className="w-full bg-gray-100 dark:bg-gray-700/50 rounded-full h-2 overflow-hidden">
+              <div className={`h-full rounded-full transition-all duration-500 ${
+                metrics.status === 'failed'
+                  ? 'bg-gradient-to-r from-red-500 to-red-400'
+                  : metrics.status === 'completed'
+                    ? 'bg-gradient-to-r from-green-500 to-emerald-400'
+                    : 'bg-gradient-to-r from-blue-500 to-blue-400'
+              }`}
                 style={{ width: `${Math.max(metrics.progress, isRunning ? 2 : 0)}%` }} />
             </div>
           </div>
@@ -518,30 +563,42 @@ const DetailModal: React.FC<DetailModalProps> = ({ executionId, onClose, onStop,
         <div className="flex-1 overflow-auto p-5">
           {tab === 'overview' && (
             <div className="space-y-5">
-              <div className="grid grid-cols-2 gap-4">
-                <div className="text-center p-4 rounded-lg bg-gray-50 dark:bg-gray-900/50">
-                  <div className="text-2xl font-bold text-blue-600">{metrics.totalNodes}</div>
-                  <div className="text-sm text-gray-500">总节点数</div>
+              <div className="grid grid-cols-2 gap-3">
+                <div className="bg-white/80 dark:bg-gray-800/80 backdrop-blur-sm rounded-xl border border-gray-200/50 dark:border-gray-700/50 p-3">
+                  <div className="text-xs font-medium text-gray-500 dark:text-gray-400 mb-0.5">总节点</div>
+                  <p className="text-xl font-bold text-gray-900 dark:text-white">{metrics.totalNodes}</p>
                 </div>
-                <div className="text-center p-4 rounded-lg bg-green-50 dark:bg-green-900/10">
-                  <div className="text-2xl font-bold text-green-600">{metrics.completedNodes}</div>
-                  <div className="text-sm text-gray-500">已完成</div>
-                </div>
-                <div className="text-center p-4 rounded-lg bg-red-50 dark:bg-red-900/10">
-                  <div className="text-2xl font-bold text-red-600">{metrics.failedNodes}</div>
-                  <div className="text-sm text-gray-500">失败</div>
-                </div>
-                <div className="text-center p-4 rounded-lg bg-blue-50 dark:bg-blue-900/10">
-                  <div className="text-2xl font-bold text-gray-600 dark:text-gray-300">
-                    {metrics.duration ? `${Math.round(metrics.duration / 1000)}s` : '-'}
+                <div className="bg-white/80 dark:bg-gray-800/80 backdrop-blur-sm rounded-xl border border-gray-200/50 dark:border-gray-700/50 p-3">
+                  <div className="flex items-center gap-1 mb-0.5">
+                    <span className="w-1.5 h-1.5 rounded-full bg-green-500" />
+                    <span className="text-xs font-medium text-gray-500 dark:text-gray-400">已完成</span>
                   </div>
-                  <div className="text-sm text-gray-500">耗时</div>
+                  <p className="text-xl font-bold text-gray-900 dark:text-white">{metrics.completedNodes}</p>
+                </div>
+                <div className="bg-white/80 dark:bg-gray-800/80 backdrop-blur-sm rounded-xl border border-gray-200/50 dark:border-gray-700/50 p-3">
+                  <div className="flex items-center gap-1 mb-0.5">
+                    <span className="w-1.5 h-1.5 rounded-full bg-red-500" />
+                    <span className="text-xs font-medium text-gray-500 dark:text-gray-400">失败</span>
+                  </div>
+                  <p className="text-xl font-bold text-gray-900 dark:text-white">{metrics.failedNodes}</p>
+                </div>
+                <div className="bg-white/80 dark:bg-gray-800/80 backdrop-blur-sm rounded-xl border border-gray-200/50 dark:border-gray-700/50 p-3">
+                  <div className="flex items-center gap-1 mb-0.5">
+                    <svg className="w-3 h-3 text-blue-500" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><circle cx="12" cy="12" r="10" /><path d="M12 6v6l4 2" /></svg>
+                    <span className="text-xs font-medium text-gray-500 dark:text-gray-400">耗时</span>
+                  </div>
+                  <p className="text-xl font-bold text-gray-900 dark:text-white">
+                    {metrics.duration ? `${Math.round(metrics.duration / 1000)}s` : '-'}
+                  </p>
                 </div>
               </div>
               {currentNodeId && (
-                <div className="bg-blue-50 dark:bg-blue-900/20 p-3 rounded-lg">
-                  <div className="font-medium text-blue-900 dark:text-blue-300 mb-1">当前执行节点</div>
-                  <p className="text-blue-700 dark:text-blue-200">{currentNodeLabel || currentNodeId}</p>
+                <div className="bg-blue-50/80 dark:bg-blue-900/20 backdrop-blur-sm rounded-xl border border-blue-200/50 dark:border-blue-800/50 p-4">
+                  <div className="flex items-center gap-2 mb-1">
+                    <span className="w-2 h-2 rounded-full bg-blue-500 animate-pulse" />
+                    <span className="text-sm font-medium text-blue-800 dark:text-blue-300">当前执行节点</span>
+                  </div>
+                  <p className="text-sm text-blue-700 dark:text-blue-200 ml-4">{currentNodeLabel || currentNodeId}</p>
                 </div>
               )}
               {executionPath && executionPath.length > 0 && (
