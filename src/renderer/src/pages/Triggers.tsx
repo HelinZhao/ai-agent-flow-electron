@@ -3,6 +3,7 @@ import { Trigger } from '@renderer/types'
 import { triggerApi } from '@renderer/lib/api'
 import { useWorkflowStore } from '@renderer/store/workflowStore'
 import { CRON_PRESETS, WEBHOOK_BASE_URL } from '@renderer/config'
+import Modal from '@renderer/components/ui/Modal'
 import CustomButton from '@renderer/components/ui/CustomButton'
 import CustomInput from '@renderer/components/ui/CustomInput'
 import CustomSelect from '@renderer/components/ui/CustomSelect'
@@ -264,143 +265,128 @@ export default function Triggers(): React.JSX.Element {
         )}
       </div>
 
-      {/* modal overlay */}
-      {showModal && (
-        <div className="fixed inset-0 z-50 top-14 flex items-center justify-center bg-black/40 backdrop-blur-sm"
-          onClick={() => setShowModal(false)}>
-          <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-2xl w-full max-w-lg mx-4 max-h-[90vh] flex flex-col"
-            onClick={e => e.stopPropagation()}>
-            <div className="px-6 py-4 border-b border-gray-200 dark:border-gray-700 flex items-center justify-between flex-shrink-0">
-              <h2 className="text-lg font-semibold text-gray-800 dark:text-gray-100">
-                {editingId ? '编辑触发器' : '新建触发器'}
-              </h2>
+      {/* modal */}
+      <Modal
+        open={showModal}
+        onClose={() => setShowModal(false)}
+        title={editingId ? '编辑触发器' : '新建触发器'}
+        footer={
+          <>
+            <CustomButton variant="secondary" onClick={() => setShowModal(false)} size='sm'>
+              取消
+            </CustomButton>
+            <CustomButton
+              onClick={handleSave}
+              loading={saving}
+              disabled={!formName.trim() || !formTargetId}
+              size='sm'
+            >
+              {editingId ? '保存' : '创建'}
+            </CustomButton>
+          </>
+        }
+      >
+        {/* name */}
+        <div>
+          <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5">名称</label>
+          <CustomInput size="sm" value={formName} onChange={e => setFormName(e.target.value)} placeholder="例如：每日报表" />
+        </div>
 
-              <button
-                onClick={() => setShowModal(false)}
-                className="flex items-center justify-center w-7 h-7 rounded-lg text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors">
-                <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M18 6L6 18M6 6l12 12" /></svg>
-              </button>
+        {/* type */}
+        <div>
+          <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5">触发方式</label>
+          <CustomSelect
+            size="sm"
+            value={formType}
+            onChange={v => setFormType(v as 'cron' | 'webhook')}
+            options={[
+              { value: 'cron', label: '⏰ 定时触发 (Cron)' },
+              { value: 'webhook', label: '🔗 Webhook' }
+            ]}
+          />
+        </div>
+
+        {/* cron */}
+        {formType === 'cron' && (
+          <div>
+            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5">
+              Cron 表达式
+            </label>
+            <div className="flex flex-wrap gap-1.5 mb-2">
+              {CRON_PRESETS.map(p => (
+                <button
+                  key={p.value}
+                  onClick={() => setFormCron(p.value)}
+                  className={`px-2.5 py-1 rounded-lg text-xs font-medium transition-colors ${formCron === p.value
+                    ? 'bg-blue-500 text-white'
+                    : 'bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600'
+                    }`}
+                >
+                  {p.label}
+                </button>
+              ))}
             </div>
-
-            <div className="px-6 py-4 space-y-4 overflow-y-auto flex-1">
-              {/* name */}
-              <div>
-                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5">名称</label>
-                <CustomInput size="sm" value={formName} onChange={e => setFormName(e.target.value)} placeholder="例如：每日报表" />
-              </div>
-
-              {/* type */}
-              <div>
-                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5">触发方式</label>
-                <CustomSelect
-                  size="sm"
-                  value={formType}
-                  onChange={v => setFormType(v as 'cron' | 'webhook')}
-                  options={[
-                    { value: 'cron', label: '⏰ 定时触发 (Cron)' },
-                    { value: 'webhook', label: '🔗 Webhook' }
-                  ]}
-                />
-              </div>
-
-              {/* cron */}
-              {formType === 'cron' && (
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5">
-                    Cron 表达式
-                  </label>
-                  <div className="flex flex-wrap gap-1.5 mb-2">
-                    {CRON_PRESETS.map(p => (
-                      <button
-                        key={p.value}
-                        onClick={() => setFormCron(p.value)}
-                        className={`px-2.5 py-1 rounded-lg text-xs font-medium transition-colors ${formCron === p.value
-                          ? 'bg-blue-500 text-white'
-                          : 'bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600'
-                          }`}
-                      >
-                        {p.label}
-                      </button>
-                    ))}
-                  </div>
-                  <div className="bg-white dark:bg-gray-900/50 rounded-lg border border-gray-200 dark:border-gray-700 p-4">
-                    <CronBuilder
-                      value={formCron}
-                      onChange={setFormCron}
-                      includeSeconds={true}  // Unix格式，不包含秒
-                    />
-                  </div>
-                  <p className="text-xs text-gray-400 mt-1">
-                    {describeCronSimple(formCron)}
-                  </p>
-                </div>
-              )}
-
-              {/* webhook */}
-              {formType === 'webhook' && (
-                <div className="bg-gray-50 dark:bg-gray-900/50 rounded-xl p-3 text-sm text-gray-500 dark:text-gray-400">
-                  创建后自动生成 Webhook URL，通过 POST 请求即可触发
-                </div>
-              )}
-
-              {/* target */}
-              <div>
-                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5">执行目标</label>
-                <div className="flex gap-2">
-                  <div className="w-28">
-                    <CustomSelect
-                      size="sm"
-                      value={formTargetType}
-                      onChange={handleTargetTypeChange}
-                      options={[
-                        { value: 'workflow', label: '工作流' },
-                        { value: 'agent', label: 'Agent' }
-                      ]}
-                    />
-                  </div>
-                  <div className="flex-1">
-                    <CustomSelect
-                      size="sm"
-                      value={formTargetId}
-                      onChange={setFormTargetId}
-                      options={targetOptions}
-                      placeholder={targetOptions.length === 0 ? `暂无${formTargetType === 'workflow' ? '工作流' : 'Agent'}` : '请选择...'}
-                    />
-                  </div>
-                </div>
-              </div>
-
-              {/* input */}
-              <div>
-                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5">
-                  输入文本
-                </label>
-                <CustomTextarea
-                  size="sm"
-                  value={formInput}
-                  onChange={e => setFormInput(e.target.value)}
-                  placeholder="传给工作流 Start 节点的输入内容"
-                  rows={3}
-                />
-              </div>
+            <div className="bg-white dark:bg-gray-900/50 rounded-lg border border-gray-200 dark:border-gray-700 p-4">
+              <CronBuilder
+                value={formCron}
+                onChange={setFormCron}
+                includeSeconds={true}
+              />
             </div>
+            <p className="text-xs text-gray-400 mt-1">
+              {describeCronSimple(formCron)}
+            </p>
+          </div>
+        )}
 
-            <div className="px-6 py-4 border-t border-gray-200 dark:border-gray-700 flex justify-end gap-2 flex-shrink-0">
-              <CustomButton variant="secondary" onClick={() => setShowModal(false)} size='sm'>
-                取消
-              </CustomButton>
-              <CustomButton
-                onClick={handleSave}
-                loading={saving}
-                disabled={!formName.trim() || !formTargetId}
-                size='sm'
-              >
-                {editingId ? '保存' : '创建'}
-              </CustomButton>
+        {/* webhook */}
+        {formType === 'webhook' && (
+          <div className="bg-gray-50 dark:bg-gray-900/50 rounded-xl p-3 text-sm text-gray-500 dark:text-gray-400">
+            创建后自动生成 Webhook URL，通过 POST 请求即可触发
+          </div>
+        )}
+
+        {/* target */}
+        <div>
+          <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5">执行目标</label>
+          <div className="flex gap-2">
+            <div className="w-28">
+              <CustomSelect
+                size="sm"
+                value={formTargetType}
+                onChange={handleTargetTypeChange}
+                options={[
+                  { value: 'workflow', label: '工作流' },
+                  { value: 'agent', label: 'Agent' }
+                ]}
+              />
+            </div>
+            <div className="flex-1">
+              <CustomSelect
+                size="sm"
+                value={formTargetId}
+                onChange={setFormTargetId}
+                options={targetOptions}
+                placeholder={targetOptions.length === 0 ? `暂无${formTargetType === 'workflow' ? '工作流' : 'Agent'}` : '请选择...'}
+              />
             </div>
           </div>
         </div>
-      )}
+
+        {/* input */}
+        <div>
+          <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5">
+            输入文本
+          </label>
+          <CustomTextarea
+            size="sm"
+            value={formInput}
+            onChange={e => setFormInput(e.target.value)}
+            placeholder="传给工作流 Start 节点的输入内容"
+            rows={3}
+          />
+        </div>
+      </Modal>
     </div>
   )
 }

@@ -3,6 +3,7 @@ import { UseFormRegister, UseFormWatch, UseFormSetValue, FieldErrors } from 'rea
 import { KnowledgeBase } from '@renderer/types'
 import CustomInput from '@renderer/components/ui/CustomInput'
 import CustomButton from '@renderer/components/ui/CustomButton'
+import Modal from '@renderer/components/ui/Modal'
 import CustomSelect from '@renderer/components/ui/CustomSelect'
 import { CHUNK_SIZE_RANGE, CHUNK_OVERLAP_RANGE, TOP_K_RANGE, EXTERNAL_KB_PROVIDER_META, VECTOR_STORE_OPTIONS, VECTOR_STORE_CONFIG_FIELDS, VECTOR_STORE_DEFAULTS } from '@renderer/config'
 
@@ -60,19 +61,20 @@ const KnowledgeFormPanel: React.FC<KnowledgeFormPanelProps> = ({
   }
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm"
-      onClick={onClose}>
-      <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-2xl w-full max-w-lg mx-4 max-h-[90vh] flex flex-col"
-        onClick={e => e.stopPropagation()}>
-        <div className="px-6 py-4 border-b border-gray-200 dark:border-gray-700 flex items-center justify-between flex-shrink-0">
-          <h2 className="text-lg font-semibold text-gray-800 dark:text-gray-100">
-            {editingId ? '编辑知识库' : '创建知识库'}
-          </h2>
-          <button onClick={onClose} className="flex items-center justify-center w-7 h-7 rounded-lg text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors">
-            <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M18 6L6 18M6 6l12 12" /></svg>
-          </button>
-        </div>
-        <form id="knowledge-form" onSubmit={onSubmit} className="px-6 py-4 space-y-4 overflow-y-auto flex-1">
+    <Modal
+      open={show}
+      onClose={onClose}
+      title={editingId ? '编辑知识库' : '创建知识库'}
+      footer={
+        <>
+          <CustomButton type="button" onClick={onClose} variant="secondary" size='sm'>取消</CustomButton>
+          <CustomButton type="submit" disabled={isLoading} variant="primary" size='sm' form="knowledge-form">
+            {isLoading ? '保存中...' : editingId ? '更新' : '创建'}
+          </CustomButton>
+        </>
+      }
+    >
+      <form id="knowledge-form" onSubmit={onSubmit} className="space-y-4">
           <div>
             <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5">名称</label>
             <CustomInput {...register('name', { required: '请输入知识库名称' })} placeholder="例如：产品文档库" error={errors.name?.message} size='sm' />
@@ -163,15 +165,7 @@ const KnowledgeFormPanel: React.FC<KnowledgeFormPanelProps> = ({
             </div>
           )}
         </form>
-
-        <div className="px-6 py-4 border-t border-gray-200 dark:border-gray-700 flex justify-end gap-2 flex-shrink-0">
-          <CustomButton type="button" onClick={onClose} variant="secondary" size='sm'>取消</CustomButton>
-          <CustomButton type="submit" disabled={isLoading} variant="primary" size='sm' form="knowledge-form">
-            {isLoading ? '保存中...' : editingId ? '更新' : '创建'}
-          </CustomButton>
-        </div>
-      </div>
-    </div>
+      </Modal>
   )
 }
 

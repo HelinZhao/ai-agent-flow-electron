@@ -5,6 +5,7 @@ import { LLMConfig } from '@renderer/types';
 import { llmConfigApi } from '@renderer/lib/api';
 import CustomSelect from '@renderer/components/ui/CustomSelect';
 import CustomInput from '@renderer/components/ui/CustomInput';
+import Modal from '@renderer/components/ui/Modal';
 import CustomButton from '@renderer/components/ui/CustomButton';
 import { LLM_DEFAULTS, PROVIDER_MATES, TEMPERATURE_RANGE, MAX_TOKENS_RANGE, MIN_LLM_CONFIG_COUNT } from '@renderer/config';
 import MessageBanner from '@renderer/components/ui/MessageBanner';
@@ -268,23 +269,55 @@ export default function SettingsLLM(): React.JSX.Element {
             </div>
 
             {/* 配置表单弹窗 */}
-            {showForm && (
-                <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm"
-                    onClick={() => { setShowForm(false); setEditingConfig(null); reset() }}>
-                    <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-2xl w-full max-w-lg mx-4 max-h-[90vh] flex flex-col"
-                        onClick={e => e.stopPropagation()}>
-                        <div className="px-6 py-4 border-b border-gray-200 dark:border-gray-700 flex items-center justify-between flex-shrink-0">
-                            <h2 className="text-lg font-semibold text-gray-800 dark:text-gray-100">
-                                {editingConfig ? '编辑配置' : '新建配置'}
-                            </h2>
-                            <button
-                                onClick={() => { setShowForm(false); setEditingConfig(null); reset() }}
-                                className="flex items-center justify-center w-7 h-7 rounded-lg text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors">
-                                <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M18 6L6 18M6 6l12 12" /></svg>
-                            </button>
-                        </div>
-
-                        <form id="llm-config-form" onSubmit={handleSubmit(onSubmit)} className="px-6 py-4 space-y-4 overflow-y-auto flex-1">
+            <Modal
+              open={showForm}
+              onClose={() => { setShowForm(false); setEditingConfig(null); reset() }}
+              title={editingConfig ? '编辑配置' : '新建配置'}
+              footer={
+                <>
+                  <CustomButton
+                    type="button"
+                    onClick={testConnection}
+                    disabled={isSaving || isTesting || (provider !== 'ollama' && !watch('apiKey'))}
+                    variant="secondary"
+                    size='sm'
+                  >
+                    {isTesting ? (
+                      <svg className="w-4 h-4 animate-spin" viewBox="0 0 24 24" fill="none">
+                        <circle cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="3" className="opacity-20" />
+                        <path d="M12 2a10 10 0 0 1 10 10" stroke="currentColor" strokeWidth="3" strokeLinecap="round" />
+                      </svg>
+                    ) : (
+                      <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M13 10V3L4 14h7v7l9-11h-7z" /></svg>
+                    )}
+                    {isTesting ? '测试中...' : '测试连接'}
+                  </CustomButton>
+                  <CustomButton
+                    type="submit"
+                    disabled={isSaving || isTesting}
+                    variant="primary"
+                    size='sm'
+                    form="llm-config-form"
+                  >
+                    {isSaving ? '保存中...' : editingConfig ? '更新配置' : '创建配置'}
+                  </CustomButton>
+                  <CustomButton
+                    type="button"
+                    onClick={() => {
+                      setIsTesting(false);
+                      setShowForm(false);
+                      setEditingConfig(null);
+                      reset();
+                    }}
+                    variant="ghost"
+                    size='sm'
+                  >
+                    取消
+                  </CustomButton>
+                </>
+              }
+            >
+              <form id="llm-config-form" onSubmit={handleSubmit(onSubmit)} className="space-y-4">
                             <div>
                                 <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5">
                                     配置名称 *
@@ -418,51 +451,7 @@ export default function SettingsLLM(): React.JSX.Element {
                                 </div>
                             )}
                         </form>
-
-                        <div className="px-6 py-4 border-t border-gray-200 dark:border-gray-700 flex gap-2 justify-end flex-shrink-0">
-                            <CustomButton
-                                type="button"
-                                onClick={testConnection}
-                                disabled={isSaving || isTesting || (provider !== 'ollama' && !watch('apiKey'))}
-                                variant="secondary"
-                                size='sm'
-                            >
-                                {isTesting ? (
-                                    <svg className="w-4 h-4 animate-spin" viewBox="0 0 24 24" fill="none">
-                                        <circle cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="3" className="opacity-20" />
-                                        <path d="M12 2a10 10 0 0 1 10 10" stroke="currentColor" strokeWidth="3" strokeLinecap="round" />
-                                    </svg>
-                                ) : (
-                                    <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M13 10V3L4 14h7v7l9-11h-7z" /></svg>
-                                )}
-                                {isTesting ? '测试中...' : '测试连接'}
-                            </CustomButton>
-                            <CustomButton
-                                type="submit"
-                                disabled={isSaving || isTesting}
-                                variant="primary"
-                                size='sm'
-                                form="llm-config-form"
-                            >
-                                {isSaving ? '保存中...' : editingConfig ? '更新配置' : '创建配置'}
-                            </CustomButton>
-                            <CustomButton
-                                type="button"
-                                onClick={() => {
-                                    setIsTesting(false);
-                                    setShowForm(false);
-                                    setEditingConfig(null);
-                                    reset();
-                                }}
-                                variant="ghost"
-                                size='sm'
-                            >
-                                取消
-                            </CustomButton>
-                        </div>
-                    </div>
-                </div>
-            )}
+                    </Modal>
         </div>
     );
 }
