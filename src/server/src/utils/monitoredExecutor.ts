@@ -1384,30 +1384,33 @@ async function buildHumanMessage(input: string, attachments?: AttachmentPayload[
   let textContent = input
 
   for (const att of attachments) {
+    // 构造附件URL，供LLM工具（如知识库上传）引用
+    const attUrl = `/api/attachments/${att.id}/${encodeURIComponent(att.name)}`
+
     switch (att.category) {
       case 'image':
-        textContent += `\n[图片附件: ${att.name}]`
+        textContent += `\n[图片附件: ${att.name}]  URL: ${attUrl}`
         break
       case 'text':
         if (att.textContent) {
-          textContent += `\n\n---\n文件: ${att.name}\n---\n${att.textContent}\n---`
+          textContent += `\n\n---\n文件: ${att.name}\n附件URL: ${attUrl}\n---\n${att.textContent}\n---`
         } else if (att.filePath) {
           try {
             const { loadAttachmentAsText } = await import('./file')
             const content = await loadAttachmentAsText(att.filePath)
-            textContent += `\n\n---\n文件: ${att.name}\n---\n${content}\n---`
+            textContent += `\n\n---\n文件: ${att.name}\n附件URL: ${attUrl}\n---\n${content}\n---`
           } catch {
-            textContent += `\n[文本文件: ${att.name} (${att.size} bytes, 内容无法读取)]`
+            textContent += `\n[文本文件: ${att.name} (${att.size} bytes, 内容无法读取)]  URL: ${attUrl}`
           }
         } else {
-          textContent += `\n[文本文件: ${att.name} (${att.size} bytes, 内容无法读取)]`
+          textContent += `\n[文本文件: ${att.name} (${att.size} bytes, 内容无法读取)]  URL: ${attUrl}`
         }
         break
       case 'pdf':
-        textContent += `\n[PDF文件: ${att.name} (${formatSize(att.size)})]`
+        textContent += `\n[PDF文件: ${att.name} (${formatSize(att.size)})]  URL: ${attUrl}`
         break
       case 'binary':
-        textContent += `\n[文件: ${att.name} (${att.type}, ${formatSize(att.size)})]`
+        textContent += `\n[文件: ${att.name} (${att.type}, ${formatSize(att.size)})]  URL: ${attUrl}`
         break
     }
   }

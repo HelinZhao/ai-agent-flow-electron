@@ -172,6 +172,52 @@ router.post('/:id/documents', upload.single('file'), async (req, res) => {
   }
 })
 
+// 通过附件URL上传文档到知识库（供LLM工具内部调用，JSON格式而非multipart）
+router.post('/:id/attachment-upload', async (req, res) => {
+  try {
+    const { id } = req.params
+    const { attachmentUrl } = req.body
+
+    if (!attachmentUrl) {
+      return res.status(400).json({ error: 'attachmentUrl 不能为空' })
+    }
+
+    // 解析 URL: /api/attachments/{attachmentId}/{filename}
+    const match = attachmentUrl.match(/\/api\/attachments\/([^/]+)\/(.+)/)
+    if (!match) {
+      return res.status(400).json({ error: '无效的附件URL格式' })
+    }
+
+    const [, attId, rawFilename] = match
+    const filename = decodeURIComponent(rawFilename)
+
+    // 拼接附件在磁盘上的路径（与 /api/attachments/:id/:filename 路由一致）
+    const attachmentsDir = path.resolve(getUserDataDir('/attachments'))
+    const filePath = path.resolve(attachmentsDir, `${attId}-${filename}`)
+
+    // 验证文件存在
+    try { await fs.access(filePath) } catch {
+      return res.status(404).json({ error: '附件文件不存在，请确认附件尚未被清理' })
+    }
+
+    const kb = await KnowledgeBaseModel.findByPk(id)
+    if (!kb) {
+      return res.status(404).json({ error: '知识库不存在' })
+    }
+    if (kb.type !== 'internal') {
+      return res.status(400).json({ error: '仅内部知识库支持上传文档' })
+    }
+
+    const chunkCount = await ingestDocument(id, filePath, filename)
+    // 不删除附件文件，聊天历史可能仍需引用
+
+    return res.status(200).json({ message: '文档上传成功', chunkCount })
+  } catch (error) {
+    console.error('附件上传知识库错误:', error)
+    return res.status(500).json({ error: `文档处理失败: ${error instanceof Error ? error.message : '未知错误'}` })
+  }
+})
+
 // 删除知识库中的某文档
 router.delete('/:id/documents/:docName', async (req, res) => {
   try {

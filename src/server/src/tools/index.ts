@@ -280,14 +280,30 @@ export const knowledgeApiTool = tool(
     name: 'knowledgeApi',
     description: `调用知识库管理相关的内部 REST API。路径中的 {id} 需替换为实际 ID。
 
-GET  /api/knowledge-base              - 获取全部知识库列表
-POST /api/knowledge-base              - 创建知识库 body: {"name":"","type":"internal","description":""}
-GET  /api/knowledge-base/{id}/stats   - 知识库文档统计
-DEL  /api/knowledge-base/{id}         - 删除知识库
-POST /api/knowledge-base/{id}/retrieve - RAG 检索 body: {"query":"检索内容"}
-GET  /api/knowledge-base/{id}/chunks/{docName} - 文档分块列表`,
+知识库管理:
+GET  /api/knowledge-base                                    - 获取全部知识库列表
+POST /api/knowledge-base                                    - 创建知识库 body: {"name":"","type":"internal|external","description":"","chunkSize":1000,"chunkOverlap":200}
+PUT  /api/knowledge-base/{id}                               - 更新知识库 body: {"name":"","description":"","type":"","chunkSize":1000}
+DEL  /api/knowledge-base/{id}                               - 删除知识库（会同时删除所有分块和向量）
+
+文档管理:
+GET  /api/knowledge-base/{id}/stats                         - 知识库文档统计（返回文档列表和总分块数）
+POST /api/knowledge-base/{id}/documents                     - 上传文档（multipart/form-data 格式，LLM无法直接使用，请使用 attachment-upload代替）
+POST /api/knowledge-base/{id}/attachment-upload             - 通过附件URL上传文档 body: {"attachmentUrl":"/api/attachments/att-xxx/filename.md"}
+DEL  /api/knowledge-base/{id}/documents/{docName}           - 删除指定文档及其所有分块
+GET  /api/knowledge-base/{id}/documents/{docName}/download  - 从分块拼接重建并下载文档原文
+
+RAG 检索:
+POST /api/knowledge-base/{id}/retrieve                      - RAG 检索 body: {"query":"检索内容"}
+
+分块管理:
+GET  /api/knowledge-base/{id}/chunks/{docName}              - 获取文档的分块列表
+POST /api/knowledge-base/{id}/chunks                        - 新增分块 body: {"content":"","source":"文档名"}
+PUT  /api/knowledge-base/{id}/chunks/{chunkId}              - 更新分块内容 body: {"content":""}
+DEL  /api/knowledge-base/{id}/chunks/{chunkId}              - 删除单个分块
+PATCH /api/knowledge-base/{id}/chunks/{chunkId}/toggle      - 切换分块启用/停用状态`,
     schema: z.object({
-      method: z.enum(['GET', 'POST', 'DELETE']).describe('HTTP 方法'),
+      method: z.enum(['GET', 'POST', 'PUT', 'DELETE', 'PATCH']).describe('HTTP 方法'),
       path: z.string().describe('API 路径，如 /api/knowledge-base 或 /api/knowledge-base/id/retrieve'),
       body: z.string().optional().describe('JSON 请求体（POST 时需要）'),
     }),
