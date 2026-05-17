@@ -5,13 +5,16 @@ AI Agent Flow Designer 是一个基于 Electron + React + TypeScript 的可视�
 ## 主要特性
 
 - **可视化工作流设计** — 基于 React Flow 的拖拽式工作流编辑器，支持一键 dagre 自动布局
-- **多 Agent 支持** — 创建和管理多个 AI Agent，支持多轮对话和附件传输
+- **多 Agent 支持** — 创建和管理多个 AI Agent（标准 Agent 可绑定技能/工具，工作流 Agent 绑定工作流），支持多轮对话和附件传输
 - **技能管理** — 自定义和管理 AI 技能模板
 - **多 LLM 配置管理** — 支持 OpenAI、Anthropic、Azure、百炼(Bailian)、LongCat 等提供商，一键切换
 - **知识库 RAG 增强** — 支持内部知识库（上传文档→自动分块→embedding→向量检索）和外部知识库（API 接入），LLM 节点可启用知识库增强
-- **工具调用与 HITL 审批** — LLM 可自主调用文件读写、命令执行、HTTP 请求等工具，危险操作需人工审批
-- **执行监控** — 实时查看工作流执行进度、节点状态、耗时和输出日志
+- **工具调用与 HITL 审批** — LLM 可自主调用文件读写、命令执行、HTTP 请求等工具，LLM 节点还可调内部 API（工作流/Agent/技能/知识库/系统配置管理），危险操作需人工审批
+- **执行监控** — 实时查看工作流执行进度、节点状态、耗时和输出日志，支持分页浏览
+- **触发器模块** — 支持 Cron 定时触发和 Webhook 自动执行工作流或 Agent
+- **SSE 实时同步** — 多窗口间通过 Server-Sent Events 自动同步数据变更
 - **LLM 缓存** — 自研 TTLCache，相同 prompt 10 分钟内直接返回缓存结果，节省 API 调用
+- **Cron 表达式构建器** — 可视化 Cron 编辑器，支持 Quartz 格式秒级精度，含常用预设模板
 - **深色/浅色主题** — 统一的主题切换，画布节点颜色在两种模式下保持一致
 - **本地数据存储** — SQLite + sqlite-vec 向量存储，数据完全本地化
 - **数据管理** — 支持聊天历史清除、数据库 VACUUM 空间回收
@@ -124,9 +127,10 @@ ai-agent-flow-electron/
 │   ├── renderer/            # 渲染进程 (React)
 │   │   ├── assets/          # 静态资源和样式
 │   │   ├── components/      # React 组件
-│   │   │   ├── ui/          # 通用 UI 组件 (Button/Input/Select...)
+│   │   │   ├── ui/          # 通用 UI 组件 (Button/Input/Select/Modal/ItemPicker...)
+│   │   │   ├── agents/      # Agent/技能 表单和详情组件
 │   │   │   ├── chat/        # 对话界面组件
-│   │   │   ├── layout/      # 布局组件
+│   │   │   ├── layout/      # 布局组件 (侧边栏等)
 │   │   │   └── workflow/    # 工作流相关组件
 │   │   │       ├── config/  # 节点配置面板 (LLM/CLI/Skill...)
 │   │   │       └── nodes.tsx # 节点类型定义和渲染
@@ -339,6 +343,30 @@ this.app.use('/api/new-route', newRouter)
 4. 在 `tailwind.config.js` 的 safelist 中添加节点颜色
 
 ## 更新日志
+
+### v1.3.0
+
+- **Agent 类型扩展** — 支持标准 Agent（绑定技能/工具）和工作流 Agent（绑定工作流），无工作流时直接 LLM 对话
+- **触发器模块** — 支持 Cron 定时触发和 Webhook 自动执行工作流或 Agent，含手动执行和启用/禁用控制
+- **CronBuilder 组件** — 可视化 Cron 表达式编辑器，支持 Quartz 格式秒级精度，含常用预设模板和人话描述
+- **LLM 节点内部 API 工具组** — LLM 节点可直接管理工作流/Agent/技能/知识库/系统配置的 CRUD 和执行
+- **知识库 API 工具** — LLM 可通过 knowledgeApiTool 管理知识库 CRUD 和 RAG 检索
+- **LLM 工具调用增强** — 支持列表过滤、节点文档上下文传递、JSON 校验、流式修复
+- **SSE 实时数据同步** — 多窗口间通过 Server-Sent Events 自动刷新数据变更
+- **弹窗化改造** — 触发器创建编辑/知识库表单/LLM 配置表单从内联改为 Modal 弹窗，内容区支持滚动
+- **提取 Modal/Pagination/ItemPickerModal 公用组件** — 弹窗、分页、选项选择器组件化复用
+- **Pagination 组件 + simple variant** — 执行监控列表和 ChunkViewer 支持分页浏览
+- **执行监控列表分页** — 执行记录支持分页浏览和按状态（全部/运行中/已暂停/已完成/已失败）筛选
+- **时间轮迁移 Worker 线程** — 定时任务迁移到 Worker 线程，避免主线程阻塞
+- **删除 Agent 自动清理** — 删除 Agent 时自动清理关联记忆和附件缓存
+- **响应式布局优化** — 拆分导航组件，Settings 页面移动端只显示图标
+- **节点颜色重构** — 节点颜色统一由 def.color 动态推导，剥离 CSS 硬编码，修复全局样式冲突
+- **构建前剔除游离节点** — 执行前自动剔除无连接的游离节点
+- **Agent 聊天稳定性** — 从 store 重新查找 agent，解决引用过期导致的空指针
+- **execa 替代手写命令执行** — CLI 节点改用 execa 库，更安全的命令执行
+- **Agent/技能编辑详情页重构** — 提取独立组件，分节布局，视觉卡片类型选择，标签式技能工具绑定
+- **执行监控/触发器页面 UI 优化** — 统一卡片悬浮动画、渐变进度条、元数据卡片、悬停边框高亮
+- **侧边栏优化** — 收起按钮移至底部，导航区域支持自动滚动
 
 ### v1.2.0
 
