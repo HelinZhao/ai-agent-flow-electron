@@ -1,20 +1,13 @@
 import React, { useState, useCallback } from 'react';
 import { useWorkflowStore } from '@renderer/store/workflowStore';
 import { Agent } from '@renderer/types';
-import { TOOL_DEFINITIONS } from '@renderer/config';
-import MarkdownIt from 'markdown-it';
-import MdEditor from 'react-markdown-editor-lite';
-import 'react-markdown-editor-lite/lib/index.css';
-import MarkdownPreview from '@renderer/components/MarkdownPreview';
-import CustomSelect from '@renderer/components/ui/CustomSelect';
 import CustomInput from '@renderer/components/ui/CustomInput';
 import CustomButton from '@renderer/components/ui/CustomButton';
 import ResponsiveGrid from '@renderer/components/ui/ResponsiveGrid';
+import AgentForm, { AgentFormData } from '@renderer/components/agents/AgentForm';
+import AgentDetail from '@renderer/components/agents/AgentDetail';
 
-const AVAILABLE_TOOLS = TOOL_DEFINITIONS
-
-const mdParser = new MarkdownIt(/* Markdown-it options */);
-
+// ─── Agent Card ───
 const AgentCard = React.memo(function AgentCard({
   agent,
   workflowName,
@@ -28,46 +21,76 @@ const AgentCard = React.memo(function AgentCard({
   onDelete: (agent: Agent) => void
   onSelect: (id: string) => void
 }) {
-  const instructionSummary = agent.instructions
-    ? agent.instructions.replace(/[#*\n]/g, ' ').substring(0, 100) + (agent.instructions.length > 100 ? '...' : '')
-    : '暂无指令'
+  const isStandard = agent.type !== 'workflow';
+  const summary = agent.instructions
+    ? agent.instructions.replace(/[#*\n]/g, ' ').substring(0, 90) +
+      (agent.instructions.length > 90 ? '...' : '')
+    : '暂无指令';
+
+  const typeLabel = isStandard ? '标准' : '工作流';
+  const accentGradient = isStandard
+    ? 'from-blue-400 to-purple-500'
+    : 'from-purple-400 to-pink-500';
 
   return (
     <div
-      className="group/agent relative bg-white dark:bg-gray-800 rounded-xl border border-gray-200/80 dark:border-gray-700/50 hover:border-blue-300 dark:hover:border-blue-600/50 hover:shadow-md transition-all duration-200 cursor-pointer overflow-hidden"
+      className="group/agent relative bg-white dark:bg-gray-800 rounded-xl border border-gray-200/80 dark:border-gray-700/50 hover:border-blue-300 dark:hover:border-blue-600/50 hover:shadow-lg hover:-translate-y-0.5 transition-all duration-200 cursor-pointer overflow-hidden"
       onClick={() => onSelect(agent.id)}
     >
-      <div className="h-1.5 rounded-t-xl bg-gradient-to-r from-blue-400 to-purple-500" />
+      {/* Accent bar */}
+      <div className={`h-1.5 rounded-t-xl bg-gradient-to-r ${accentGradient}`} />
+
       <div className="p-4">
-        <div className="flex items-start justify-between mb-3">
-          <div className="flex items-start space-x-2.5 min-w-0">
-            <div className="flex items-center justify-center w-9 h-9 rounded-lg bg-blue-50 dark:bg-blue-900/20 flex-shrink-0">
+        {/* Header */}
+        <div className="flex items-start justify-between mb-2">
+          <div className="flex items-center gap-2.5 min-w-0">
+            <div className="flex items-center justify-center w-9 h-9 rounded-lg bg-gradient-to-br from-blue-50 to-purple-50 dark:from-blue-900/30 dark:to-purple-900/30 flex-shrink-0">
               <span className="text-base">🤖</span>
             </div>
             <div className="min-w-0">
-              <h4 className="text-sm font-semibold text-gray-900 dark:text-white truncate">{agent.name}</h4>
-              <p className="text-xs text-gray-400 dark:text-gray-500 mt-0.5">{agent.description || '暂无描述'}</p>
+              <h4 className="text-sm font-semibold text-gray-900 dark:text-white truncate">
+                {agent.name}
+              </h4>
+              <p className="text-xs text-gray-400 dark:text-gray-500 mt-0.5 truncate">
+                {agent.description || '暂无描述'}
+              </p>
             </div>
           </div>
         </div>
 
-        {workflowName && (
-          <div className="flex items-center space-x-1.5 mb-3">
-            <span className="text-xs text-blue-500">🔗</span>
-            <span className="text-xs text-blue-500 dark:text-blue-400 truncate">{workflowName}</span>
-          </div>
-        )}
+        {/* Type badge + workflow */}
+        <div className="flex items-center gap-2 mb-2.5">
+          <span
+            className={`inline-flex items-center px-1.5 py-0.5 text-[10px] font-medium rounded-full border ${
+              isStandard
+                ? 'bg-blue-50 dark:bg-blue-900/20 text-blue-600 dark:text-blue-400 border-blue-200 dark:border-blue-800'
+                : 'bg-purple-50 dark:bg-purple-900/20 text-purple-600 dark:text-purple-400 border-purple-200 dark:border-purple-800'
+            }`}
+          >
+            {typeLabel}
+          </span>
+          {workflowName && (
+            <span className="text-[10px] text-gray-400 dark:text-gray-500 truncate">
+              {workflowName}
+            </span>
+          )}
+        </div>
 
-        <p className="text-xs text-gray-400 dark:text-gray-500 line-clamp-2">{instructionSummary}</p>
+        <p className="text-xs text-gray-400 dark:text-gray-500 line-clamp-2 leading-relaxed">
+          {summary}
+        </p>
       </div>
 
+      {/* Hover actions */}
       <div className="absolute top-3 right-3 z-10 hidden group-hover/agent:flex items-center gap-1 px-2 py-1.5 rounded-xl border border-gray-200 dark:border-gray-600 bg-white dark:bg-gray-800 shadow-lg">
         <button
           onClick={(e) => { e.stopPropagation(); onEdit(agent) }}
           className="flex items-center justify-center w-6 h-6 rounded-lg text-gray-400 hover:text-blue-600 dark:hover:text-blue-400 hover:bg-blue-50 dark:hover:bg-blue-900/20 transition-colors"
           title="编辑"
         >
-          <svg className="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" /></svg>
+          <svg className="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+            <path d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+          </svg>
         </button>
         <div className="w-px h-4 bg-gray-200 dark:bg-gray-600" />
         <button
@@ -75,455 +98,226 @@ const AgentCard = React.memo(function AgentCard({
           className="flex items-center justify-center w-6 h-6 rounded-lg text-gray-400 hover:text-red-600 dark:hover:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors"
           title="删除"
         >
-          <svg className="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" /></svg>
+          <svg className="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+            <path d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+          </svg>
         </button>
       </div>
 
-      <div className="absolute bottom-4 right-4 text-gray-300 dark:text-gray-600 group-hover/agent:text-blue-400 dark:group-hover/agent:text-blue-500 transition-colors">
-        <svg className="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M9 5l7 7-7 7" /></svg>
+      {/* Chevron */}
+      <div className="absolute bottom-3 right-3 text-gray-300 dark:text-gray-600 group-hover/agent:text-blue-400 dark:group-hover/agent:text-blue-500 transition-colors">
+        <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+          <path d="M9 5l7 7-7 7" />
+        </svg>
       </div>
     </div>
-  )
-})
+  );
+});
 
+// ─── Main Page ───
 export default function Agents(): React.JSX.Element {
-    const { agents, skills, addAgent, updateAgent, deleteAgent, workflows } = useWorkflowStore();
-    const [selectedAgentId, setSelectedAgentId] = useState<string | null>(null);
-    const [searchTerm, setSearchTerm] = useState('');
+  const { agents, skills, addAgent, updateAgent, deleteAgent, workflows } = useWorkflowStore();
+  const [selectedAgentId, setSelectedAgentId] = useState<string | null>(null);
+  const [searchTerm, setSearchTerm] = useState('');
+  const [isEditing, setIsEditing] = useState(false);
 
-    const selectedAgent = selectedAgentId ? agents.find(a => a.id === selectedAgentId) ?? null : null;
+  const selectedAgent = selectedAgentId
+    ? agents.find((a) => a.id === selectedAgentId) ?? null
+    : null;
 
-    // 过滤agents基于搜索词
-    const filteredAgents = agents.filter(agent =>
-        agent.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        (agent.description && agent.description.toLowerCase().includes(searchTerm.toLowerCase()))
-    );
+  const filteredAgents = agents.filter(
+    (agent) =>
+      agent.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      (agent.description &&
+        agent.description.toLowerCase().includes(searchTerm.toLowerCase())),
+  );
 
-    const [isEditing, setIsEditing] = useState(false);
-    const [formData, setFormData] = useState({
-        name: '',
-        description: '',
-        instructions: '',
-        type: 'standard',
-        skillIds: [] as string[],
-        enabledTools: [] as string[],
-        workflowId: ''
-    });
-    const [isLoading, setIsLoading] = useState(false);
+  const handleCreate = useCallback((): void => {
+    setSelectedAgentId('__create__');
+    setIsEditing(true);
+  }, []);
 
-    const handleCreate = useCallback((): void => {
-        setSelectedAgentId('__create__');
-        setFormData({ name: '', description: '', instructions: '', type: 'standard', skillIds: [], enabledTools: [], workflowId: '' });
-        setIsEditing(true);
-    }, []);
+  const handleEdit = useCallback((agent: Agent): void => {
+    setSelectedAgentId(agent.id);
+    setIsEditing(true);
+  }, []);
 
-    const handleEdit = useCallback((agent: Agent): void => {
-        setSelectedAgentId(agent.id);
-        setFormData({
-            name: agent.name,
-            description: agent.description,
-            instructions: agent.instructions,
-            type: agent.type || 'standard',
-            skillIds: agent.skillIds || [],
-            enabledTools: agent.enabledTools || [],
-            workflowId: agent.workflowId || ''
-        });
-        setIsEditing(true);
-    }, []);
-
-    const handleSave = async (): Promise<void> => {
-        if (!formData.name.trim() || !formData.instructions.trim()) return;
-
-        setIsLoading(true);
-        try {
-            const payload = {
-                name: formData.name,
-                description: formData.description,
-                instructions: formData.instructions,
-                type: formData.type,
-                ...(formData.type === 'standard'
-                    ? { skillIds: formData.skillIds, enabledTools: formData.enabledTools, workflowId: undefined }
-                    : { workflowId: formData.workflowId || undefined, skillIds: undefined, enabledTools: undefined }
-                )
-            };
-            if (selectedAgent) {
-                await updateAgent(selectedAgent.id, payload);
-            } else {
-                await addAgent(payload as any);
-            }
-            setIsEditing(false);
-            setSelectedAgentId(null);
-            setFormData({ name: '', description: '', instructions: '', type: 'standard', skillIds: [], enabledTools: [], workflowId: '' });
-        } catch (error) {
-            console.error('保存失败:', error);
-        } finally {
-            setIsLoading(false);
+  const handleDelete = useCallback(
+    (agent: Agent): void => {
+      if (window.confirm(`确定要删除 Agent "${agent.name}" 吗？`)) {
+        deleteAgent(agent.id);
+        if (selectedAgentId === agent.id) {
+          setSelectedAgentId(null);
+          setIsEditing(false);
         }
+      }
+    },
+    [deleteAgent, selectedAgentId],
+  );
+
+  const handleBack = (): void => {
+    setSelectedAgentId(null);
+    setIsEditing(false);
+  };
+
+  const handleSave = async (formData: AgentFormData): Promise<void> => {
+    const payload = {
+      name: formData.name,
+      description: formData.description,
+      instructions: formData.instructions,
+      type: formData.type,
+      ...(formData.type === 'standard'
+        ? { skillIds: formData.skillIds, enabledTools: formData.enabledTools }
+        : { workflowId: formData.workflowId || undefined, skillIds: undefined, enabledTools: undefined }
+      ),
     };
 
-    const handleDelete = useCallback((agent: Agent): void => {
-        if (window.confirm(`确定要删除Agent "${agent.name}" 吗？`)) {
-            deleteAgent(agent.id);
-            setSelectedAgentId(prev => prev === agent.id ? null : prev);
-            setIsEditing(false);
-        }
-    }, [deleteAgent]);
-
-    const handleBack = (): void => {
-        setSelectedAgentId(null);
-        setIsEditing(false);
-    };
-
-    // ========== 二级页面：Agent详情/编辑 ==========
-    if (selectedAgentId) {
-        return (
-            <div className="mx-auto py-6 px-4 sm:px-6 lg:px-8">
-                {/* 顶部导航 */}
-                <div className="flex items-center space-x-3 mb-6">
-                    <button
-                        onClick={handleBack}
-                        className="flex items-center justify-center w-8 h-8 rounded-lg text-gray-500 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors"
-                    >
-                        <svg className="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M15 19l-7-7 7-7" /></svg>
-                    </button>
-                    <div className="flex items-center space-x-2">
-                        <div className="w-8 h-8 bg-gradient-to-r from-blue-500 to-purple-600 rounded-lg flex items-center justify-center flex-shrink-0">
-                            <span className="text-white font-bold text-sm">🤖</span>
-                        </div>
-                        <div>
-                            <h3 className="text-base font-semibold text-gray-900 dark:text-white">
-                                {isEditing ? (selectedAgent ? '编辑Agent' : '创建新Agent') : selectedAgent!.name}
-                            </h3>
-                            {!isEditing && selectedAgent!.description && (
-                                <p className="text-xs text-gray-500 dark:text-gray-400">{selectedAgent!.description}</p>
-                            )}
-                        </div>
-                    </div>
-                </div>
-
-                <div className="bg-white/80 dark:bg-gray-800/80 backdrop-blur-md shadow-lg rounded-lg border border-gray-200/50 dark:border-gray-700/50">
-                    <div className="px-6 py-6">
-                        {isEditing ? (
-                            <div className="space-y-6">
-                                <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-                                    <div>
-                                        <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                                            Agent名称 *
-                                        </label>
-                                        <CustomInput
-                                            type="text"
-                                            value={formData.name}
-                                            onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-                                            placeholder="输入Agent名称"
-                                        />
-                                    </div>
-
-                                    <div>
-                                        <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                                            描述
-                                        </label>
-                                        <CustomInput
-                                            type="text"
-                                            value={formData.description}
-                                            onChange={(e) => setFormData({ ...formData, description: e.target.value })}
-                                            placeholder="输入Agent描述"
-                                        />
-                                    </div>
-                                </div>
-
-                                <div>
-                                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                                        Agent 类型
-                                    </label>
-                                    <CustomSelect
-                                        value={formData.type}
-                                        onChange={(value) => setFormData({ ...formData, type: value, workflowId: '', skillIds: [], enabledTools: [] })}
-                                        options={[
-                                            { value: 'standard', label: '普通 Agent（可使用技能和工具）' },
-                                            { value: 'workflow', label: '工作流 Agent（绑定工作流）' }
-                                        ]}
-                                    />
-                                    <p className="text-xs text-gray-500 dark:text-gray-400 mt-2">
-                                        {formData.type === 'standard' ? '普通 Agent 可以绑定技能和工具，在对话中自动调用' : '工作流 Agent 绑定一个现有工作流，执行时走工作流逻辑'}
-                                    </p>
-                                </div>
-
-                                {formData.type === 'standard' ? (
-                                    <>
-                                        <div>
-                                            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                                                绑定技能
-                                            </label>
-                                            {skills.length === 0 ? (
-                                                <p className="text-xs text-gray-400 dark:text-gray-500 bg-gray-50 dark:bg-gray-700 p-3 rounded">
-                                                    暂无可用的技能，请先在技能管理页面创建
-                                                </p>
-                                            ) : (
-                                                <div className="grid grid-cols-2 gap-2">
-                                                    {skills.map(s => {
-                                                        const enabled = formData.skillIds.includes(s.id)
-                                                        return (
-                                                            <label key={s.id}
-                                                                className={`flex items-start space-x-2 p-2 border rounded-lg cursor-pointer transition-colors ${enabled
-                                                                    ? 'border-blue-500 bg-blue-50 dark:bg-blue-900/20 text-blue-700 dark:text-blue-300'
-                                                                    : 'border-gray-200 dark:border-gray-600 hover:bg-gray-50 dark:hover:bg-gray-700 text-gray-900 dark:text-white'
-                                                                    }`}
-                                                            >
-                                                                <input
-                                                                    type="checkbox"
-                                                                    checked={enabled}
-                                                                    onChange={() => {
-                                                                        const current = formData.skillIds
-                                                                        const updated = enabled
-                                                                            ? current.filter(id => id !== s.id)
-                                                                            : [...current, s.id]
-                                                                        setFormData({ ...formData, skillIds: updated })
-                                                                    }}
-                                                                    className="w-4 h-4 text-blue-600 rounded"
-                                                                />
-                                                                <div className="min-w-0 flex-1">
-                                                                    <div className="text-sm font-medium truncate">{s.name}</div>
-                                                                    <div className="text-xs text-gray-500 dark:text-gray-400 truncate">{s.description}</div>
-                                                                </div>
-                                                            </label>
-                                                        )
-                                                    })}
-                                                </div>
-                                            )}
-                                            <p className="text-xs text-gray-500 dark:text-gray-400 mt-2">
-                                                勾选的技能内容会自动注入到对话上下文中
-                                            </p>
-                                        </div>
-
-                                        <div>
-                                            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                                                绑定工具
-                                            </label>
-                                            <p className="text-xs text-gray-500 dark:text-gray-400 mb-3">
-                                                勾选后 Agent 可在对话中自主调用这些工具
-                                            </p>
-                                            <div className="grid grid-cols-2 gap-2">
-                                                {AVAILABLE_TOOLS.map(t => {
-                                                    const enabled = formData.enabledTools.includes(t.id)
-                                                    return (
-                                                        <label key={t.id}
-                                                            className={`flex items-start space-x-2 p-2 border rounded-lg cursor-pointer transition-colors ${enabled
-                                                                ? 'border-blue-500 bg-blue-50 dark:bg-blue-900/20 text-blue-700 dark:text-blue-300'
-                                                                : 'border-gray-200 dark:border-gray-600 hover:bg-gray-50 dark:hover:bg-gray-700 text-gray-900 dark:text-white'
-                                                                }`}
-                                                        >
-                                                            <input
-                                                                type="checkbox"
-                                                                checked={enabled}
-                                                                onChange={() => {
-                                                                    const current = formData.enabledTools
-                                                                    const updated = enabled
-                                                                        ? current.filter(id => id !== t.id)
-                                                                        : [...current, t.id]
-                                                                    setFormData({ ...formData, enabledTools: updated })
-                                                                }}
-                                                                className="w-4 h-4 text-blue-600 rounded"
-                                                            />
-                                                            <div className="min-w-0 flex-1">
-                                                                <div className="text-sm font-medium truncate">{t.label}</div>
-                                                                <div className="text-xs text-gray-500 dark:text-gray-400 truncate">{t.description}</div>
-                                                            </div>
-                                                        </label>
-                                                    )
-                                                })}
-                                            </div>
-                                        </div>
-                                    </>
-                                ) : (
-                                    <div>
-                                        <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                                            绑定工作流
-                                        </label>
-                                        <CustomSelect
-                                            value={formData.workflowId}
-                                            onChange={(value) => setFormData({ ...formData, workflowId: value })}
-                                            options={[
-                                                { value: '', label: '选择工作流' },
-                                                ...workflows.map(workflow => ({
-                                                    value: workflow.id,
-                                                    label: workflow.name
-                                                }))
-                                            ]}
-                                            placeholder="选择工作流"
-                                        />
-                                        <p className="text-xs text-gray-500 dark:text-gray-400 mt-2">
-                                            绑定工作流后，与该 Agent 的对话将执行该工作流
-                                        </p>
-                                    </div>
-                                )}
-
-                                <div>
-                                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                                        Agent指令 *
-                                    </label>
-                                    <div className="border border-gray-200/50 dark:border-gray-600/50 rounded-xl overflow-hidden">
-                                        <MdEditor
-                                            style={{ height: '400px' }}
-                                            renderHTML={text => mdParser.render(text)}
-                                            value={formData.instructions}
-                                            onChange={(value) => setFormData(prev => ({ ...prev, instructions: value.text }))}
-                                        />
-                                    </div>
-                                    <p className="text-xs text-gray-500 dark:text-gray-400 mt-2">
-                                        详细描述这个Agent的职责、行为模式和回复风格
-                                    </p>
-                                </div>
-
-                                <div className="flex justify-end space-x-4 pt-4">
-                                    <CustomButton
-                                        onClick={() => {
-                                            setIsEditing(false);
-                                            if (!selectedAgent) handleBack();
-                                        }}
-                                        variant="secondary"
-                                    >
-                                        取消
-                                    </CustomButton>
-                                    <CustomButton
-                                        onClick={handleSave}
-                                        disabled={isLoading || !formData.name.trim() || !formData.instructions.trim()}
-                                        className="px-6 py-3 bg-gradient-to-r from-blue-500 to-blue-600 text-white rounded-xl hover:from-blue-600 hover:to-blue-700 transition-all duration-200 shadow-lg font-medium disabled:opacity-50 disabled:cursor-not-allowed flex items-center space-x-2"
-                                    >
-                                        {isLoading ? (
-                                            <>
-                                                <span className="animate-spin">⚡</span>
-                                                <span>保存中...</span>
-                                            </>
-                                        ) : (
-                                            <>
-                                                <span>💾</span>
-                                                <span>保存</span>
-                                            </>
-                                        )}
-                                    </CustomButton>
-                                </div>
-                            </div>
-                        ) : (
-                            <div>
-                                <div className="flex justify-between items-start mb-6">
-                                    <div>
-                                        <h3 className="text-2xl font-semibold text-gray-900 dark:text-white mb-2">
-                                            {selectedAgent!.name}
-                                        </h3>
-                                        <p className="text-gray-600 dark:text-gray-300">{selectedAgent!.description || '暂无描述'}</p>
-                                    </div>
-
-                                    <div className="flex space-x-2">
-                                        <button
-                                            onClick={() => handleEdit(selectedAgent!)}
-                                            className="px-3 py-1.5 text-sm text-blue-600 dark:text-blue-400 hover:bg-blue-50 dark:hover:bg-blue-900/20 rounded-lg transition-colors flex items-center space-x-1.5"
-                                        >
-                                            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
-                                            </svg>
-                                            <span>编辑</span>
-                                        </button>
-                                        <button
-                                            onClick={() => handleDelete(selectedAgent!)}
-                                            className="px-3 py-1.5 text-sm text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-lg transition-colors flex items-center space-x-1.5"
-                                        >
-                                            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
-                                            </svg>
-                                            <span>删除</span>
-                                        </button>
-                                    </div>
-                                </div>
-
-                                {selectedAgent!.workflowId && (
-                                    <div className="mb-6 p-4 bg-blue-50/50 dark:bg-blue-900/20 rounded-xl border border-blue-200/50 dark:border-blue-800/50">
-                                        <div className="flex items-center space-x-2">
-                                            <span className="text-blue-600">🔗</span>
-                                            <span className="text-sm font-medium text-blue-700 dark:text-blue-300">绑定工作流: </span>
-                                            <span className="text-sm text-blue-600 dark:text-blue-400">
-                                                {workflows.find(w => w.id === selectedAgent!.workflowId)?.name || '未知工作流'}
-                                            </span>
-                                        </div>
-                                    </div>
-                                )}
-                                <MarkdownPreview content={selectedAgent!.instructions} className="border border-gray-200/50 dark:border-gray-600/50 rounded-xl p-4" />
-                            </div>
-                        )}
-                    </div>
-                </div>
-            </div>
-        );
+    if (selectedAgent) {
+      await updateAgent(selectedAgent.id, payload);
+    } else {
+      await addAgent(payload as any);
     }
 
-    // ========== 一级页面：Agent列表（卡片式） ==========
-    return (
-        <div className="mx-auto py-6 px-4 sm:px-6 lg:px-8">
-            {/* 标题栏 */}
-            <div className="flex justify-between items-center mb-6">
-                <h1 className="text-xl font-bold bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent">
-                    Agent管理
-                </h1>
-                <div className="flex space-x-2 items-center">
-                    {/* 搜索栏 */}
-                    <CustomInput
-                        value={searchTerm}
-                        onChange={(e) => setSearchTerm(e.target.value)}
-                        placeholder="搜索Agent..."
-                        size="sm"
-                        hidden={agents.length === 0}
-                        className='rounded-xl'
-                        leftIcon={<svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="11" cy="11" r="8" /><path d="m21 21-4.35-4.35" /></svg>}
-                    />
-                    <CustomButton
-                        onClick={handleCreate}
-                        variant="primary"
-                        size="sm"
-                    >
-                        <span>✨</span>
-                        <span>创建新Agent</span>
-                    </CustomButton>
-                </div>
-            </div>
+    setIsEditing(false);
+    setSelectedAgentId(null);
+  };
 
-            {/* 卡片网格 */}
-            {filteredAgents.length > 0 ? (
-                <ResponsiveGrid>
-                    {filteredAgents.map((agent) => (
-                        <AgentCard
-                            key={agent.id}
-                            agent={agent}
-                            workflowName={agent.workflowId ? (workflows.find(w => w.id === agent.workflowId)?.name || '未知工作流') : ''}
-                            onSelect={setSelectedAgentId}
-                            onEdit={handleEdit}
-                            onDelete={handleDelete}
-                        />
-                    ))}
-                </ResponsiveGrid>
-            ) : (
-                <div className="flex flex-col items-center justify-center py-20 text-gray-400 dark:text-gray-500">
-                    {searchTerm ? (
-                        <>
-                            <svg className="w-14 h-14 mb-4 opacity-30" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5">
-                                <path d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
-                            </svg>
-                            <p className="text-sm font-medium">未找到匹配的Agent</p>
-                            <p className="text-xs mt-1">尝试使用其他关键词搜索</p>
-                        </>
-                    ) : (
-                        <>
-                            <div className="text-8xl mb-6">🤖</div>
-                            <h3 className="text-xl font-semibold text-gray-900 dark:text-white mb-2">还没有Agent</h3>
-                            <p className="text-sm text-gray-500 dark:text-gray-400 mb-6">创建您的第一个AI Agent来管理工作流</p>
-                            <button
-                                onClick={handleCreate}
-                                className="px-6 py-3 bg-gradient-to-r from-blue-500 to-purple-600 text-white rounded-xl hover:from-blue-600 hover:to-purple-700 transition-all duration-200 shadow-lg font-medium"
-                            >
-                                创建第一个Agent
-                            </button>
-                        </>
-                    )}
-                </div>
-            )}
+  // ─── Detail / Edit View ───
+  if (selectedAgentId) {
+    return (
+      <div className="mx-auto py-6 px-4 sm:px-6 lg:px-8">
+        {/* Back button */}
+        <div className="flex items-center gap-3 mb-6">
+          <button
+            onClick={handleBack}
+            className="flex items-center justify-center w-8 h-8 rounded-lg text-gray-500 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors"
+          >
+            <svg className="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+              <path d="M15 19l-7-7 7-7" />
+            </svg>
+          </button>
+          <h2 className="text-base font-semibold text-gray-900 dark:text-white">
+            {isEditing
+              ? selectedAgent
+                ? '编辑 Agent'
+                : '创建新 Agent'
+              : selectedAgent?.name || ''}
+          </h2>
         </div>
+
+        <div className="bg-white/80 dark:bg-gray-800/80 backdrop-blur-md shadow-lg rounded-xl border border-gray-200/50 dark:border-gray-700/50 p-6">
+          {isEditing ? (
+            <AgentForm
+              agent={selectedAgent}
+              skills={skills}
+              workflows={workflows}
+              onSave={handleSave}
+              onCancel={() => {
+                if (selectedAgent) {
+                  setIsEditing(false);
+                } else {
+                  handleBack();
+                }
+              }}
+            />
+          ) : selectedAgent ? (
+            <AgentDetail
+              agent={selectedAgent}
+              skills={skills}
+              workflowName={
+                selectedAgent.workflowId
+                  ? workflows.find((w) => w.id === selectedAgent.workflowId)?.name || '未知工作流'
+                  : ''
+              }
+              onEdit={() => setIsEditing(true)}
+              onDelete={() => handleDelete(selectedAgent)}
+            />
+          ) : null}
+        </div>
+      </div>
     );
+  }
+
+  // ─── List View ───
+  return (
+    <div className="mx-auto py-6 px-4 sm:px-6 lg:px-8">
+      {/* Header */}
+      <div className="flex justify-between items-center mb-6">
+        <h1 className="text-xl font-bold bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent">
+          Agent 管理
+        </h1>
+        <div className="flex items-center gap-2">
+          {agents.length > 0 && (
+            <CustomInput
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              placeholder="搜索 Agent..."
+              size="sm"
+              className="rounded-xl"
+              leftIcon={
+                <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <circle cx="11" cy="11" r="8" />
+                  <path d="m21 21-4.35-4.35" />
+                </svg>
+              }
+            />
+          )}
+          <CustomButton onClick={handleCreate} variant="primary" size="sm">
+            <span>+</span>
+            <span>新建 Agent</span>
+          </CustomButton>
+        </div>
+      </div>
+
+      {/* Cards / Empty state */}
+      {filteredAgents.length > 0 ? (
+        <ResponsiveGrid>
+          {filteredAgents.map((agent) => (
+            <AgentCard
+              key={agent.id}
+              agent={agent}
+              workflowName={
+                agent.workflowId
+                  ? workflows.find((w) => w.id === agent.workflowId)?.name || '未知工作流'
+                  : ''
+              }
+              onSelect={setSelectedAgentId}
+              onEdit={handleEdit}
+              onDelete={handleDelete}
+            />
+          ))}
+        </ResponsiveGrid>
+      ) : (
+        <div className="flex flex-col items-center justify-center py-20 text-gray-400 dark:text-gray-500">
+          {searchTerm ? (
+            <>
+              <svg className="w-14 h-14 mb-4 opacity-30" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5">
+                <path d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+              </svg>
+              <p className="text-sm font-medium">未找到匹配的 Agent</p>
+              <p className="text-xs mt-1">尝试使用其他关键词搜索</p>
+            </>
+          ) : (
+            <>
+              <div className="flex items-center justify-center w-20 h-20 rounded-2xl bg-gradient-to-br from-blue-100 to-purple-100 dark:from-blue-900/30 dark:to-purple-900/30 mb-6">
+                <span className="text-4xl">🤖</span>
+              </div>
+              <h3 className="text-xl font-semibold text-gray-900 dark:text-white mb-2">
+                还没有 Agent
+              </h3>
+              <p className="text-sm text-gray-500 dark:text-gray-400 mb-6">
+                创建您的第一个 AI Agent 来管理工作流
+              </p>
+              <button
+                onClick={handleCreate}
+                className="px-6 py-3 bg-gradient-to-r from-blue-500 to-purple-600 text-white rounded-xl hover:from-blue-600 hover:to-purple-700 transition-all duration-200 shadow-lg font-medium"
+              >
+                创建第一个 Agent
+              </button>
+            </>
+          )}
+        </div>
+      )}
+    </div>
+  );
 }

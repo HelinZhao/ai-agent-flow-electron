@@ -22,6 +22,8 @@ export default function KnowledgeDetail({ kb, onBack }: KnowledgeDetailProps): R
   const [isUploading, setIsUploading] = useState(false)
   const fileInputRef = useRef<HTMLInputElement>(null)
 
+  const isInternal = kb.type === 'internal'
+
   const handleUpload = async () => {
     if (!fileInputRef.current?.files?.length) return
     const file = fileInputRef.current.files[0]
@@ -46,6 +48,7 @@ export default function KnowledgeDetail({ kb, onBack }: KnowledgeDetailProps): R
       setMessage({ type: 'success', text: '文档删除成功' })
       getKnowledgeBases()
     } catch (error) {
+      console.error('删除文档失败:', error)
       setMessage({ type: 'error', text: '删除文档失败' })
     } finally {
       setIsLoading(false)
@@ -69,8 +72,12 @@ export default function KnowledgeDetail({ kb, onBack }: KnowledgeDetailProps): R
 
   const docs = kb.documents || []
 
+  const accent = isInternal
+    ? { border: 'border-purple-200/50 dark:border-purple-800/50', bg: 'bg-purple-50 dark:bg-purple-900/20', text: 'text-purple-600 dark:text-purple-400', bar: 'bg-purple-500', hero: 'from-purple-500/10 via-transparent to-purple-500/10 dark:from-purple-500/5 dark:to-purple-500/5', icon: 'from-purple-500 to-purple-600', tag: 'bg-purple-100 text-purple-700 dark:bg-purple-900/30 dark:text-purple-300 border-purple-200 dark:border-purple-800' }
+    : { border: 'border-orange-200/50 dark:border-orange-800/50', bg: 'bg-orange-50 dark:bg-orange-900/20', text: 'text-orange-600 dark:text-orange-400', bar: 'bg-orange-500', hero: 'from-orange-500/10 via-transparent to-orange-500/10 dark:from-orange-500/5 dark:to-orange-500/5', icon: 'from-orange-500 to-orange-600', tag: 'bg-orange-100 text-orange-700 dark:bg-orange-900/30 dark:text-orange-300 border-orange-200 dark:border-orange-800' }
+
   return (
-    <div className='py-6 px-4 sm:px-6 lg:px-8'>
+    <div className="mx-auto py-6 px-4 sm:px-6 lg:px-8">
       {message && (
         <MessageBanner
           type={message.type}
@@ -79,197 +86,228 @@ export default function KnowledgeDetail({ kb, onBack }: KnowledgeDetailProps): R
         />
       )}
 
-      <div className="flex items-center justify-between mb-5">
-        <div className="flex items-center space-x-3">
-          <button
-            onClick={onBack}
-            className="flex items-center justify-center w-8 h-8 rounded-lg text-gray-500 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors"
-          >
-            <svg className="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M15 19l-7-7 7-7" /></svg>
-          </button>
-          <div className="flex items-center space-x-2">
-            <div className={`flex items-center justify-center w-8 h-8 rounded-lg ${
-              kb.type === 'internal'
-                ? 'bg-purple-50 dark:bg-purple-900/20'
-                : 'bg-orange-50 dark:bg-orange-900/20'
-            }`}>
-              <svg className={`w-4.5 h-4.5 ${
-                kb.type === 'internal' ? 'text-purple-600 dark:text-purple-400' : 'text-orange-600 dark:text-orange-400'
-              }`} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                {kb.type === 'internal'
-                  ? <path d="M4 19.5A2.5 2.5 0 016.5 17H20a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v13.5zM8 7h8m-8 4h5" />
-                  : <path d="M13 10V3L4 14h7v7l9-11h-7z" />
-                }
-              </svg>
-            </div>
-            <div>
-              <div className="flex items-center space-x-2">
-                <h3 className="text-base font-semibold text-gray-900 dark:text-white">{kb.name}</h3>
-                <span className={`text-xs px-1.5 py-0.5 rounded-md font-medium ${
-                  kb.type === 'internal'
-                    ? 'bg-purple-100 text-purple-700 dark:bg-purple-900/30 dark:text-purple-300'
-                    : 'bg-orange-100 text-orange-700 dark:bg-orange-900/30 dark:text-orange-300'
-                }`}>
-                  {kb.type === 'internal' ? '内部' : '外部'}
-                </span>
+      {/* Back button */}
+      <div className="flex items-center gap-3 mb-6">
+        <button
+          onClick={onBack}
+          className="flex items-center justify-center w-8 h-8 rounded-lg text-gray-500 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors"
+        >
+          <svg className="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M15 19l-7-7 7-7" /></svg>
+        </button>
+        <h2 className="text-base font-semibold text-gray-900 dark:text-white">{kb.name}</h2>
+      </div>
+
+      <div className="bg-white/80 dark:bg-gray-800/80 backdrop-blur-md shadow-lg rounded-xl border border-gray-200/50 dark:border-gray-700/50 p-6">
+        {/* ── Hero ── */}
+        <div className={`relative overflow-hidden bg-gradient-to-br ${accent.hero} rounded-xl border border-gray-200/50 dark:border-gray-700/50 p-6 mb-6`}>
+          <div className="flex items-start justify-between">
+            <div className="flex items-start gap-4">
+              <div className={`flex items-center justify-center w-14 h-14 rounded-xl bg-gradient-to-br ${accent.icon} shadow-lg flex-shrink-0`}>
+                <svg className="w-6 h-6 text-white" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                  {isInternal
+                    ? <path d="M4 19.5A2.5 2.5 0 016.5 17H20a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v13.5zM8 7h8m-8 4h5" />
+                    : <path d="M13 10V3L4 14h7v7l9-11h-7z" />
+                  }
+                </svg>
               </div>
-              {kb.description && (
-                <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">{kb.description}</p>
-              )}
-            </div>
-          </div>
-        </div>
-      </div>
-
-      <div className="grid grid-cols-3 gap-3 mb-5">
-        <div className="bg-white dark:bg-gray-800 rounded-xl border border-gray-200/80 dark:border-gray-700/50 p-4 text-center">
-          <p className="text-2xl font-bold text-gray-900 dark:text-white">{kb.documentCount || 0}</p>
-          <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">文档</p>
-        </div>
-        <div className="bg-white dark:bg-gray-800 rounded-xl border border-gray-200/80 dark:border-gray-700/50 p-4 text-center">
-          <p className="text-2xl font-bold text-gray-900 dark:text-white">{kb.totalChunks || 0}</p>
-          <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">分块</p>
-        </div>
-        <div className="bg-white dark:bg-gray-800 rounded-xl border border-gray-200/80 dark:border-gray-700/50 p-4 text-center">
-          <p className="text-2xl font-bold text-gray-900 dark:text-white">{kb.chunkSize}</p>
-          <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">分块大小</p>
-        </div>
-      </div>
-
-      {kb.type === 'internal' && (
-        <>
-          <div className="flex items-center justify-between mb-3">
-            <h4 className="text-sm font-medium text-gray-900 dark:text-white">文档列表</h4>
-            <div>
-              <input
-                ref={fileInputRef}
-                type="file"
-                accept={KB_UPLOAD_ACCEPT}
-                className="hidden"
-                onChange={handleUpload}
-              />
-              <CustomButton
-                onClick={() => fileInputRef.current?.click()}
-                variant="primary"
-                size="sm"
-                disabled={isUploading}
-              >
-                {isUploading ? (
-                  <>
-                    <svg className="animate-spin -ml-1 mr-1.5 h-3.5 w-3.5 text-current" viewBox="0 0 24 24" fill="none">
-                      <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
-                      <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
-                    </svg>
-                    上传中...
-                  </>
-                ) : (
-                  <>
-                    <svg className="w-4 h-4 mr-1" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M12 5v14m-7-7h14" /></svg>
-                    上传文档
-                  </>
-                )}
-              </CustomButton>
-            </div>
-          </div>
-
-          {docs.length === 0 ? (
-            <div className="flex flex-col items-center justify-center py-10 text-gray-400 dark:text-gray-500 bg-gray-50 dark:bg-gray-900/30 rounded-xl border border-gray-100 dark:border-gray-700/30">
-              <svg className="w-10 h-10 mb-3 opacity-30" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5">
-                <path d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
-              </svg>
-              <p className="text-sm">暂无文档</p>
-              <p className="text-xs mt-1">点击「上传文档」添加 txt/md 文件</p>
-            </div>
-          ) : (
-            <div className="space-y-0 bg-white dark:bg-gray-800 rounded-xl border border-gray-200/80 dark:border-gray-700/50 overflow-hidden">
-              {docs.map((doc) => (
-                <div
-                  key={doc}
-                  className="group/doc relative flex items-center justify-between px-4 py-3 border-b border-gray-100 dark:border-gray-700/50 last:border-b-0 hover:bg-gray-50 dark:hover:bg-gray-700/30 transition-colors"
-                >
-                  <div className="flex items-center space-x-3 min-w-0">
-                    <div className="flex items-center justify-center w-7 h-7 rounded-lg bg-gray-100 dark:bg-gray-700">
-                      <svg className="w-3.5 h-3.5 text-gray-500 dark:text-gray-400" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                        <path d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
-                      </svg>
-                    </div>
-                    <span className="text-sm text-gray-700 dark:text-gray-300 truncate">{doc}</span>
-                  </div>
-
-                  <div className="absolute right-3 top-1/2 -translate-y-1/2 z-10 flex items-center gap-1 px-2 py-1.5 rounded-xl border border-gray-200 dark:border-gray-600 bg-white dark:bg-gray-800 shadow-lg backdrop-blur-sm opacity-0 group-hover/doc:opacity-100 transition-opacity pointer-events-none group-hover/doc:pointer-events-auto">
-                    <button
-                      onClick={() => setChunkViewerState({ kbId: kb.id, docName: doc })}
-                      className="flex items-center justify-center w-6 h-6 rounded-lg text-gray-400 hover:text-blue-600 dark:hover:text-blue-400 hover:bg-blue-50 dark:hover:bg-blue-900/20 transition-colors"
-                      title="查看分块"
-                    >
-                      <svg className="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M4 4h16v16H4zM8 4v16M4 8h16M4 12h16" /></svg>
-                    </button>
-                    <div className="w-px h-4 bg-gray-200 dark:bg-gray-600" />
-                    <button
-                      onClick={() => handleDownload(doc)}
-                      className="flex items-center justify-center w-6 h-6 rounded-lg text-gray-400 hover:text-green-600 dark:hover:text-green-400 hover:bg-green-50 dark:hover:bg-green-900/20 transition-colors"
-                      title="下载"
-                    >
-                      <svg className="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4m14-7l-5 5-5-5m5 5V3" /></svg>
-                    </button>
-                    <div className="w-px h-4 bg-gray-200 dark:bg-gray-600" />
-                    <button
-                      onClick={() => setDeleteDocTarget(doc)}
-                      className="flex items-center justify-center w-6 h-6 rounded-lg text-gray-400 hover:text-red-600 dark:hover:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors"
-                      title="删除"
-                    >
-                      <svg className="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" /></svg>
-                    </button>
-                  </div>
+              <div>
+                <div className="flex items-center gap-2 mb-1">
+                  <h2 className="text-xl font-bold text-gray-900 dark:text-white">{kb.name}</h2>
+                  <span className={`inline-flex items-center px-2 py-0.5 text-xs font-medium rounded-full border ${accent.tag}`}>
+                    {isInternal ? '内部知识库' : '外部知识库'}
+                  </span>
                 </div>
-              ))}
-            </div>
-          )}
-        </>
-      )}
-
-      {kb.type === 'external' && (
-        <div className="bg-white dark:bg-gray-800 rounded-xl border border-gray-200/80 dark:border-gray-700/50 p-4">
-          <h4 className="text-sm font-medium text-gray-900 dark:text-white mb-3">外部配置</h4>
-          <div className="space-y-2">
-            <div className="flex items-center justify-between">
-              <span className="text-xs text-gray-500 dark:text-gray-400">提供商</span>
-              <span className="text-xs text-gray-700 dark:text-gray-300">
-                {kb.provider && EXTERNAL_KB_PROVIDER_META[kb.provider]
-                  ? EXTERNAL_KB_PROVIDER_META[kb.provider].name
-                  : kb.provider || '通用 API'}
-              </span>
-            </div>
-            <div className="flex items-center justify-between">
-              <span className="text-xs text-gray-500 dark:text-gray-400">API 地址</span>
-              <span className="text-xs text-gray-700 dark:text-gray-300">{kb.apiUrl || '未配置'}</span>
-            </div>
-            <div className="flex items-center justify-between">
-              <span className="text-xs text-gray-500 dark:text-gray-400">检索数量</span>
-              <span className="text-xs text-gray-700 dark:text-gray-300">{kb.topK}</span>
-            </div>
-            <div className="flex items-center justify-between">
-              <span className="text-xs text-gray-500 dark:text-gray-400">API Key</span>
-              <span className="text-xs text-gray-700 dark:text-gray-300">{kb.apiKey ? '已配置' : '未配置'}</span>
+                <p className="text-sm text-gray-500 dark:text-gray-400">
+                  {kb.description || '暂无描述'}
+                </p>
+              </div>
             </div>
           </div>
         </div>
-      )}
 
-      {deleteDocTarget && (
-        <div className="fixed inset-0 bg-black/40 backdrop-blur-sm flex items-center justify-center z-50">
-          <div className="bg-white dark:bg-gray-800 rounded-xl shadow-xl border border-gray-200 dark:border-gray-700 p-5 mx-4 max-w-sm">
-            <h4 className="text-base font-semibold text-gray-900 dark:text-white mb-2">删除文档</h4>
-            <p className="text-sm text-gray-500 dark:text-gray-400 mb-4">确定要删除文档 "{deleteDocTarget}" 吗？相关向量也将被清除。</p>
-            <div className="flex justify-end space-x-3">
-              <CustomButton onClick={() => setDeleteDocTarget(null)} variant="secondary" size="sm">取消</CustomButton>
-              <CustomButton onClick={() => handleDeleteDoc(deleteDocTarget)} variant="danger" size="sm" disabled={isLoading}>
-                {isLoading ? '删除中...' : '删除'}
-              </CustomButton>
+        {/* ── Stats ── */}
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
+          <div className="bg-white/80 dark:bg-gray-800/80 backdrop-blur-sm rounded-xl border border-gray-200/50 dark:border-gray-700/50 p-4">
+            <div className="flex items-center gap-2 mb-3">
+              <div className={`w-6 h-6 rounded-md ${accent.bg} flex items-center justify-center`}>
+                <svg className={`w-3.5 h-3.5 ${accent.text}`} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                  <path d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                </svg>
+              </div>
+              <span className="text-sm font-medium text-gray-700 dark:text-gray-300">文档数</span>
             </div>
+            <p className="text-2xl font-bold text-gray-900 dark:text-white pl-8">{kb.documentCount || 0}</p>
+          </div>
+
+          <div className="bg-white/80 dark:bg-gray-800/80 backdrop-blur-sm rounded-xl border border-gray-200/50 dark:border-gray-700/50 p-4">
+            <div className="flex items-center gap-2 mb-3">
+              <div className={`w-6 h-6 rounded-md ${accent.bg} flex items-center justify-center`}>
+                <svg className={`w-3.5 h-3.5 ${accent.text}`} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                  <path d="M4 4h16v16H4zM8 4v16M4 8h16M4 12h16" />
+                </svg>
+              </div>
+              <span className="text-sm font-medium text-gray-700 dark:text-gray-300">分块数</span>
+            </div>
+            <p className="text-2xl font-bold text-gray-900 dark:text-white pl-8">{kb.totalChunks || 0}</p>
+          </div>
+
+          <div className="bg-white/80 dark:bg-gray-800/80 backdrop-blur-sm rounded-xl border border-gray-200/50 dark:border-gray-700/50 p-4">
+            <div className="flex items-center gap-2 mb-3">
+              <div className={`w-6 h-6 rounded-md ${accent.bg} flex items-center justify-center`}>
+                <svg className={`w-3.5 h-3.5 ${accent.text}`} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                  <path d="M4 6h16M4 10h16M4 14h16M4 18h16" />
+                </svg>
+              </div>
+              <span className="text-sm font-medium text-gray-700 dark:text-gray-300">分块大小</span>
+            </div>
+            <p className="text-2xl font-bold text-gray-900 dark:text-white pl-8">{kb.chunkSize}</p>
           </div>
         </div>
-      )}
+
+        {/* ── Documents (internal) ── */}
+        {isInternal && (
+          <>
+            <div className="flex items-center gap-2 mb-3">
+              <div className={`w-1 h-5 ${accent.bar} rounded-full`} />
+              <h3 className="text-base font-semibold text-gray-800 dark:text-gray-200">文档列表</h3>
+              <div className="ml-auto">
+                <input
+                  ref={fileInputRef}
+                  type="file"
+                  accept={KB_UPLOAD_ACCEPT}
+                  className="hidden"
+                  onChange={handleUpload}
+                />
+                <CustomButton
+                  onClick={() => fileInputRef.current?.click()}
+                  variant="primary"
+                  size="sm"
+                  disabled={isUploading}
+                >
+                  {isUploading ? (
+                    <>
+                      <svg className="animate-spin -ml-1 mr-1.5 h-3.5 w-3.5 text-current" viewBox="0 0 24 24" fill="none">
+                        <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+                        <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
+                      </svg>
+                      上传中...
+                    </>
+                  ) : (
+                    <>
+                      <svg className="w-4 h-4 mr-1" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M12 5v14m-7-7h14" /></svg>
+                      上传文档
+                    </>
+                  )}
+                </CustomButton>
+              </div>
+            </div>
+
+            {docs.length === 0 ? (
+              <div className="flex flex-col items-center justify-center py-12 text-gray-400 dark:text-gray-500 bg-gray-50 dark:bg-gray-900/30 rounded-xl border border-gray-100 dark:border-gray-700/30">
+                <svg className="w-10 h-10 mb-3 opacity-30" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5">
+                  <path d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                </svg>
+                <p className="text-sm">暂无文档</p>
+                <p className="text-xs mt-1">点击「上传文档」添加 txt / md / pdf 文件</p>
+              </div>
+            ) : (
+              <div className="bg-white/80 dark:bg-gray-800/80 backdrop-blur-sm rounded-xl border border-gray-200/50 dark:border-gray-700/50 overflow-hidden">
+                {docs.map((doc) => (
+                  <div
+                    key={doc}
+                    className="group/doc relative flex items-center justify-between px-4 py-3 border-b border-gray-100 dark:border-gray-700/50 last:border-b-0 hover:bg-gray-50 dark:hover:bg-gray-700/30 transition-colors"
+                  >
+                    <div className="flex items-center gap-3 min-w-0">
+                      <div className="flex items-center justify-center w-8 h-8 rounded-lg bg-gradient-to-br from-gray-50 to-gray-100 dark:from-gray-700 dark:to-gray-600 flex-shrink-0">
+                        <svg className="w-4 h-4 text-gray-500 dark:text-gray-400" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                          <path d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                        </svg>
+                      </div>
+                      <span className="text-sm text-gray-700 dark:text-gray-300 truncate">{doc}</span>
+                    </div>
+
+                    <div className="z-10 flex items-center gap-1 px-2 py-1.5 rounded-xl border border-gray-200 dark:border-gray-600 bg-white dark:bg-gray-800 shadow-lg opacity-0 group-hover/doc:opacity-100 transition-opacity pointer-events-none group-hover/doc:pointer-events-auto">
+                      <button
+                        onClick={() => setChunkViewerState({ kbId: kb.id, docName: doc })}
+                        className="flex items-center justify-center w-6 h-6 rounded-lg text-gray-400 hover:text-blue-600 dark:hover:text-blue-400 hover:bg-blue-50 dark:hover:bg-blue-900/20 transition-colors"
+                        title="查看分块"
+                      >
+                        <svg className="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M4 4h16v16H4zM8 4v16M4 8h16M4 12h16" /></svg>
+                      </button>
+                      <div className="w-px h-4 bg-gray-200 dark:bg-gray-600" />
+                      <button
+                        onClick={() => handleDownload(doc)}
+                        className="flex items-center justify-center w-6 h-6 rounded-lg text-gray-400 hover:text-green-600 dark:hover:text-green-400 hover:bg-green-50 dark:hover:bg-green-900/20 transition-colors"
+                        title="下载"
+                      >
+                        <svg className="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4m14-7l-5 5-5-5m5 5V3" /></svg>
+                      </button>
+                      <div className="w-px h-4 bg-gray-200 dark:bg-gray-600" />
+                      <button
+                        onClick={() => setDeleteDocTarget(doc)}
+                        className="flex items-center justify-center w-6 h-6 rounded-lg text-gray-400 hover:text-red-600 dark:hover:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors"
+                        title="删除"
+                      >
+                        <svg className="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" /></svg>
+                      </button>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </>
+        )}
+
+        {/* ── External config ── */}
+        {!isInternal && (
+          <>
+            <div className="flex items-center gap-2 mb-3">
+              <div className={`w-1 h-5 ${accent.bar} rounded-full`} />
+              <h3 className="text-base font-semibold text-gray-800 dark:text-gray-200">外部配置</h3>
+            </div>
+            <div className="bg-white/80 dark:bg-gray-800/80 backdrop-blur-sm rounded-xl border border-gray-200/50 dark:border-gray-700/50 p-5">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div>
+                  <dt className="text-xs font-medium text-gray-500 dark:text-gray-400 mb-0.5">提供商</dt>
+                  <dd className="text-sm text-gray-900 dark:text-white">
+                    {kb.provider && EXTERNAL_KB_PROVIDER_META[kb.provider]
+                      ? EXTERNAL_KB_PROVIDER_META[kb.provider].name
+                      : kb.provider || '通用 API'}
+                  </dd>
+                </div>
+                <div>
+                  <dt className="text-xs font-medium text-gray-500 dark:text-gray-400 mb-0.5">检索数量 (TopK)</dt>
+                  <dd className="text-sm text-gray-900 dark:text-white">{kb.topK}</dd>
+                </div>
+                <div>
+                  <dt className="text-xs font-medium text-gray-500 dark:text-gray-400 mb-0.5">API 地址</dt>
+                  <dd className="text-sm text-gray-900 dark:text-white break-all">{kb.apiUrl || '未配置'}</dd>
+                </div>
+                <div>
+                  <dt className="text-xs font-medium text-gray-500 dark:text-gray-400 mb-0.5">API Key</dt>
+                  <dd className="text-sm text-gray-900 dark:text-white">{kb.apiKey ? '已配置' : '未配置'}</dd>
+                </div>
+              </div>
+            </div>
+          </>
+        )}
+
+        {/* ── Delete confirmation dialog ── */}
+        {deleteDocTarget && (
+          <div className="fixed inset-0 bg-black/40 backdrop-blur-sm flex items-center justify-center z-50">
+            <div className="bg-white dark:bg-gray-800 rounded-xl shadow-xl border border-gray-200 dark:border-gray-700 p-5 mx-4 max-w-sm">
+              <h4 className="text-base font-semibold text-gray-900 dark:text-white mb-2">删除文档</h4>
+              <p className="text-sm text-gray-500 dark:text-gray-400 mb-4">确定要删除文档 "{deleteDocTarget}" 吗？相关向量也将被清除。</p>
+              <div className="flex justify-end space-x-3">
+                <CustomButton onClick={() => setDeleteDocTarget(null)} variant="secondary" size="sm">取消</CustomButton>
+                <CustomButton onClick={() => handleDeleteDoc(deleteDocTarget)} variant="danger" size="sm" disabled={isLoading}>
+                  {isLoading ? '删除中...' : '删除'}
+                </CustomButton>
+              </div>
+            </div>
+          </div>
+        )}
+      </div>
 
       {chunkViewerState && (
         <ChunkViewer

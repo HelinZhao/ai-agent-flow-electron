@@ -560,7 +560,7 @@ export default function Workflow(): React.JSX.Element {
                             {filteredWorkflows.map((workflow) => (
                                 <div
                                     key={workflow.id}
-                                    className="group/workflow relative bg-white dark:bg-gray-800 rounded-xl border border-gray-200/80 dark:border-gray-700/50 hover:border-blue-300 dark:hover:border-blue-600/50 hover:shadow-md transition-all duration-200 cursor-pointer overflow-hidden"
+                                    className="group/workflow relative bg-white dark:bg-gray-800 rounded-xl border border-gray-200/80 dark:border-gray-700/50 hover:border-blue-300 dark:hover:border-blue-600/50 hover:shadow-lg hover:-translate-y-0.5 transition-all duration-200 cursor-pointer overflow-hidden"
                                     onClick={() => handleCardClick(workflow.id)}
                                 >
                                     {/* 卡片顶部色带 */}
@@ -570,7 +570,7 @@ export default function Workflow(): React.JSX.Element {
                                     <div className="p-4">
                                         <div className="flex items-start justify-between mb-3">
                                             <div className="flex items-start space-x-2.5 min-w-0">
-                                                <div className="flex items-center justify-center w-9 h-9 rounded-lg bg-blue-50 dark:bg-blue-900/20 flex-shrink-0">
+                                                <div className="flex items-center justify-center w-9 h-9 rounded-lg bg-gradient-to-br from-blue-50 to-purple-50 dark:from-blue-900/30 dark:to-purple-900/30 flex-shrink-0">
                                                     <span className="text-base">🔄</span>
                                                 </div>
                                                 <div className="min-w-0">
@@ -619,8 +619,8 @@ export default function Workflow(): React.JSX.Element {
                                     </div>
 
                                     {/* 进入箭头 */}
-                                    <div className="absolute bottom-4 right-4 text-gray-300 dark:text-gray-600 group-hover/workflow:text-blue-400 dark:group-hover/workflow:text-blue-500 transition-colors">
-                                        <svg className="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M9 5l7 7-7 7" /></svg>
+                                    <div className="absolute bottom-3 right-3 text-gray-300 dark:text-gray-600 group-hover/workflow:text-blue-400 dark:group-hover/workflow:text-blue-500 transition-colors">
+                                        <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M9 5l7 7-7 7" /></svg>
                                     </div>
                                 </div>
                             ))}

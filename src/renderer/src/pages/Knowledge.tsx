@@ -28,7 +28,7 @@ const KBCard = React.memo(function KBCard({
 
   return (
     <div
-      className="group/kb relative bg-white dark:bg-gray-800 rounded-xl border border-gray-200/80 dark:border-gray-700/50 hover:border-blue-300 dark:hover:border-blue-600/50 hover:shadow-md transition-all duration-200 cursor-pointer overflow-hidden"
+      className="group/kb relative bg-white dark:bg-gray-800 rounded-xl border border-gray-200/80 dark:border-gray-700/50 hover:border-blue-300 dark:hover:border-blue-600/50 hover:shadow-lg hover:-translate-y-0.5 transition-all duration-200 cursor-pointer overflow-hidden"
       onClick={() => onSelect(kb.id)}
     >
       <div className={`h-1.5 rounded-t-xl ${isInternal
@@ -39,9 +39,9 @@ const KBCard = React.memo(function KBCard({
       <div className="p-4">
         <div className="flex items-start justify-between mb-3">
           <div className="flex items-center space-x-2.5">
-            <div className={`flex items-center justify-center w-9 h-9 rounded-lg ${isInternal
-              ? 'bg-purple-50 dark:bg-purple-900/20'
-              : 'bg-orange-50 dark:bg-orange-900/20'
+            <div className={`flex items-center justify-center w-9 h-9 rounded-lg flex-shrink-0 ${isInternal
+              ? 'bg-gradient-to-br from-purple-50 to-purple-100 dark:from-purple-900/30 dark:to-purple-800/30'
+              : 'bg-gradient-to-br from-orange-50 to-orange-100 dark:from-orange-900/30 dark:to-orange-800/30'
               }`}>
               <svg className={`w-5 h-5 ${isInternal ? 'text-purple-600 dark:text-purple-400' : 'text-orange-600 dark:text-orange-400'
                 }`} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
@@ -100,8 +100,8 @@ const KBCard = React.memo(function KBCard({
         </button>
       </div>
 
-      <div className="absolute bottom-4 right-4 text-gray-300 dark:text-gray-600 group-hover/kb:text-blue-400 dark:group-hover/kb:text-blue-500 transition-colors">
-        <svg className="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M9 5l7 7-7 7" /></svg>
+      <div className="absolute bottom-3 right-3 text-gray-300 dark:text-gray-600 group-hover/kb:text-blue-400 dark:group-hover/kb:text-blue-500 transition-colors">
+        <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M9 5l7 7-7 7" /></svg>
       </div>
     </div>
   )

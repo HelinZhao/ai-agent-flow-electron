@@ -1,9 +1,10 @@
 import React from 'react'
+import { createPortal } from 'react-dom'
 
 interface ModalProps {
   open: boolean
   onClose: () => void
-  title: string
+  title: React.ReactNode
   children: React.ReactNode
   footer?: React.ReactNode
 }
@@ -11,8 +12,8 @@ interface ModalProps {
 export default function Modal({ open, onClose, title, children, footer }: ModalProps): React.ReactElement | null {
   if (!open) return null
 
-  return (
-    <div className="fixed inset-0 z-50 top-14 flex items-center justify-center bg-black/40 backdrop-blur-sm"
+  return createPortal(
+    <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/40 backdrop-blur-sm"
       onClick={onClose}>
       <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-2xl w-full max-w-lg mx-4 max-h-[calc(100vh-4rem)] flex flex-col"
         onClick={e => e.stopPropagation()}>
@@ -37,6 +38,7 @@ export default function Modal({ open, onClose, title, children, footer }: ModalP
           </div>
         )}
       </div>
-    </div>
+    </div>,
+    document.body
   )
 }
