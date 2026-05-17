@@ -5,8 +5,8 @@ import CustomInput from '@renderer/components/ui/CustomInput';
 import CustomButton from '@renderer/components/ui/CustomButton';
 import CustomFileUpload from '@renderer/components/ui/CustomFileUpload';
 import ResponsiveGrid from '@renderer/components/ui/ResponsiveGrid';
-import SkillForm from '@renderer/components/agents/SkillForm';
-import SkillDetail from '@renderer/components/agents/SkillDetail';
+import SkillForm from '@renderer/components/skills/SkillForm';
+import SkillDetail from '@renderer/components/skills/SkillDetail';
 import { SKILL_IMPORT_ACCEPT } from '@renderer/config';
 
 // ─── Skill Card ───

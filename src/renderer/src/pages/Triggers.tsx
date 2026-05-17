@@ -173,7 +173,7 @@ export default function Triggers(): React.JSX.Element {
       </div>
 
       {/* list */}
-      <div className="flex-1 overflow-auto px-6 py-6">
+      <div className="flex-1 overflow-auto px-6 py-4">
         {loading ? (
           <div className="flex flex-col items-center justify-center h-48 text-gray-400 dark:text-gray-500">
             <div className="flex items-center justify-center w-16 h-16 rounded-2xl bg-gradient-to-br from-blue-100 to-purple-100 dark:from-blue-900/30 dark:to-purple-900/30 mb-4">

@@ -112,7 +112,7 @@ export default function Logs(): React.JSX.Element {
   return (
     <div className="flex flex-col h-full text-gray-900 dark:text-gray-100 font-mono">
       {/* 工具栏 */}
-      <div className="flex items-center justify-between px-4 py-[calc(1rem-1px)] bg-gray-100 dark:bg-gray-900 border-b border-gray-200 dark:border-gray-800 shrink-0">
+      <div className="flex items-center justify-between px-4 py-2 bg-gray-100 dark:bg-gray-900 border-b border-gray-200 dark:border-gray-800 shrink-0">
         <div className="flex items-center space-x-3">
           {/* 连接状态 */}
           <span className="flex items-center space-x-1.5">

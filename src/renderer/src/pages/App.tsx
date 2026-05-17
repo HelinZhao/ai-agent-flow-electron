@@ -20,9 +20,9 @@ import Knowledge from "./Knowledge";
 
 const navItems = [
     { path: '/chat', label: 'AI对话', icon: '💬', page: <Chat /> },
-    { path: '/', label: '工作流设计器', icon: '🔄', page: <Workflow /> },
-    { path: '/agents', label: 'Agent管理', icon: '🤖', page: <Agents /> },
-    { path: '/skills', label: '技能管理', icon: '⚡', page: <Skills /> },
+    { path: '/', label: '工作流', icon: '🔄', page: <Workflow /> },
+    { path: '/agents', label: 'Agent', icon: '🤖', page: <Agents /> },
+    { path: '/skills', label: '技能', icon: '⚡', page: <Skills /> },
     { path: '/knowledge', label: '知识库', icon: '📚', page: <Knowledge /> },
     { path: '/triggers', label: '触发器', icon: '⏰', page: <Triggers /> },
     { path: '/monitor', label: '执行监控', icon: '📊', page: <ExecutionMonitor /> },

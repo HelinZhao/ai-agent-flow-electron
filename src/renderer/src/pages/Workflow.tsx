@@ -444,7 +444,7 @@ export default function Workflow(): React.JSX.Element {
             {/* 标题栏 */}
             <div className="flex justify-between items-center mb-6">
                 <h1 className="text-xl font-bold bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent">
-                    工作流设计器
+                    工作流管理
                 </h1>
                 <div className="flex space-x-2 items-center">
                     {/* 搜索栏 */}

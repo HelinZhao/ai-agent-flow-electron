@@ -24,7 +24,7 @@ export default function SkillDetail({ skill, onEdit, onDelete }: SkillDetailProp
       <div className="relative overflow-hidden bg-gradient-to-br from-amber-500/10 via-transparent to-orange-500/10 dark:from-amber-500/5 dark:to-orange-500/5 rounded-xl border border-gray-200/50 dark:border-gray-700/50 p-6 mb-6">
         <div className="flex items-start justify-between">
           <div className="flex items-start gap-4">
-            <div className="flex items-center justify-center w-14 h-14 rounded-xl bg-gradient-to-br from-amber-500 to-orange-600 shadow-lg flex-shrink-0">
+            <div className="flex items-center justify-center w-14 h-14 rounded-xl bg-gradient-to-br from-amber-600 to-orange-700 shadow-lg flex-shrink-0">
               <span className="text-2xl text-white">⚡</span>
             </div>
             <div>
