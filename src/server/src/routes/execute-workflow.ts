@@ -471,23 +471,6 @@ router.post('/agent-chat-monitor', async (req, res) => {
       })
     }
 
-    // 检查 Agent 是否绑定了工作流
-    if (!agent.workflowId) {
-      return res.status(400).json({
-        error: 'Agent 未绑定工作流',
-        message: `Agent「${agent.name}」尚未绑定工作流，请先为该 Agent 配置工作流后再进行对话`
-      })
-    }
-
-    // 查找绑定的工作流
-    const workflow = await WorkflowModel.findByPk(agent.workflowId)
-    if (!workflow) {
-      return res.status(404).json({
-        error: '工作流不存在',
-        message: `Agent「${agent.name}」绑定的工作流不存在，请联系管理员检查配置`
-      })
-    }
-
     // 查找启用的 LLM 配置
     const activeLLMConfig = await LLMConfigModel.findOne({
       where: { isActive: true }
@@ -497,6 +480,45 @@ router.post('/agent-chat-monitor', async (req, res) => {
       return res.status(400).json({
         error: '未配置大模型',
         message: '请先配置并启用一个大模型配置，然后重试'
+      })
+    }
+
+    // 将数据库中的 LLM 配置转换为 LLM 配置对象
+    const llmConfig: LLMConfig = {
+      provider: activeLLMConfig.provider,
+      apiKey: activeLLMConfig.apiKey,
+      model: activeLLMConfig.model,
+      baseUrl: activeLLMConfig.baseUrl,
+      temperature: activeLLMConfig.temperature,
+      maxTokens: activeLLMConfig.maxTokens
+    }
+
+    // 无工作流时走直接对话模式
+    if (!agent.workflowId) {
+      const executionId = await monitoredExecutor.startDirectChat(
+        input,
+        llmConfig,
+        { id: agent.id, name: agent.name, instructions: agent.instructions },
+        threadId || agent.id,
+        attachments,
+        [],
+        autoApprovedTools
+      )
+      return res.status(200).json({
+        executionId,
+        success: true,
+        message: 'Agent直接对话已开始',
+        agentName: agent.name,
+        workflowName: ''
+      })
+    }
+
+    // 查找绑定的工作流
+    const workflow = await WorkflowModel.findByPk(agent.workflowId)
+    if (!workflow) {
+      return res.status(404).json({
+        error: '工作流不存在',
+        message: `Agent「${agent.name}」绑定的工作流不存在，请联系管理员检查配置`
       })
     }
 
@@ -511,23 +533,13 @@ router.post('/agent-chat-monitor', async (req, res) => {
       updatedAt: workflow.updatedAt
     }
 
-    // 将数据库中的 LLM 配置转换为 LLM 配置对象
-    const llmConfig: LLMConfig = {
-      provider: activeLLMConfig.provider,
-      apiKey: activeLLMConfig.apiKey,
-      model: activeLLMConfig.model,
-      baseUrl: activeLLMConfig.baseUrl,
-      temperature: activeLLMConfig.temperature,
-      maxTokens: activeLLMConfig.maxTokens
-    }
-
     // 开始执行工作流
     const executionId = await monitoredExecutor.startExecution(
       workflowObj,
       input,
       llmConfig,
       agentId,
-      threadId || agentId, // 使用 agentId 作为默认 threadId
+      threadId || agentId,
       attachments,
       autoApprovedTools
     )

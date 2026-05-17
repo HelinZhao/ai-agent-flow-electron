@@ -12,6 +12,9 @@ export default defineConfig({
         '@renderer': resolve('src/renderer/src') // 设置渲染器源码路径别名
       }
     },
-    plugins: [react()]
+    plugins: [react()],
+    server: {
+      port: 45173
+    }
   }
 })

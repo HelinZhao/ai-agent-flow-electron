@@ -59,6 +59,8 @@ export class MonitoredLangGraphExecutor {
   private sseClients = new Map<string, any[]>() // executionId -> SSE clients
   // 线程级附件存储：跨对话累积图片等附件数据，供后续对话的callLLM注入
   private threadAttachments = new Map<string, AttachmentPayload[]>()
+  // 线程级对话历史：用于直接对话（无工作流）模式下的上下文记忆
+  private threadMessages = new Map<string, BaseMessage[]>()
   // 当前正在执行的 agentId 栈，用于检测循环调用
   private agentCallStack = new Set<string>()
   private WorkflowState = Annotation.Root({
@@ -1366,6 +1368,130 @@ ${conditionText}
   async deleteThread(threadId: string): Promise<void> {
     await checkpointer.deleteThread(threadId)
     this.threadAttachments.delete(threadId)
+    this.threadMessages.delete(threadId)
+  }
+
+  // 直接对话（无工作流）：直接用 agent 指令调 LLM
+  async startDirectChat(
+    input: string,
+    llmConfig: LLMConfig,
+    agent: { id: string; name: string; instructions: string },
+    threadId?: string,
+    attachments?: AttachmentPayload[],
+    enabledTools?: string[],
+    autoApprovedTools?: string[]
+  ): Promise<string> {
+    const executionId = uuidv4()
+    const effectiveThreadId = threadId || agent.id || 'default-thread'
+
+    const minimalWorkflow: Workflow = {
+      id: 'direct-chat',
+      name: `对话: ${agent.name}`,
+      description: '直接对话（无工作流）',
+      nodes: [],
+      edges: [],
+      createdAt: new Date(),
+      updatedAt: new Date()
+    }
+
+    const executionState: ExecutionState = {
+      executionId,
+      workflow: minimalWorkflow,
+      status: 'running',
+      startTime: new Date(),
+      nodeResults: new Map(),
+      progress: 0,
+      logs: [{ timestamp: new Date(), level: 'info', message: `开始直接对话: ${agent.name}` }],
+      agentId: agent.id,
+      threadId: effectiveThreadId,
+      autoApprovedToolTypes: new Set<string>(autoApprovedTools || []),
+      pendingApproval: null,
+      attachments: [],
+    }
+
+    // 附件落地磁盘
+    let diskAttachments: AttachmentPayload[] | undefined
+    if (attachments && attachments.length > 0) {
+      diskAttachments = []
+      for (const att of attachments) {
+        try {
+          const filePath = await saveAttachmentToDisk(att)
+          diskAttachments.push({ id: att.id, name: att.name, type: att.type, size: att.size, category: att.category, filePath })
+        } catch {
+          diskAttachments.push(att)
+        }
+      }
+      executionState.attachments = diskAttachments
+      // 累积到线程级
+      const existing = this.threadAttachments.get(effectiveThreadId) || []
+      const merged = [...existing]
+      for (const att of diskAttachments) {
+        if (!merged.some(e => e.id === att.id)) merged.push(att)
+      }
+      this.threadAttachments.set(effectiveThreadId, merged)
+    }
+
+    this.executionStates.set(executionId, executionState)
+
+    // 后台执行
+    this.executeDirectChatAsync(executionId, input, llmConfig, agent, effectiveThreadId, diskAttachments, enabledTools)
+
+    return executionId
+  }
+
+  private async executeDirectChatAsync(
+    executionId: string,
+    input: string,
+    llmConfig: LLMConfig,
+    agent: { id: string; name: string; instructions: string },
+    threadId: string,
+    attachments?: AttachmentPayload[],
+    enabledTools?: string[]
+  ): Promise<void> {
+    try {
+      const state = this.executionStates.get(executionId)
+
+      // 恢复线程级对话历史
+      const conversationHistory = this.threadMessages.get(threadId) || []
+      const userMessage = new HumanMessage(input)
+      const updatedHistory = [...conversationHistory, userMessage]
+
+      // 构建 prompt：agent 指令 + 用户输入
+      const prompt = `${agent.instructions}\n\n用户输入: ${input}`
+
+      // 调用 LLM
+      const result = await callLLM(prompt, llmConfig, updatedHistory, enabledTools || [])
+
+      // 保存对话历史
+      const aiMessage = new AIMessage(result)
+      this.threadMessages.set(threadId, [...updatedHistory, aiMessage])
+
+      if (state) {
+        state.status = 'completed'
+        state.endTime = new Date()
+        state.progress = 100
+        state.logs.push({ timestamp: new Date(), level: 'info', message: '直接对话完成' })
+        state.nodeResults.set('direct-chat', {
+          output: result,
+          status: 'completed',
+          metadata: { nodeId: 'direct-chat', type: 'direct-chat', label: '直接对话' }
+        })
+        this.broadcastToSSEClients(executionId, {
+          type: 'execution_complete', executionId, status: 'completed', progress: 100, endTime: state.endTime
+        })
+      }
+    } catch (error) {
+      const state = this.executionStates.get(executionId)
+      if (state && state.status === 'running') {
+        state.status = 'failed'
+        state.endTime = new Date()
+        state.logs.push({ timestamp: new Date(), level: 'error', message: `直接对话失败: ${error instanceof Error ? error.message : '未知错误'}` })
+        this.broadcastToSSEClients(executionId, {
+          type: 'execution_complete', executionId, status: 'failed', progress: state.progress, endTime: state.endTime,
+          error: error instanceof Error ? error.message : '未知错误'
+        })
+      }
+    }
   }
 }
 

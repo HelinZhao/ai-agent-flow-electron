@@ -206,9 +206,6 @@ export function useConversation() {
     }))
 
     try {
-      const agentWorkflow = workflows.find((w) => w.id === agent.workflowId)
-      if (!agentWorkflow) throw new Error('Agent未绑定有效的工作流')
-
       const { executionId, success } = await workflowExecutionApi.agentChatMonitor(
         agent.id, userMessage.content, agent.id, attachmentsPayload,
         Array.from(autoApprovedTools),
