@@ -1,5 +1,6 @@
 import { Router } from 'express'
 import { AgentModel } from '../models'
+import { monitoredExecutor } from './execute-workflow'
 
 const router = Router()
 
@@ -91,6 +92,8 @@ router.delete('/:id', async (req, res) => {
       return res.status(404).json({ error: '智能体不存在' })
     }
 
+    // 清理内存中的附件缓存
+    monitoredExecutor.deleteThread(id).catch(() => {})
     await agent.destroy()
     return res.status(204).send()
   } catch (error) {
