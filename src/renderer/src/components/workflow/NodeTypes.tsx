@@ -20,9 +20,6 @@ function handleClass(def: { color: string }) {
 function iconBox(def: { color: string }) {
   return `w-10 h-10 bg-gradient-to-br from-${def.color}-400 to-${def.color}-600 rounded-lg flex items-center justify-center shadow-lg border border-${def.color}-300`
 }
-function hoverGlow(def: { color: string }) {
-  return `absolute inset-0 bg-gradient-to-r from-transparent via-${def.color}-400/10 to-transparent opacity-0 transition-opacity duration-300 rounded-lg`
-}
 
 // ============================================================
 //  StartNode
@@ -32,14 +29,13 @@ export function StartNode({ data, selected }: { data: any; selected: boolean }):
   const def = NODE_DEFS_MAP['start']
   const sourcePos = direction === 'vertical' ? Position.Bottom : Position.Right
   return (
-    <div className={`node-start group relative px-4 py-3 min-w-[120px] ${nodeBg(def)} rounded-lg hover:shadow-glow-md dark:hover:shadow-glow-md-w transition-shadow duration-300  ${nodeBorder(def)} ${selected ? nodeRing(def) : ''}`}>
+    <div className={`node-start group relative px-4 py-3 min-w-[120px] ${nodeBg(def)} rounded-lg transition-shadow duration-300  ${nodeBorder(def)} ${selected ? nodeRing(def) : 'hover:shadow-glow-md dark:hover:shadow-glow-md-w'}`}>
       <Handle type="source" position={sourcePos} className={handleClass(def)} />
       <div className="text-center">
         <div className="text-black text-lg mb-1">{def.icon}</div>
         <div className="font-bold text-gray-800 text-sm">{def.shortLabel}</div>
         <div className="text-xs text-gray-700 font-medium mt-1">{data.label}</div>
       </div>
-      <div className={hoverGlow(def)}></div>
     </div>
   );
 }
@@ -53,7 +49,7 @@ export function SkillNode({ data, selected }: { data: any; selected: boolean }):
   const targetPos = direction === 'vertical' ? Position.Top : Position.Left
   const sourcePos = direction === 'vertical' ? Position.Bottom : Position.Right
   return (
-    <div className={`node-skill group relative px-4 py-3 min-w-[160px] ${nodeBg(def)} rounded-lg hover:shadow-glow-md dark:hover:shadow-glow-md-w transition-shadow duration-300 ${nodeBorder(def)} ${selected ? nodeRing(def) : ''}`}>
+    <div className={`node-skill group relative px-4 py-3 min-w-[160px] ${nodeBg(def)} rounded-lg transition-shadowduration-300 ${nodeBorder(def)} ${selected ? nodeRing(def) : 'hover:shadow-glow-md dark:hover:shadow-glow-md-w'}`}>
       <Handle type="target" position={targetPos} className={handleClass(def)} />
       <Handle type="source" position={sourcePos} className={handleClass(def)} />
       <div className="flex items-center space-x-3">
@@ -70,7 +66,6 @@ export function SkillNode({ data, selected }: { data: any; selected: boolean }):
           )}
         </div>
       </div>
-      <div className={hoverGlow(def)}></div>
     </div>
   );
 }
@@ -84,12 +79,12 @@ export function BranchNode({ data, selected }: { data: any; selected: boolean })
   const targetPos = direction === 'vertical' ? Position.Top : Position.Left
   const sourcePos = direction === 'vertical' ? Position.Bottom : Position.Right
   const branches = data.config?.branches || [
-    { id: 'branch1', label: '条件1', condition: '' },
-    { id: 'branch2', label: '条件2', condition: '' }
+    { id: 'branch1', label: '条件1', condition: 'hover:shadow-glow-md dark:hover:shadow-glow-md-w' },
+    { id: 'branch2', label: '条件2', condition: 'hover:shadow-glow-md dark:hover:shadow-glow-md-w' }
   ];
 
   return (
-    <div className={`node-branch group relative px-4 py-3 min-w-[160px] ${nodeBg(def)} rounded-lg hover:shadow-glow-md dark:hover:shadow-glow-md-w transition-shadow duration-300 ${nodeBorder(def)} ${selected ? nodeRing(def) : ''}`}>
+    <div className={`node-branch group relative px-4 py-3 min-w-[160px] ${nodeBg(def)} rounded-lg transition-shadowduration-300 ${nodeBorder(def)} ${selected ? nodeRing(def) : 'hover:shadow-glow-md dark:hover:shadow-glow-md-w'}`}>
       <Handle type="target" position={targetPos} className={handleClass(def)} />
       <Handle type="source" position={sourcePos} className={handleClass(def)} />
       <div className="flex items-center space-x-3">
@@ -104,7 +99,6 @@ export function BranchNode({ data, selected }: { data: any; selected: boolean })
           </div>
         </div>
       </div>
-      <div className={hoverGlow(def)}></div>
     </div>
   );
 }
@@ -118,7 +112,7 @@ export function ApiNode({ data, selected }: { data: any; selected: boolean }): R
   const targetPos = direction === 'vertical' ? Position.Top : Position.Left
   const sourcePos = direction === 'vertical' ? Position.Bottom : Position.Right
   return (
-    <div className={`node-api group relative px-4 py-3 min-w-[160px] ${nodeBg(def)} rounded-lg hover:shadow-glow-md dark:hover:shadow-glow-md-w transition-shadow duration-300 ${nodeBorder(def)} ${selected ? nodeRing(def) : ''}`}>
+    <div className={`node-api group relative px-4 py-3 min-w-[160px] ${nodeBg(def)} rounded-lg transition-shadowduration-300 ${nodeBorder(def)} ${selected ? nodeRing(def) : 'hover:shadow-glow-md dark:hover:shadow-glow-md-w'}`}>
       <Handle type="target" position={targetPos} className={handleClass(def)} />
       <Handle type="source" position={sourcePos} className={handleClass(def)} />
       <div className="flex items-center space-x-3">
@@ -135,7 +129,6 @@ export function ApiNode({ data, selected }: { data: any; selected: boolean }): R
           )}
         </div>
       </div>
-      <div className={hoverGlow(def)}></div>
     </div>
   );
 }
@@ -149,7 +142,7 @@ export function LLMNode({ data, selected }: { data: any; selected: boolean }): R
   const targetPos = direction === 'vertical' ? Position.Top : Position.Left
   const sourcePos = direction === 'vertical' ? Position.Bottom : Position.Right
   return (
-    <div className={`node-llm group relative px-4 py-3 min-w-[160px] ${nodeBg(def)} rounded-lg hover:shadow-glow-md dark:hover:shadow-glow-md-w transition-shadow duration-300 ${nodeBorder(def)} ${selected ? nodeRing(def) : ''}`}>
+    <div className={`node-llm group relative px-4 py-3 min-w-[160px] ${nodeBg(def)} rounded-lg transition-shadowduration-300 ${nodeBorder(def)} ${selected ? nodeRing(def) : 'hover:shadow-glow-md dark:hover:shadow-glow-md-w'}`}>
       <Handle type="target" position={targetPos} className={handleClass(def)} />
       <Handle type="source" position={sourcePos} className={handleClass(def)} />
       <div className="flex items-center space-x-3">
@@ -166,7 +159,6 @@ export function LLMNode({ data, selected }: { data: any; selected: boolean }): R
           )}
         </div>
       </div>
-      <div className={hoverGlow(def)}></div>
     </div>
   );
 }
@@ -180,7 +172,7 @@ export function AgentNode({ data, selected }: { data: any; selected: boolean }):
   const targetPos = direction === 'vertical' ? Position.Top : Position.Left
   const sourcePos = direction === 'vertical' ? Position.Bottom : Position.Right
   return (
-    <div className={`node-agent group relative px-4 py-3 min-w-[160px] ${nodeBg(def)} rounded-lg hover:shadow-glow-md dark:hover:shadow-glow-md-w transition-shadow duration-300 ${nodeBorder(def)} ${selected ? nodeRing(def) : ''}`}>
+    <div className={`node-agent group relative px-4 py-3 min-w-[160px] ${nodeBg(def)} rounded-lg transition-shadowduration-300 ${nodeBorder(def)} ${selected ? nodeRing(def) : 'hover:shadow-glow-md dark:hover:shadow-glow-md-w'}`}>
       <Handle type="target" position={targetPos} className={handleClass(def)} />
       <Handle type="source" position={sourcePos} className={handleClass(def)} />
       <div className="flex items-center space-x-3">
@@ -197,7 +189,6 @@ export function AgentNode({ data, selected }: { data: any; selected: boolean }):
           )}
         </div>
       </div>
-      <div className={hoverGlow(def)}></div>
     </div>
   );
 }
@@ -211,7 +202,7 @@ export function CliNode({ data, selected }: { data: any; selected: boolean }): R
   const targetPos = direction === 'vertical' ? Position.Top : Position.Left
   const sourcePos = direction === 'vertical' ? Position.Bottom : Position.Right
   return (
-    <div className={`node-cli group relative px-4 py-3 min-w-[160px] ${nodeBg(def)} rounded-lg hover:shadow-glow-md dark:hover:shadow-glow-md-w transition-shadow duration-300 ${nodeBorder(def)} ${selected ? nodeRing(def) : ''}`}>
+    <div className={`node-cli group relative px-4 py-3 min-w-[160px] ${nodeBg(def)} rounded-lg transition-shadowduration-300 ${nodeBorder(def)} ${selected ? nodeRing(def) : 'hover:shadow-glow-md dark:hover:shadow-glow-md-w'}`}>
       <Handle type="target" position={targetPos} className={handleClass(def)} />
       <Handle type="source" position={sourcePos} className={handleClass(def)} />
       <div className="flex items-center space-x-3">
@@ -228,7 +219,6 @@ export function CliNode({ data, selected }: { data: any; selected: boolean }): R
           )}
         </div>
       </div>
-      <div className={hoverGlow(def)}></div>
     </div>
   );
 }
@@ -242,7 +232,7 @@ export function TextNode({ data, selected }: { data: any; selected: boolean }): 
   const targetPos = direction === 'vertical' ? Position.Top : Position.Left
   const sourcePos = direction === 'vertical' ? Position.Bottom : Position.Right
   return (
-    <div className={`node-text group relative px-4 py-3 min-w-[160px] ${nodeBg(def)} rounded-lg hover:shadow-glow-md dark:hover:shadow-glow-md-w transition-shadow duration-300 ${nodeBorder(def)} ${selected ? nodeRing(def) : ''}`}>
+    <div className={`node-text group relative px-4 py-3 min-w-[160px] ${nodeBg(def)} rounded-lg transition-shadowduration-300 ${nodeBorder(def)} ${selected ? nodeRing(def) : 'hover:shadow-glow-md dark:hover:shadow-glow-md-w'}`}>
       <Handle type="target" position={targetPos} className={handleClass(def)} />
       <Handle type="source" position={sourcePos} className={handleClass(def)} />
       <div className="flex items-center space-x-3">
@@ -259,7 +249,6 @@ export function TextNode({ data, selected }: { data: any; selected: boolean }): 
           )}
         </div>
       </div>
-      <div className={hoverGlow(def)}></div>
     </div>
   );
 }
@@ -272,14 +261,13 @@ export function EndNode({ data, selected }: { data: any; selected: boolean }): R
   const def = NODE_DEFS_MAP['end']
   const targetPos = direction === 'vertical' ? Position.Top : Position.Left
   return (
-    <div className={`node-end group relative px-4 py-3 min-w-[120px] ${nodeBg(def)} rounded-lg hover:shadow-glow-md dark:hover:shadow-glow-md-w transition-shadow duration-300 ${nodeBorder(def)} ${selected ? nodeRing(def) : ''}`}>
+    <div className={`node-end group relative px-4 py-3 min-w-[120px] ${nodeBg(def)} rounded-lg transition-shadowduration-300 ${nodeBorder(def)} ${selected ? nodeRing(def) : 'hover:shadow-glow-md dark:hover:shadow-glow-md-w'}`}>
       <Handle type="target" position={targetPos} className={handleClass(def)} />
       <div className="text-center">
         <div className="text-black text-lg mb-1">{def.icon}</div>
         <div className="font-bold text-gray-800 text-sm">{def.shortLabel}</div>
         <div className="text-xs text-gray-700 font-medium mt-1">{data.label}</div>
       </div>
-      <div className={hoverGlow(def)}></div>
     </div>
   );
 }

@@ -201,11 +201,20 @@ const inferResource = (path: string): string | null => {
 
 const callInternalApi = async (method: string, path: string, body?: string): Promise<string> => {
   const opts: any = { method, headers: { 'Content-Type': 'application/json' } }
-  if (body && (method === 'POST' || method === 'PUT')) opts.body = body
+  if (body && (method === 'POST' || method === 'PUT')) {
+    // 确保 body 是合法 JSON，重新序列化避免 LLM 生成不规范的 JSON
+    try {
+      opts.body = JSON.stringify(JSON.parse(body))
+    } catch {
+      return `JSON 解析错误：LLM 生成的请求体不是合法的 JSON 格式，请修正后重试。前100字符: ${body.substring(0, 100)}`
+    }
+  }
+  const url = `http://127.0.0.1:${SERVER_PORT}${path}`
+  console.log(`[API工具] ${method} ${path} bodyLen=${body?.length || 0}`)
   try {
-    const resp = await fetch(`http://127.0.0.1:${SERVER_PORT}${path}`, opts)
+    const resp = await fetch(url, opts)
     const text = await resp.text()
-    // 写操作成功后通知前端数据已变更
+    console.log(`[API工具] 响应 ${resp.status} ${method} ${path} 长度=${text.length}`)
     if (method !== 'GET' && resp.ok) {
       const resource = inferResource(path)
       if (resource) changeNotifier.emitChange(resource as any)
@@ -214,6 +223,7 @@ const callInternalApi = async (method: string, path: string, body?: string): Pro
       ? text.substring(0, TOOL_HTTP_MAX_CHARS) + '\n...(响应过长，已截断)'
       : text
   } catch (err) {
+    console.error(`[API工具] 失败 ${method} ${url}: ${err instanceof Error ? err.message : String(err)}`)
     return `API 调用失败: ${err instanceof Error ? err.message : String(err)}`
   }
 }
@@ -226,11 +236,24 @@ export const workflowsApiTool = tool(
   {
     name: 'workflowsApi',
     description: `调用工作流和执行相关的内部 REST API。路径中的 {id} 需替换为实际 ID。
+节点类型及config结构:
+  节点通用结构: {"id":"唯一id","type":"类型","position":{"x":0,"y":0},"data":{"label":"显示名","config":{...}}}
+  start/end: 节点通用结构,但无需config
+  llm:   config={"enabledTools":[],"prompt":"提示词","variables":[]}
+  branch: config={"branches":[{"id":"b1","label":"分支A","condition":"条件"}]}
+  skill: config={"skillId":"技能id","skillName":"技能名"}
+  api:   config={"apiConfig":{"url":"https://...","method":"GET","headers":"","body":""}}
+  agent: config={"agentId":"agentId","agentName":"名称"}
+  cli:   config={"cliConfig":{"templateId":"custom","command":"命令","workingDirectory":"","timeout":60}}
+  text:  config={"text":"文本内容","variables":[]}
+  edge: {"id":"唯一id","source":"源id","target":"目标id"}
+  分支出边额外字段: "condition":"分支id", "label":"分支标签"
 
-GET  /api/workflows                              - 获取全部工作流列表
-POST /api/workflows                              - 创建工作流 body: {"name":"","description":"","nodes":[],"edges":[]}
+
+GET  /api/workflows                              - 获取全部工作流列表（?name=&createdAfter=&updatedAfter=）
+POST /api/workflows                              - 创建工作流（节点类型及config见上方）
 GET  /api/workflows/{id}                         - 获取单个工作流详情
-PUT  /api/workflows/{id}                         - 更新工作流
+PUT  /api/workflows/{id}                         - 更新工作流（节点类型及config见上方）
 DEL  /api/workflows/{id}                         - 删除工作流
 POST /api/execute-workflow/monitor               - 异步执行工作流 body: {"workflow":{},"input":""}
 GET  /api/execute-workflow/progress/{executionId} - 获取执行进度
@@ -255,15 +278,15 @@ export const agentsSkillsApiTool = tool(
     name: 'agentsSkillsApi',
     description: `调用 Agent 和技能管理相关的内部 REST API。路径中的 {id} 需替换为实际 ID。
 
-GET  /api/agents                     - 获取全部 Agent 列表
+GET  /api/agents                     - 获取全部 Agent 列表（?name=&createdAfter=&updatedAfter=）
 POST /api/agents                     - 创建 Agent body: {"name":"","description":"","instructions":"","workflowId":"(可选)"}
 GET  /api/agents/{id}                - 获取单个 Agent 详情
-PUT  /api/agents/{id}                - 更新 Agent
+PUT  /api/agents/{id}                - 更新 Agent body: {"name":"","description":"","instructions":"","workflowId":"(可选)"}
 DEL  /api/agents/{id}                - 删除 Agent
-GET  /api/skills                     - 获取全部技能列表
+GET  /api/skills                     - 获取全部技能列表（?name=&createdAfter=&updatedAfter=）
 POST /api/skills                     - 创建技能 body: {"name":"","description":"","content":""}
 GET  /api/skills/{id}                - 获取技能详情
-PUT  /api/skills/{id}                - 更新技能
+PUT  /api/skills/{id}                - 更新技能 body: {"name":"","description":"","content":""}
 DEL  /api/skills/{id}                - 删除技能`,
     schema: z.object({
       method: z.enum(['GET', 'POST', 'PUT', 'DELETE']).describe('HTTP 方法'),
@@ -281,7 +304,7 @@ export const knowledgeApiTool = tool(
     description: `调用知识库管理相关的内部 REST API。路径中的 {id} 需替换为实际 ID。
 
 知识库管理:
-GET  /api/knowledge-base                                    - 获取全部知识库列表
+GET  /api/knowledge-base                                    - 获取全部知识库列表（?name=&createdAfter=&updatedAfter=）
 POST /api/knowledge-base                                    - 创建知识库 body: {"name":"","type":"internal|external","description":"","chunkSize":1000,"chunkOverlap":200}
 PUT  /api/knowledge-base/{id}                               - 更新知识库 body: {"name":"","description":"","type":"","chunkSize":1000}
 DEL  /api/knowledge-base/{id}                               - 删除知识库（会同时删除所有分块和向量）
@@ -324,7 +347,7 @@ POST /api/llm-config/test-connection      - 测试连接 body: {"provider":"","a
 DEL  /api/llm-config/{id}                 - 删除 LLM 配置
 GET  /api/proxy                           - 获取代理配置
 PUT  /api/proxy                           - 更新代理 body: {"enabled":true,"host":"","port":""}
-GET  /api/triggers                        - 获取触发器列表
+GET  /api/triggers                        - 获取触发器列表（?name=&createdAfter=&updatedAfter=）
 POST /api/triggers                        - 创建触发器 body: {"name":"","type":"cron|webhook","cronExpression":"","workflowId":"","enabled":true}
 POST /api/triggers/{id}/run               - 手动触发
 GET  /api/data/db-stats                   - 数据库存储统计

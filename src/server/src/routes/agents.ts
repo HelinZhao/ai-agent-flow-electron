@@ -1,13 +1,29 @@
 import { Router } from 'express'
+import { Op } from 'sequelize'
 import { AgentModel } from '../models'
 import { monitoredExecutor } from './execute-workflow'
 
 const router = Router()
 
-// 获取所有智能体
-router.get('/', async (_req, res) => {
+// 获取所有智能体（支持 ?name= 按名称搜索）
+router.get('/', async (req, res) => {
   try {
+    const where: any = {}
+    if (req.query.name) {
+      where.name = { [Op.like]: `%${req.query.name}%` }
+    }
+    if (req.query.createdAfter || req.query.createdBefore) {
+      where.createdAt = {}
+      if (req.query.createdAfter) where.createdAt[Op.gte] = new Date(req.query.createdAfter as string)
+      if (req.query.createdBefore) where.createdAt[Op.lte] = new Date(req.query.createdBefore as string)
+    }
+    if (req.query.updatedAfter || req.query.updatedBefore) {
+      where.updatedAt = {}
+      if (req.query.updatedAfter) where.updatedAt[Op.gte] = new Date(req.query.updatedAfter as string)
+      if (req.query.updatedBefore) where.updatedAt[Op.lte] = new Date(req.query.updatedBefore as string)
+    }
     const agents = await AgentModel.findAll({
+      where,
       order: [['updatedAt', 'DESC']]
     })
     return res.status(200).json(agents)

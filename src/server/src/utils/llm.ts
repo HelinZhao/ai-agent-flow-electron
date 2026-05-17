@@ -226,35 +226,30 @@ const callLLMOnce = async (
     let stepCount = 0
     const stream = await agent.stream({ messages }, { recursionLimit })
 
-    for await (const chunk of stream) {
-      for (const [nodeName, nodeState] of Object.entries(chunk)) {
-        if (nodeName === 'agent') {
-          const msg = nodeState?.messages?.[nodeState.messages.length - 1]
-          if (msg) {
-            stepCount++
-            lastAgentMsg = msg
-            if (msg.content && typeof msg.content === 'string') {
-              console.log(`[LLM Agent] 步骤${stepCount} - 模型输出: ${msg.content.substring(0, 200)}${msg.content.length > 200 ? '...' : ''}`)
-            }
-            const toolCalls = (msg as any).tool_calls
-            if (toolCalls && toolCalls.length > 0) {
-              for (const tc of toolCalls) {
+    for await (const rawChunk of stream) {
+      const chunk = rawChunk as any
+      for (const [nodeName, nodeState] of Object.entries<any>(chunk)) {
+        if (nodeName === "model_request") {
+          const msgs = nodeState?.messages
+          const msg = Array.isArray(msgs) ? msgs[msgs.length - 1] : undefined
+          if (msg?.content !== undefined || msg?.tool_calls?.length) {
+            stepCount++; lastAgentMsg = msg
+            if (msg.content && typeof msg.content === "string")
+              console.log(`[LLM Agent] 步骤${stepCount} - 模型输出: ${msg.content.substring(0, 200)}${msg.content.length > 200 ? "..." : ""}`)
+            if (msg?.tool_calls?.length)
+              for (const tc of msg.tool_calls)
                 console.log(`[LLM Agent] 步骤${stepCount} - 调用工具: ${tc.name}(${JSON.stringify(tc.args).substring(0, 300)})`)
-              }
-            }
           }
-        } else if (nodeName === 'tools') {
-          const msg = nodeState?.messages?.[nodeState.messages.length - 1]
-          if (msg && msg.content) {
-            const resultStr = typeof msg.content === 'string'
-              ? msg.content
-              : JSON.stringify(msg.content)
-            console.log(`[LLM Agent] 工具结果 (${msg.name || 'unknown'}): ${resultStr.substring(0, 300)}${resultStr.length > 300 ? '...' : ''}`)
+        } else if (nodeName === "tools") {
+          const msgs = nodeState?.messages
+          const msg = Array.isArray(msgs) ? msgs[msgs.length - 1] : undefined
+          if (msg?.content) {
+            const resultStr = typeof msg.content === "string" ? msg.content : JSON.stringify(msg.content)
+            console.log(`[LLM Agent] 工具结果 (${msg.name || "unknown"}): ${resultStr.substring(0, 300)}${resultStr.length > 300 ? "..." : ""}`)
           }
         }
       }
     }
-
     const finalContent = lastAgentMsg?.content?.toString() || ''
     if (!finalContent) {
       console.log(`[LLM Agent] agent 返回内容为空，可能因递归限制(${recursionLimit})或步数不足被截断`)
