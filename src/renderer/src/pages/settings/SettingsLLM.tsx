@@ -267,197 +267,201 @@ export default function SettingsLLM(): React.JSX.Element {
                 ))}
             </div>
 
-            {/* 配置表单 */}
+            {/* 配置表单弹窗 */}
             {showForm && (
-                <form onSubmit={handleSubmit(onSubmit)} className="space-y-5 border border-gray-200 dark:border-gray-700 rounded-xl p-5 bg-white dark:bg-gray-800/40">
-                    <div className="flex items-center justify-between border-b border-gray-100 dark:border-gray-700/50 py-3 -mx-5 px-5 -mt-5 mb-2 rounded-t-xl bg-gray-50/50 dark:bg-gray-900/30">
-                        <h3 className="text-sm font-semibold text-gray-900 dark:text-white">
-                            {editingConfig ? '编辑配置' : '新建配置'}
-                        </h3>
-                        <button
-                            type="button"
-                            onClick={() => { setShowForm(false); setEditingConfig(null); reset() }}
-                            className="flex items-center justify-center w-6 h-6 rounded-lg text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors"
-                        >
-                            <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M18 6L6 18M6 6l12 12" /></svg>
-                        </button>
-                    </div>
+                <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm"
+                    onClick={() => { setShowForm(false); setEditingConfig(null); reset() }}>
+                    <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-2xl w-full max-w-lg mx-4 max-h-[90vh] flex flex-col"
+                        onClick={e => e.stopPropagation()}>
+                        <div className="px-6 py-4 border-b border-gray-200 dark:border-gray-700 flex items-center justify-between flex-shrink-0">
+                            <h2 className="text-lg font-semibold text-gray-800 dark:text-gray-100">
+                                {editingConfig ? '编辑配置' : '新建配置'}
+                            </h2>
+                            <button
+                                onClick={() => { setShowForm(false); setEditingConfig(null); reset() }}
+                                className="flex items-center justify-center w-7 h-7 rounded-lg text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors">
+                                <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M18 6L6 18M6 6l12 12" /></svg>
+                            </button>
+                        </div>
 
-                    <div>
-                        <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                            配置名称 *
-                        </label>
-                        <CustomInput
-                            {...register('name', { required: '请输入配置名称' })}
-                            placeholder="例如：OpenAI 主配置"
-                            error={errors.name?.message}
-                            size='sm'
-                        />
-                        {errors.name && (
-                            <p className="mt-1 text-sm text-red-600">{errors.name.message}</p>
-                        )}
-                    </div>
-
-                    <div>
-                        <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                            提供商
-                        </label>
-                        <CustomSelect
-                            value={provider}
-                            onChange={(value) => {
-                                setValue('provider', value as LLMConfig['provider'], { shouldValidate: true });
-                            }}
-                            options={Object.entries(PROVIDER_MATES).map(([key, item]) => ({ value: key, label: item.name }))}
-                            placeholder="选择提供商"
-                            error={!!errors.provider}
-                            size='sm'
-                        />
-                        {errors.provider && (
-                            <p className="mt-1 text-sm text-red-600">{errors.provider.message}</p>
-                        )}
-                    </div>
-
-                    <div>
-                        <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                            API Key {provider !== 'ollama' ? '*' : ''}
-                        </label>
-                        {provider === 'ollama' ? (
-                            <p className="text-sm text-gray-500 dark:text-gray-400 py-2">Ollama 本地模型不需要 API Key</p>
-                        ) : (
-                            <>
+                        <form id="llm-config-form" onSubmit={handleSubmit(onSubmit)} className="px-6 py-4 space-y-4 overflow-y-auto flex-1">
+                            <div>
+                                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5">
+                                    配置名称 *
+                                </label>
                                 <CustomInput
-                                    type="password"
-                                    {...register('apiKey', { required: provider !== 'ollama' ? '请输入API Key' : false })}
-                                    placeholder={(PROVIDER_MATES[provider]?.prefix || "") + "..."}
-                                    error={errors.apiKey?.message}
+                                    {...register('name', { required: '请输入配置名称' })}
+                                    placeholder="例如：OpenAI 主配置"
+                                    error={errors.name?.message}
                                     size='sm'
                                 />
-                                {errors.apiKey && (
-                                    <p className="mt-1 text-sm text-red-600">{errors.apiKey.message}</p>
+                                {errors.name && (
+                                    <p className="mt-1 text-sm text-red-600">{errors.name.message}</p>
                                 )}
-                            </>
-                        )}
-                    </div>
-
-                    <div>
-                        <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                            模型名称
-                        </label>
-                        <CustomInput
-                            {...register('model')}
-                            placeholder={provider === 'ollama' ? 'bge-m3-q8_0（推荐中文） / nomic-embed-text' : "gpt-3.5-turbo"}
-                            helper={provider === 'ollama' ? '先在终端运行 ollama pull <模型名> 下载模型' : undefined}
-                            size='sm'
-                        />
-                    </div>
-
-                    {provider !== 'ollama' && (
-                        <div>
-                            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                                API Base URL (可选)
-                            </label>
-                            <CustomInput
-                                {...register('baseUrl')}
-                                placeholder={(PROVIDER_MATES[provider]?.baseUrl ?? "") || 'https://api.openai.com/v1'}
-                                helper="留空使用默认地址，或使用自定义代理地址"
-                                size='sm'
-                            />
-                        </div>
-                    )}
-
-                    {provider !== 'ollama' && (
-                        <div className="grid grid-cols-6 gap-4">
-                            <div className="col-span-3">
-                                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                                    温度
-                                </label>
-                                <div className="flex items-center gap-3">
-                                    <TemperatureSlider
-                                        value={watch('temperature') || 0.7}
-                                        onChange={(v) => setValue('temperature', v, { shouldValidate: true })}
-                                        min={TEMPERATURE_RANGE.min}
-                                        max={TEMPERATURE_RANGE.max}
-                                        step={TEMPERATURE_RANGE.step}
-                                    />
-                                    <span className="text-sm font-mono text-gray-600 dark:text-gray-300 min-w-[3ch] tabular-nums">
-                                        {watch('temperature') || 0.7}
-                                    </span>
-                                </div>
                             </div>
 
-                            <div className="col-span-3">
-                                <label className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                                    最大Token数
+                            <div>
+                                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5">
+                                    提供商
+                                </label>
+                                <CustomSelect
+                                    value={provider}
+                                    onChange={(value) => {
+                                        setValue('provider', value as LLMConfig['provider'], { shouldValidate: true });
+                                    }}
+                                    options={Object.entries(PROVIDER_MATES).map(([key, item]) => ({ value: key, label: item.name }))}
+                                    placeholder="选择提供商"
+                                    error={!!errors.provider}
+                                    size='sm'
+                                />
+                                {errors.provider && (
+                                    <p className="mt-1 text-sm text-red-600">{errors.provider.message}</p>
+                                )}
+                            </div>
+
+                            <div>
+                                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5">
+                                    API Key {provider !== 'ollama' ? '*' : ''}
+                                </label>
+                                {provider === 'ollama' ? (
+                                    <p className="text-sm text-gray-500 dark:text-gray-400 py-2">Ollama 本地模型不需要 API Key</p>
+                                ) : (
+                                    <>
+                                        <CustomInput
+                                            type="password"
+                                            {...register('apiKey', { required: provider !== 'ollama' ? '请输入API Key' : false })}
+                                            placeholder={(PROVIDER_MATES[provider]?.prefix || "") + "..."}
+                                            error={errors.apiKey?.message}
+                                            size='sm'
+                                        />
+                                        {errors.apiKey && (
+                                            <p className="mt-1 text-sm text-red-600">{errors.apiKey.message}</p>
+                                        )}
+                                    </>
+                                )}
+                            </div>
+
+                            <div>
+                                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5">
+                                    模型名称
                                 </label>
                                 <CustomInput
-                                    type="number"
-                                    min={MAX_TOKENS_RANGE.min}
-                                    max={MAX_TOKENS_RANGE.max}
-                                    {...register('maxTokens', { valueAsNumber: true })}
+                                    {...register('model')}
+                                    placeholder={provider === 'ollama' ? 'bge-m3-q8_0（推荐中文） / nomic-embed-text' : "gpt-3.5-turbo"}
+                                    helper={provider === 'ollama' ? '先在终端运行 ollama pull <模型名> 下载模型' : undefined}
                                     size='sm'
                                 />
                             </div>
-                        </div>
-                    )}
 
-                    {provider !== 'ollama' && (
-                        <div className="p-3.5 bg-amber-50 dark:bg-amber-900/15 border border-amber-200/70 dark:border-amber-700/40 rounded-lg">
-                            <div className="flex gap-3">
-                                <div className="flex-shrink-0 mt-0.5">
-                                    <svg className="h-4 w-4 text-amber-500" viewBox="0 0 20 20" fill="currentColor">
-                                        <path fillRule="evenodd" d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z" clipRule="evenodd" />
-                                    </svg>
+                            {provider !== 'ollama' && (
+                                <div>
+                                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5">
+                                        API Base URL (可选)
+                                    </label>
+                                    <CustomInput
+                                        {...register('baseUrl')}
+                                        placeholder={(PROVIDER_MATES[provider]?.baseUrl ?? "") || 'https://api.openai.com/v1'}
+                                        helper="留空使用默认地址，或使用自定义代理地址"
+                                        size='sm'
+                                    />
                                 </div>
-                                <div className="text-xs text-amber-700 dark:text-amber-400 leading-relaxed">
-                                    <p className="font-medium text-amber-800 dark:text-amber-300 mb-0.5">消息格式说明</p>
-                                    <p>当前系统仅支持 OpenAI 兼容的消息格式。请确保您的 LLM 提供商兼容 OpenAI API 规范，否则可能导致调用失败。</p>
-                                </div>
-                            </div>
-                        </div>
-                    )}
-
-                    <div className="flex gap-3 pt-1">
-                        <CustomButton
-                            type="submit"
-                            disabled={isSaving || isTesting}
-                            variant="primary"
-                            className="flex-1"
-                        >
-                            {isSaving ? '保存中...' : editingConfig ? '更新配置' : '创建配置'}
-                        </CustomButton>
-
-                        <CustomButton
-                            type="button"
-                            onClick={testConnection}
-                            disabled={isSaving || isTesting || (provider !== 'ollama' && !watch('apiKey'))}
-                            variant="secondary"
-                            className="flex-1"
-                        >
-                            {isTesting ? (
-                                <svg className="w-4 h-4 animate-spin" viewBox="0 0 24 24" fill="none">
-                                    <circle cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="3" className="opacity-20" />
-                                    <path d="M12 2a10 10 0 0 1 10 10" stroke="currentColor" strokeWidth="3" strokeLinecap="round" />
-                                </svg>
-                            ) : (
-                                <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M13 10V3L4 14h7v7l9-11h-7z" /></svg>
                             )}
-                            {isTesting ? '测试中...' : '测试连接'}
-                        </CustomButton>
 
-                        <CustomButton
-                            type="button"
-                            onClick={() => {
-                                setIsTesting(false);
-                                setShowForm(false);
-                                setEditingConfig(null);
-                                reset();
-                            }}
-                            variant="ghost"
-                        >
-                            取消
-                        </CustomButton>
+                            {provider !== 'ollama' && (
+                                <div className="grid grid-cols-6 gap-4">
+                                    <div className="col-span-3">
+                                        <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5">
+                                            温度
+                                        </label>
+                                        <div className="flex items-center gap-3">
+                                            <TemperatureSlider
+                                                value={watch('temperature') || 0.7}
+                                                onChange={(v) => setValue('temperature', v, { shouldValidate: true })}
+                                                min={TEMPERATURE_RANGE.min}
+                                                max={TEMPERATURE_RANGE.max}
+                                                step={TEMPERATURE_RANGE.step}
+                                            />
+                                            <span className="text-sm font-mono text-gray-600 dark:text-gray-300 min-w-[3ch] tabular-nums">
+                                                {watch('temperature') || 0.7}
+                                            </span>
+                                        </div>
+                                    </div>
+
+                                    <div className="col-span-3">
+                                        <label className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5">
+                                            最大Token数
+                                        </label>
+                                        <CustomInput
+                                            type="number"
+                                            min={MAX_TOKENS_RANGE.min}
+                                            max={MAX_TOKENS_RANGE.max}
+                                            {...register('maxTokens', { valueAsNumber: true })}
+                                            size='sm'
+                                        />
+                                    </div>
+                                </div>
+                            )}
+
+                            {provider !== 'ollama' && (
+                                <div className="p-3.5 bg-amber-50 dark:bg-amber-900/15 border border-amber-200/70 dark:border-amber-700/40 rounded-lg">
+                                    <div className="flex gap-3">
+                                        <div className="flex-shrink-0 mt-0.5">
+                                            <svg className="h-4 w-4 text-amber-500" viewBox="0 0 20 20" fill="currentColor">
+                                                <path fillRule="evenodd" d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z" clipRule="evenodd" />
+                                            </svg>
+                                        </div>
+                                        <div className="text-xs text-amber-700 dark:text-amber-400 leading-relaxed">
+                                            <p className="font-medium text-amber-800 dark:text-amber-300 mb-0.5">消息格式说明</p>
+                                            <p>当前系统仅支持 OpenAI 兼容的消息格式。请确保您的 LLM 提供商兼容 OpenAI API 规范，否则可能导致调用失败。</p>
+                                        </div>
+                                    </div>
+                                </div>
+                            )}
+                        </form>
+
+                        <div className="px-6 py-4 border-t border-gray-200 dark:border-gray-700 flex gap-2 justify-end flex-shrink-0">
+                            <CustomButton
+                                type="button"
+                                onClick={testConnection}
+                                disabled={isSaving || isTesting || (provider !== 'ollama' && !watch('apiKey'))}
+                                variant="secondary"
+                                size='sm'
+                            >
+                                {isTesting ? (
+                                    <svg className="w-4 h-4 animate-spin" viewBox="0 0 24 24" fill="none">
+                                        <circle cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="3" className="opacity-20" />
+                                        <path d="M12 2a10 10 0 0 1 10 10" stroke="currentColor" strokeWidth="3" strokeLinecap="round" />
+                                    </svg>
+                                ) : (
+                                    <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M13 10V3L4 14h7v7l9-11h-7z" /></svg>
+                                )}
+                                {isTesting ? '测试中...' : '测试连接'}
+                            </CustomButton>
+                            <CustomButton
+                                type="submit"
+                                disabled={isSaving || isTesting}
+                                variant="primary"
+                                size='sm'
+                                form="llm-config-form"
+                            >
+                                {isSaving ? '保存中...' : editingConfig ? '更新配置' : '创建配置'}
+                            </CustomButton>
+                            <CustomButton
+                                type="button"
+                                onClick={() => {
+                                    setIsTesting(false);
+                                    setShowForm(false);
+                                    setEditingConfig(null);
+                                    reset();
+                                }}
+                                variant="ghost"
+                                size='sm'
+                            >
+                                取消
+                            </CustomButton>
+                        </div>
                     </div>
-                </form>
+                </div>
             )}
         </div>
     );
