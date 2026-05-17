@@ -209,7 +209,7 @@ export default function Chat(): React.JSX.Element {
                                             agentName={conv.selectedAgent!.name}
                                             onAttachmentClick={handleAttachmentClick}
                                             isLastAgent={idx === lastAgentIdx}
-                                            onRegenerate={idx === lastAgentIdx ? () => conv.regenerate(workflows, activeLLMConfig) : undefined}
+                                            onRegenerate={idx === lastAgentIdx ? () => conv.regenerate(agents, workflows, activeLLMConfig) : undefined}
                                         />
                                     ))
                                 })()}
@@ -274,6 +274,7 @@ export default function Chat(): React.JSX.Element {
                                 onSend={() => conv.sendMessage(
                                     conv.inputMessage,
                                     conv.pendingAttachments,
+                                    agents,
                                     workflows,
                                     activeLLMConfig,
                                 )}

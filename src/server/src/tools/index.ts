@@ -249,7 +249,6 @@ export const workflowsApiTool = tool(
   edge: {"id":"唯一id","source":"源id","target":"目标id"}
   分支出边额外字段: "condition":"分支id", "label":"分支标签"
 
-
 GET  /api/workflows                              - 获取全部工作流列表（?name=&createdAfter=&updatedAfter=）
 POST /api/workflows                              - 创建工作流（节点类型及config见上方）
 GET  /api/workflows/{id}                         - 获取单个工作流详情

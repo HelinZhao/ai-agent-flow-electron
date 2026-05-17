@@ -164,10 +164,11 @@ export function useConversation() {
   const sendMessage = useCallback(async (
     text: string,
     attachments: AttachmentData[],
+    agents: Agent[],
     workflows: { id: string; workflowId?: string }[],
     activeLLMConfig: unknown,
   ) => {
-    const agent = selectedAgent
+    const agent = agents.find(a => a.id === selectedAgent?.id) || selectedAgent
     if ((!text.trim() && attachments.length === 0) || !agent || !activeLLMConfig) {
       if (!activeLLMConfig) alert('请先配置LLM API')
       return
@@ -343,10 +344,11 @@ export function useConversation() {
 
   // 从末尾向前找到最后一条用户消息，删除其后所有消息并重新发送
   const regenerate = useCallback(async (
+    agents: Agent[],
     workflows: { id: string; workflowId?: string }[],
     activeLLMConfig: unknown,
   ) => {
-    const agent = selectedAgent
+    const agent = agents.find(a => a.id === selectedAgent?.id) || selectedAgent
     if (!agent || messages.length === 0) return
 
     let lastUserIdx = -1
@@ -362,7 +364,7 @@ export function useConversation() {
 
     // 截断后重新发送用户消息
     await chatRecordApi.saveRecord(agent.id, agent.name, truncated).catch(() => {})
-    await sendMessage(userMsg.content, userMsg.attachments || [], workflows, activeLLMConfig)
+    await sendMessage(userMsg.content, userMsg.attachments || [], agents, workflows, activeLLMConfig)
   }, [selectedAgent, messages, sendMessage])
 
   const sentHistory = selectedAgent ? sentHistoryRef.current[selectedAgent.id] || [] : []
