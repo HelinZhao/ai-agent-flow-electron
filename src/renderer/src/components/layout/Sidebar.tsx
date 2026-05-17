@@ -18,19 +18,7 @@ const Sidebar: React.FC<SidebarProps> = ({ currentPage, onNavigate, navItems } :
   return (
    <nav className={`hidden md:block bg-white/80 dark:bg-gray-800/80 backdrop-blur-md shadow-sm border-r border-gray-200/50 dark:border-gray-700/50 flex-shrink-0 overflow-visible z-30 transition-all duration-300 w-16 ${!sidebarCollapsed ? 'xl:w-52' : ''}`}>
           <div className="flex flex-col h-full">
-            {/* 侧边栏收起/展开按钮 - 仅在大屏显示 */}
-            <div className="hidden xl:flex items-center justify-center p-3 border-b border-gray-200/50 dark:border-gray-700/50">
-              <button
-                onClick={() => setSidebarCollapsed(!sidebarCollapsed)}
-                className="p-2 rounded-lg hover:bg-gray-100/80 dark:hover:bg-gray-700/50 dark:text-white transition-colors duration-200"
-                title={sidebarCollapsed ? '展开侧边栏' : '收起侧边栏'}
-              >
-                <svg className={`w-4 h-4 transition-transform duration-200 ${sidebarCollapsed ? 'rotate-180' : ''}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
-                </svg>
-              </button>
-            </div>
-            <div className="flex-1 flex flex-col items-center xl:items-stretch py-4 space-y-2">
+            <div className="flex-1 flex flex-col items-center xl:items-stretch pt-4 pb-2 space-y-2 overflow-y-auto overflow-x-hidden">
               {navItems.map((item) => (
                 <button
                   key={item.path}
@@ -52,6 +40,18 @@ const Sidebar: React.FC<SidebarProps> = ({ currentPage, onNavigate, navItems } :
                   </div>
                 </button>
               ))}
+            </div>
+            {/* 侧边栏收起/展开按钮 - 仅在大屏显示 */}
+            <div className="hidden xl:flex items-center justify-center p-3 border-t border-gray-200/50 dark:border-gray-700/50">
+              <button
+                onClick={() => setSidebarCollapsed(!sidebarCollapsed)}
+                className="p-2 rounded-lg hover:bg-gray-100/80 dark:hover:bg-gray-700/50 dark:text-white transition-colors duration-200"
+                title={sidebarCollapsed ? '展开侧边栏' : '收起侧边栏'}
+              >
+                <svg className={`w-4 h-4 transition-transform duration-200 ${sidebarCollapsed ? 'rotate-180' : ''}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
+                </svg>
+              </button>
             </div>
           </div>
         </nav>
