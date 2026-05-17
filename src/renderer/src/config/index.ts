@@ -259,3 +259,26 @@ export const CRON_PRESETS = [
 
 /** Webhook 基础 URL */
 export const WEBHOOK_BASE_URL = 'http://localhost:3100/webhook'
+
+// ========== 工具定义（ID → 中文标签映射） ==========
+
+export interface ToolDef { id: string; label: string; description: string }
+
+export const TOOL_DEFINITIONS: ToolDef[] = [
+  { id: 'readFile', label: '读取文件', description: '读取指定文件内容' },
+  { id: 'writeFile', label: '写入文件', description: '将内容写入指定文件' },
+  { id: 'listDirectory', label: '列出目录', description: '列出目录下的文件和子目录' },
+  { id: 'executeCommand', label: '执行命令', description: '执行 shell 命令' },
+  { id: 'httpRequest', label: 'HTTP请求', description: '发送 HTTP 请求' },
+  { id: 'webSearch', label: '网页搜索', description: '搜索网页获取信息' },
+  { id: 'workflowsApi', label: '工作流API', description: '管理工作流和执行（CRUD+执行）' },
+  { id: 'agentsSkillsApi', label: 'Agent/技能API', description: '管理 Agent 和技能（CRUD）' },
+  { id: 'knowledgeApi', label: '知识库API', description: '管理知识库和 RAG 检索' },
+  { id: 'configApi', label: '系统配置API', description: 'LLM 配置、触发器、系统设置' },
+  { id: 'readSkill', label: '读取技能', description: '读取指定技能的完整内容' },
+]
+
+/** 工具 ID → 中文标签快速查找 */
+export const TOOL_LABEL_MAP: Record<string, string> = Object.fromEntries(
+  TOOL_DEFINITIONS.map(t => [t.id, t.label])
+)

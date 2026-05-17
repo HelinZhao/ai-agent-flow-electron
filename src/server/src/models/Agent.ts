@@ -6,6 +6,9 @@ export interface AgentAttributes {
   name: string
   description: string
   instructions: string
+  type: string
+  skillIds?: string
+  enabledTools?: string
   workflowId?: string
   createdAt: Date
   updatedAt: Date
@@ -24,6 +27,9 @@ export class AgentModel
   declare name: string
   declare description: string
   declare instructions: string
+  declare type: string
+  declare skillIds?: string
+  declare enabledTools?: string
   declare workflowId?: string
   declare createdAt: Date
   declare updatedAt: Date
@@ -47,6 +53,18 @@ AgentModel.init(
     instructions: {
       type: DataTypes.TEXT,
       allowNull: false
+    },
+    type: {
+      type: DataTypes.STRING,
+      defaultValue: 'standard'
+    },
+    skillIds: {
+      type: DataTypes.TEXT,
+      allowNull: true
+    },
+    enabledTools: {
+      type: DataTypes.TEXT,
+      allowNull: true
     },
     workflowId: {
       type: DataTypes.UUID,

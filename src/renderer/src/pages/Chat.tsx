@@ -2,7 +2,7 @@ import React, { useState, useRef } from 'react';
 import { useWorkflowStore } from '@renderer/store/workflowStore';
 import { AttachmentMetadata } from '@renderer/types';
 import { AttachmentData, processFileAttachment, formatFileSize } from '@renderer/lib/attachmentUtils';
-import { SERVER_BASE_URL } from '@renderer/config';
+import { SERVER_BASE_URL, TOOL_LABEL_MAP } from '@renderer/config';
 import { useConversation } from '@renderer/hooks/useConversation';
 import AgentListSidebar from '@renderer/components/chat/AgentListSidebar';
 import ChatMessage from '@renderer/components/chat/ChatMessage';
@@ -244,7 +244,7 @@ export default function Chat(): React.JSX.Element {
                                                 <div className="space-y-1.5 mb-3">
                                                     {conv.pendingApproval!.actionRequests.map((action, i) => (
                                                         <div key={i} className="bg-gray-50/80 dark:bg-gray-600/40 rounded-lg p-2.5 text-xs border border-gray-100 dark:border-gray-600/30">
-                                                            <div className="font-medium text-gray-800 dark:text-gray-200">{action.name}</div>
+                                                            <div className="font-medium text-gray-800 dark:text-gray-200">{TOOL_LABEL_MAP[action.name] || action.name}</div>
                                                             <div className="text-gray-500 dark:text-gray-400 mt-1 max-h-[80px] overflow-auto font-mono text-[10px]">
                                                                 {JSON.stringify(action.args, null, 2)}
                                                             </div>
@@ -275,7 +275,6 @@ export default function Chat(): React.JSX.Element {
                                     conv.inputMessage,
                                     conv.pendingAttachments,
                                     agents,
-                                    workflows,
                                     activeLLMConfig,
                                 )}
                                 disabled={conv.isLoading}

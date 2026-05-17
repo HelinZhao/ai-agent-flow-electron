@@ -2,9 +2,7 @@ import { tool } from 'langchain'
 import { z } from 'zod'
 import * as fs from 'fs/promises'
 import * as path from 'path'
-import { spawn } from 'child_process'
-import * as iconv from 'iconv-lite'
-import * as jschardet from 'jschardet'
+import { execa } from 'execa'
 import { DUCKDUCKGO_URL, TOOL_EXECUTION_TIMEOUT, TOOL_READ_FILE_MAX_CHARS, TOOL_HTTP_MAX_CHARS, TOOL_WEB_SEARCH_MAX_RESULTS, TOOL_WEB_SEARCH_SNIPPET_LENGTH, WEB_SEARCH_USER_AGENT, SERVER_PORT } from '../config'
 import { changeNotifier } from '../utils/dataChangeNotifier'
 import { getUserDataDir } from '../utils/file'
@@ -15,28 +13,13 @@ const PLATFORM_HINT = process.platform === 'win32'
   ? `当前运行在 Windows 系统，当前用户名是 ${CURRENT_USER}。文件路径应使用 Windows 格式（如 C:\\Users\\${CURRENT_USER}\\Desktop\\file.txt），命令使用 cmd.exe 语法。`
   : `当前运行在 Linux/Mac 系统，当前用户名是 ${CURRENT_USER}。文件路径应使用 Unix 格式（如 /home/${CURRENT_USER}/Desktop/file.txt），命令使用 sh 语法。`
 
-const decodeBuffer = (buf: Buffer): string => {
-  if (buf.length === 0) return ''
-  if (buf.length >= 3 && buf[0] === 0xEF && buf[1] === 0xBB && buf[2] === 0xBF) {
-    return buf.subarray(3).toString('utf-8')
-  }
-  const detected = jschardet.detect(buf.toString('binary'))
-  const encoding = detected.encoding || 'utf-8'
-  if (encoding === 'ascii' || encoding === 'UTF-8') {
-    return buf.toString('utf-8')
-  }
-  return iconv.decode(buf, encoding)
-}
-
 // 路径归一化：Windows 上将 Unix 风格绝对路径转为 Windows 路径
 function normalizePath(filePath: string): string {
   if (process.platform !== 'win32') return filePath
-  // /Users/xxx/... → C:\Users\xxx\...
   const userMatch = filePath.match(/^\/Users\/([^/]+)\/(.+)$/)
   if (userMatch) {
     return path.join(process.env.USERPROFILE || `C:\\Users\\${userMatch[1]}`, userMatch[2])
   }
-  // /home/xxx/... → C:\Users\xxx\...（WSL 兼容）
   const homeMatch = filePath.match(/^\/home\/([^/]+)\/(.+)$/)
   if (homeMatch) {
     return path.join(process.env.USERPROFILE || `C:\\Users\\${homeMatch[1]}`, homeMatch[2])
@@ -46,25 +29,6 @@ function normalizePath(filePath: string): string {
 
 // 工具执行的工作目录（用户数据目录，以保证写入权限）
 export const getToolWorkingDir = (): string => getUserDataDir('/tools')
-
-const spawnWithOutput = (cmd: string, args: string[], cwd?: string, timeout?: number): Promise<string> => {
-  const timeoutMs = (timeout || TOOL_EXECUTION_TIMEOUT) * 1000
-  return new Promise((resolve, reject) => {
-    const child = spawn(cmd, args, { cwd: cwd || process.cwd(), windowsHide: true })
-    const chunks: Buffer[] = []
-    const errChunks: Buffer[] = []
-    child.stdout?.on('data', (d: Buffer) => chunks.push(d))
-    child.stderr?.on('data', (d: Buffer) => errChunks.push(d))
-    const timer = setTimeout(() => { child.kill(); reject(new Error('执行超时')) }, timeoutMs)
-    child.on('close', () => {
-      clearTimeout(timer)
-      const stdout = decodeBuffer(Buffer.concat(chunks))
-      const stderr = decodeBuffer(Buffer.concat(errChunks))
-      resolve(stderr ? `${stdout}\n[stderr]: ${stderr}` : stdout)
-    })
-    child.on('error', (err) => { clearTimeout(timer); reject(err) })
-  })
-}
 
 // tool() API: tool(func, { name, description, schema })
 export const readFileTool = tool(
@@ -124,12 +88,13 @@ export const executeCommandTool = tool(
     for (const p of blocked) {
       if (p.test(command)) return `命令被安全策略阻止: "${command}"`
     }
-    const effectiveTimeout = timeout || TOOL_EXECUTION_TIMEOUT
-    const isWin = process.platform === 'win32'
-    if (isWin) {
-      return spawnWithOutput('cmd.exe', ['/d', '/s', '/c', command], undefined, effectiveTimeout)
+    const effectiveTimeout = (timeout || TOOL_EXECUTION_TIMEOUT) * 1000
+    try {
+      const { stdout, stderr } = await execa(command, { shell: true, timeout: effectiveTimeout, reject: false, encoding: 'utf8' })
+      return stdout || stderr || '命令执行完成，无输出'
+    } catch (error) {
+      return `命令执行失败: ${error instanceof Error ? error.message : String(error)}`
     }
-    return spawnWithOutput('/bin/sh', ['-c', command], undefined, effectiveTimeout)
   },
   {
     name: 'executeCommand',
@@ -360,6 +325,26 @@ GET  /api/health                          - 健康检查`,
   }
 )
 
+export const readSkillTool = tool(
+  async ({ skillId }: { skillId: string }) => {
+    try {
+      const resp = await fetch(`http://127.0.0.1:${SERVER_PORT}/api/skills/${skillId}`)
+      if (!resp.ok) return `获取技能失败: HTTP ${resp.status}`
+      const skill = await resp.json()
+      return `名称: ${skill.name}\n描述: ${skill.description}\n内容:\n${skill.content}`
+    } catch (err) {
+      return `获取技能失败: ${err instanceof Error ? err.message : String(err)}`
+    }
+  },
+  {
+    name: 'readSkill',
+    description: `读取指定 ID 的技能的完整内容（名称、描述、正文）。当你需要了解某个技能的详细内容时调用此工具。`,
+    schema: z.object({
+      skillId: z.string().describe('技能的 ID'),
+    }),
+  }
+)
+
 const ALL_TOOLS: Record<string, any> = {
   readFile: readFileTool,
   writeFile: writeFileTool,
@@ -371,6 +356,7 @@ const ALL_TOOLS: Record<string, any> = {
   agentsSkillsApi: agentsSkillsApiTool,
   knowledgeApi: knowledgeApiTool,
   configApi: configApiTool,
+  readSkill: readSkillTool,
 }
 
 export const getToolsByIds = (ids: string[]): any[] => {
@@ -388,4 +374,5 @@ export const TOOL_DEFINITIONS = [
   { id: 'agentsSkillsApi', label: 'Agent/技能API', description: '调用 Agent 和技能管理接口' },
   { id: 'knowledgeApi', label: '知识库API', description: '调用知识库管理接口' },
   { id: 'configApi', label: '系统配置API', description: '调用 LLM 配置、触发器、系统设置接口' },
+  { id: 'readSkill', label: '读取技能', description: '读取指定技能的完整内容' },
 ]

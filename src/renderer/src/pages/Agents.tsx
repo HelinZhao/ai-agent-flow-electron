@@ -1,6 +1,7 @@
 import React, { useState, useCallback } from 'react';
 import { useWorkflowStore } from '@renderer/store/workflowStore';
 import { Agent } from '@renderer/types';
+import { TOOL_DEFINITIONS } from '@renderer/config';
 import MarkdownIt from 'markdown-it';
 import MdEditor from 'react-markdown-editor-lite';
 import 'react-markdown-editor-lite/lib/index.css';
@@ -9,6 +10,8 @@ import CustomSelect from '@renderer/components/ui/CustomSelect';
 import CustomInput from '@renderer/components/ui/CustomInput';
 import CustomButton from '@renderer/components/ui/CustomButton';
 import ResponsiveGrid from '@renderer/components/ui/ResponsiveGrid';
+
+const AVAILABLE_TOOLS = TOOL_DEFINITIONS
 
 const mdParser = new MarkdownIt(/* Markdown-it options */);
 
@@ -84,7 +87,7 @@ const AgentCard = React.memo(function AgentCard({
 })
 
 export default function Agents(): React.JSX.Element {
-    const { agents, addAgent, updateAgent, deleteAgent, workflows } = useWorkflowStore();
+    const { agents, skills, addAgent, updateAgent, deleteAgent, workflows } = useWorkflowStore();
     const [selectedAgentId, setSelectedAgentId] = useState<string | null>(null);
     const [searchTerm, setSearchTerm] = useState('');
 
@@ -101,13 +104,16 @@ export default function Agents(): React.JSX.Element {
         name: '',
         description: '',
         instructions: '',
+        type: 'standard',
+        skillIds: [] as string[],
+        enabledTools: [] as string[],
         workflowId: ''
     });
     const [isLoading, setIsLoading] = useState(false);
 
     const handleCreate = useCallback((): void => {
         setSelectedAgentId('__create__');
-        setFormData({ name: '', description: '', instructions: '', workflowId: '' });
+        setFormData({ name: '', description: '', instructions: '', type: 'standard', skillIds: [], enabledTools: [], workflowId: '' });
         setIsEditing(true);
     }, []);
 
@@ -117,6 +123,9 @@ export default function Agents(): React.JSX.Element {
             name: agent.name,
             description: agent.description,
             instructions: agent.instructions,
+            type: agent.type || 'standard',
+            skillIds: agent.skillIds || [],
+            enabledTools: agent.enabledTools || [],
             workflowId: agent.workflowId || ''
         });
         setIsEditing(true);
@@ -127,14 +136,24 @@ export default function Agents(): React.JSX.Element {
 
         setIsLoading(true);
         try {
+            const payload = {
+                name: formData.name,
+                description: formData.description,
+                instructions: formData.instructions,
+                type: formData.type,
+                ...(formData.type === 'standard'
+                    ? { skillIds: formData.skillIds, enabledTools: formData.enabledTools, workflowId: undefined }
+                    : { workflowId: formData.workflowId || undefined, skillIds: undefined, enabledTools: undefined }
+                )
+            };
             if (selectedAgent) {
-                await updateAgent(selectedAgent.id, formData);
+                await updateAgent(selectedAgent.id, payload);
             } else {
-                await addAgent(formData);
+                await addAgent(payload as any);
             }
             setIsEditing(false);
             setSelectedAgentId(null);
-            setFormData({ name: '', description: '', instructions: '', workflowId: '' });
+            setFormData({ name: '', description: '', instructions: '', type: 'standard', skillIds: [], enabledTools: [], workflowId: '' });
         } catch (error) {
             console.error('保存失败:', error);
         } finally {
@@ -214,24 +233,129 @@ export default function Agents(): React.JSX.Element {
 
                                 <div>
                                     <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                                        绑定工作流
+                                        Agent 类型
                                     </label>
                                     <CustomSelect
-                                        value={formData.workflowId}
-                                        onChange={(value) => setFormData({ ...formData, workflowId: value })}
+                                        value={formData.type}
+                                        onChange={(value) => setFormData({ ...formData, type: value, workflowId: '', skillIds: [], enabledTools: [] })}
                                         options={[
-                                            { value: '', label: '选择工作流（可选）' },
-                                            ...workflows.map(workflow => ({
-                                                value: workflow.id,
-                                                label: workflow.name
-                                            }))
+                                            { value: 'standard', label: '普通 Agent（可使用技能和工具）' },
+                                            { value: 'workflow', label: '工作流 Agent（绑定工作流）' }
                                         ]}
-                                        placeholder="选择工作流（可选）"
                                     />
                                     <p className="text-xs text-gray-500 dark:text-gray-400 mt-2">
-                                        可选：将此Agent绑定到一个现有的工作流
+                                        {formData.type === 'standard' ? '普通 Agent 可以绑定技能和工具，在对话中自动调用' : '工作流 Agent 绑定一个现有工作流，执行时走工作流逻辑'}
                                     </p>
                                 </div>
+
+                                {formData.type === 'standard' ? (
+                                    <>
+                                        <div>
+                                            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                                                绑定技能
+                                            </label>
+                                            {skills.length === 0 ? (
+                                                <p className="text-xs text-gray-400 dark:text-gray-500 bg-gray-50 dark:bg-gray-700 p-3 rounded">
+                                                    暂无可用的技能，请先在技能管理页面创建
+                                                </p>
+                                            ) : (
+                                                <div className="grid grid-cols-2 gap-2">
+                                                    {skills.map(s => {
+                                                        const enabled = formData.skillIds.includes(s.id)
+                                                        return (
+                                                            <label key={s.id}
+                                                                className={`flex items-start space-x-2 p-2 border rounded-lg cursor-pointer transition-colors ${enabled
+                                                                    ? 'border-blue-500 bg-blue-50 dark:bg-blue-900/20 text-blue-700 dark:text-blue-300'
+                                                                    : 'border-gray-200 dark:border-gray-600 hover:bg-gray-50 dark:hover:bg-gray-700 text-gray-900 dark:text-white'
+                                                                    }`}
+                                                            >
+                                                                <input
+                                                                    type="checkbox"
+                                                                    checked={enabled}
+                                                                    onChange={() => {
+                                                                        const current = formData.skillIds
+                                                                        const updated = enabled
+                                                                            ? current.filter(id => id !== s.id)
+                                                                            : [...current, s.id]
+                                                                        setFormData({ ...formData, skillIds: updated })
+                                                                    }}
+                                                                    className="w-4 h-4 text-blue-600 rounded"
+                                                                />
+                                                                <div className="min-w-0 flex-1">
+                                                                    <div className="text-sm font-medium truncate">{s.name}</div>
+                                                                    <div className="text-xs text-gray-500 dark:text-gray-400 truncate">{s.description}</div>
+                                                                </div>
+                                                            </label>
+                                                        )
+                                                    })}
+                                                </div>
+                                            )}
+                                            <p className="text-xs text-gray-500 dark:text-gray-400 mt-2">
+                                                勾选的技能内容会自动注入到对话上下文中
+                                            </p>
+                                        </div>
+
+                                        <div>
+                                            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                                                绑定工具
+                                            </label>
+                                            <p className="text-xs text-gray-500 dark:text-gray-400 mb-3">
+                                                勾选后 Agent 可在对话中自主调用这些工具
+                                            </p>
+                                            <div className="grid grid-cols-2 gap-2">
+                                                {AVAILABLE_TOOLS.map(t => {
+                                                    const enabled = formData.enabledTools.includes(t.id)
+                                                    return (
+                                                        <label key={t.id}
+                                                            className={`flex items-start space-x-2 p-2 border rounded-lg cursor-pointer transition-colors ${enabled
+                                                                ? 'border-blue-500 bg-blue-50 dark:bg-blue-900/20 text-blue-700 dark:text-blue-300'
+                                                                : 'border-gray-200 dark:border-gray-600 hover:bg-gray-50 dark:hover:bg-gray-700 text-gray-900 dark:text-white'
+                                                                }`}
+                                                        >
+                                                            <input
+                                                                type="checkbox"
+                                                                checked={enabled}
+                                                                onChange={() => {
+                                                                    const current = formData.enabledTools
+                                                                    const updated = enabled
+                                                                        ? current.filter(id => id !== t.id)
+                                                                        : [...current, t.id]
+                                                                    setFormData({ ...formData, enabledTools: updated })
+                                                                }}
+                                                                className="w-4 h-4 text-blue-600 rounded"
+                                                            />
+                                                            <div className="min-w-0 flex-1">
+                                                                <div className="text-sm font-medium truncate">{t.label}</div>
+                                                                <div className="text-xs text-gray-500 dark:text-gray-400 truncate">{t.description}</div>
+                                                            </div>
+                                                        </label>
+                                                    )
+                                                })}
+                                            </div>
+                                        </div>
+                                    </>
+                                ) : (
+                                    <div>
+                                        <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                                            绑定工作流
+                                        </label>
+                                        <CustomSelect
+                                            value={formData.workflowId}
+                                            onChange={(value) => setFormData({ ...formData, workflowId: value })}
+                                            options={[
+                                                { value: '', label: '选择工作流' },
+                                                ...workflows.map(workflow => ({
+                                                    value: workflow.id,
+                                                    label: workflow.name
+                                                }))
+                                            ]}
+                                            placeholder="选择工作流"
+                                        />
+                                        <p className="text-xs text-gray-500 dark:text-gray-400 mt-2">
+                                            绑定工作流后，与该 Agent 的对话将执行该工作流
+                                        </p>
+                                    </div>
+                                )}
 
                                 <div>
                                     <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">

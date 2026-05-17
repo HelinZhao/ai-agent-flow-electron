@@ -29,25 +29,24 @@ const Layout: React.FC<LayoutProps> = ({ navItems, currentPage, onNavigate, load
             </span>
           </div>
           <div className="flex items-center space-x-3 app-no-drag">
-            {loading && (
-              <div className="flex items-center justify-center w-6 h-6">
+            <div className="w-9 h-9 flex items-center justify-center">
+              {loading ? (
                 <svg className="w-4 h-4 text-blue-500 animate-spin" viewBox="0 0 24 24" fill="none">
                   <circle cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="3" className="opacity-20" />
                   <path d="M12 2a10 10 0 0 1 10 10" stroke="currentColor" strokeWidth="3" strokeLinecap="round" />
                 </svg>
-              </div>
-            )}
-            {onRefresh && (
-              <button
-                onClick={onRefresh}
-                title="刷新数据"
-                className="p-2 rounded-lg text-gray-500 hover:text-blue-600 hover:bg-blue-50 dark:text-gray-400 dark:hover:text-blue-400 dark:hover:bg-blue-900/20 transition-colors"
-              >
-                <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                  <path d="M21.5 2v6h-6M2.5 22v-6h6M2 11.5a10 10 0 0 1 18.8-4.3M22 12.5a10 10 0 0 1-18.8 4.2" />
-                </svg>
-              </button>
-            )}
+              ) : onRefresh && (
+                <button
+                  onClick={onRefresh}
+                  title="刷新数据"
+                  className="rounded-lg text-gray-500 hover:text-blue-600 hover:bg-blue-50 dark:text-gray-400 dark:hover:text-blue-400 dark:hover:bg-blue-900/20 transition-colors"
+                >
+                  <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                    <path d="M21.5 2v6h-6M2.5 22v-6h6M2 11.5a10 10 0 0 1 18.8-4.3M22 12.5a10 10 0 0 1-18.8 4.2" />
+                  </svg>
+                </button>
+              )}
+            </div>
             <LLMConfigSwitcher />
             <ThemeToggle />
           </div>

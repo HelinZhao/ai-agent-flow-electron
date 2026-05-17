@@ -1,8 +1,9 @@
 import { Router } from 'express'
 import { Workflow, LLMConfig } from '../types'
-import { AgentModel, WorkflowModel, LLMConfigModel } from '../models'
+import { AgentModel, SkillModel, WorkflowModel, LLMConfigModel } from '../models'
 import { MonitoredLangGraphExecutor } from '../utils/monitoredExecutor'
 import { WORKFLOW_POLL_MAX_ATTEMPTS, WORKFLOW_POLL_INTERVAL } from '../config'
+import { safeJsonParse } from '../utils/shared'
 
 const router = Router()
 
@@ -495,14 +496,30 @@ router.post('/agent-chat-monitor', async (req, res) => {
 
     // 无工作流时走直接对话模式
     if (!agent.workflowId) {
+      // 解析绑定的技能和工具
+      const skillIds = safeJsonParse<string[]>(agent.skillIds, [])
+      const enabledTools = safeJsonParse<string[]>(agent.enabledTools, [])
+
+      // 注入技能列表（仅 ID/名称/描述，不含完整内容）并自动添加读取技能的工具
+      let skillsContext = ''
+      if (skillIds.length > 0) {
+        const skills = await SkillModel.findAll({ where: { id: skillIds } })
+        skillsContext = '绑定技能:\n' + skills.map(s => `- ${s.id}: ${s.name} — ${s.description}`).join('\n')
+        skillsContext += '\n\n如需了解某个技能的详细内容，可使用 readSkill 工具传入技能 ID 进行读取。'
+      }
+      const allEnabledTools = skillIds.length > 0 && !enabledTools.includes('readSkill')
+        ? [...enabledTools, 'readSkill']
+        : enabledTools
+
       const executionId = await monitoredExecutor.startDirectChat(
         input,
         llmConfig,
         { id: agent.id, name: agent.name, instructions: agent.instructions },
         threadId || agent.id,
         attachments,
-        [],
-        autoApprovedTools
+        allEnabledTools,
+        autoApprovedTools,
+        skillsContext
       )
       return res.status(200).json({
         executionId,

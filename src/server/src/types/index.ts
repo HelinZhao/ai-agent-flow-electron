@@ -71,6 +71,9 @@ export interface Agent {
   name: string
   description: string
   instructions: string
+  type: string
+  skillIds?: string[]
+  enabledTools?: string[]
   workflowId?: string
   createdAt: Date
   updatedAt: Date

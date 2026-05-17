@@ -165,7 +165,6 @@ export function useConversation() {
     text: string,
     attachments: AttachmentData[],
     agents: Agent[],
-    workflows: { id: string; workflowId?: string }[],
     activeLLMConfig: unknown,
   ) => {
     const agent = agents.find(a => a.id === selectedAgent?.id) || selectedAgent
@@ -361,7 +360,7 @@ export function useConversation() {
 
     // 截断后重新发送用户消息
     await chatRecordApi.saveRecord(agent.id, agent.name, truncated).catch(() => {})
-    await sendMessage(userMsg.content, userMsg.attachments || [], agents, workflows, activeLLMConfig)
+    await sendMessage(userMsg.content, userMsg.attachments || [], agents, activeLLMConfig)
   }, [selectedAgent, messages, sendMessage])
 
   const sentHistory = selectedAgent ? sentHistoryRef.current[selectedAgent.id] || [] : []

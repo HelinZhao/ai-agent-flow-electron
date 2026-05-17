@@ -18,7 +18,7 @@ export interface AttachmentPayload {
 }
 
 // 安全JSON解析函数
-export const safeJsonParse = <T>(str: string, defaultValue: T): T => {
+export const safeJsonParse = <T>(str: string | undefined, defaultValue: T): T => {
   if (!str) return defaultValue
   try {
     return JSON.parse(str)

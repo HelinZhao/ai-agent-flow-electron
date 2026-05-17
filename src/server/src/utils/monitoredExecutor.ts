@@ -1379,7 +1379,8 @@ ${conditionText}
     threadId?: string,
     attachments?: AttachmentPayload[],
     enabledTools?: string[],
-    autoApprovedTools?: string[]
+    autoApprovedTools?: string[],
+    skillsContext?: string
   ): Promise<string> {
     const executionId = uuidv4()
     const effectiveThreadId = threadId || agent.id || 'default-thread'
@@ -1434,7 +1435,7 @@ ${conditionText}
     this.executionStates.set(executionId, executionState)
 
     // 后台执行
-    this.executeDirectChatAsync(executionId, input, llmConfig, agent, effectiveThreadId, diskAttachments, enabledTools)
+    this.executeDirectChatAsync(executionId, input, llmConfig, agent, effectiveThreadId, diskAttachments, enabledTools, skillsContext)
 
     return executionId
   }
@@ -1446,7 +1447,8 @@ ${conditionText}
     agent: { id: string; name: string; instructions: string },
     threadId: string,
     attachments?: AttachmentPayload[],
-    enabledTools?: string[]
+    enabledTools?: string[],
+    skillsContext?: string
   ): Promise<void> {
     try {
       const state = this.executionStates.get(executionId)
@@ -1456,11 +1458,56 @@ ${conditionText}
       const userMessage = new HumanMessage(input)
       const updatedHistory = [...conversationHistory, userMessage]
 
-      // 构建 prompt：agent 指令 + 用户输入
-      const prompt = `${agent.instructions}\n\n用户输入: ${input}`
+      // 构建 prompt：技能参考 + agent 指令 + 用户输入
+      let prompt = agent.instructions
+      if (skillsContext) {
+        prompt = `【技能参考】\n${skillsContext}\n\n${prompt}`
+      }
+      prompt += `\n\n用户输入: ${input}`
+
+      // 构建 HITL 审批回调（危险工具需要用户确认）
+      const hasDangerousTools = (enabledTools || []).some((t: string) => DANGEROUS_TOOLS.includes(t))
+      const llmOptions: CallLLMOptions = hasDangerousTools
+        ? {
+          approvalCallback: async (request: HITLRequest): Promise<HITLResponse> => {
+            const execState = this.executionStates.get(executionId)
+            if (!execState || execState.status !== 'running') {
+              throw new ExecutionTerminatedError()
+            }
+
+            // 已放行的工具自动批准
+            const needApproval = request.actionRequests.filter(
+              a => !execState.autoApprovedToolTypes.has(a.name)
+            )
+            if (needApproval.length === 0) {
+              return { decisions: request.actionRequests.map(() => ({ type: 'approve' })) }
+            }
+
+            const approvalPromise = new Promise<HITLResponse>((resolve, reject) => {
+              execState.pendingApproval = { resolve, reject, request }
+            })
+
+            this.broadcastToSSEClients(executionId, {
+              type: 'tool_approval_required',
+              executionId,
+              actionRequests: needApproval,
+              reviewConfigs: request.reviewConfigs.filter(rc => needApproval.some(a => a.name === rc.actionName)),
+            })
+
+            const userResponse = await approvalPromise
+
+            const decisions: HITLDecision[] = request.actionRequests.map((action) => {
+              if (execState.autoApprovedToolTypes.has(action.name)) return { type: 'approve' }
+              const userDecision = userResponse.decisions.find(d => d.type !== 'approve' || needApproval.some(a => a.name === action.name))
+              return userDecision || { type: 'approve' }
+            })
+            return { decisions }
+          }
+        }
+        : {}
 
       // 调用 LLM
-      const result = await callLLM(prompt, llmConfig, updatedHistory, enabledTools || [])
+      const result = await callLLM(prompt, llmConfig, updatedHistory, enabledTools || [], llmOptions)
 
       // 保存对话历史
       const aiMessage = new AIMessage(result)
