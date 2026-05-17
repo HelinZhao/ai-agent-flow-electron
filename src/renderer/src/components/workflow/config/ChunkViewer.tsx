@@ -4,6 +4,7 @@ import { knowledgeBaseApi } from '@renderer/lib/api'
 import { KnowledgeChunk } from '@renderer/types'
 import CustomButton from '@renderer/components/ui/CustomButton'
 import CustomSwitch from '@renderer/components/ui/CustomSwitch'
+import Pagination from '@renderer/components/ui/Pagination'
 import { CHUNK_PAGE_SIZE, CHUNK_VIEWER_HEIGHT, CHUNK_PREVIEW_LINES } from '@renderer/config'
 
 interface ChunkViewerProps {
@@ -326,28 +327,16 @@ export default function ChunkViewer({ kbId, docName, onClose }: ChunkViewerProps
               ))}
             </div>
 
-            {/* 分页 */}
+            {/******************* 分页 *******************/}
             {totalPages > 1 && (
               <div className="flex items-center justify-between px-5 py-2.5 border-t border-gray-100 dark:border-gray-700 bg-gray-50/50 dark:bg-gray-900/30">
-                <span className="text-xs text-gray-400 dark:text-gray-500">
-                  {chunks.length} 条 · {currentPage}/{totalPages}
-                </span>
-                <div className="flex items-center space-x-1">
-                  <button
-                    onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
-                    disabled={currentPage <= 1}
-                    className="flex items-center justify-center w-7 h-7 rounded-lg text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 disabled:opacity-30 disabled:hover:bg-transparent transition-colors"
-                  >
-                    <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M15 19l-7-7 7-7" /></svg>
-                  </button>
-                  <button
-                    onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))}
-                    disabled={currentPage >= totalPages}
-                    className="flex items-center justify-center w-7 h-7 rounded-lg text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 disabled:opacity-30 disabled:hover:bg-transparent transition-colors"
-                  >
-                    <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M9 5l7 7-7 7" /></svg>
-                  </button>
-                </div>
+                <Pagination
+                  page={currentPage}
+                  totalPages={totalPages}
+                  onChange={setCurrentPage}
+                  variant="simple"
+                  totalLabel={`${chunks.length} 条 · `}
+                />
               </div>
             )}
           </div>
