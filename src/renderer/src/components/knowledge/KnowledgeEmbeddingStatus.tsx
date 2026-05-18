@@ -95,11 +95,15 @@ const KnowledgeEmbeddingStatus: React.FC<KnowledgeEmbeddingStatusProps> = ({
       {modelPulling && modelPullProgress && (
         <div className="mt-3">
           <div className="w-full h-1.5 bg-blue-200 dark:bg-blue-800 rounded-full overflow-hidden">
-            <div className="h-full bg-gradient-to-r from-blue-500 to-purple-500 rounded-full transition-all duration-300"
-              style={{ width: `${modelPullProgress.total && modelPullProgress.completed ? Math.round((modelPullProgress.completed / modelPullProgress.total) * 100) : 30}%` }} />
+            {modelPullProgress.status === 'importing' ? (
+              <div className="h-full bg-gradient-to-r from-amber-400 to-orange-500 rounded-full animate-pulse" style={{ width: '100%' }} />
+            ) : (
+              <div className="h-full bg-gradient-to-r from-blue-500 to-purple-500 rounded-full transition-all duration-300"
+                style={{ width: `${modelPullProgress.total && modelPullProgress.completed ? Math.round((modelPullProgress.completed / modelPullProgress.total) * 100) : 30}%` }} />
+            )}
           </div>
           <p className="text-xs text-blue-600 dark:text-blue-400 mt-1">
-            {modelPullProgress.status}
+            {modelPullProgress.status === 'importing' ? '正在导入 Ollama...' : modelPullProgress.status}
             {modelPullProgress.completed != null && modelPullProgress.total != null
               ? ` (${Math.round(modelPullProgress.completed / 1024 / 1024)}MB / ${Math.round(modelPullProgress.total / 1024 / 1024)}MB)` : ''}
           </p>
