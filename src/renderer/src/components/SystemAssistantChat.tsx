@@ -6,6 +6,7 @@ import { chatRecordApi } from '@renderer/lib/chatRecord'
 import type { ChatMessage as ChatMessageType, ToolApprovalRequest } from '@renderer/types'
 import { TOOL_LABEL_MAP } from '@renderer/config'
 import CustomButton from '@renderer/components/ui/CustomButton'
+import MarkdownPreview from '@renderer/components/MarkdownPreview'
 
 const SYSTEM_AGENT_ID = '00000000-0000-0000-0000-000000000001'
 const SYSTEM_AGENT_NAME = '系统助手'
@@ -330,7 +331,7 @@ export default function SystemAssistantChat() {
                     ? 'bg-blue-500 text-white rounded-br-md'
                     : 'bg-gray-100 dark:bg-gray-700 text-gray-800 dark:text-gray-200 rounded-bl-md'
                 }`}>
-                  {msg.content}
+                  {msg.sender === 'user' ? msg.content : <MarkdownPreview content={msg.content} />}
                 </div>
               </div>
             ))}
