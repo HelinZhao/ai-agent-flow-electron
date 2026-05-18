@@ -9,6 +9,10 @@
  * 若系统 PATH 中已有 ollama（`ollama --version` 成功），则跳过下载。
  * 若网络受限无法下载，应用会回退使用系统 PATH 中的 ollama。
  *
+ * 参数：
+ *   --platform win32|darwin|linux   — 指定下载平台（默认自动检测当前系统）
+ *   --arch x64|arm64                — 指定架构（默认自动检测当前系统）
+ *
  * 环境变量：
  *   FORCE_DOWNLOAD=1     — 强制重新下载
  *   GITHUB_MIRROR=https://mirror.example.com  — GitHub Release 镜像地址
@@ -23,24 +27,38 @@ import { spawnSync, spawn } from 'child_process'
 
 const DEST_DIR = join(import.meta.dirname, '..', 'resources', 'ollama')
 const MIRROR = process.env.GITHUB_MIRROR || 'https://github.com'
+const args = process.argv.slice(2)
+
+function parseArgs() {
+  const options = { platform: process.platform, arch: process.arch }
+  for (let i = 0; i < args.length; i++) {
+    if (args[i] === '--platform' && i + 1 < args.length) {
+      options.platform = args[++i]
+    } else if (args[i] === '--arch' && i + 1 < args.length) {
+      options.arch = args[++i]
+    }
+  }
+  return options
+}
 
 function getPlatformInfo() {
-  const supported = process.arch === 'x64' || (process.platform === 'darwin' && process.arch === 'arm64')
+  const { platform, arch } = parseArgs()
+  const supported = arch === 'x64' || (platform === 'darwin' && arch === 'arm64')
   if (!supported) {
-    console.warn(`[download-ollama] 不支持的架构: ${process.arch}，仅支持 x64（macOS 支持 x64 和 arm64）`)
+    console.warn(`[download-ollama] 不支持的架构: ${arch}，仅支持 x64（macOS 支持 x64 和 arm64）`)
     return null
   }
   const base = `${MIRROR}/ollama/ollama/releases/latest/download`
-  if (process.platform === 'win32') {
+  if (platform === 'win32') {
     return { url: `${base}/ollama-windows-amd64.zip`, binaryName: 'ollama.exe', archiveType: 'zip' }
   }
-  if (process.platform === 'darwin') {
+  if (platform === 'darwin') {
     return { url: `${base}/ollama-darwin.tgz`, binaryName: 'ollama', archiveType: 'tgz' }
   }
-  if (process.platform === 'linux') {
+  if (platform === 'linux') {
     return { url: `${base}/ollama-linux-amd64.tar.zst`, binaryName: 'ollama', archiveType: 'zst' }
   }
-  console.warn(`[download-ollama] 不支持的平台: ${process.platform}`)
+  console.warn(`[download-ollama] 不支持的平台: ${platform}`)
   return null
 }
 

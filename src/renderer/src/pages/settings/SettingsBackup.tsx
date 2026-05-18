@@ -1,9 +1,13 @@
 import { useState, useRef } from 'react'
 import { useWorkflowStore } from '@renderer/store/workflowStore'
+import { triggerApi } from '@renderer/lib/api'
 import MessageBanner from '@renderer/components/ui/MessageBanner'
 
 export default function SettingsBackup() {
-  const { workflows, skills, agents, llmConfigs, addWorkflow, addSkill, addAgent, addLLMConfig } = useWorkflowStore()
+  const {
+    workflows, skills, agents, llmConfigs, triggers, knowledgeBases,
+    addWorkflow, addSkill, addAgent, addLLMConfig, addKnowledgeBase, fetchTriggers
+  } = useWorkflowStore()
   const [message, setMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null)
   const [importing, setImporting] = useState(false)
   const fileRef = useRef<HTMLInputElement>(null)
@@ -19,7 +23,7 @@ export default function SettingsBackup() {
       filters: [{ name: 'JSON', extensions: ['json'] }],
     })
     if (!filePath) return
-    const data = { workflows, skills, agents, llmConfigs }
+    const data = { workflows, skills, agents, llmConfigs, triggers, knowledgeBases }
     const result = await window.api.file.write(filePath, JSON.stringify(data, null, 2))
     if (result.success) {
       setMessage({ type: 'success', text: '数据导出成功' })
@@ -36,7 +40,7 @@ export default function SettingsBackup() {
     try {
       const text = await file.text()
       const data = JSON.parse(text)
-      if (!data.workflows && !data.skills && !data.agents && !data.llmConfigs) {
+      if (!data.workflows && !data.skills && !data.agents && !data.llmConfigs && !data.triggers && !data.knowledgeBases) {
         setMessage({ type: 'error', text: '无效的备份文件格式' })
         return
       }
@@ -45,6 +49,10 @@ export default function SettingsBackup() {
       if (data.skills) for (const s of data.skills) { await addSkill(s); count++ }
       if (data.agents) for (const a of data.agents) { await addAgent(a); count++ }
       if (data.llmConfigs) for (const c of data.llmConfigs) { await addLLMConfig(c); count++ }
+      if (data.triggers) for (const t of data.triggers) { await triggerApi.create(t); count++ }
+      if (data.knowledgeBases) for (const kb of data.knowledgeBases) { await addKnowledgeBase(kb); count++ }
+      // 刷新数据
+      await fetchTriggers()
       setMessage({ type: 'success', text: `导入完成，共处理 ${count} 条数据` })
     } catch {
       setMessage({ type: 'error', text: '导入失败，请检查文件格式' })
@@ -58,7 +66,7 @@ export default function SettingsBackup() {
     <div className="space-y-6">
       <div>
         <h3 className="text-lg font-bold text-gray-900 dark:text-white">数据备份</h3>
-        <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">导出或导入工作流、技能、Agent 和 LLM 配置</p>
+        <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">导出或导入工作流、技能、Agent、LLM 配置、触发器和知识库</p>
       </div>
 
       {message && (
@@ -76,7 +84,7 @@ export default function SettingsBackup() {
           <div>
             <p className="text-sm font-semibold text-gray-900 dark:text-white">导出备份</p>
             <p className="text-xs text-gray-500 dark:text-gray-400 mt-1 leading-relaxed">
-              将所有工作流、技能、Agent 和 LLM 配置导出为 JSON 文件
+              将所有工作流、技能、Agent、LLM 配置、触发器和知识库导出为 JSON 文件
             </p>
           </div>
         </button>
@@ -106,16 +114,24 @@ export default function SettingsBackup() {
             <span>工作流：{workflows.length} 个</span>
           </div>
           <div className="flex items-center gap-2">
-            <span className="w-2 h-2 rounded-full bg-green-500" />
+            <span className="w-2 h-2 rounded-full bg-orange-500" />
             <span>技能：{skills.length} 个</span>
           </div>
           <div className="flex items-center gap-2">
-            <span className="w-2 h-2 rounded-full bg-red-500" />
+            <span className="w-2 h-2 rounded-full bg-purple-500" />
             <span>Agent：{agents.length} 个</span>
           </div>
           <div className="flex items-center gap-2">
-            <span className="w-2 h-2 rounded-full bg-purple-500" />
+            <span className="w-2 h-2 rounded-full bg-indigo-500" />
             <span>LLM 配置：{llmConfigs.length} 个</span>
+          </div>
+          <div className="flex items-center gap-2">
+            <span className="w-2 h-2 rounded-full bg-cyan-500" />
+            <span>触发器：{triggers.length} 个</span>
+          </div>
+          <div className="flex items-center gap-2">
+            <span className="w-2 h-2 rounded-full bg-green-500" />
+            <span>知识库：{knowledgeBases.length} 个</span>
           </div>
         </div>
       </div>
