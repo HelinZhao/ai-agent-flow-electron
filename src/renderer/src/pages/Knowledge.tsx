@@ -137,18 +137,19 @@ export default function Knowledge(): React.JSX.Element {
         return
       }
       setModelExists(status.modelExists)
-      if (status.pulling) {
-        setModelPulling(true)
-        cancel = ollamaApi.subscribePullProgress(progress => {
-          setModelPullProgress(progress)
-          if (progress.status === 'success') {
-            setModelExists(true)
-            setModelPulling(false)
-          } else if (progress.status === 'error') {
-            setModelPulling(false)
-          }
-        })
-      }
+      setModelPulling(status.pulling)
+      // 始终订阅，确保小窗触发下载时页面也能同步状态
+      cancel = ollamaApi.subscribePullProgress(progress => {
+        setModelPullProgress(progress)
+        if (progress.status === 'success') {
+          setModelExists(true)
+          setModelPulling(false)
+        } else if (progress.status === 'error') {
+          setModelPulling(false)
+        } else if (progress.status === 'downloading' || progress.status === 'importing') {
+          setModelPulling(true)
+        }
+      })
     }).catch(() => {
       const dismissed = localStorage.getItem('ollama-dismissed')
       if (dismissed !== 'true') setShowOllamaDialog(true)

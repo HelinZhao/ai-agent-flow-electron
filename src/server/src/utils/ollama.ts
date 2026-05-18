@@ -361,10 +361,11 @@ export async function downloadAndImportModel(
   model: string,
   ggufRepo: string,
   ggufFile: string,
-  mirror: string
+  mirror: string,
+  onProgress?: (status: string, completed?: number, total?: number) => void
 ): Promise<boolean> {
   const { mkdirSync } = await import('fs')
-  const { rm } = await import('fs/promises')
+  const { rm, writeFile } = await import('fs/promises')
   const { join } = await import('path')
   const { tmpdir } = await import('os')
 
@@ -373,13 +374,29 @@ export async function downloadAndImportModel(
   const ggufPath = join(tempDir, ggufFile)
 
   try {
-    // 下载 GGUF（用 arrayBuffer 避免 Node/web stream 类型冲突）
+    // 流式下载 GGUF，带进度汇报
     const url = `${mirror}/${ggufRepo}/resolve/main/${ggufFile}`
     console.log(`[Ollama] 从镜像下载 GGUF: ${url}`)
+    onProgress?.('downloading', 0, 0)
     const resp = await fetch(url, { signal: AbortSignal.timeout(600_000) })
     if (!resp.ok) throw new Error(`下载失败: HTTP ${resp.status}`)
-    const buf = Buffer.from(await resp.arrayBuffer())
-    await (await import('fs/promises')).writeFile(ggufPath, buf)
+
+    const contentLength = resp.headers.get('content-length')
+    const total = contentLength ? parseInt(contentLength, 10) : 0
+    const chunks: Buffer[] = []
+    let downloaded = 0
+
+    for await (const chunk of resp.body as any) {
+      chunks.push(Buffer.from(chunk))
+      downloaded += chunk.length
+      if (total > 0) {
+        onProgress?.('downloading', downloaded, total)
+      }
+    }
+
+    const buf = Buffer.concat(chunks)
+    await writeFile(ggufPath, buf)
+    onProgress?.('importing', 0, 0)
     console.log(`[Ollama] GGUF 下载完成 (${(buf.length / 1024 / 1024).toFixed(1)} MB)`)
 
     // 通过 CLI 导入

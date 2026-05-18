@@ -31,8 +31,8 @@ import {
   setOllamaBinaryPath,
   setOllamaRegistryMirror,
   checkOllamaModel,
-  pullOllamaModelStream,
   importLocalGGUFModel,
+  downloadAndImportModel,
   logGpuInfo
 } from './utils/ollama'
 import { timingWheel, cronToNextTime } from './utils/timingWheel'
@@ -120,23 +120,29 @@ export class LocalServer {
       }
       this.isPulling = true
 
-      // 后台拉取，不阻塞响应
-      pullOllamaModelStream(OLLAMA_DEFAULT_MODEL, (status, completed, total) => {
-        this.pullEmitter.emit('progress', { status, completed, total })
-      })
+      // 后台从镜像下载 GGUF 并导入（不阻塞响应）
+      downloadAndImportModel(
+        OLLAMA_DEFAULT_MODEL,
+        'OllmOne/bge-m3-GGUF',
+        'bge-m3-q8_0.gguf',
+        process.env.MODEL_MIRROR || 'https://www.modelscope.cn',
+        (status, completed, total) => {
+          this.pullEmitter.emit('progress', { status, completed, total })
+        }
+      )
         .then((success) => {
           this.isPulling = false
           this.modelExists = success
           this.pullEmitter.emit('progress', {
             status: success ? 'success' : 'error',
-            message: success ? '模型拉取完成' : '模型拉取失败'
+            message: success ? '模型下载并导入完成' : '模型下载或导入失败'
           })
         })
         .catch((error) => {
           this.isPulling = false
           this.pullEmitter.emit('progress', {
             status: 'error',
-            message: error?.message || '模型拉取出错'
+            message: error?.message || '模型下载出错'
           })
         })
 

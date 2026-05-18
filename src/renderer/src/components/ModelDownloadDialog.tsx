@@ -73,15 +73,21 @@ export default function ModelDownloadDialog({ onDismissOnce, onDismissPermanentl
             <div className="flex items-center justify-between text-xs text-gray-500 dark:text-gray-400 mb-1.5">
               <span className="flex items-center gap-1.5">
                 <svg className="w-3.5 h-3.5 animate-spin" viewBox="0 0 24 24" fill="none"><circle cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="3" className="opacity-20" /><path d="M12 2a10 10 0 0 1 10 10" stroke="currentColor" strokeWidth="3" strokeLinecap="round" /></svg>
-                正在下载...
+                {progress?.status === 'importing' ? '正在导入...' : '正在下载...'}
               </span>
-              {progressPercent !== null && (
+              {progress?.status === 'importing' ? (
+                <span className="text-amber-600 dark:text-amber-400 font-mono text-xs">导入中...</span>
+              ) : progressPercent !== null ? (
                 <span className="text-blue-600 dark:text-blue-400 font-mono text-xs">{progressPercent}%</span>
-              )}
+              ) : null}
             </div>
             <div className="w-full h-2 bg-blue-200 dark:bg-blue-800 rounded-full overflow-hidden">
-              <div className="h-full bg-gradient-to-r from-blue-500 to-purple-500 rounded-full transition-all duration-300"
-                style={{ width: `${progressPercent || 0}%` }} />
+              {progress?.status === 'importing' ? (
+                <div className="h-full bg-gradient-to-r from-amber-400 to-orange-500 rounded-full animate-pulse" style={{ width: '100%' }} />
+              ) : (
+                <div className="h-full bg-gradient-to-r from-blue-500 to-purple-500 rounded-full transition-all duration-300"
+                  style={{ width: `${progressPercent || 0}%` }} />
+              )}
             </div>
             <button onClick={handleDismissOnce}
               className="mt-2 w-full text-xs text-blue-500 hover:text-blue-700 dark:text-blue-400 dark:hover:text-blue-300 transition-colors">

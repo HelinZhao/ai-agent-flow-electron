@@ -7,6 +7,18 @@ interface KnowledgeEmbeddingStatusProps {
   onPull: () => void
 }
 
+function getStatusText(
+  modelExists: boolean | null,
+  modelPulling: boolean,
+  progress: KnowledgeEmbeddingStatusProps['modelPullProgress']
+): string {
+  if (modelExists) return '模型已就绪，内部知识库可正常使用'
+  if (progress?.status === 'error') return progress.message || '模型下载失败，请重试'
+  if (progress?.status === 'importing') return '正在导入 Ollama...'
+  if (modelPulling) return progress?.status || '正在下载...'
+  return '模型未安装，内部知识库需要此模型进行文档向量化'
+}
+
 const KnowledgeEmbeddingStatus: React.FC<KnowledgeEmbeddingStatusProps> = ({
   modelExists,
   modelPulling,
@@ -54,13 +66,7 @@ const KnowledgeEmbeddingStatus: React.FC<KnowledgeEmbeddingStatusProps> = ({
               <code className="ml-1.5 px-1.5 py-0.5 rounded bg-gray-100 dark:bg-gray-700 text-blue-600 dark:text-blue-400 text-xs font-mono">bge-m3-q8_0</code>
             </p>
             <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">
-              {modelExists
-                ? '模型已就绪，内部知识库可正常使用'
-                : modelPullProgress?.status === 'error'
-                  ? modelPullProgress.message || '模型下载失败，请重试'
-                  : modelPulling
-                    ? modelPullProgress?.status || '正在下载...'
-                    : '模型未安装，内部知识库需要此模型进行文档向量化'}
+              {getStatusText(modelExists, modelPulling, modelPullProgress)}
             </p>
           </div>
         </div>
@@ -71,7 +77,7 @@ const KnowledgeEmbeddingStatus: React.FC<KnowledgeEmbeddingStatusProps> = ({
             </span>
           ) : modelPulling ? (
             <span className="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-lg bg-blue-100 dark:bg-blue-900/20 text-blue-700 dark:text-blue-300 text-xs font-medium">
-              下载中...
+              {modelPullProgress?.status === 'importing' ? '导入中...' : '下载中...'}
             </span>
           ) : !modelPullProgress?.status ? (
             <button onClick={onPull}
