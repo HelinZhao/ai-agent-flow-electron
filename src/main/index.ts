@@ -114,14 +114,16 @@ app.whenReady().then(() => {
   // 本地服务器IPC处理
   let localServer: LocalServer | null = null
 
+  const createServer = (): LocalServer => new LocalServer({
+    ollamaBinaryPath: resolveOllamaBinary(),
+    bundledModelPath: resolveBundledModelPath(),
+    ollamaRegistryMirror: process.env.MODEL_MIRROR || undefined
+  })
+
   ipcMain.handle('server:start', async (_, port?: number) => {
     try {
       if (!localServer) {
-        localServer = new LocalServer({
-          ollamaBinaryPath: resolveOllamaBinary(),
-          bundledModelPath: resolveBundledModelPath(),
-          ollamaRegistryMirror: process.env.MODEL_MIRROR
-        })
+        localServer = createServer()
       }
       const actualPort = await localServer.start(port)
       return { success: true, port: actualPort, url: localServer.getServerUrl() }
@@ -223,17 +225,15 @@ app.whenReady().then(() => {
   })
 
   // 自动启动服务器
-  const ollamaBinaryPath = resolveOllamaBinary()
-  const bundledModelPath = resolveBundledModelPath()
-  const server = new LocalServer({ ollamaBinaryPath, bundledModelPath })
-  server
+  localServer = createServer()
+  localServer
     .start()
     .then((port) => {
       console.log(`Local server auto-started on port ${port}`)
-      localServer = server
     })
     .catch((error) => {
       console.error('Failed to auto-start local server:', error)
+      localServer = null
     })
 
   createWindow()
