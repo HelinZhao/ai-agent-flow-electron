@@ -108,8 +108,8 @@ export default function SettingsGeneral() {
 
         <div className="px-5 py-4 border-t border-gray-100 dark:border-gray-700/50 flex items-center justify-between">
           <div>
-            <p className="text-sm font-semibold text-gray-900 dark:text-white">悬浮系统助手</p>
-            <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">在右下角显示可拖拽的 AI 助手悬浮按钮</p>
+            <p className="text-sm font-semibold text-gray-900 dark:text-white">悬浮布丁</p>
+            <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">在右下角显示可拖拽的布丁悬浮按钮</p>
           </div>
           <CustomSwitch checked={showSystemAssistant} onChange={setShowSystemAssistant} />
         </div>

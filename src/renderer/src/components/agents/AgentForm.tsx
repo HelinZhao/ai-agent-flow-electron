@@ -102,11 +102,11 @@ export default function AgentForm({ agent, skills, workflows, onSave, onCancel, 
       <div className="space-y-8">
         {isSystem && (
           <div className="mb-6 p-4 rounded-xl bg-amber-50 dark:bg-amber-900/10 border border-amber-200 dark:border-amber-700">
-            <p className="text-sm text-amber-700 dark:text-amber-300">系统助手仅允许调整技能和工具绑定，其他信息不可修改</p>
+            <p className="text-sm text-amber-700 dark:text-amber-300">布丁仅允许调整技能和工具绑定，其他信息不可修改</p>
           </div>
         )}
 
-        {/* ── 系统助手只展示技能&工具，其他隐藏 ── */}
+        {/* ── 布丁只展示技能&工具，其他隐藏 ── */}
         {!isSystem && (
           <>
             <section>

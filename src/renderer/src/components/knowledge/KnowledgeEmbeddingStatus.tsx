@@ -104,7 +104,7 @@ const KnowledgeEmbeddingStatus: React.FC<KnowledgeEmbeddingStatusProps> = ({
           </div>
           <p className="text-xs text-blue-600 dark:text-blue-400 mt-1">
             {modelPullProgress.status === 'importing' ? '正在导入 Ollama...' : modelPullProgress.status}
-            {modelPullProgress.completed != null && modelPullProgress.total != null
+            {modelPullProgress.status !== 'importing' && modelPullProgress.completed != null && modelPullProgress.total != null
               ? ` (${Math.round(modelPullProgress.completed / 1024 / 1024)}MB / ${Math.round(modelPullProgress.total / 1024 / 1024)}MB)` : ''}
           </p>
         </div>

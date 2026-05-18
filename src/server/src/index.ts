@@ -296,9 +296,9 @@ export class LocalServer {
     if (!existingSystemAgent) {
       const agent = AgentModel.build({
         id: SYSTEM_AGENT_ID,
-        name: '系统助手',
+        name: '布丁',
         description: 'Agent Flow 内置 AI 助手，帮助你了解和使用本应用',
-        instructions: `你是 Agent Flow 的内置 AI 助手。
+        instructions: `你是布丁（Buding），Agent Flow 的内置 AI 助手。
 
 你的职责是帮助用户了解和使用 Agent Flow 这个 AI 工作流编排平台。
 
@@ -327,7 +327,7 @@ export class LocalServer {
         ]),
       })
       await agent.save()
-      console.log('[SystemAgent] 系统助手创建成功')
+      console.log('[SystemAgent] 布丁创建成功')
     }
 
     // 加载所有启用的 cron 触发器并注册到时间轮

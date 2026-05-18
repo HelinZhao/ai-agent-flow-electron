@@ -9,7 +9,7 @@ import CustomButton from '@renderer/components/ui/CustomButton'
 import MarkdownPreview from '@renderer/components/MarkdownPreview'
 
 const SYSTEM_AGENT_ID = '00000000-0000-0000-0000-000000000001'
-const SYSTEM_AGENT_NAME = '系统助手'
+const SYSTEM_AGENT_NAME = '布丁'
 const BTN_SIZE = 48
 const GAP = 24
 
@@ -90,7 +90,7 @@ export default function SystemAssistantChat() {
           await addAgent({
             name: SYSTEM_AGENT_NAME,
             description: 'Agent Flow 内置 AI 助手，帮助你了解和使用本应用',
-            instructions: `你是 Agent Flow 的内置 AI 助手。
+            instructions: `你是布丁（Buding），Agent Flow 的内置 AI 助手。
 
 你的职责是帮助用户了解和使用 Agent Flow 这个 AI 工作流编排平台。
 
@@ -118,7 +118,7 @@ export default function SystemAssistantChat() {
             ],
           })
         } catch (e) {
-          console.error('[系统助手] 自动创建失败:', e)
+          console.error('[布丁] 自动创建失败:', e)
         }
       }
     }, 2000)
@@ -174,7 +174,7 @@ export default function SystemAssistantChat() {
     const agent = systemAgent || agents.find(a => a.id === SYSTEM_AGENT_ID)
     if (!text || loading) return
     if (!agent || !activeLLMConfig) {
-      const hint = !agent ? '系统助手暂未就绪，请刷新后重试' : '请先在设置中配置 LLM 模型'
+      const hint = !agent ? '布丁暂未就绪，请刷新后重试' : '请先在设置中配置 LLM 模型'
       setMessages([...messages, {
         id: `msg-${Date.now()}`,
         content: hint,
@@ -261,7 +261,7 @@ export default function SystemAssistantChat() {
 
   const handleNewChat = useCallback(async () => {
     if (messages.length === 0) return
-    if (!window.confirm('确定要清空系统助手的对话记录吗？')) return
+    if (!window.confirm('确定要清空布丁的对话记录吗？')) return
     const agent = systemAgent || agents.find(a => a.id === SYSTEM_AGENT_ID || a.name === SYSTEM_AGENT_NAME)
     if (agent) {
       await chatRecordApi.deleteRecord(agent.id).catch(() => {})
@@ -295,7 +295,7 @@ export default function SystemAssistantChat() {
         onMouseDown={handleMouseDown}
         className="fixed z-[100] w-12 h-12 rounded-full bg-gradient-to-r from-amber-400 to-orange-500 text-white shadow-lg hover:shadow-xl hover:scale-105 transition-all duration-200 flex items-center justify-center cursor-grab active:cursor-grabbing select-none"
         style={{ left: pos.x, top: pos.y }}
-        title="系统助手"
+        title="布丁"
       >
         {open ? (
           <svg className="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
@@ -313,7 +313,7 @@ export default function SystemAssistantChat() {
           {/* Header */}
           <div className="flex items-center gap-2 px-4 py-3 bg-gradient-to-r from-amber-50 to-orange-50 dark:from-amber-900/20 dark:to-orange-900/20 border-b border-gray-200 dark:border-gray-700">
             <span>✨</span>
-            <span className="text-sm font-semibold text-gray-900 dark:text-white flex-1">系统助手</span>
+            <span className="text-sm font-semibold text-gray-900 dark:text-white flex-1">布丁</span>
             <button onClick={handleNewChat} className="text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 transition-colors" title="新对话">
               <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
                 <path d="M4 4v16a2 2 0 002 2h12a2 2 0 002-2V8.342a2 2 0 00-.602-1.43l-4.44-4.342A2 2 0 0013.56 2H6a2 2 0 00-2 2z" />
@@ -327,7 +327,7 @@ export default function SystemAssistantChat() {
           <div className="flex-1 overflow-y-auto p-3 space-y-3">
             {messages.length === 0 && (
               <div className="text-center py-8">
-                <p className="text-sm text-gray-400 dark:text-gray-500">你好！我是 Agent Flow 的系统助手</p>
+                <p className="text-sm text-gray-400 dark:text-gray-500">你好！我是布丁，你的 Agent Flow 智能助手</p>
                 <p className="text-xs text-gray-400 dark:text-gray-500 mt-1">有什么可以帮助你的吗？</p>
               </div>
             )}

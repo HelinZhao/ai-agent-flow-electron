@@ -140,7 +140,7 @@ export default function Agents(): React.JSX.Element {
           agent.description.toLowerCase().includes(searchTerm.toLowerCase())),
     )
     .sort((a, b) => {
-      // 系统助手始终置顶
+      // 布丁始终置顶
       if (a.isSystem && !b.isSystem) return -1
       if (!a.isSystem && b.isSystem) return 1
       return 0
@@ -175,7 +175,7 @@ export default function Agents(): React.JSX.Element {
   };
 
   const handleSave = async (formData: AgentFormData): Promise<void> => {
-    // 系统助手只允许更新技能和工具
+    // 布丁只允许更新技能和工具
     if (selectedAgent?.isSystem) {
       await updateAgent(selectedAgent.id, {
         skillIds: formData.skillIds,
@@ -224,7 +224,7 @@ export default function Agents(): React.JSX.Element {
           <h2 className="text-base font-semibold text-gray-900 dark:text-white">
             {isEditing
               ? selectedAgent?.isSystem
-                ? '调整系统助手'
+                ? '调整布丁技能/工具'
                 : selectedAgent
                   ? '编辑 Agent'
                   : '创建新 Agent'

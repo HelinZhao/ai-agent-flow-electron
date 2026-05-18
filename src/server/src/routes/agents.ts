@@ -88,11 +88,11 @@ router.put('/:id', async (req, res) => {
       return res.status(404).json({ error: '智能体不存在' })
     }
 
-    // 系统助手只允许修改技能和工具
+    // 布丁只允许修改技能和工具
     if (agent.isSystem) {
       if (name !== undefined || description !== undefined || instructions !== undefined ||
           type !== undefined || workflowId !== undefined) {
-        return res.status(403).json({ error: '系统助手仅允许调整技能和工具' })
+        return res.status(403).json({ error: '布丁仅允许调整技能和工具' })
       }
       const allowedFields: any = {}
       if (skillIds !== undefined) allowedFields.skillIds = skillIds ? JSON.stringify(skillIds) : null
@@ -129,9 +129,9 @@ router.delete('/:id', async (req, res) => {
       return res.status(404).json({ error: '智能体不存在' })
     }
 
-    // 系统助手不可删除
+    // 布丁不可删除
     if (agent.isSystem) {
-      return res.status(403).json({ error: '系统助手不可删除' })
+      return res.status(403).json({ error: '布丁不可删除' })
     }
 
     // 清理内存中的附件缓存
