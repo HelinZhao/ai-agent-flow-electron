@@ -7,6 +7,7 @@ import SettingsBackup from './settings/SettingsBackup';
 import SettingsGeneral from './settings/SettingsGeneral';
 import SettingsProxy from './settings/SettingsProxy';
 import SettingsAbout from './settings/SettingsAbout';
+import SettingsSponsor from './settings/SettingsSponsor';
 
 const TAB_ICONS: Record<string, React.ReactNode> = {
   llm: (
@@ -44,6 +45,11 @@ const TAB_ICONS: Record<string, React.ReactNode> = {
       <path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4m14-7l-5 5-5-5m5 5V3" /><path d="M7 10l5 5 5-5" />
     </svg>
   ),
+  sponsor: (
+    <svg className="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z" />
+    </svg>
+  ),
   about: (
     <svg className="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
       <circle cx="12" cy="12" r="10" /><path d="M12 16v-4m0-4h.01" />
@@ -59,6 +65,7 @@ const SETTINGS_TABS = [
   { id: 'proxy', label: '代理', desc: 'HTTP 代理配置' },
   { id: 'theme', label: '外观主题', desc: '界面颜色与显示' },
   { id: 'data', label: '数据管理', desc: '数据库与存储空间' },
+  { id: 'sponsor', label: '赞助支持', desc: '赞助项目发展' },
   { id: 'about', label: '关于', desc: '版本信息与技术栈' },
 ]
 
@@ -81,6 +88,8 @@ export default function Settings(): React.JSX.Element {
         return <SettingsTheme />;
       case 'data':
         return <SettingsData />;
+      case 'sponsor':
+        return <SettingsSponsor />;
       case 'about':
         return <SettingsAbout />;
       default:
