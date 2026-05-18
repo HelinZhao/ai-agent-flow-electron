@@ -13,3 +13,5 @@ resources/lancedb/
 resources/uploads/
 resources/proxy-config.json
 data/
+.claude/
+.vscode/
