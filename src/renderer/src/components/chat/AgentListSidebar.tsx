@@ -111,6 +111,11 @@ export default function AgentListSidebar({
               <div className="text-left min-w-0 flex-1 relative">
                 <div className="text-sm font-medium truncate leading-tight flex items-center gap-1.5">
                   {agent.name}
+                  {agent.isSystem && (
+                    <span className="inline-flex items-center px-1 py-0.5 text-[9px] font-medium rounded-full bg-amber-100 dark:bg-amber-900/30 text-amber-700 dark:text-amber-300 border border-amber-200 dark:border-amber-700 leading-none">
+                      系统
+                    </span>
+                  )}
                   {draftAgentIds?.has(agent.id) && (
                     <span className="inline-block w-1.5 h-1.5 rounded-full bg-amber-400 shrink-0" title="有未发送的内容" />
                   )}

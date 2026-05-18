@@ -1,6 +1,8 @@
 import { useState, useRef, useEffect, useCallback } from 'react'
 import { useWorkflowStore } from '@renderer/store/workflowStore'
+import { useSettingsStore } from '@renderer/store/settingsStore'
 import { workflowExecutionApi } from '@renderer/lib/api'
+import { chatRecordApi } from '@renderer/lib/chatRecord'
 import type { ChatMessage as ChatMessageType, ToolApprovalRequest } from '@renderer/types'
 import { TOOL_LABEL_MAP } from '@renderer/config'
 import CustomButton from '@renderer/components/ui/CustomButton'
@@ -71,6 +73,7 @@ export default function SystemAssistantChat() {
     document.addEventListener('mouseup', onUp)
   }, [])
 
+  const { showSystemAssistant } = useSettingsStore()
   const systemAgent = agents.find(a => a.id === SYSTEM_AGENT_ID || a.name === SYSTEM_AGENT_NAME)
   const creatingRef = useRef(false)
 
@@ -130,6 +133,33 @@ export default function SystemAssistantChat() {
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' })
   }, [messages])
+
+  // 自动保存对话历史
+  const saveTimerRef = useRef<ReturnType<typeof setTimeout> | undefined>(undefined)
+  useEffect(() => {
+    if (messages.length === 0) return
+    clearTimeout(saveTimerRef.current)
+    saveTimerRef.current = setTimeout(() => {
+      const agent = systemAgent || agents.find(a => a.id === SYSTEM_AGENT_ID || a.name === SYSTEM_AGENT_NAME)
+      if (!agent) return
+      chatRecordApi.saveRecord(agent.id, agent.name, messages).catch(() => {})
+    }, 500)
+    return () => clearTimeout(saveTimerRef.current)
+  }, [messages])
+
+  // 每次张开对话框时自动加载历史
+  useEffect(() => {
+    if (!open) return
+    const agent = systemAgent || agents.find(a => a.id === SYSTEM_AGENT_ID || a.name === SYSTEM_AGENT_NAME)
+    if (!agent) return
+    chatRecordApi.loadRecord(agent.id).then((result) => {
+      if (result.success && result.history?.messages?.length) {
+        setMessages(result.history.messages)
+      } else {
+        setMessages([])
+      }
+    })
+  }, [open, systemAgent, agents])
 
   const sendMessage = async () => {
     const text = input.trim()
@@ -221,6 +251,17 @@ export default function SystemAssistantChat() {
     } catch { /* ignore */ }
   }, [currentExecutionId])
 
+  const handleNewChat = useCallback(async () => {
+    if (messages.length === 0) return
+    if (!window.confirm('确定要清空系统助手的对话记录吗？')) return
+    const agent = systemAgent || agents.find(a => a.id === SYSTEM_AGENT_ID || a.name === SYSTEM_AGENT_NAME)
+    if (agent) {
+      await chatRecordApi.deleteRecord(agent.id).catch(() => {})
+      await workflowExecutionApi.deleteThread(agent.id).catch(() => {})
+    }
+    setMessages([])
+  }, [messages, systemAgent, agents])
+
   const handleKeyDown = (e: React.KeyboardEvent) => {
     if (e.key === 'Enter' && !e.shiftKey) {
       e.preventDefault()
@@ -235,6 +276,8 @@ export default function SystemAssistantChat() {
     const top = pos.y - ph - gap < 0 ? pos.y + BTN_SIZE + gap : pos.y - ph - gap
     return { left, top }
   })()
+
+  if (!showSystemAssistant) return null
 
   return (
     <>
@@ -263,6 +306,12 @@ export default function SystemAssistantChat() {
           <div className="flex items-center gap-2 px-4 py-3 bg-gradient-to-r from-amber-50 to-orange-50 dark:from-amber-900/20 dark:to-orange-900/20 border-b border-gray-200 dark:border-gray-700">
             <span>✨</span>
             <span className="text-sm font-semibold text-gray-900 dark:text-white flex-1">系统助手</span>
+            <button onClick={handleNewChat} className="text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 transition-colors" title="新对话">
+              <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                <path d="M4 4v16a2 2 0 002 2h12a2 2 0 002-2V8.342a2 2 0 00-.602-1.43l-4.44-4.342A2 2 0 0013.56 2H6a2 2 0 00-2 2z" />
+                <path d="M9 13h6m-3-3v6" />
+              </svg>
+            </button>
             <span className="text-[10px] text-amber-600 dark:text-amber-400 bg-amber-100 dark:bg-amber-900/30 px-1.5 py-0.5 rounded-full">随时提问</span>
           </div>
 

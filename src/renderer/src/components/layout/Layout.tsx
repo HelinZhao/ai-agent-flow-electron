@@ -78,7 +78,7 @@ const Layout: React.FC<LayoutProps> = ({ navItems, currentPage, onNavigate, load
           ))}
         </main>
       </div>
-      <SystemAssistantChat />
+      {currentPage !== '/chat' && <SystemAssistantChat />}
     </div>
   )
 }
