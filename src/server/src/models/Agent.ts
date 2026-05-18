@@ -10,6 +10,7 @@ export interface AgentAttributes {
   skillIds?: string
   enabledTools?: string
   workflowId?: string
+  isSystem?: boolean
   createdAt: Date
   updatedAt: Date
 }
@@ -31,6 +32,7 @@ export class AgentModel
   declare skillIds?: string
   declare enabledTools?: string
   declare workflowId?: string
+  declare isSystem?: boolean
   declare createdAt: Date
   declare updatedAt: Date
 }
@@ -68,6 +70,11 @@ AgentModel.init(
     },
     workflowId: {
       type: DataTypes.UUID,
+      allowNull: true
+    },
+    isSystem: {
+      type: DataTypes.BOOLEAN,
+      defaultValue: false,
       allowNull: true
     },
     createdAt: {

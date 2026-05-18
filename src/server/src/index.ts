@@ -38,6 +38,7 @@ import {
 import { timingWheel, cronToNextTime } from './utils/timingWheel'
 import { changeNotifier } from './utils/dataChangeNotifier'
 import { TriggerModel } from './models'
+import { AgentModel } from './models'
 import { app } from 'electron'
 
 export class LocalServer {
@@ -282,6 +283,46 @@ export class LocalServer {
   public async start(port?: number): Promise<number> {
     await migrateOldDataDir()
     await initDatabase()
+
+    // 种子系统助手 Agent（不存在则创建）
+    const SYSTEM_AGENT_ID = '00000000-0000-0000-0000-000000000001'
+    const existingSystemAgent = await AgentModel.findByPk(SYSTEM_AGENT_ID)
+    if (!existingSystemAgent) {
+      const agent = AgentModel.build({
+        id: SYSTEM_AGENT_ID,
+        name: '系统助手',
+        description: 'Agent Flow 内置 AI 助手，帮助你了解和使用本应用',
+        instructions: `你是 Agent Flow 的内置 AI 助手。
+
+你的职责是帮助用户了解和使用 Agent Flow 这个 AI 工作流编排平台。
+
+你可以回答以下方面的问题：
+1. 工作流创建和编辑（节点类型、连线、布局）
+2. Agent 配置（标准 Agent 和工作流 Agent 的区别）
+3. 技能管理（创建和绑定技能）
+4. 知识库使用（内部/外部知识库、RAG 检索）
+5. 触发器设置（Cron 定时触发和 Webhook）
+6. LLM 配置（支持哪些提供商、如何切换）
+7. 工具调用和人工审批（HITL）
+8. 应用常见问题排查
+
+回答要求：
+- 使用中文，简洁明了
+- 如果问题超出你的知识范围，诚实地告诉用户你不确定
+- 对于操作类问题，给出清晰的步骤指引
+- 保持友好和耐心的语气`,
+        type: 'standard',
+        isSystem: true,
+        enabledTools: JSON.stringify([
+          'readFile', 'writeFile', 'listDirectory', 'executeCommand',
+          'httpRequest', 'webSearch',
+          'workflowsApi', 'agentsSkillsApi', 'knowledgeApi', 'configApi',
+          'readSkill',
+        ]),
+      })
+      await agent.save()
+      console.log('[SystemAgent] 系统助手创建成功')
+    }
 
     // 加载所有启用的 cron 触发器并注册到时间轮
     const enabledCronTriggers = await TriggerModel.findAll({

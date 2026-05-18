@@ -3,6 +3,7 @@ import LLMConfigSwitcher from './LLMConfigSwitcher'
 import Sidebar from './Sidebar'
 import MobileNav from './MobileNav'
 import WindowControls from './WindowControls'
+import SystemAssistantChat from '@renderer/components/SystemAssistantChat'
 
 interface LayoutProps {
   children: React.ReactNode
@@ -77,6 +78,7 @@ const Layout: React.FC<LayoutProps> = ({ navItems, currentPage, onNavigate, load
           ))}
         </main>
       </div>
+      <SystemAssistantChat />
     </div>
   )
 }

@@ -21,6 +21,7 @@ const AgentCard = React.memo(function AgentCard({
   onDelete: (agent: Agent) => void
   onSelect: (id: string) => void
 }) {
+  const isSystem = agent.isSystem;
   const isStandard = agent.type !== 'workflow';
   const summary = agent.instructions
     ? agent.instructions.replace(/[#*\n]/g, ' ').substring(0, 90) +
@@ -44,13 +45,18 @@ const AgentCard = React.memo(function AgentCard({
         {/* Header */}
         <div className="flex items-start justify-between mb-2">
           <div className="flex items-center gap-2.5 min-w-0">
-            <div className="flex items-center justify-center w-9 h-9 rounded-lg bg-gradient-to-br from-blue-50 to-purple-50 dark:from-blue-900/30 dark:to-purple-900/30 flex-shrink-0">
-              <span className="text-base">🤖</span>
+            <div className={`flex items-center justify-center w-9 h-9 rounded-lg ${isSystem ? 'bg-gradient-to-br from-amber-50 to-orange-50 dark:from-amber-900/30 dark:to-orange-900/30' : 'bg-gradient-to-br from-blue-50 to-purple-50 dark:from-blue-900/30 dark:to-purple-900/30'} flex-shrink-0`}>
+              <span className="text-base">{isSystem ? '✨' : '🤖'}</span>
             </div>
             <div className="min-w-0">
               <h4 className="text-sm font-semibold text-gray-900 dark:text-white truncate">
                 {agent.name}
               </h4>
+                    {isSystem && (
+                      <span className="inline-flex items-center px-1.5 py-0.5 text-[10px] font-medium rounded-full bg-amber-100 dark:bg-amber-900/30 text-amber-700 dark:text-amber-300 border border-amber-200 dark:border-amber-700">
+                        系统
+                      </span>
+                    )}
               <p className="text-xs text-gray-400 dark:text-gray-500 mt-0.5 truncate">
                 {agent.description || '暂无描述'}
               </p>
@@ -92,7 +98,7 @@ const AgentCard = React.memo(function AgentCard({
             <path d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
           </svg>
         </button>
-        <div className="w-px h-4 bg-gray-200 dark:bg-gray-600" />
+        {!isSystem && <><div className="w-px h-4 bg-gray-200 dark:bg-gray-600" />
         <button
           onClick={(e) => { e.stopPropagation(); onDelete(agent) }}
           className="flex items-center justify-center w-6 h-6 rounded-lg text-gray-400 hover:text-red-600 dark:hover:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors"
@@ -102,10 +108,11 @@ const AgentCard = React.memo(function AgentCard({
             <path d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
           </svg>
         </button>
+        </>}
       </div>
 
       {/* Chevron */}
-      <div className="absolute bottom-3 right-3 text-gray-300 dark:text-gray-600 group-hover/agent:text-blue-400 dark:group-hover/agent:text-blue-500 transition-colors">
+      <div className={`absolute bottom-3 right-3 transition-colors ${isSystem ? `text-amber-300 dark:text-amber-600 group-hover/agent:text-amber-500` : `text-gray-300 dark:text-gray-600 group-hover/agent:text-blue-400 dark:group-hover/agent:text-blue-500`}`}>
         <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
           <path d="M9 5l7 7-7 7" />
         </svg>
@@ -125,12 +132,19 @@ export default function Agents(): React.JSX.Element {
     ? agents.find((a) => a.id === selectedAgentId) ?? null
     : null;
 
-  const filteredAgents = agents.filter(
-    (agent) =>
-      agent.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      (agent.description &&
-        agent.description.toLowerCase().includes(searchTerm.toLowerCase())),
-  );
+  const filteredAgents = agents
+    .filter(
+      (agent) =>
+        agent.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        (agent.description &&
+          agent.description.toLowerCase().includes(searchTerm.toLowerCase())),
+    )
+    .sort((a, b) => {
+      // 系统助手始终置顶
+      if (a.isSystem && !b.isSystem) return -1
+      if (!a.isSystem && b.isSystem) return 1
+      return 0
+    })
 
   const handleCreate = useCallback((): void => {
     setSelectedAgentId('__create__');
@@ -161,6 +175,17 @@ export default function Agents(): React.JSX.Element {
   };
 
   const handleSave = async (formData: AgentFormData): Promise<void> => {
+    // 系统助手只允许更新技能和工具
+    if (selectedAgent?.isSystem) {
+      await updateAgent(selectedAgent.id, {
+        skillIds: formData.skillIds,
+        enabledTools: formData.enabledTools,
+      });
+      setIsEditing(false);
+      setSelectedAgentId(null);
+      return
+    }
+
     const payload = {
       name: formData.name,
       description: formData.description,
@@ -198,9 +223,11 @@ export default function Agents(): React.JSX.Element {
           </button>
           <h2 className="text-base font-semibold text-gray-900 dark:text-white">
             {isEditing
-              ? selectedAgent
-                ? '编辑 Agent'
-                : '创建新 Agent'
+              ? selectedAgent?.isSystem
+                ? '调整系统助手'
+                : selectedAgent
+                  ? '编辑 Agent'
+                  : '创建新 Agent'
               : selectedAgent?.name || ''}
           </h2>
         </div>
@@ -219,6 +246,7 @@ export default function Agents(): React.JSX.Element {
                   handleBack();
                 }
               }}
+              isSystem={selectedAgent?.isSystem}
             />
           ) : selectedAgent ? (
             <AgentDetail
@@ -231,6 +259,7 @@ export default function Agents(): React.JSX.Element {
               }
               onEdit={() => setIsEditing(true)}
               onDelete={() => handleDelete(selectedAgent)}
+              isSystem={selectedAgent?.isSystem}
             />
           ) : null}
         </div>

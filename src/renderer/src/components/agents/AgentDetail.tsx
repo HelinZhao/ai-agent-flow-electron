@@ -9,6 +9,7 @@ interface AgentDetailProps {
   workflowName: string
   onEdit: () => void
   onDelete: () => void
+  isSystem?: boolean
 }
 
 function InfoItem({ label, children }: { label: string; children: React.ReactNode }) {
@@ -37,21 +38,26 @@ function Tag({ label, color = 'blue' }: { label: string; color?: 'blue' | 'purpl
   );
 }
 
-export default function AgentDetail({ agent, skills, workflowName, onEdit, onDelete }: AgentDetailProps) {
+export default function AgentDetail({ agent, skills, workflowName, onEdit, onDelete, isSystem }: AgentDetailProps) {
   const isStandard = agent.type === 'standard';
 
   return (
     <>
       {/* ── Hero ── */}
-      <div className="relative overflow-hidden bg-gradient-to-br from-blue-500/10 via-transparent to-purple-500/10 dark:from-blue-500/5 dark:to-purple-500/5 rounded-xl border border-gray-200/50 dark:border-gray-700/50 p-6 mb-6">
+      <div className={`relative overflow-hidden rounded-xl border border-gray-200/50 dark:border-gray-700/50 p-6 mb-6 ${isSystem ? 'bg-gradient-to-br from-amber-500/10 via-transparent to-orange-500/10 dark:from-amber-500/5 dark:to-orange-500/5' : 'bg-gradient-to-br from-blue-500/10 via-transparent to-purple-500/10 dark:from-blue-500/5 dark:to-purple-500/5'}`}>
         <div className="flex items-start justify-between">
           <div className="flex items-start gap-4">
-            <div className="flex items-center justify-center w-14 h-14 rounded-xl bg-gradient-to-br from-blue-500 to-purple-600 shadow-lg flex-shrink-0">
-              <span className="text-2xl text-white">🤖</span>
+            <div className={`flex items-center justify-center w-14 h-14 rounded-xl shadow-lg flex-shrink-0 ${isSystem ? 'bg-gradient-to-br from-amber-400 to-orange-500' : 'bg-gradient-to-br from-blue-500 to-purple-600'}`}>
+              <span className="text-2xl text-white">{isSystem ? '✨' : '🤖'}</span>
             </div>
             <div>
               <div className="flex items-center gap-2 mb-1">
                 <h2 className="text-xl font-bold text-gray-900 dark:text-white">{agent.name}</h2>
+                {isSystem && (
+                  <span className="inline-flex items-center px-1.5 py-0.5 text-[10px] font-medium rounded-full bg-amber-100 dark:bg-amber-900/30 text-amber-700 dark:text-amber-300 border border-amber-200 dark:border-amber-700">
+                    系统
+                  </span>
+                )}
                 <Tag label={isStandard ? '标准' : '工作流'} color={isStandard ? 'blue' : 'purple'} />
               </div>
               <p className="text-sm text-gray-500 dark:text-gray-400">
@@ -60,26 +66,40 @@ export default function AgentDetail({ agent, skills, workflowName, onEdit, onDel
             </div>
           </div>
 
-          <div className="flex items-center gap-2">
-            <button
-              onClick={onEdit}
-              className="inline-flex items-center gap-1.5 px-3 py-1.5 text-sm font-medium text-blue-600 dark:text-blue-400 bg-blue-50 dark:bg-blue-900/20 hover:bg-blue-100 dark:hover:bg-blue-900/40 rounded-lg transition-colors"
-            >
-              <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                <path d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
-              </svg>
-              <span>编辑</span>
-            </button>
-            <button
-              onClick={onDelete}
-              className="inline-flex items-center gap-1.5 px-3 py-1.5 text-sm font-medium text-red-600 dark:text-red-400 bg-red-50 dark:bg-red-900/20 hover:bg-red-100 dark:hover:bg-red-900/40 rounded-lg transition-colors"
-            >
-              <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                <path d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
-              </svg>
-              <span>删除</span>
-            </button>
-          </div>
+          {isSystem ? (
+            <div className="flex items-center gap-2">
+              <button
+                onClick={onEdit}
+                className="inline-flex items-center gap-1.5 px-3 py-1.5 text-sm font-medium text-amber-600 dark:text-amber-400 bg-amber-50 dark:bg-amber-900/20 hover:bg-amber-100 dark:hover:bg-amber-900/40 rounded-lg transition-colors"
+              >
+                <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                  <path d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+                </svg>
+                <span>调整技能/工具</span>
+              </button>
+            </div>
+          ) : (
+            <div className="flex items-center gap-2">
+              <button
+                onClick={onEdit}
+                className="inline-flex items-center gap-1.5 px-3 py-1.5 text-sm font-medium text-blue-600 dark:text-blue-400 bg-blue-50 dark:bg-blue-900/20 hover:bg-blue-100 dark:hover:bg-blue-900/40 rounded-lg transition-colors"
+              >
+                <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                  <path d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+                </svg>
+                <span>编辑</span>
+              </button>
+              <button
+                onClick={onDelete}
+                className="inline-flex items-center gap-1.5 px-3 py-1.5 text-sm font-medium text-red-600 dark:text-red-400 bg-red-50 dark:bg-red-900/20 hover:bg-red-100 dark:hover:bg-red-900/40 rounded-lg transition-colors"
+              >
+                <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                  <path d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                </svg>
+                <span>删除</span>
+              </button>
+            </div>
+          )}
         </div>
       </div>
 

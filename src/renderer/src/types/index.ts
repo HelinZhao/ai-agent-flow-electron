@@ -81,6 +81,7 @@ export interface Agent {
   skillIds?: string[]
   enabledTools?: string[]
   workflowId?: string
+  isSystem?: boolean
   createdAt: Date
   updatedAt: Date
 }

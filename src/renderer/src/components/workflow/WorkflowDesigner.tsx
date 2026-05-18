@@ -84,7 +84,7 @@ function WorkflowDesigner(props: WorkflowDesignerProps): React.JSX.Element {
       position: node.position,
       data: {
         ...node.data,
-        label: node.data.label || getNodeDefaultLabel(node.type),
+        label: node.data?.label || getNodeDefaultLabel(node.type),
       },
     })) || [];
   }, [workflow?.nodes]);
