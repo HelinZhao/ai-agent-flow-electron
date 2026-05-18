@@ -488,6 +488,9 @@ export const knowledgeBaseApi = {
     axios.get(`${baseURL}/knowledge-base/${kbId}/documents/${encodeURIComponent(docName)}/download`, {
       responseType: 'blob'
     }).then(res => res.data),
+
+  retrieveDebug: (kbId: string, query: string): Promise<{ results: { id: string; content: string; source: string; chunkIndex: number; distance: number }[] }> =>
+    api.post(`/knowledge-base/${kbId}/retrieve-debug`, { query }),
 }
 
 // 数据管理 API

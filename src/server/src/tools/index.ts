@@ -282,6 +282,7 @@ GET  /api/knowledge-base/{id}/documents/{docName}/download  - 从分块拼接重
 
 RAG 检索:
 POST /api/knowledge-base/{id}/retrieve                      - RAG 检索 body: {"query":"检索内容"}
+POST /api/knowledge-base/{id}/retrieve-debug                - 召回测试 body: {"query":"检索内容"}，返回结构化结果（含距离分数）
 
 分块管理:
 GET  /api/knowledge-base/{id}/chunks/{docName}              - 获取文档的分块列表

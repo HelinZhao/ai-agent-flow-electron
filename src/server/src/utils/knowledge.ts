@@ -145,6 +145,49 @@ export async function retrieveContext(
   return sortedChunks.join('\n\n---\n\n')
 }
 
+// 检索（调试模式）：返回结构化结果，含分块ID、内容、来源、距离
+export async function retrieveContextDebug(
+  knowledgeBaseId: string,
+  query: string
+): Promise<{ id: string; content: string; source: string; chunkIndex: number; distance: number }[]> {
+  const kb = await KnowledgeBaseModel.findByPk(knowledgeBaseId)
+  if (!kb) throw new Error('知识库不存在')
+
+  if (kb.type === 'external') {
+    const text = await retrieveExternal(kb, query)
+    return text ? [{ id: '', content: text, source: '外部知识库', chunkIndex: 0, distance: 0 }] : []
+  }
+
+  const totalChunks = await KnowledgeChunkModel.count({ where: { knowledgeBaseId } })
+  if (totalChunks === 0) return []
+
+  const { embeddings, dims } = await getEmbeddingsInstance()
+  const store = getVectorStore(kb.vectorStore || 'sqlite-vec', kb.vectorConfig)
+  await store.ensureReady(dims)
+
+  const queryVector = await embeddings.embedQuery(query)
+  const rows = await store.search(new Float32Array(queryVector), kb.topK)
+  if (rows.length === 0) return []
+
+  const chunkIds = rows.map(r => r.chunkId)
+  const chunks = await KnowledgeChunkModel.findAll({
+    where: { id: chunkIds, knowledgeBaseId, enabled: true }
+  })
+
+  const chunkMap = new Map(chunks.map(c => [c.id, c]))
+
+  return rows.map(r => {
+    const chunk = chunkMap.get(r.chunkId)
+    return {
+      id: r.chunkId,
+      content: chunk ? chunk.content : '',
+      source: chunk ? chunk.source : '',
+      chunkIndex: chunk ? chunk.chunkIndex : 0,
+      distance: r.distance
+    }
+  })
+}
+
 // 外部知识库检索：调用外部 API
 async function retrieveExternal(kb: KnowledgeBaseModel, query: string): Promise<string> {
   const providerName = kb.provider || 'generic'

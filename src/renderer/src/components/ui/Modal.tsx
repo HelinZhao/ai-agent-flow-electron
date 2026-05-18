@@ -1,4 +1,4 @@
-import React from 'react'
+import React, { useRef } from 'react'
 import { createPortal } from 'react-dom'
 
 interface ModalProps {
@@ -10,11 +10,21 @@ interface ModalProps {
 }
 
 export default function Modal({ open, onClose, title, children, footer }: ModalProps): React.ReactElement | null {
+  const mouseDownRef = useRef(false)
+
   if (!open) return null
 
   return createPortal(
     <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/40 backdrop-blur-sm"
-      onClick={onClose}>
+      onMouseDown={(e) => { if (e.target === e.currentTarget) mouseDownRef.current = true }}
+      onMouseUp={(e) => {
+        if (e.target === e.currentTarget && mouseDownRef.current) {
+          mouseDownRef.current = false
+          onClose()
+        }
+        mouseDownRef.current = false
+      }}
+    >
       <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-2xl w-full max-w-lg mx-4 max-h-[calc(100vh-4rem)] flex flex-col"
         onClick={e => e.stopPropagation()}>
 

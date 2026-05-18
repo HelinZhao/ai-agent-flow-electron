@@ -5,7 +5,7 @@ import path from 'path'
 import fs from 'fs/promises'
 import { KnowledgeBaseModel } from '../models'
 import { getUserDataDir } from '../utils/file'
-import { ingestDocument, deleteDocumentChunks, deleteAllChunks, getDocumentStats, retrieveContext, getChunksByDocument, addChunk, updateChunkContent, deleteSingleChunk, toggleChunkEnabled, reconstructDocumentFromChunks } from '../utils/knowledge'
+import { ingestDocument, deleteDocumentChunks, deleteAllChunks, getDocumentStats, retrieveContext, retrieveContextDebug, getChunksByDocument, addChunk, updateChunkContent, deleteSingleChunk, toggleChunkEnabled, reconstructDocumentFromChunks } from '../utils/knowledge'
 import { UPLOAD_DIR, KB_UPLOAD_EXTENSIONS, DEFAULT_CHUNK_SIZE, DEFAULT_CHUNK_OVERLAP, DEFAULT_TOP_K } from '../config'
 
 // 确保 uploads 目录存在
@@ -267,6 +267,25 @@ router.post('/:id/retrieve', async (req, res) => {
     return res.status(200).json({ context })
   } catch (error) {
     console.error('检索错误:', error)
+    return res.status(500).json({ error: `检索失败: ${error instanceof Error ? error.message : '未知错误'}` })
+  }
+})
+
+// 检索调试接口（返回结构化结果，含距离分数）
+router.post('/:id/retrieve-debug', async (req, res) => {
+  try {
+    const { id } = req.params
+    const { query } = req.body
+
+    if (!query) {
+      return res.status(400).json({ error: '查询内容不能为空' })
+    }
+
+    const results = await retrieveContextDebug(id, query)
+
+    return res.status(200).json({ results })
+  } catch (error) {
+    console.error('检索调试错误:', error)
     return res.status(500).json({ error: `检索失败: ${error instanceof Error ? error.message : '未知错误'}` })
   }
 })

@@ -4,6 +4,7 @@ import { KnowledgeBase } from '@renderer/types'
 import { knowledgeBaseApi } from '@renderer/lib/api'
 import CustomButton from '@renderer/components/ui/CustomButton'
 import MessageBanner from '@renderer/components/ui/MessageBanner'
+import Modal from '@renderer/components/ui/Modal'
 import ChunkViewer from '@renderer/components/workflow/config/ChunkViewer'
 import { KB_UPLOAD_ACCEPT, EXTERNAL_KB_PROVIDER_META } from '@renderer/config'
 
@@ -20,6 +21,24 @@ export default function KnowledgeDetail({ kb, onBack }: KnowledgeDetailProps): R
   const [chunkViewerState, setChunkViewerState] = useState<{ kbId: string; docName: string } | null>(null)
   const [deleteDocTarget, setDeleteDocTarget] = useState<string | null>(null)
   const [isUploading, setIsUploading] = useState(false)
+  const [showRecallTest, setShowRecallTest] = useState(false)
+  const [recallQuery, setRecallQuery] = useState('')
+  const [recallResults, setRecallResults] = useState<{ id: string; content: string; source: string; chunkIndex: number; distance: number }[] | null>(null)
+  const [recallLoading, setRecallLoading] = useState(false)
+
+  const handleRecallTest = async () => {
+    if (!recallQuery.trim()) return
+    setRecallLoading(true)
+    setRecallResults(null)
+    try {
+      const res = await knowledgeBaseApi.retrieveDebug(kb.id, recallQuery)
+      setRecallResults(res.results)
+    } catch (error) {
+      setMessage({ type: 'error', text: `召回测试失败: ${error instanceof Error ? error.message : '未知错误'}` })
+    } finally {
+      setRecallLoading(false)
+    }
+  }
   const fileInputRef = useRef<HTMLInputElement>(null)
 
   const isInternal = kb.type === 'internal'
@@ -163,6 +182,75 @@ export default function KnowledgeDetail({ kb, onBack }: KnowledgeDetailProps): R
             <p className="text-2xl font-bold text-gray-900 dark:text-white pl-8">{kb.chunkSize}</p>
           </div>
         </div>
+
+        {/* ── Recall Test ── */}
+        <div className="mb-6">
+          <button
+            onClick={() => { setRecallQuery(''); setRecallResults(null); setShowRecallTest(true) }}
+            className="flex items-center gap-2 px-4 py-2.5 rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800/60 hover:border-blue-300 dark:hover:border-blue-600/50 hover:shadow-md transition-all w-full text-left"
+          >
+            <div className="flex items-center justify-center w-8 h-8 rounded-lg bg-blue-50 dark:bg-blue-900/20 flex-shrink-0">
+              <svg className="w-4 h-4 text-blue-600 dark:text-blue-400" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                <circle cx="11" cy="11" r="8" /><path d="m21 21-4.35-4.35" /><path d="M8 11h6" />
+              </svg>
+            </div>
+            <div>
+              <p className="text-sm font-semibold text-gray-900 dark:text-white">召回测试</p>
+              <p className="text-xs text-gray-500 dark:text-gray-400">输入查询，测试向量检索效果</p>
+            </div>
+            <svg className="w-4 h-4 ml-auto text-gray-400" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M9 5l7 7-7 7" /></svg>
+          </button>
+        </div>
+
+        {/* ── Recall Test Modal ── */}
+        <Modal open={showRecallTest} onClose={() => setShowRecallTest(false)} title="召回测试">
+          <div className="flex gap-2">
+            <input
+              value={recallQuery}
+              onChange={(e) => setRecallQuery(e.target.value)}
+              onKeyDown={(e) => e.key === 'Enter' && handleRecallTest()}
+              placeholder="输入测试查询内容..."
+              className="flex-1 px-3 py-2 text-sm rounded-lg border border-gray-200 dark:border-gray-600 bg-gray-50 dark:bg-gray-700 text-gray-900 dark:text-white placeholder-gray-400 focus:outline-none focus:ring-1 focus:ring-blue-500"
+            />
+            <CustomButton onClick={handleRecallTest} variant="primary" size="sm" disabled={recallLoading || !recallQuery.trim()}>
+              {recallLoading ? '检索中...' : '检索'}
+            </CustomButton>
+          </div>
+
+          {recallLoading && (
+            <div className="flex justify-center py-8">
+              <svg className="w-6 h-6 text-blue-500 animate-spin" viewBox="0 0 24 24" fill="none">
+                <circle cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="3" className="opacity-20" />
+                <path d="M12 2a10 10 0 0 1 10 10" stroke="currentColor" strokeWidth="3" strokeLinecap="round" />
+              </svg>
+            </div>
+          )}
+          {recallResults !== null && !recallLoading && (
+            recallResults.length === 0 ? (
+              <div className="text-center py-8 text-gray-400">
+                <svg className="w-10 h-10 mx-auto mb-2 opacity-30" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5">
+                  <circle cx="11" cy="11" r="8" /><path d="m21 21-4.35-4.35" />
+                </svg>
+                <p className="text-sm">未检索到相关内容</p>
+              </div>
+            ) : (
+              <div className="space-y-3">
+                {recallResults.map((r, i) => (
+                  <div key={r.id || i} className="rounded-xl border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-900/30 overflow-hidden">
+                    <div className="flex items-center justify-between px-4 py-2 bg-white dark:bg-gray-800 border-b border-gray-100 dark:border-gray-700 text-xs">
+                      <span className="font-medium text-gray-700 dark:text-gray-300">#{i + 1}</span>
+                      <span className="text-gray-500 truncate mx-2">{r.source}</span>
+                      <span className="text-gray-400">距离: {r.distance.toFixed(4)}</span>
+                    </div>
+                    <div className="px-4 py-3 text-sm text-gray-600 dark:text-gray-400 max-h-32 overflow-y-auto whitespace-pre-wrap font-mono text-[11px]">
+                      {r.content}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )
+          )}
+        </Modal>
 
         {/* ── Documents (internal) ── */}
         {isInternal && (
