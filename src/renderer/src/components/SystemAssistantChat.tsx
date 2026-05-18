@@ -135,10 +135,16 @@ export default function SystemAssistantChat() {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' })
   }, [messages])
 
-  // 自动保存对话历史
+  // 自动保存对话历史（仅在有真正的新消息时保存）
   const saveTimerRef = useRef<ReturnType<typeof setTimeout> | undefined>(undefined)
+  const justLoadedRef = useRef(false)
   useEffect(() => {
     if (messages.length === 0) return
+    // 刚加载完历史时不触发保存
+    if (justLoadedRef.current) {
+      justLoadedRef.current = false
+      return
+    }
     clearTimeout(saveTimerRef.current)
     saveTimerRef.current = setTimeout(() => {
       const agent = systemAgent || agents.find(a => a.id === SYSTEM_AGENT_ID || a.name === SYSTEM_AGENT_NAME)
@@ -155,6 +161,7 @@ export default function SystemAssistantChat() {
     if (!agent) return
     chatRecordApi.loadRecord(agent.id).then((result) => {
       if (result.success && result.history?.messages?.length) {
+        justLoadedRef.current = true
         setMessages(result.history.messages)
       } else {
         setMessages([])

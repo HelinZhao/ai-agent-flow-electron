@@ -1,10 +1,11 @@
 import { Router } from 'express'
 import { Op } from 'sequelize'
 import { v4 as uuidv4 } from 'uuid'
-import { TriggerModel, AgentModel, WorkflowModel, LLMConfigModel } from '../models'
+import { TriggerModel, AgentModel, WorkflowModel, LLMConfigModel, SkillModel } from '../models'
 import { timingWheel, cronToNextTime } from '../utils/timingWheel'
 import { monitoredExecutor } from './execute-workflow'
 import { WEBHOOK_RATE_LIMIT, WEBHOOK_RATE_WINDOW } from '../config'
+import { safeJsonParse } from '../utils/shared'
 import type { Workflow, LLMConfig } from '../types'
 
 const router = Router()
@@ -41,14 +42,14 @@ async function getActiveLLMConfig(): Promise<LLMConfig> {
 }
 
 // 执行触发器目标
-async function fireTrigger(triggerId: string): Promise<void> {
+async function fireTrigger(triggerId: string, payload?: string): Promise<string | null | undefined> {
   const trigger = await TriggerModel.findByPk(triggerId)
-  if (!trigger || !trigger.enabled) return
+  if (!trigger || !trigger.enabled) return null
 
   // 防止重复触发：上次还在执行中
   if (trigger.lastRunStatus === 'running') {
     console.log(`[Trigger] ${trigger.name}: 上次执行尚未完成，跳过本次触发`)
-    return
+    return null
   }
 
   try {
@@ -56,6 +57,8 @@ async function fireTrigger(triggerId: string): Promise<void> {
     await trigger.update({ lastRunStatus: 'running', lastRunAt: new Date() })
 
     const llmConfig = await getActiveLLMConfig()
+    let executionId: string | null = null
+    const input = payload ?? trigger.input
 
     if (trigger.targetType === 'workflow') {
       const workflow = await WorkflowModel.findByPk(trigger.targetId)
@@ -73,41 +76,67 @@ async function fireTrigger(triggerId: string): Promise<void> {
 
       await monitoredExecutor.startExecution(
         workflowObj,
-        trigger.input,
+        input,
         llmConfig,
         undefined,
         `trigger-${trigger.id}-${Date.now()}`
       )
-    } else {
+    } else if (trigger.targetType === 'agent') {
       const agent = await AgentModel.findByPk(trigger.targetId)
-      if (!agent || !agent.workflowId) {
-        throw new Error(`Agent ${trigger.targetId} 不存在或未绑定工作流`)
+      if (!agent) {
+        throw new Error(`Agent ${trigger.targetId} 不存在`)
       }
 
-      const workflow = await WorkflowModel.findByPk(agent.workflowId)
-      if (!workflow) throw new Error(`Agent 绑定的工作流 ${agent.workflowId} 不存在`)
+      if (agent.workflowId) {
+        const workflow = await WorkflowModel.findByPk(agent.workflowId)
+        if (!workflow) throw new Error(`Agent 绑定的工作流 ${agent.workflowId} 不存在`)
 
-      const workflowObj: Workflow = {
-        id: workflow.id,
-        name: workflow.name,
-        description: workflow.description,
-        nodes: JSON.parse(workflow.nodes),
-        edges: JSON.parse(workflow.edges),
-        createdAt: workflow.createdAt,
-        updatedAt: workflow.updatedAt
+        const workflowObj: Workflow = {
+          id: workflow.id,
+          name: workflow.name,
+          description: workflow.description,
+          nodes: JSON.parse(workflow.nodes),
+          edges: JSON.parse(workflow.edges),
+          createdAt: workflow.createdAt,
+          updatedAt: workflow.updatedAt
+        }
+
+        await monitoredExecutor.startExecution(
+          workflowObj,
+          input,
+          llmConfig,
+          agent.id,
+          `trigger-${trigger.id}-${Date.now()}`
+        )
+      } else {
+        const skillIds = safeJsonParse<string[]>(agent.skillIds, [])
+        const enabledTools = safeJsonParse<string[]>(agent.enabledTools, [])
+        // 注入技能列表（仅 ID/名称/描述，不含完整内容）并自动添加读取技能的工具
+        let skillsContext = ''
+        if (skillIds.length > 0) {
+          const skills = await SkillModel.findAll({ where: { id: skillIds } })
+          skillsContext = '绑定技能:\n' + skills.map(s => `- ${s.id}: ${s.name} — ${s.description}`).join('\n')
+          skillsContext += '\n\n如需了解某个技能的详细内容，可使用 readSkill 工具传入技能 ID 进行读取。'
+        }
+        const allEnabledTools = skillIds.length > 0 && !enabledTools.includes('readSkill')
+          ? [...enabledTools, 'readSkill']
+          : enabledTools
+        executionId = await monitoredExecutor.startDirectChat(
+          input,
+          llmConfig,
+          { id: agent.id, name: agent.name, instructions: agent.instructions },
+          agent.id,
+          [],
+          allEnabledTools,
+          [],
+          skillsContext
+        )
       }
-
-      await monitoredExecutor.startExecution(
-        workflowObj,
-        trigger.input,
-        llmConfig,
-        agent.id,
-        `trigger-${trigger.id}-${Date.now()}`
-      )
     }
 
     await trigger.update({ lastRunStatus: 'success' })
     console.log(`[Trigger] ${trigger.name}: 执行成功`)
+    return executionId
   } catch (error) {
     const msg = error instanceof Error ? error.message : '未知错误'
     console.error(`[Trigger] ${trigger.name}: 执行失败 -`, msg)
@@ -127,7 +156,7 @@ async function fireTrigger(triggerId: string): Promise<void> {
 }
 
 // 注册时间轮回调
-timingWheel.onFire = fireTrigger
+timingWheel.onFire = (id: string) => { fireTrigger(id); return Promise.resolve() }
 
 // ===================== REST API =====================
 
@@ -230,7 +259,7 @@ router.put('/:id', async (req, res) => {
       cronExpression: cronExpression !== undefined ? (cronExpression || undefined) : trigger.cronExpression,
       targetType: targetType ?? trigger.targetType,
       targetId: targetId ?? trigger.targetId,
-      input: input !== undefined ? input : trigger.input,
+      input: input !== undefined ? input : input,
       enabled: enabled !== undefined ? enabled : trigger.enabled,
       nextRunAt: undefined
     })
@@ -275,10 +304,9 @@ router.post('/:id/run', async (req, res) => {
     const trigger = await TriggerModel.findByPk(id)
     if (!trigger) return res.status(404).json({ error: '触发器不存在' })
 
-    // 异步执行，不阻塞响应
-    fireTrigger(id)
+    const executionId = await fireTrigger(id)
 
-    return res.status(200).json({ message: '触发器已手动触发' })
+    return res.status(200).json({ message: '触发器已手动触发', ...(executionId ? { executionId } : {}) })
   } catch (error) {
     console.error('手动触发错误:', error)
     return res.status(500).json({ error: '服务器内部错误' })
@@ -304,8 +332,14 @@ webhookRouter.post('/:token', async (req, res) => {
     })
     if (!trigger) return res.status(404).json({ error: '触发器不存在或已禁用' })
 
-    fireTrigger(trigger.id)
-    return res.status(200).json({ message: 'Webhook 触发成功', triggerName: trigger.name })
+    const input = req.body?.input
+    const payload = typeof input === 'string' ? input : JSON.stringify(req.body || '')
+    const executionId = await fireTrigger(trigger.id, payload)
+    return res.status(200).json({
+      message: 'Webhook 触发成功',
+      triggerName: trigger.name,
+      ...(executionId ? { executionId } : {})
+    })
   } catch (error) {
     console.error('Webhook 触发错误:', error)
     return res.status(500).json({ error: '服务器内部错误' })
