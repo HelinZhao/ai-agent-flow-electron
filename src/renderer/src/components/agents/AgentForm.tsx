@@ -5,6 +5,7 @@ import MarkdownIt from 'markdown-it';
 import MdEditor from 'react-markdown-editor-lite';
 import 'react-markdown-editor-lite/lib/index.css';
 import CustomInput from '@renderer/components/ui/CustomInput';
+import CustomSelect from '@renderer/components/ui/CustomSelect';
 import CustomButton from '@renderer/components/ui/CustomButton';
 import ItemPickerModal from '@renderer/components/ui/ItemPickerModal';
 
@@ -171,25 +172,29 @@ export default function AgentForm({ agent, skills, workflows, onSave, onCancel, 
           </>
         )}
 
-        {/* ── Skills & Tools Section ── */}
+        {/* ── Skills & Tools Section (仅标准 Agent) ── */}
+        {formData.type === 'standard' && (
         <section>
-          <div className="flex items-center gap-2 mb-5">
-            <div className="w-1 h-5 bg-emerald-500 rounded-full" />
-            <h3 className="text-base font-semibold text-gray-800 dark:text-gray-200">技能 & 工具</h3>
+          <div className="flex items-center justify-between mb-4">
+            <div className="flex items-center gap-2">
+              <div className="w-1 h-5 bg-amber-500 rounded-full" />
+              <h3 className="text-base font-semibold text-gray-800 dark:text-gray-200">技能</h3>
+            </div>
+            {hasSkills && (
+              <div onClick={() => setPickerTarget('skills')} className="inline-flex items-center gap-1.5 px-3 py-1.5 text-sm font-medium text-blue-600 dark:text-blue-400 bg-blue-50 dark:bg-blue-900/20 rounded-lg hover:bg-blue-100 dark:hover:bg-blue-900/40 cursor-pointer transition-colors border border-blue-200/50 dark:border-blue-800/50">
+                <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M12 4v16m8-8H4" /></svg>
+                <span>添加技能</span>
+              </div>
+            )}
           </div>
 
-          <div className="mb-4">
-            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">绑定技能</label>
+          <div className="mb-6">
             {hasSkills ? (
-              <div className="space-y-2">
-                <div onClick={() => setPickerTarget('skills')} className="inline-flex items-center gap-1.5 px-3 py-1.5 text-sm font-medium text-blue-600 dark:text-blue-400 bg-blue-50 dark:bg-blue-900/20 rounded-lg hover:bg-blue-100 dark:hover:bg-blue-900/40 cursor-pointer transition-colors border border-blue-200/50 dark:border-blue-800/50">
-                  <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M12 4v16m8-8H4" /></svg>
-                  <span>添加技能</span>
-                </div>
-                {selectedSkills.length > 0 && (
-                  <div className="p-3 bg-gray-50 dark:bg-gray-800/50 rounded-lg border border-gray-200/50 dark:border-gray-700/50">
-                    <Tags items={selectedSkills.map((s) => ({ id: s.id, label: s.name }))} onRemove={(id) => updateField({ skillIds: formData.skillIds.filter((i) => i !== id) })} emptyText="暂未绑定技能" />
-                  </div>
+              <div className="p-3 bg-gray-50 dark:bg-gray-800/50 rounded-lg border border-gray-200/50 dark:border-gray-700/50">
+                {selectedSkills.length > 0 ? (
+                  <Tags items={selectedSkills.map((s) => ({ id: s.id, label: s.name }))} onRemove={(id) => updateField({ skillIds: formData.skillIds.filter((i) => i !== id) })} emptyText="" />
+                ) : (
+                  <p className="text-xs text-gray-400 dark:text-gray-500 text-center py-2">暂未绑定技能，点击上方「添加技能」按钮开始绑定</p>
                 )}
               </div>
             ) : (
@@ -198,35 +203,45 @@ export default function AgentForm({ agent, skills, workflows, onSave, onCancel, 
           </div>
 
           <div>
-            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">绑定工具</label>
-            <div className="space-y-2">
+            <div className="flex items-center justify-between mb-4">
+              <div className="flex items-center gap-2">
+                <div className="w-1 h-5 bg-blue-500 rounded-full" />
+                <h3 className="text-base font-semibold text-gray-800 dark:text-gray-200">工具</h3>
+              </div>
               <div onClick={() => setPickerTarget('tools')} className="inline-flex items-center gap-1.5 px-3 py-1.5 text-sm font-medium text-blue-600 dark:text-blue-400 bg-blue-50 dark:bg-blue-900/20 rounded-lg hover:bg-blue-100 dark:hover:bg-blue-900/40 cursor-pointer transition-colors border border-blue-200/50 dark:border-blue-800/50">
                 <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M12 4v16m8-8H4" /></svg>
                 <span>添加工具</span>
               </div>
-              {selectedTools.length > 0 && (
-                <div className="p-3 bg-gray-50 dark:bg-gray-800/50 rounded-lg border border-gray-200/50 dark:border-gray-700/50">
-                  <Tags items={selectedTools.map((t) => ({ id: t.id, label: t.label }))} onRemove={(id) => updateField({ enabledTools: formData.enabledTools.filter((i) => i !== id) })} emptyText="暂未绑定工具" />
-                </div>
-              )}
             </div>
+              <div className="p-3 bg-gray-50 dark:bg-gray-800/50 rounded-lg border border-gray-200/50 dark:border-gray-700/50">
+                {selectedTools.length > 0 ? (
+                  <Tags items={selectedTools.map((t) => ({ id: t.id, label: t.label }))} onRemove={(id) => updateField({ enabledTools: formData.enabledTools.filter((i) => i !== id) })} emptyText="" />
+                ) : (
+                  <p className="text-xs text-gray-400 dark:text-gray-500 text-center py-2">暂未绑定工具，点击上方「添加工具」按钮开始绑定</p>
+                )}
+              </div>
           </div>
         </section>
+        )}
 
-        {!isSystem && formData.type === 'workflow' && (
+        {formData.type === 'workflow' && (
           <section>
             <div className="flex items-center gap-2 mb-5">
-              <div className="w-1 h-5 bg-emerald-500 rounded-full" />
+              <div className="w-1 h-5 bg-indigo-500 rounded-full" />
               <h3 className="text-base font-semibold text-gray-800 dark:text-gray-200">工作流绑定</h3>
             </div>
             <div>
               {hasWorkflows ? (
                 <div>
-                  <select value={formData.workflowId} onChange={(e) => updateField({ workflowId: e.target.value })}
-                    className="w-full px-3 py-2.5 text-sm bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded-xl focus:ring-2 focus:ring-blue-500/50 focus:border-blue-500 dark:focus:border-blue-500 outline-none transition-colors text-gray-900 dark:text-white">
-                    <option value="">选择工作流</option>
-                    {workflows.map((w) => <option key={w.id} value={w.id}>{w.name}</option>)}
-                  </select>
+                  <CustomSelect
+                    value={formData.workflowId}
+                    onChange={(value) => updateField({ workflowId: value })}
+                    options={[
+                      { value: '', label: '选择工作流' },
+                      ...workflows.map((w) => ({ value: w.id, label: w.name }))
+                    ]}
+                    size="md"
+                  />
                   <p className="text-xs text-gray-500 dark:text-gray-400 mt-2">绑定工作流后，与该 Agent 的对话将执行该工作流</p>
                 </div>
               ) : (
@@ -240,7 +255,7 @@ export default function AgentForm({ agent, skills, workflows, onSave, onCancel, 
         {!isSystem && (
           <section>
             <div className="flex items-center gap-2 mb-5">
-              <div className="w-1 h-5 bg-amber-500 rounded-full" />
+              <div className="w-1 h-5 bg-emerald-500 rounded-full" />
               <h3 className="text-base font-semibold text-gray-800 dark:text-gray-200">系统指令</h3>
             </div>
             <div>
