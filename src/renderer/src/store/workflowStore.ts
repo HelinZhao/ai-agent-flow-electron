@@ -572,6 +572,9 @@ export const useWorkflowStore = create<WorkflowState>()(
                 set({ triggers })
                 break
               }
+              case 'mcp-servers':
+                // MCP 服务器数据由 McpServers 页面自行管理
+                break
             }
           } catch (err) {
             console.error('[EventStream] 解析事件失败:', err)

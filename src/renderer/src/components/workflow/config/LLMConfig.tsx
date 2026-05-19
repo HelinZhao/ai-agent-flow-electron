@@ -1,7 +1,8 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { VariableConfig } from '@renderer/types';
 import { useWorkflowStore } from '@renderer/store/workflowStore';
 import { TOOL_DEFINITIONS } from '@renderer/config';
+import { mcpApi } from '@renderer/lib/mcpApi';
 import VariableConfigModal from '../VariableConfigModal';
 import CustomTextarea from '../../ui/CustomTextarea';
 import CustomButton from '../../ui/CustomButton';
@@ -14,32 +15,38 @@ const AVAILABLE_TOOLS = TOOL_DEFINITIONS
 function Tags({
   items,
   onRemove,
+  isMcpMap,
 }: {
   items: { id: string; label: string }[]
   onRemove: (id: string) => void
+  isMcpMap?: Record<string, boolean>
 }) {
   if (items.length === 0) {
     return <span className="text-sm text-gray-400 dark:text-gray-500 italic">暂未绑定</span>;
   }
   return (
     <div className="flex flex-wrap gap-1.5">
-      {items.map((item) => (
-        <span
-          key={item.id}
-          className="inline-flex items-center gap-1 px-2 py-0.5 text-xs font-medium rounded-full bg-blue-50 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400 border border-blue-200 dark:border-blue-800"
-        >
-          {item.label}
-          <button
-            type="button"
-            onClick={() => onRemove(item.id)}
-            className="inline-flex items-center justify-center w-3.5 h-3.5 rounded-full hover:bg-blue-200 dark:hover:bg-blue-700 transition-colors"
+      {items.map((item) => {
+        const isMcp = isMcpMap?.[item.id]
+        return (
+          <span
+            key={item.id}
+            className={`inline-flex items-center gap-1 px-2 py-0.5 text-xs font-medium rounded-full border ${isMcp ? 'bg-purple-50 dark:bg-purple-900/30 text-purple-600 dark:text-purple-400 border-purple-200 dark:border-purple-800' : 'bg-blue-50 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400 border-blue-200 dark:border-blue-800'}`}
           >
-            <svg className="w-2.5 h-2.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3">
-              <path d="M6 6l12 12M6 18L18 6" />
-            </svg>
-          </button>
-        </span>
-      ))}
+            {isMcp && <span className="text-[10px] font-bold mr-0.5">MCP</span>}
+            {item.label}
+            <button
+              type="button"
+              onClick={() => onRemove(item.id)}
+              className="inline-flex items-center justify-center w-3.5 h-3.5 rounded-full hover:bg-blue-200 dark:hover:bg-blue-700 transition-colors"
+            >
+              <svg className="w-2.5 h-2.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3">
+                <path d="M6 6l12 12M6 18L18 6" />
+              </svg>
+            </button>
+          </span>
+        )
+      })}
     </div>
   );
 }
@@ -103,12 +110,17 @@ function SkillPicker({
 function ToolPicker({
   selected,
   onChange,
+  mcpTools,
 }: {
   selected: string[]
   onChange: (ids: string[]) => void
+  mcpTools: typeof TOOL_DEFINITIONS
 }) {
   const [open, setOpen] = useState(false);
-  const selectedTools = AVAILABLE_TOOLS.filter((t) => selected.includes(t.id));
+  const allTools = [...AVAILABLE_TOOLS, ...mcpTools];
+  const selectedTools = allTools.filter((t) => selected.includes(t.id));
+  const isMcpMap: Record<string, boolean> = {};
+  mcpTools.forEach(t => { isMcpMap[t.id] = true });
 
   return (
     <>
@@ -134,6 +146,7 @@ function ToolPicker({
               <Tags
                 items={selectedTools.map((t) => ({ id: t.id, label: t.label }))}
                 onRemove={(id) => onChange(selected.filter((i) => i !== id))}
+                isMcpMap={isMcpMap}
               />
             </div>
           )}
@@ -143,7 +156,7 @@ function ToolPicker({
       <ItemPickerModal
         open={open}
         title="选择工具"
-        items={AVAILABLE_TOOLS.map((t) => ({ id: t.id, label: t.label, description: t.description }))}
+        items={allTools.map((t) => ({ id: t.id, label: t.label, description: t.description }))}
         selected={selected}
         onApply={(ids) => { onChange(ids); setOpen(false); }}
         onClose={() => setOpen(false)}
@@ -161,11 +174,18 @@ const LLMConfig: React.FC<LLMConfigProps> = ({ config, onConfigChange }) => {
   const [showVariableModal, setShowVariableModal] = useState(false);
   const [editingVariable, setEditingVariable] = useState<VariableConfig | null>(null);
   const [variables, setVariables] = useState<VariableConfig[]>(config.variables || []);
+  const [mcpTools, setMcpTools] = useState<typeof TOOL_DEFINITIONS>([]);
   const knowledgeBases = useWorkflowStore((s) => s.knowledgeBases);
   const getKnowledgeBases = useWorkflowStore((s) => s.getKnowledgeBases);
 
-  React.useEffect(() => {
+  useEffect(() => {
     if (knowledgeBases.length === 0) getKnowledgeBases()
+  }, [])
+
+  useEffect(() => {
+    mcpApi.getTools().then(tools => {
+      setMcpTools(tools.map(t => ({ id: t.id, label: t.label, description: t.description })))
+    }).catch(() => {})
   }, [])
 
   const llmConfigs = useWorkflowStore((s) => s.llmConfigs);
@@ -260,6 +280,7 @@ const LLMConfig: React.FC<LLMConfigProps> = ({ config, onConfigChange }) => {
       <ToolPicker
         selected={config.enabledTools || []}
         onChange={(tools) => onConfigChange({ ...config, enabledTools: tools })}
+        mcpTools={mcpTools}
       />
 
       <div>

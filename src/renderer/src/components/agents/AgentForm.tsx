@@ -1,6 +1,7 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Agent, Skill, Workflow } from '@renderer/types';
 import { TOOL_DEFINITIONS } from '@renderer/config';
+import { mcpApi } from '@renderer/lib/mcpApi';
 import { useWorkflowStore } from '@renderer/store/workflowStore';
 import MarkdownIt from 'markdown-it';
 import MdEditor from 'react-markdown-editor-lite';
@@ -33,24 +34,29 @@ interface AgentFormProps {
   isSystem?: boolean
 }
 
-function Tags({ items, onRemove, emptyText }: {
+function Tags({ items, onRemove, emptyText, isMcpMap }: {
   items: { id: string; label: string }[]
   onRemove: (id: string) => void
   emptyText: string
+  isMcpMap?: Record<string, boolean>
 }) {
   if (items.length === 0) {
     return <span className="text-sm text-gray-400 dark:text-gray-500 italic">{emptyText}</span>;
   }
   return (
     <div className="flex flex-wrap gap-1.5">
-      {items.map((item) => (
-        <span key={item.id} className="inline-flex items-center gap-1 px-2 py-0.5 text-xs font-medium rounded-full bg-blue-50 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400 border border-blue-200 dark:border-blue-800">
-          {item.label}
-          <button type="button" onClick={() => onRemove(item.id)} className="inline-flex items-center justify-center w-3.5 h-3.5 rounded-full hover:bg-blue-200 dark:hover:bg-blue-700 transition-colors">
-            <svg className="w-2.5 h-2.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3"><path d="M6 6l12 12M6 18L18 6" /></svg>
-          </button>
-        </span>
-      ))}
+      {items.map((item) => {
+        const isMcp = isMcpMap?.[item.id]
+        return (
+          <span key={item.id} className={`inline-flex items-center gap-1 px-2 py-0.5 text-xs font-medium rounded-full border ${isMcp ? 'bg-purple-50 dark:bg-purple-900/30 text-purple-600 dark:text-purple-400 border-purple-200 dark:border-purple-800' : 'bg-blue-50 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400 border-blue-200 dark:border-blue-800'}`}>
+            {isMcp && <span className="text-[10px] font-bold mr-0.5">MCP</span>}
+            {item.label}
+            <button type="button" onClick={() => onRemove(item.id)} className="inline-flex items-center justify-center w-3.5 h-3.5 rounded-full hover:bg-blue-200 dark:hover:bg-blue-700 transition-colors">
+              <svg className="w-2.5 h-2.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3"><path d="M6 6l12 12M6 18L18 6" /></svg>
+            </button>
+          </span>
+        )
+      })}
     </div>
   );
 }
@@ -83,6 +89,22 @@ export default function AgentForm({ agent, skills, workflows, onSave, onCancel, 
   );
   const [isLoading, setIsLoading] = useState(false);
   const [pickerTarget, setPickerTarget] = useState<'skills' | 'tools' | null>(null);
+  const [mcpToolDefs, setMcpToolDefs] = useState<typeof TOOL_DEFINITIONS>([]);
+
+  // 在挂载时获取 MCP 工具列表（非阻塞）
+  useEffect(() => {
+    mcpApi.getTools().then(tools => {
+      setMcpToolDefs(tools.map(t => ({
+        id: t.id,
+        label: t.label,
+        description: t.description,
+      })))
+    }).catch(() => {
+      // 静默失败，MCP 工具列表切换为不可用
+    })
+  }, [])
+
+  const ALL_AVAILABLE_TOOLS = [...AVAILABLE_TOOLS, ...mcpToolDefs];
 
   const updateField = (field: Partial<AgentFormData>) =>
     setFormData((prev) => ({ ...prev, ...field }));
@@ -98,7 +120,9 @@ export default function AgentForm({ agent, skills, workflows, onSave, onCancel, 
   };
 
   const selectedSkills = skills.filter((s) => formData.skillIds.includes(s.id));
-  const selectedTools = AVAILABLE_TOOLS.filter((t) => formData.enabledTools.includes(t.id));
+  const selectedTools = ALL_AVAILABLE_TOOLS.filter((t) => formData.enabledTools.includes(t.id));
+  const isMcpToolMap: Record<string, boolean> = {}
+  mcpToolDefs.forEach(t => { isMcpToolMap[t.id] = true })
   const hasWorkflows = workflows.length > 0;
   const hasSkills = skills.length > 0;
   const llmConfigs = useWorkflowStore((s) => s.llmConfigs);
@@ -221,7 +245,7 @@ export default function AgentForm({ agent, skills, workflows, onSave, onCancel, 
             </div>
               <div className="p-3 bg-gray-50 dark:bg-gray-800/50 rounded-lg border border-gray-200/50 dark:border-gray-700/50">
                 {selectedTools.length > 0 ? (
-                  <Tags items={selectedTools.map((t) => ({ id: t.id, label: t.label }))} onRemove={(id) => updateField({ enabledTools: formData.enabledTools.filter((i) => i !== id) })} emptyText="" />
+                  <Tags items={selectedTools.map((t) => ({ id: t.id, label: t.label }))} onRemove={(id) => updateField({ enabledTools: formData.enabledTools.filter((i) => i !== id) })} emptyText="" isMcpMap={isMcpToolMap} />
                 ) : (
                   <p className="text-xs text-gray-400 dark:text-gray-500 text-center py-2">暂未绑定工具，点击上方「添加工具」按钮开始绑定</p>
                 )}
@@ -270,7 +294,7 @@ export default function AgentForm({ agent, skills, workflows, onSave, onCancel, 
                 onChange={(value) => updateField({ llmConfigId: value })}
                 options={[
                   { value: '', label: activeLLMConfig ? `默认（${activeLLMConfig.name}）` : '使用全局默认配置' },
-                  ...llmConfigs.map((c) => ({ value: c.id, label: c.name + (c.isActive ? '（当前默认）' : '') }))
+                  ...llmConfigs.map((c) => ({ value: c.id || '', label: c.name + (c.isActive ? '（当前默认）' : '') }))
                 ]}
                 size="md"
               />
@@ -308,7 +332,7 @@ export default function AgentForm({ agent, skills, workflows, onSave, onCancel, 
         <ItemPickerModal open title="选择技能" items={skills.map((s) => ({ id: s.id, label: s.name, description: s.description }))} selected={formData.skillIds} onApply={(ids) => updateField({ skillIds: ids })} onClose={() => setPickerTarget(null)} />
       )}
       {pickerTarget === 'tools' && (
-        <ItemPickerModal open title="选择工具" items={AVAILABLE_TOOLS.map((t) => ({ id: t.id, label: t.label, description: t.description }))} selected={formData.enabledTools} onApply={(ids) => updateField({ enabledTools: ids })} onClose={() => setPickerTarget(null)} />
+        <ItemPickerModal open title="选择工具" items={ALL_AVAILABLE_TOOLS.map((t) => ({ id: t.id, label: t.label, description: t.description }))} selected={formData.enabledTools} onApply={(ids) => updateField({ enabledTools: ids })} onClose={() => setPickerTarget(null)} />
       )}
     </>
   );

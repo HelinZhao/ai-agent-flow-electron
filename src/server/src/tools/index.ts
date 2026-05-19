@@ -6,6 +6,7 @@ import { execa } from 'execa'
 import { DUCKDUCKGO_URL, TOOL_EXECUTION_TIMEOUT, TOOL_READ_FILE_MAX_CHARS, TOOL_HTTP_MAX_CHARS, TOOL_WEB_SEARCH_MAX_RESULTS, TOOL_WEB_SEARCH_SNIPPET_LENGTH, WEB_SEARCH_USER_AGENT, SERVER_PORT } from '../config'
 import { changeNotifier } from '../utils/dataChangeNotifier'
 import { getUserDataDir } from '../utils/file'
+import { mcpConnectionManager } from '../mcp'
 
 // 当前平台信息（用于工具描述，避免 LLM 用错路径格式和用户名）
 const CURRENT_USER = process.env.USERNAME || process.env.USER || '用户名'
@@ -161,6 +162,7 @@ const inferResource = (path: string): string | null => {
   if (path.includes('/api/knowledge-base')) return 'knowledge-base'
   if (path.includes('/api/llm-config')) return 'llm-config'
   if (path.includes('/api/triggers')) return 'triggers'
+  if (path.includes('/api/mcp-servers')) return 'mcp-servers'
   return null
 }
 
@@ -361,10 +363,27 @@ const ALL_TOOLS: Record<string, any> = {
 }
 
 export const getToolsByIds = (ids: string[]): any[] => {
-  return ids.map(id => ALL_TOOLS[id]).filter(Boolean)
+  const builtinTools = ids.map(id => ALL_TOOLS[id]).filter(Boolean)
+  const mcpIds = ids.filter(id => id.startsWith('mcp_'))
+  const mcpTools = mcpIds
+    .map(id => mcpConnectionManager.getMcpToolById(id))
+    .filter(Boolean)
+  return [...builtinTools, ...mcpTools]
 }
 
-export const TOOL_DEFINITIONS = [
+export interface ToolDefinition {
+  id: string
+  label: string
+  description: string
+}
+
+/** 合并内置工具和 MCP 工具的所有定义 */
+export const getAllToolDefinitions = (): ToolDefinition[] => {
+  const mcpDefs = mcpConnectionManager.getMcpToolDefinitions()
+  return [...TOOL_DEFINITIONS, ...mcpDefs]
+}
+
+export const TOOL_DEFINITIONS: ToolDefinition[] = [
   { id: 'readFile', label: '读取文件', description: '读取指定文件内容' },
   { id: 'writeFile', label: '写入文件', description: '将内容写入指定文件' },
   { id: 'listDirectory', label: '列出目录', description: '列出目录下的文件和子目录' },

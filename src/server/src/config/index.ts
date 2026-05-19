@@ -325,6 +325,26 @@ export const LOG_MAX_ENTRIES = 2000
 /** 知识库文档上传允许的文件扩展名 */
 export const KB_UPLOAD_EXTENSIONS = ['.txt', '.md']
 
+// ========== MCP 服务器配置 ==========
+
+/** MCP 工具 ID 前缀 */
+export const MCP_TOOL_PREFIX = 'mcp_'
+
+/** MCP 工具调用超时（毫秒） */
+export const MCP_TOOL_CALL_TIMEOUT = 60000
+
+/** MCP 连接失败重试最大次数 */
+export const MCP_MAX_RECONNECT_ATTEMPTS = 5
+
+/** MCP 重连基线延迟（毫秒），用于指数退避 */
+export const MCP_RECONNECT_BASE_DELAY = 1000
+
+/** MCP 重连最大延迟（毫秒） */
+export const MCP_RECONNECT_MAX_DELAY = 60000
+
+/** Stdio 传输的 spawn 超时（毫秒） */
+export const MCP_STDIO_SPAWN_TIMEOUT = 10000
+
 // ========== CLI 工具 ==========
 
 /** CLI 命令默认执行超时（秒） */

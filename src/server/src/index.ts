@@ -14,6 +14,8 @@ import executeWorkflowRouter from './routes/execute-workflow'
 import triggersRouter, { webhookRouter } from './routes/triggers'
 import logsRouter from './routes/logs'
 import proxyRouter from './routes/proxy'
+import mcpServersRouter from './routes/mcp-servers'
+import { mcpConnectionManager } from './mcp'
 import { getUserDataDir, migrateOldDataDir } from './utils'
 import {
   SERVER_PORT,
@@ -51,6 +53,7 @@ export class LocalServer {
   private modelExists = false
   private isPulling = false
   private pullEmitter = new EventEmitter()
+  private mcpManager = mcpConnectionManager
 
   constructor(options?: {
     ollamaBinaryPath?: string
@@ -102,6 +105,7 @@ export class LocalServer {
     this.app.use('/webhook', webhookRouter)
     this.app.use('/api/logs', logsRouter)
     this.app.use('/api', proxyRouter)
+    this.app.use('/api/mcp-servers', mcpServersRouter)
 
     // Ollama 模型状态与拉取路由
     this.app.get('/api/ollama/status', async (_req, res) => {
@@ -349,6 +353,9 @@ export class LocalServer {
     // 初始化 Ollama 服务（知识库 embedding 依赖）
     await this.initOllama()
 
+    // 初始化 MCP 连接
+    await this.mcpManager.initialize()
+
     return new Promise((resolve, reject) => {
       if (port) {
         this.port = port
@@ -373,12 +380,15 @@ export class LocalServer {
     })
   }
 
-  public stop(): Promise<void> {
+  public async stop(): Promise<void> {
     // 停止时间轮
     timingWheel.stop()
 
     // 清理 Ollama 进程
     stopOllama()
+
+    // 关闭 MCP 连接
+    await this.mcpManager.shutdown()
 
     return new Promise((resolve, reject) => {
       if (this.server) {

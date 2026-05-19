@@ -130,6 +130,39 @@ async function migrateTriggerTable(): Promise<void> {
   }
 }
 
+/**
+ * 执行增量迁移：创建 mcp_servers 表（如不存在）
+ */
+async function migrateMcpServersTable(): Promise<void> {
+  try {
+    const queryInterface = sequelize.getQueryInterface()
+    await queryInterface.describeTable('mcp_servers')
+  } catch {
+    console.log('[Migration] mcp_servers 表不存在，创建中...')
+    await sequelize.query(`
+      CREATE TABLE IF NOT EXISTS mcp_servers (
+        id TEXT PRIMARY KEY,
+        name TEXT NOT NULL,
+        transportType TEXT NOT NULL CHECK(transportType IN ('stdio', 'sse')),
+        command TEXT,
+        args TEXT,
+        url TEXT,
+        enabled INTEGER NOT NULL DEFAULT 1,
+        connectionStatus TEXT NOT NULL DEFAULT 'disconnected',
+        toolsCount INTEGER NOT NULL DEFAULT 0,
+        lastConnectedAt TEXT,
+        settings TEXT,
+        createdAt TEXT NOT NULL,
+        updatedAt TEXT NOT NULL
+      )
+    `)
+    await sequelize.query(`
+      CREATE UNIQUE INDEX IF NOT EXISTS idx_mcp_servers_name ON mcp_servers(name)
+    `)
+    console.log('[Migration] mcp_servers 表创建成功')
+  }
+}
+
 // 测试数据库连接
 export const initDatabase = async (): Promise<void> => {
   try {
@@ -144,6 +177,7 @@ export const initDatabase = async (): Promise<void> => {
     await migrateWorkflowColumns()
     await migrateAgentColumns()
     await migrateTriggerTable()
+    await migrateMcpServersTable()
   } catch (error) {
     console.error('数据库连接失败:', error)
     throw error

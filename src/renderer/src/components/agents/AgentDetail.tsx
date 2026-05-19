@@ -1,7 +1,8 @@
-import React from 'react';
+import React, { useEffect, useState } from 'react';
 import { Agent, Skill } from '@renderer/types';
 import { TOOL_LABEL_MAP } from '@renderer/config';
 import MarkdownPreview from '@renderer/components/MarkdownPreview';
+import { mcpApi } from '@renderer/lib/mcpApi';
 
 interface AgentDetailProps {
   agent: Agent
@@ -43,6 +44,19 @@ function Tag({ label, color = 'blue' }: { label: string; color?: 'blue' | 'purpl
 
 export default function AgentDetail({ agent, skills, workflowName, llmConfigName, onEdit, onDelete, isSystem }: AgentDetailProps) {
   const isStandard = agent.type === 'standard';
+  const [mcpToolLabels, setMcpToolLabels] = useState<Record<string, string>>({});
+
+  useEffect(() => {
+    mcpApi.getTools().then(tools => {
+      const map: Record<string, string> = {}
+      tools.forEach(t => { map[t.id] = t.label })
+      setMcpToolLabels(map)
+    }).catch(() => {})
+  }, [])
+
+  const getToolLabel = (tid: string): string => {
+    return TOOL_LABEL_MAP[tid] || mcpToolLabels[tid] || tid
+  }
 
   return (
     <>
@@ -184,9 +198,12 @@ export default function AgentDetail({ agent, skills, workflowName, llmConfigName
                 <div className="pl-8">
                   {agent.enabledTools && agent.enabledTools.length > 0 ? (
                     <div className="flex flex-wrap gap-1.5">
-                      {agent.enabledTools.map((tid) => (
-                        <Tag key={tid} label={TOOL_LABEL_MAP[tid] || tid} color="blue" />
-                      ))}
+                      {agent.enabledTools.map((tid) => {
+                        const isMcp = tid.startsWith('mcp_')
+                        return (
+                          <Tag key={tid} label={getToolLabel(tid)} color={isMcp ? 'purple' : 'blue'} />
+                        );
+                      })}
                     </div>
                   ) : (
                     <p className="text-sm text-gray-400 dark:text-gray-500">未绑定工具</p>
