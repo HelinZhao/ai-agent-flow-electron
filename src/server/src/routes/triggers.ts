@@ -1,11 +1,11 @@
 import { Router } from 'express'
 import { Op } from 'sequelize'
 import { v4 as uuidv4 } from 'uuid'
-import { TriggerModel, AgentModel, WorkflowModel, LLMConfigModel, SkillModel } from '../models'
+import { TriggerModel, AgentModel, WorkflowModel, LLMConfigModel } from '../models'
 import { timingWheel, cronToNextTime } from '../utils/timingWheel'
 import { monitoredExecutor } from './execute-workflow'
 import { WEBHOOK_RATE_LIMIT, WEBHOOK_RATE_WINDOW } from '../config'
-import { safeJsonParse } from '../utils/shared'
+import { safeJsonParse, buildSkillsContext } from '../utils/shared'
 import type { Workflow, LLMConfig } from '../types'
 
 const router = Router()
@@ -111,16 +111,7 @@ async function fireTrigger(triggerId: string, payload?: string): Promise<string 
       } else {
         const skillIds = safeJsonParse<string[]>(agent.skillIds, [])
         const enabledTools = safeJsonParse<string[]>(agent.enabledTools, [])
-        // 注入技能列表（仅 ID/名称/描述，不含完整内容）并自动添加读取技能的工具
-        let skillsContext = ''
-        if (skillIds.length > 0) {
-          const skills = await SkillModel.findAll({ where: { id: skillIds } })
-          skillsContext = '绑定技能:\n' + skills.map(s => `- ${s.id}: ${s.name} — ${s.description}`).join('\n')
-          skillsContext += '\n\n如需了解某个技能的详细内容，可使用 readSkill 工具传入技能 ID 进行读取。'
-        }
-        const allEnabledTools = skillIds.length > 0 && !enabledTools.includes('readSkill')
-          ? [...enabledTools, 'readSkill']
-          : enabledTools
+        const { skillsContext, enabledTools: allEnabledTools } = await buildSkillsContext(skillIds, enabledTools)
         executionId = await monitoredExecutor.startDirectChat(
           input,
           llmConfig,

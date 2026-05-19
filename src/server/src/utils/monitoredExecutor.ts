@@ -15,7 +15,7 @@ import { executeApiCall } from './api'
 import { executeCliCommand, executeCliTemplate } from './cli'
 import { HITLRequest, HITLResponse, HITLDecision, CallLLMOptions } from './hitl'
 import { getUserDataDir, saveAttachmentToDisk } from './file'
-import { AttachmentPayload, safeJsonParse } from './shared'
+import { AttachmentPayload, safeJsonParse, buildSkillsContext } from './shared'
 import { retrieveContext } from './knowledge'
 import { v4 as uuidv4 } from 'uuid'
 import { SqliteSaver } from "@langchain/langgraph-checkpoint-sqlite";
@@ -918,8 +918,18 @@ export class MonitoredLangGraphExecutor {
         }
       }
 
+      // 技能绑定：注入技能列表并添加 readSkill 工具
+      let promptWithSkills = promptWithRag
+      let allEnabledTools = enabledTools
+      const skillIds = node.data.config?.skillIds as string[] | undefined
+      if (skillIds && skillIds.length > 0) {
+        const { skillsContext, enabledTools: updatedTools } = await buildSkillsContext(skillIds, enabledTools)
+        promptWithSkills = `${skillsContext}\n\n---\n\n${promptWithRag}`
+        allEnabledTools = updatedTools
+      }
+
       // 构建 HITL 宯批回调
-      const hasDangerousTools = enabledTools.some((t: string) => DANGEROUS_TOOLS.includes(t))
+      const hasDangerousTools = allEnabledTools.some((t: string) => DANGEROUS_TOOLS.includes(t))
       const options: CallLLMOptions = hasDangerousTools
         ? {
           approvalCallback: async (request: HITLRequest): Promise<HITLResponse> => {
@@ -973,7 +983,7 @@ export class MonitoredLangGraphExecutor {
         }
         : {}
 
-      const result = await callLLM(promptWithRag, llmConfig, conversationHistory, enabledTools, { ...options, cache: node.data.config?.enableCache ?? false }, attachments)
+      const result = await callLLM(promptWithSkills, llmConfig, conversationHistory, allEnabledTools, { ...options, cache: node.data.config?.enableCache ?? false }, attachments)
 
       return {
         output: result,

@@ -19,7 +19,7 @@ function Tags({
   onRemove: (id: string) => void
 }) {
   if (items.length === 0) {
-    return <span className="text-sm text-gray-400 dark:text-gray-500 italic">暂未绑定工具</span>;
+    return <span className="text-sm text-gray-400 dark:text-gray-500 italic">暂未绑定</span>;
   }
   return (
     <div className="flex flex-wrap gap-1.5">
@@ -44,6 +44,61 @@ function Tags({
   );
 }
 
+// ─── SkillPicker ───
+function SkillPicker({
+  selected,
+  onChange,
+  skills,
+}: {
+  selected: string[]
+  onChange: (ids: string[]) => void
+  skills: { id: string; name: string; description: string }[]
+}) {
+  const [open, setOpen] = useState(false);
+  const selectedSkills = skills.filter((s) => selected.includes(s.id));
+
+  return (
+    <>
+      <div>
+        <div className="flex items-center justify-between mb-2">
+          <label className="text-sm font-medium text-gray-700 dark:text-gray-300">
+            技能
+          </label>
+          <CustomButton
+            onClick={() => setOpen(true)}
+            variant="primary"
+            size="xs"
+          >
+            + 添加技能
+          </CustomButton>
+        </div>
+        <p className="text-xs text-gray-500 dark:text-gray-400 mb-3">
+          绑定技能后，LLM 可通过 readSkill 工具读取技能内容并执行
+        </p>
+        <div className="space-y-2">
+          {selectedSkills.length > 0 && (
+            <div className="p-3 bg-gray-50 dark:bg-gray-800/50 rounded-lg border border-gray-200/50 dark:border-gray-700/50">
+              <Tags
+                items={selectedSkills.map((s) => ({ id: s.id, label: s.name }))}
+                onRemove={(id) => onChange(selected.filter((i) => i !== id))}
+              />
+            </div>
+          )}
+        </div>
+      </div>
+
+      <ItemPickerModal
+        open={open}
+        title="选择技能"
+        items={skills.map((s) => ({ id: s.id, label: s.name, description: s.description }))}
+        selected={selected}
+        onApply={(ids) => { onChange(ids); setOpen(false); }}
+        onClose={() => setOpen(false)}
+      />
+    </>
+  );
+}
+
 // ─── ToolPicker ───
 function ToolPicker({
   selected,
@@ -65,7 +120,7 @@ function ToolPicker({
           <CustomButton
             onClick={() => setOpen(true)}
             variant="primary"
-            size="sm"
+            size="xs"
           >
             + 添加工具
           </CustomButton>
@@ -113,6 +168,7 @@ const LLMConfig: React.FC<LLMConfigProps> = ({ config, onConfigChange }) => {
   }, [])
 
   const llmConfigs = useWorkflowStore((s) => s.llmConfigs);
+  const skills = useWorkflowStore((s) => s.skills);
 
   // 当外部config变化时同步更新本地状态
   React.useEffect(() => {
@@ -192,6 +248,13 @@ const LLMConfig: React.FC<LLMConfigProps> = ({ config, onConfigChange }) => {
         />
       </div>
 
+      {/* ── Skill picker ── */}
+      <SkillPicker
+        selected={config.skillIds || []}
+        onChange={(ids) => onConfigChange({ ...config, skillIds: ids })}
+        skills={skills}
+      />
+
       {/* ── Tools picker ── */}
       <ToolPicker
         selected={config.enabledTools || []}
@@ -206,7 +269,7 @@ const LLMConfig: React.FC<LLMConfigProps> = ({ config, onConfigChange }) => {
           <CustomButton
             onClick={handleAddVariable}
             variant="primary"
-            size="sm"
+            size="xs"
           >
             + 添加变量
           </CustomButton>

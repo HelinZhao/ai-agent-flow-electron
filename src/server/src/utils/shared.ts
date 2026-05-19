@@ -1,9 +1,35 @@
 import { VISION_MODEL_PATTERNS } from '../config'
 import { Worker } from 'worker_threads'
+import { SkillModel } from '../models'
 
 export function isVisionModel(model: string): boolean {
   const lowerModel = model.toLowerCase()
   return VISION_MODEL_PATTERNS.some((pattern) => lowerModel.includes(pattern))
+}
+
+export interface SkillsContextResult {
+  skillsContext: string
+  enabledTools: string[]
+}
+
+/**
+ * 根据技能 ID 列表构建技能上下文提示词，并自动注入 readSkill 工具。
+ * 在 agent 对话、LLM 节点、触发器等多个调用点复用。
+ */
+export async function buildSkillsContext(
+  skillIds: string[] | undefined,
+  enabledTools: string[]
+): Promise<SkillsContextResult> {
+  if (!skillIds || skillIds.length === 0) {
+    return { skillsContext: '', enabledTools }
+  }
+  const skills = await SkillModel.findAll({ where: { id: skillIds } })
+  const skillsContext = '绑定技能:\n' + skills.map(s => `- ${s.id}: ${s.name} — ${s.description}`).join('\n')
+    + '\n\n如需了解某个技能的详细内容，可使用 readSkill 工具传入技能 ID 进行读取。'
+  const allEnabledTools = !enabledTools.includes('readSkill')
+    ? [...enabledTools, 'readSkill']
+    : enabledTools
+  return { skillsContext, enabledTools: allEnabledTools }
 }
 
 export interface AttachmentPayload {
