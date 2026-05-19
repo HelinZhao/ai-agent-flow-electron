@@ -134,6 +134,36 @@ export function ApiNode({ data, selected }: { data: any; selected: boolean }): R
 }
 
 // ============================================================
+//  McpNode
+// ============================================================
+export function McpNode({ data, selected }: { data: any; selected: boolean }): React.JSX.Element {
+  const direction = useContext(LayoutDirectionContext)
+  const def = NODE_DEFS_MAP['mcp']
+  const targetPos = direction === 'vertical' ? Position.Top : Position.Left
+  const sourcePos = direction === 'vertical' ? Position.Bottom : Position.Right
+  return (
+    <div className={`node-mcp group relative px-4 py-3 min-w-[160px] ${nodeBg(def)} rounded-lg transition-shadowduration-300 ${nodeBorder(def)} ${selected ? nodeRing(def) : 'hover:shadow-glow-md dark:hover:shadow-glow-md-w'}`}>
+      <Handle type="target" position={targetPos} className={handleClass(def)} />
+      <Handle type="source" position={sourcePos} className={handleClass(def)} />
+      <div className="flex items-center space-x-3">
+        <div className={iconBox(def)}>
+          <span className="text-black text-base">{def.icon}</span>
+        </div>
+        <div className="flex-1 text-left">
+          <div className="font-bold text-gray-800">{def.shortLabel}</div>
+          <div className="text-xs text-gray-700 font-medium mt-0.5">{data.label}</div>
+          {data.config?.mcpConfig?.toolName && (
+            <div className="text-xs text-gray-700 font-medium mt-1 bg-white/30 rounded border border-white/40 max-w-[140px] truncate">
+              {data.config.mcpConfig.serverName || data.config.mcpConfig.serverId}: {data.config.mcpConfig.toolName}
+            </div>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ============================================================
 //  LLMNode
 // ============================================================
 export function LLMNode({ data, selected }: { data: any; selected: boolean }): React.JSX.Element {

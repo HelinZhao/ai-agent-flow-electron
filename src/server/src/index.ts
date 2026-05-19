@@ -39,8 +39,7 @@ import {
 } from './utils/ollama'
 import { timingWheel, cronToNextTime } from './utils/timingWheel'
 import { changeNotifier } from './utils/dataChangeNotifier'
-import { TriggerModel } from './models'
-import { AgentModel } from './models'
+import { TriggerModel, AgentModel, AgentAttributes } from './models'
 import { app } from 'electron'
 
 export class LocalServer {
@@ -329,7 +328,7 @@ export class LocalServer {
           'workflowsApi', 'agentsSkillsApi', 'knowledgeApi', 'configApi',
           'readSkill',
         ]),
-      })
+      } as AgentAttributes)
       await agent.save()
       console.log('[SystemAgent] 布丁创建成功')
     }

@@ -21,6 +21,7 @@ import { v4 as uuidv4 } from 'uuid'
 import { SqliteSaver } from "@langchain/langgraph-checkpoint-sqlite";
 import { DB_FILENAME, DANGEROUS_TOOLS } from '../config'
 import { LLMConfigModel, AgentModel, WorkflowModel } from '../models'
+import { mcpConnectionManager } from '../mcp'
 
 // 执行状态存储
 interface ExecutionState {
@@ -524,6 +525,9 @@ export class MonitoredLangGraphExecutor {
       case 'cli':
         return await this.executeCli(node, input, llmConfig)
 
+      case 'mcp':
+        return await this.executeMCP(node, input, llmConfig)
+
       case 'text':
         return await this.executeText(node, input)
 
@@ -664,6 +668,50 @@ export class MonitoredLangGraphExecutor {
           nodeId: node.id,
           label: node.data?.label,
           type: 'api',
+          error: errorMsg
+        }
+      }
+    }
+  }
+
+  private async executeMCP(node: WorkflowNode, input: string, llmConfig: LLMConfig) {
+    const mcpConfig = node.data.config?.mcpConfig
+    if (!mcpConfig?.serverId || !mcpConfig?.toolName) {
+      return {
+        output: input,
+        metadata: { nodeId: node.id, type: 'mcp', error: '未配置 MCP 服务器或工具', label: node.data?.label }
+      }
+    }
+
+    try {
+      const args = mcpConfig.params || {}
+      // 替换 {{input}} 占位符
+      const resolvedArgs: Record<string, any> = {}
+      for (const [key, value] of Object.entries(args)) {
+        resolvedArgs[key] = typeof value === 'string' ? value.replace(/\{\{input\}\}/g, input) : value
+      }
+
+      const mcpResult = await mcpConnectionManager.callTool(mcpConfig.serverId, mcpConfig.toolName, resolvedArgs)
+
+      return {
+        output: mcpResult,
+        metadata: {
+          nodeId: node.id,
+          label: node.data?.label,
+          type: 'mcp',
+          serverName: mcpConfig.serverName || mcpConfig.serverId,
+          toolName: mcpConfig.toolName,
+          mcpResult
+        }
+      }
+    } catch (error) {
+      const errorMsg = error instanceof Error ? error.message : 'MCP 工具调用失败'
+      return {
+        output: errorMsg,
+        metadata: {
+          nodeId: node.id,
+          label: node.data?.label,
+          type: 'mcp',
           error: errorMsg
         }
       }

@@ -100,7 +100,7 @@ export class McpConnectionManager {
     // 断开所有连接
     const disconnectPromises: Promise<void>[] = []
     for (const [serverId] of this.connections) {
-      disconnectPromises.push(this.disconnectServer(serverId).catch(() => {}))
+      disconnectPromises.push(this.disconnectServer(serverId).catch(() => { }))
     }
     await Promise.allSettled(disconnectPromises)
     this.mcpTools.clear()
@@ -117,7 +117,7 @@ export class McpConnectionManager {
     if (!server.enabled) throw new Error(`MCP 服务器 ${server.name} 已禁用`)
 
     // 断开已有连接
-    await this.disconnectServer(serverId).catch(() => {})
+    await this.disconnectServer(serverId).catch(() => { })
 
     const abortController = new AbortController()
     const client = new Client(
@@ -197,7 +197,7 @@ export class McpConnectionManager {
       conn.connected = false
       conn.error = error instanceof Error ? error.message : String(error)
       // 清理连接
-      try { transport.close() } catch {}
+      try { transport.close() } catch { }
       this.connections.delete(serverId)
       this.removeTools(serverId)
 
@@ -230,10 +230,10 @@ export class McpConnectionManager {
       conn.connected = false
       try {
         await conn.transport.close()
-      } catch {}
+      } catch { }
       try {
         await conn.client.close()
-      } catch {}
+      } catch { }
       this.connections.delete(serverId)
     }
 
@@ -242,7 +242,7 @@ export class McpConnectionManager {
     await McpServerModel.update(
       { connectionStatus: 'disconnected', toolsCount: 0 },
       { where: { id: serverId } }
-    ).catch(() => {})
+    ).catch(() => { })
 
     changeNotifier.emitChange('mcp-servers')
   }
@@ -263,7 +263,7 @@ export class McpConnectionManager {
     await McpServerModel.update(
       { toolsCount: tools.length },
       { where: { id: serverId } }
-    ).catch(() => {})
+    ).catch(() => { })
 
     changeNotifier.emitChange('mcp-servers')
     return tools.length
@@ -368,6 +368,13 @@ export class McpConnectionManager {
     }
 
     return JSON.stringify(content)
+  }
+
+  /**
+   * 按 serverId + toolName 直接调用 MCP 工具（供工作流节点使用）
+   */
+  public async callTool(serverId: string, toolName: string, args: Record<string, any>): Promise<string> {
+    return this.callMcpTool(serverId, toolName, args)
   }
 
   /**
@@ -544,13 +551,13 @@ export class McpConnectionManager {
       if (errorMessage) {
         const server = await McpServerModel.findByPk(serverId)
         if (server) {
-          const settings = server.settings ? safeJsonParse<Record<string, any>>(server.settings, {}) : {}
+          const settings = safeJsonParse<Record<string, any>>(server.settings, {})
           settings.lastError = errorMessage
           updateData.settings = JSON.stringify(settings)
         }
       }
       await McpServerModel.update(updateData, { where: { id: serverId } })
-    } catch {}
+    } catch { }
   }
 
   /**
@@ -574,7 +581,7 @@ export class McpConnectionManager {
       name: server.name,
       transportType: server.transportType,
       command: server.command,
-      args: server.args ? safeJsonParse<string[]>(server.args, []) : [],
+      args: safeJsonParse<string[]>(server.args, []),
       url: server.url,
       enabled: server.enabled,
       connectionStatus: conn?.connected ? 'connected' : server.connectionStatus,

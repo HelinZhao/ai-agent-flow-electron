@@ -9,6 +9,7 @@ import AgentConfig from './config/AgentConfig';
 import CLIConfig from './config/CliConfig';
 import TextConfig from './config/TextConfig';
 import WorkflowConfig from './config/WorkflowConfig';
+import McpConfig from './config/McpConfig';
 import CustomInput from '../ui/CustomInput';
 import CustomButton from '../ui/CustomButton';
 import { getNodeDefaultLabel, NODE_DEFS_MAP } from './nodes';
@@ -31,6 +32,7 @@ const BG_COLORS: Record<string, string> = {
   cli: 'bg-orange-500',
   text: 'bg-teal-500',
   end: 'bg-gray-500',
+  mcp: 'bg-purple-500',
 }
 
 const NodeConfigPanel: React.FC<NodeConfigPanelProps> = ({ node, onClose, onSave, workflowId }: NodeConfigPanelProps) => {
@@ -82,6 +84,9 @@ const NodeConfigPanel: React.FC<NodeConfigPanelProps> = ({ node, onClose, onSave
 
       case 'cli':
         return <CLIConfig config={config} onConfigChange={setConfig} />;
+
+      case 'mcp':
+        return <McpConfig config={config} onConfigChange={setConfig} />;
 
       case 'text':
         return <TextConfig config={config} onConfigChange={setConfig} />;
