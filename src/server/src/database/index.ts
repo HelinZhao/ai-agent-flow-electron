@@ -80,7 +80,7 @@ async function migrateWorkflowColumns(): Promise<void> {
 /**
  * 执行增量迁移：给 agents 表添加 isSystem 列（如不存在）
  */
-async function migrateAgentIsSystem(): Promise<void> {
+async function migrateAgentColumns(): Promise<void> {
   try {
     const queryInterface = sequelize.getQueryInterface()
     const tableInfo = await queryInterface.describeTable('agents') as Record<string, unknown>
@@ -88,6 +88,11 @@ async function migrateAgentIsSystem(): Promise<void> {
       console.log('[Migration] agents 表缺少 isSystem 列，执行迁移...')
       await sequelize.query(`ALTER TABLE agents ADD COLUMN isSystem INTEGER DEFAULT 0;`)
       console.log('[Migration] isSystem 列添加成功')
+    }
+    if (!tableInfo.llmConfigId) {
+      console.log('[Migration] agents 表缺少 llmConfigId 列，执行迁移...')
+      await sequelize.query(`ALTER TABLE agents ADD COLUMN llmConfigId INTEGER DEFAULT 0;`)
+      console.log('[Migration] llmConfigId 列添加成功')
     }
   } catch (error) {
     console.log('[Migration] 跳过 agents isSystem 列迁移:', (error as Error).message)
@@ -137,7 +142,7 @@ export const initDatabase = async (): Promise<void> => {
     await migrateKnowledgeBaseColumns()
     await migrateLLMConfigColumns()
     await migrateWorkflowColumns()
-    await migrateAgentIsSystem()
+    await migrateAgentColumns()
     await migrateTriggerTable()
   } catch (error) {
     console.error('数据库连接失败:', error)

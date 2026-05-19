@@ -37,7 +37,7 @@ router.get('/', async (req, res) => {
 // 创建智能体
 router.post('/', async (req, res) => {
   try {
-    const { name, description, instructions, type, skillIds, enabledTools, workflowId } = req.body
+    const { name, description, instructions, type, skillIds, enabledTools, workflowId, llmConfigId } = req.body
 
     if (!name || !description || !instructions) {
       return res.status(400).json({ error: '名称、描述和指令不能为空' })
@@ -50,7 +50,8 @@ router.post('/', async (req, res) => {
       type: type || 'standard',
       skillIds: skillIds ? JSON.stringify(skillIds) : undefined,
       enabledTools: enabledTools ? JSON.stringify(enabledTools) : undefined,
-      workflowId: type === 'workflow' ? workflowId : undefined
+      workflowId: type === 'workflow' ? workflowId : undefined,
+      llmConfigId
     })
 
     return res.status(201).json(formatAgent(agent.toJSON()))
@@ -81,7 +82,7 @@ router.get('/:id', async (req, res) => {
 router.put('/:id', async (req, res) => {
   try {
     const { id } = req.params
-    const { name, description, instructions, type, skillIds, enabledTools, workflowId } = req.body
+    const { name, description, instructions, type, skillIds, enabledTools, workflowId, llmConfigId } = req.body
 
     const agent = await AgentModel.findByPk(id)
     if (!agent) {
@@ -92,11 +93,12 @@ router.put('/:id', async (req, res) => {
     if (agent.isSystem) {
       if (name !== undefined || description !== undefined || instructions !== undefined ||
           type !== undefined || workflowId !== undefined) {
-        return res.status(403).json({ error: '布丁仅允许调整技能和工具' })
+        return res.status(403).json({ error: '布丁仅允许调整技能、工具和LLM配置' })
       }
       const allowedFields: any = {}
       if (skillIds !== undefined) allowedFields.skillIds = skillIds ? JSON.stringify(skillIds) : null
       if (enabledTools !== undefined) allowedFields.enabledTools = enabledTools ? JSON.stringify(enabledTools) : null
+      if (llmConfigId !== undefined) allowedFields.llmConfigId = llmConfigId || null
       await agent.update(allowedFields)
       return res.status(200).json(formatAgent(agent.toJSON()))
     }
@@ -109,6 +111,7 @@ router.put('/:id', async (req, res) => {
     if (skillIds !== undefined) updateData.skillIds = skillIds ? JSON.stringify(skillIds) : null
     if (enabledTools !== undefined) updateData.enabledTools = enabledTools ? JSON.stringify(enabledTools) : null
     if (workflowId !== undefined) updateData.workflowId = type === 'workflow' ? workflowId : null
+    if (llmConfigId !== undefined) updateData.llmConfigId = llmConfigId || null
 
     await agent.update(updateData)
 

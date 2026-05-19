@@ -63,6 +63,8 @@ export class MonitoredLangGraphExecutor {
   private threadMessages = new Map<string, BaseMessage[]>()
   // 当前正在执行的 agentId 栈，用于检测循环调用
   private agentCallStack = new Set<string>()
+  // 当前正在执行的 workflowId 栈，用于检测工作流节点循环调用
+  private workflowCallStack = new Set<string>()
   private WorkflowState = Annotation.Root({
     messages: Annotation<BaseMessage[]>({
       reducer: (x, y) => x.concat(y)
@@ -516,6 +518,9 @@ export class MonitoredLangGraphExecutor {
       case 'agent':
         return await this.executeAgent(executionId, node, input, llmConfig, conversationHistory, attachments)
 
+      case 'workflow':
+        return await this.executeSubWorkflow(executionId, node, input, llmConfig, conversationHistory, attachments)
+
       case 'cli':
         return await this.executeCli(node, input, llmConfig)
 
@@ -761,6 +766,98 @@ export class MonitoredLangGraphExecutor {
       }
       const errorMsg = error instanceof Error ? error.message : 'Agent执行失败'
       return { output: errorMsg, metadata: { nodeId: node.id, type: 'agent', error: errorMsg, agentId: node.data.config?.agentId } }
+    }
+  }
+
+  private async executeSubWorkflow(
+    executionId: string,
+    node: WorkflowNode,
+    input: string,
+    llmConfig: LLMConfig,
+    _conversationHistory?: BaseMessage[],
+    attachments?: AttachmentPayload[]
+  ) {
+    const workflowId = node.data.config?.workflowId as string | undefined
+    if (!workflowId) {
+      return { output: input, metadata: { nodeId: node.id, type: 'workflow', error: '未配置工作流ID', label: node.data?.label } }
+    }
+
+    // 检测循环调用
+    if (this.workflowCallStack.has(workflowId)) {
+      const chain = [...this.workflowCallStack, workflowId].join(' → ')
+      console.warn('[循环检测] Workflow:', chain)
+      return { output: input, metadata: { nodeId: node.id, type: 'workflow', error: '检测到循环调用(' + chain + ')', workflowId } }
+    }
+
+    try {
+      const workflow = await WorkflowModel.findByPk(workflowId)
+      if (!workflow) {
+        return { output: input, metadata: { nodeId: node.id, type: 'workflow', error: '工作流不存在', workflowId } }
+      }
+
+      const workflowObj: Workflow = {
+        id: workflow.id,
+        name: workflow.name,
+        description: workflow.description,
+        nodes: safeJsonParse(workflow.nodes, []),
+        edges: safeJsonParse(workflow.edges, []),
+        createdAt: workflow.createdAt,
+        updatedAt: workflow.updatedAt,
+      }
+
+      // 空工作流检查
+      if (!workflowObj.nodes || workflowObj.nodes.length === 0) {
+        return { output: input, metadata: { nodeId: node.id, type: 'workflow', error: '工作流为空，没有任何节点', workflowId, workflowName: workflow.name } }
+      }
+
+      // 为子工作流创建独立 executionId，继承父状态的放权工具列表
+      const subExecutionId = `${executionId}:workflow:${node.id}`
+      const parentState = this.executionStates.get(executionId)
+      const inheritedAutoApprove = parentState?.autoApprovedToolTypes
+        ? new Set(parentState.autoApprovedToolTypes)
+        : new Set<string>()
+
+      this.executionStates.set(subExecutionId, {
+        executionId: subExecutionId,
+        workflow: workflowObj,
+        status: 'running',
+        startTime: new Date(),
+        nodeResults: new Map(),
+        progress: 0,
+        logs: [],
+        agentId: undefined,
+        threadId: undefined,
+        autoApprovedToolTypes: inheritedAutoApprove,
+        pendingApproval: null,
+        attachments: undefined,
+      })
+
+      this.workflowCallStack.add(workflowId)
+      try {
+        const subGraph = await this.buildMonitoredLangGraph(subExecutionId, workflowObj, llmConfig)
+        const result = await this.executeMonitoredLangGraph(subGraph, input, subExecutionId, undefined, subExecutionId, attachments)
+
+        return {
+          output: result,
+          metadata: {
+            nodeId: node.id,
+            label: node.data?.label,
+            type: 'workflow',
+            workflowId: workflow.id,
+            workflowName: workflow.name,
+          },
+        }
+      } finally {
+        this.executionStates.delete(subExecutionId)
+        this.workflowCallStack.delete(workflowId)
+      }
+    } catch (error) {
+      const subState = this.executionStates.get(`${executionId}:workflow:${node.id}`)
+      if (subState?.status !== 'running') {
+        throw error
+      }
+      const errorMsg = error instanceof Error ? error.message : '工作流执行失败'
+      return { output: errorMsg, metadata: { nodeId: node.id, type: 'workflow', error: errorMsg, workflowId } }
     }
   }
 
@@ -1154,9 +1251,9 @@ ${conditionText}
     }
 
     stopOne(executionId)
-    // 同时停止所有子 agent 执行（ID 格式：parentExecutionId:agent:nodeId）
+    // 同时停止所有子 agent / 子工作流执行（ID 格式：parentExecutionId:agent:nodeId / parentExecutionId:workflow:nodeId）
     for (const [id] of this.executionStates) {
-      if (id.startsWith(`${executionId}:agent:`)) {
+      if (id.startsWith(`${executionId}:agent:`) || id.startsWith(`${executionId}:workflow:`)) {
         stopOne(id)
       }
     }
@@ -1269,8 +1366,8 @@ ${conditionText}
   // 向指定执行的所有SSE客户端发送更新
   broadcastToSSEClients(executionId: string, data: any): void {
     // 如果是子工作流的审批请求，转发到父 executionId 的 SSE 客户端
-    if (data.type === 'tool_approval_required' && executionId.includes(':agent:')) {
-      const parentId = executionId.split(':agent:')[0]
+    if (data.type === 'tool_approval_required' && (executionId.includes(':agent:') || executionId.includes(':workflow:'))) {
+      const parentId = executionId.includes(':agent:') ? executionId.split(':agent:')[0] : executionId.split(':workflow:')[0]
       const subState = this.executionStates.get(executionId)
       const parentState = this.executionStates.get(parentId)
       // 将子工作流的 pendingApproval 同步到父状态，使 approveToolCall 能解析到

@@ -472,12 +472,18 @@ router.post('/agent-chat-monitor', async (req, res) => {
       })
     }
 
-    // 查找启用的 LLM 配置
-    const activeLLMConfig = await LLMConfigModel.findOne({
-      where: { isActive: true }
-    })
+    // 解析 LLM 配置：优先使用 Agent 指定的配置，否则使用全局活跃配置
+    let llmConfigModel = null
+    if (agent.llmConfigId) {
+      llmConfigModel = await LLMConfigModel.findByPk(agent.llmConfigId)
+    }
+    if (!llmConfigModel) {
+      llmConfigModel = await LLMConfigModel.findOne({
+        where: { isActive: true }
+      })
+    }
 
-    if (!activeLLMConfig) {
+    if (!llmConfigModel) {
       return res.status(400).json({
         error: '未配置大模型',
         message: '请先配置并启用一个大模型配置，然后重试'
@@ -486,12 +492,12 @@ router.post('/agent-chat-monitor', async (req, res) => {
 
     // 将数据库中的 LLM 配置转换为 LLM 配置对象
     const llmConfig: LLMConfig = {
-      provider: activeLLMConfig.provider,
-      apiKey: activeLLMConfig.apiKey,
-      model: activeLLMConfig.model,
-      baseUrl: activeLLMConfig.baseUrl,
-      temperature: activeLLMConfig.temperature,
-      maxTokens: activeLLMConfig.maxTokens
+      provider: llmConfigModel.provider,
+      apiKey: llmConfigModel.apiKey,
+      model: llmConfigModel.model,
+      baseUrl: llmConfigModel.baseUrl,
+      temperature: llmConfigModel.temperature,
+      maxTokens: llmConfigModel.maxTokens
     }
 
     // 无工作流时走直接对话模式

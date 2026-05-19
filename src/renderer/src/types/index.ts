@@ -10,7 +10,7 @@ export interface BranchNodeConfig {
 
 export interface WorkflowNode {
   id: string
-  type: 'start' | 'skill' | 'branch' | 'api' | 'llm' | 'agent' | 'cli' | 'text' | 'end'
+  type: 'start' | 'skill' | 'branch' | 'api' | 'llm' | 'agent' | 'cli' | 'text' | 'end' | 'workflow'
   position: { x: number; y: number }
   data: {
     label: string
@@ -81,6 +81,7 @@ export interface Agent {
   skillIds?: string[]
   enabledTools?: string[]
   workflowId?: string
+  llmConfigId?: string
   isSystem?: boolean
   createdAt: Date
   updatedAt: Date

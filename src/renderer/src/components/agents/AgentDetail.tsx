@@ -7,6 +7,7 @@ interface AgentDetailProps {
   agent: Agent
   skills: Skill[]
   workflowName: string
+  llmConfigName?: string
   onEdit: () => void
   onDelete: () => void
   isSystem?: boolean
@@ -21,13 +22,15 @@ function InfoItem({ label, children }: { label: string; children: React.ReactNod
   );
 }
 
-function Tag({ label, color = 'blue' }: { label: string; color?: 'blue' | 'purple' | 'emerald' }) {
+function Tag({ label, color = 'blue' }: { label: string; color?: 'blue' | 'purple' | 'emerald' | 'amber' }) {
   const colorMap = {
     blue: 'bg-blue-50 dark:bg-blue-900/20 text-blue-600 dark:text-blue-400 border-blue-200 dark:border-blue-800',
     purple:
       'bg-purple-50 dark:bg-purple-900/20 text-purple-600 dark:text-purple-400 border-purple-200 dark:border-purple-800',
     emerald:
       'bg-emerald-50 dark:bg-emerald-900/20 text-emerald-600 dark:text-emerald-400 border-emerald-200 dark:border-emerald-800',
+    amber:
+      'bg-amber-50 dark:bg-amber-900/20 text-amber-600 dark:text-amber-400 border-amber-200 dark:border-amber-800',
   };
   return (
     <span
@@ -38,7 +41,7 @@ function Tag({ label, color = 'blue' }: { label: string; color?: 'blue' | 'purpl
   );
 }
 
-export default function AgentDetail({ agent, skills, workflowName, onEdit, onDelete, isSystem }: AgentDetailProps) {
+export default function AgentDetail({ agent, skills, workflowName, llmConfigName, onEdit, onDelete, isSystem }: AgentDetailProps) {
   const isStandard = agent.type === 'standard';
 
   return (
@@ -104,7 +107,7 @@ export default function AgentDetail({ agent, skills, workflowName, onEdit, onDel
       </div>
 
       {/* ── Metadata ── */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
         <div className="bg-white/80 dark:bg-gray-800/80 backdrop-blur-sm rounded-xl border border-gray-200/50 dark:border-gray-700/50 p-4">
           <div className="flex items-center gap-2 mb-3">
             <div className="w-6 h-6 rounded-md bg-blue-50 dark:bg-blue-900/20 flex items-center justify-center">
@@ -137,49 +140,58 @@ export default function AgentDetail({ agent, skills, workflowName, onEdit, onDel
           <>
             <div className="bg-white/80 dark:bg-gray-800/80 backdrop-blur-sm rounded-xl border border-gray-200/50 dark:border-gray-700/50 p-4">
               <div className="flex items-center gap-2 mb-3">
-                <div className="w-6 h-6 rounded-md bg-emerald-50 dark:bg-emerald-900/20 flex items-center justify-center">
-                  <svg className="w-3.5 h-3.5 text-emerald-500" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                    <path d="M11.42 15.17l-5.3 1.7 1.7-5.3 8.49-8.48a2.83 2.83 0 014 4l-8.49 8.48-2.4.6z" />
-                  </svg>
+                <div className="w-6 h-6 rounded-md bg-cyan-50 dark:bg-cyan-900/20 flex items-center justify-center">
+                  <span className="text-xs text-cyan-500">🧠</span>
                 </div>
-                <span className="text-sm font-medium text-gray-700 dark:text-gray-300">绑定技能</span>
+                <span className="text-sm font-medium text-gray-700 dark:text-gray-300">LLM 配置</span>
               </div>
-              <div className="pl-8">
-                {agent.skillIds && agent.skillIds.length > 0 ? (
-                  <div className="flex flex-wrap gap-1.5">
-                    {agent.skillIds.map((sid) => {
-                      const skill = skills.find((s) => s.id === sid);
-                      return (
-                        <Tag key={sid} label={skill?.name || '未知技能'} color="emerald" />
-                      );
-                    })}
-                  </div>
-                ) : (
-                  <p className="text-sm text-gray-400 dark:text-gray-500">未绑定技能</p>
-                )}
-              </div>
+              <p className="text-sm text-gray-900 dark:text-white pl-8">
+                {llmConfigName || '使用全局默认配置'}
+              </p>
             </div>
 
-            <div className="bg-white/80 dark:bg-gray-800/80 backdrop-blur-sm rounded-xl border border-gray-200/50 dark:border-gray-700/50 p-4">
-              <div className="flex items-center gap-2 mb-3">
-                <div className="w-6 h-6 rounded-md bg-amber-50 dark:bg-amber-900/20 flex items-center justify-center">
-                  <svg className="w-3.5 h-3.5 text-amber-500" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                    <path d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.066 2.573c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.573 1.066c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.066-2.573c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" />
-                    <path d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
-                  </svg>
-                </div>
-                <span className="text-sm font-medium text-gray-700 dark:text-gray-300">绑定工具</span>
-              </div>
-              <div className="pl-8">
-                {agent.enabledTools && agent.enabledTools.length > 0 ? (
-                  <div className="flex flex-wrap gap-1.5">
-                    {agent.enabledTools.map((tid) => (
-                      <Tag key={tid} label={TOOL_LABEL_MAP[tid] || tid} color="blue" />
-                    ))}
+            <div className="md:col-span-2 grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div className="bg-white/80 dark:bg-gray-800/80 backdrop-blur-sm rounded-xl border border-gray-200/50 dark:border-gray-700/50 p-4">
+                <div className="flex items-center gap-2 mb-3">
+                  <div className="w-6 h-6 rounded-md bg-amber-50 dark:bg-amber-900/20 flex items-center justify-center">
+                    <span className="text-xs text-amber-500">⚡</span>
                   </div>
-                ) : (
-                  <p className="text-sm text-gray-400 dark:text-gray-500">未绑定工具</p>
-                )}
+                  <span className="text-sm font-medium text-gray-700 dark:text-gray-300">绑定技能</span>
+                </div>
+                <div className="pl-8">
+                  {agent.skillIds && agent.skillIds.length > 0 ? (
+                    <div className="flex flex-wrap gap-1.5">
+                      {agent.skillIds.map((sid) => {
+                        const skill = skills.find((s) => s.id === sid);
+                        return (
+                          <Tag key={sid} label={skill?.name || '未知技能'} color="amber" />
+                        );
+                      })}
+                    </div>
+                  ) : (
+                    <p className="text-sm text-gray-400 dark:text-gray-500">未绑定技能</p>
+                  )}
+                </div>
+              </div>
+
+              <div className="bg-white/80 dark:bg-gray-800/80 backdrop-blur-sm rounded-xl border border-gray-200/50 dark:border-gray-700/50 p-4">
+                <div className="flex items-center gap-2 mb-3">
+                  <div className="w-6 h-6 rounded-md bg-blue-50 dark:bg-blue-900/20 flex items-center justify-center">
+                    <span className="text-xs text-blue-500">🔧</span>
+                  </div>
+                  <span className="text-sm font-medium text-gray-700 dark:text-gray-300">绑定工具</span>
+                </div>
+                <div className="pl-8">
+                  {agent.enabledTools && agent.enabledTools.length > 0 ? (
+                    <div className="flex flex-wrap gap-1.5">
+                      {agent.enabledTools.map((tid) => (
+                        <Tag key={tid} label={TOOL_LABEL_MAP[tid] || tid} color="blue" />
+                      ))}
+                    </div>
+                  ) : (
+                    <p className="text-sm text-gray-400 dark:text-gray-500">未绑定工具</p>
+                  )}
+                </div>
               </div>
             </div>
           </>

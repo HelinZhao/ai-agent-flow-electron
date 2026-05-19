@@ -1,6 +1,6 @@
 // ---- 动态生成 safelist（字符串数组，比正则更可靠） ----
 
-const NODE_COLORS = ['green', 'blue', 'yellow', 'indigo', 'purple', 'red', 'orange', 'gray', 'teal']
+const NODE_COLORS = ['green', 'blue', 'yellow', 'indigo', 'purple', 'red', 'orange', 'gray', 'teal', "cyan"]
 
 function buildSafelist() {
   const list = []

@@ -11,7 +11,7 @@ import {
 } from '@xyflow/react';
 import '@xyflow/react/dist/style.css';
 
-import { StartNode, SkillNode, BranchNode, ApiNode, AgentNode, EndNode, LLMNode, CliNode, TextNode } from './NodeTypes';
+import { StartNode, SkillNode, BranchNode, ApiNode, AgentNode, EndNode, LLMNode, CliNode, TextNode, WorkflowNode as WorkflowNodeComponent } from './NodeTypes';
 import NodeConfigPanel from './NodeConfigPanel';
 import { Workflow, WorkflowBranch, WorkflowEdge, WorkflowNode } from '@renderer/types';
 import NodeListPanel from './NodeListPanel';
@@ -33,6 +33,7 @@ const nodeTypes = {
   api: ApiNode,
   llm: LLMNode,
   agent: AgentNode,
+  workflow: WorkflowNodeComponent,
   cli: CliNode,
   text: TextNode,
   end: EndNode,
@@ -432,6 +433,7 @@ function WorkflowDesigner(props: WorkflowDesignerProps): React.JSX.Element {
                 node={selectedNode}
                 onClose={onUnselectNode}
                 onSave={handleSaveNode}
+                workflowId={workflow.id}
               />
             )}
           </ReactFlow>

@@ -8,6 +8,7 @@ import ApiConfig from './config/ApiConfig';
 import AgentConfig from './config/AgentConfig';
 import CLIConfig from './config/CliConfig';
 import TextConfig from './config/TextConfig';
+import WorkflowConfig from './config/WorkflowConfig';
 import CustomInput from '../ui/CustomInput';
 import CustomButton from '../ui/CustomButton';
 import { getNodeDefaultLabel, NODE_DEFS_MAP } from './nodes';
@@ -16,6 +17,7 @@ interface NodeConfigPanelProps {
   node: WorkflowNode | null;
   onClose: () => void;
   onSave?: (nodeId: string, label: string, config: Record<string, any>) => void;
+  workflowId?: string;
 }
 
 const BG_COLORS: Record<string, string> = {
@@ -25,12 +27,13 @@ const BG_COLORS: Record<string, string> = {
   llm: 'bg-indigo-500',
   api: 'bg-purple-500',
   agent: 'bg-red-500',
+  workflow: 'bg-cyan-500',
   cli: 'bg-orange-500',
   text: 'bg-teal-500',
   end: 'bg-gray-500',
 }
 
-const NodeConfigPanel: React.FC<NodeConfigPanelProps> = ({ node, onClose, onSave }: NodeConfigPanelProps) => {
+const NodeConfigPanel: React.FC<NodeConfigPanelProps> = ({ node, onClose, onSave, workflowId }: NodeConfigPanelProps) => {
   const { updateNode } = useReactFlow()
   const [config, setConfig] = useState<Record<string, any>>(node?.data.config || {});
   const [label, setLabel] = useState(node?.data.label || '');
@@ -73,6 +76,9 @@ const NodeConfigPanel: React.FC<NodeConfigPanelProps> = ({ node, onClose, onSave
 
       case 'agent':
         return <AgentConfig config={config} onConfigChange={setConfig} />;
+
+      case 'workflow':
+        return <WorkflowConfig config={config} onConfigChange={setConfig} workflowId={workflowId} />;
 
       case 'cli':
         return <CLIConfig config={config} onConfigChange={setConfig} />;

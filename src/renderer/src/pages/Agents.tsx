@@ -123,7 +123,7 @@ const AgentCard = React.memo(function AgentCard({
 
 // ─── Main Page ───
 export default function Agents(): React.JSX.Element {
-  const { agents, skills, addAgent, updateAgent, deleteAgent, workflows } = useWorkflowStore();
+  const { agents, skills, addAgent, updateAgent, deleteAgent, workflows, llmConfigs } = useWorkflowStore();
   const [selectedAgentId, setSelectedAgentId] = useState<string | null>(null);
   const [searchTerm, setSearchTerm] = useState('');
   const [isEditing, setIsEditing] = useState(false);
@@ -175,11 +175,12 @@ export default function Agents(): React.JSX.Element {
   };
 
   const handleSave = async (formData: AgentFormData): Promise<void> => {
-    // 布丁只允许更新技能和工具
+    // 布丁只允许更新技能、工具和LLM配置
     if (selectedAgent?.isSystem) {
       await updateAgent(selectedAgent.id, {
         skillIds: formData.skillIds,
         enabledTools: formData.enabledTools,
+        llmConfigId: formData.llmConfigId || undefined,
       });
       setIsEditing(false);
       setSelectedAgentId(null);
@@ -191,6 +192,7 @@ export default function Agents(): React.JSX.Element {
       description: formData.description,
       instructions: formData.instructions,
       type: formData.type,
+      llmConfigId: formData.llmConfigId || undefined,
       ...(formData.type === 'standard'
         ? { skillIds: formData.skillIds, enabledTools: formData.enabledTools }
         : { workflowId: formData.workflowId || undefined, skillIds: undefined, enabledTools: undefined }
@@ -256,6 +258,11 @@ export default function Agents(): React.JSX.Element {
                 selectedAgent.workflowId
                   ? workflows.find((w) => w.id === selectedAgent.workflowId)?.name || '未知工作流'
                   : ''
+              }
+              llmConfigName={
+                selectedAgent.llmConfigId
+                  ? llmConfigs.find((c) => c.id === selectedAgent.llmConfigId)?.name || '未知配置'
+                  : undefined
               }
               onEdit={() => setIsEditing(true)}
               onDelete={() => handleDelete(selectedAgent)}

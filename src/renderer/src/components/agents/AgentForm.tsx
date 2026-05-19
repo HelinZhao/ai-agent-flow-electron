@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { Agent, Skill, Workflow } from '@renderer/types';
 import { TOOL_DEFINITIONS } from '@renderer/config';
+import { useWorkflowStore } from '@renderer/store/workflowStore';
 import MarkdownIt from 'markdown-it';
 import MdEditor from 'react-markdown-editor-lite';
 import 'react-markdown-editor-lite/lib/index.css';
@@ -20,6 +21,7 @@ export interface AgentFormData {
   skillIds: string[]
   enabledTools: string[]
   workflowId: string
+  llmConfigId: string
 }
 
 interface AgentFormProps {
@@ -66,6 +68,7 @@ export default function AgentForm({ agent, skills, workflows, onSave, onCancel, 
           skillIds: agent.skillIds || [],
           enabledTools: agent.enabledTools || [],
           workflowId: agent.workflowId || '',
+          llmConfigId: agent.llmConfigId || '',
         }
       : {
           name: '',
@@ -75,6 +78,7 @@ export default function AgentForm({ agent, skills, workflows, onSave, onCancel, 
           skillIds: [],
           enabledTools: [],
           workflowId: '',
+          llmConfigId: '',
         },
   );
   const [isLoading, setIsLoading] = useState(false);
@@ -97,13 +101,15 @@ export default function AgentForm({ agent, skills, workflows, onSave, onCancel, 
   const selectedTools = AVAILABLE_TOOLS.filter((t) => formData.enabledTools.includes(t.id));
   const hasWorkflows = workflows.length > 0;
   const hasSkills = skills.length > 0;
+  const llmConfigs = useWorkflowStore((s) => s.llmConfigs);
+  const activeLLMConfig = useWorkflowStore((s) => s.activeLLMConfig);
 
   return (
     <>
       <div className="space-y-8">
         {isSystem && (
           <div className="mb-6 p-4 rounded-xl bg-amber-50 dark:bg-amber-900/10 border border-amber-200 dark:border-amber-700">
-            <p className="text-sm text-amber-700 dark:text-amber-300">布丁仅允许调整技能和工具绑定，其他信息不可修改</p>
+            <p className="text-sm text-amber-700 dark:text-amber-300">布丁仅允许调整技能、工具和 LLM 配置，其他信息不可修改</p>
           </div>
         )}
 
@@ -247,6 +253,28 @@ export default function AgentForm({ agent, skills, workflows, onSave, onCancel, 
               ) : (
                 <p className="text-xs text-gray-400 dark:text-gray-500 bg-gray-50 dark:bg-gray-800/50 p-3 rounded-lg border border-gray-200/50 dark:border-gray-700/50">暂无可用的工作流，请先在工作流管理页面创建</p>
               )}
+            </div>
+          </section>
+        )}
+
+        {/* ── LLM 配置 Section（标准 Agent） ── */}
+        {formData.type === 'standard' && (
+          <section>
+            <div className="flex items-center gap-2 mb-5">
+              <div className="w-1 h-5 bg-cyan-500 rounded-full" />
+              <h3 className="text-base font-semibold text-gray-800 dark:text-gray-200">LLM 配置</h3>
+            </div>
+            <div>
+              <CustomSelect
+                value={formData.llmConfigId}
+                onChange={(value) => updateField({ llmConfigId: value })}
+                options={[
+                  { value: '', label: activeLLMConfig ? `默认（${activeLLMConfig.name}）` : '使用全局默认配置' },
+                  ...llmConfigs.map((c) => ({ value: c.id, label: c.name + (c.isActive ? '（当前默认）' : '') }))
+                ]}
+                size="md"
+              />
+              <p className="text-xs text-gray-500 dark:text-gray-400 mt-2">选择此 Agent 专用的 LLM 配置，留空则使用全局活跃配置</p>
             </div>
           </section>
         )}

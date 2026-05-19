@@ -10,7 +10,6 @@ interface WorkflowState {
   agents: Agent[]
   llmConfigs: LLMConfig[]
   activeLLMConfig: LLMConfig | null
-  currentWorkflow: Workflow | null
   currentPage: string
   loading: boolean
   error: string | null
@@ -22,7 +21,6 @@ interface WorkflowState {
   addWorkflow: (workflow: Omit<Workflow, 'id' | 'createdAt' | 'updatedAt'>) => Promise<Workflow>
   updateWorkflow: (id: string, updates: Partial<Workflow>) => Promise<void>
   deleteWorkflow: (id: string) => Promise<void>
-  setCurrentWorkflow: (workflow: Workflow | null) => void
   setCurrentPage: (page: string) => void
 
   // Skill actions
@@ -83,7 +81,6 @@ export const useWorkflowStore = create<WorkflowState>()(
       activeLLMConfig: null,
       knowledgeBases: [],
       triggers: [],
-      currentWorkflow: null,
       currentPage: '/',
       loading: false,
       error: null,
@@ -170,9 +167,6 @@ export const useWorkflowStore = create<WorkflowState>()(
 
           set({ workflows: state.workflows.map((w) => (w.id === id ? updatedWorkflow : w)) })
 
-          if (state.currentWorkflow?.id === id) {
-            set({ currentWorkflow: updatedWorkflow })
-          }
         } catch (error) {
           console.error('更新工作流失败:', error)
           state.setError('更新工作流失败')
@@ -191,10 +185,6 @@ export const useWorkflowStore = create<WorkflowState>()(
           await workflowApi.delete(id)
 
           set({ workflows: state.workflows.filter((w) => w.id !== id) })
-
-          if (state.currentWorkflow?.id === id) {
-            set({ currentWorkflow: null })
-          }
         } catch (error) {
           console.error('删除工作流失败:', error)
           state.setError('删除工作流失败')
@@ -204,9 +194,6 @@ export const useWorkflowStore = create<WorkflowState>()(
         }
       },
 
-      setCurrentWorkflow: (workflow) => {
-        set({ currentWorkflow: workflow })
-      },
       setCurrentPage: (page) => {
         set({ currentPage: page })
       },
