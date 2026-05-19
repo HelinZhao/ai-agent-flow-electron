@@ -1,4 +1,5 @@
 import React, { useState, useCallback, useMemo, useEffect, useRef, memo } from 'react';
+import { createPortal } from 'react-dom';
 import {
   ReactFlow,
   Controls,
@@ -51,6 +52,7 @@ function WorkflowDesigner(props: WorkflowDesignerProps): React.JSX.Element {
   const { workflow, onSave, onRun, isRunning, onCanvasChange } = props
   const [selectedNode, setSelectedNode] = useState<WorkflowNode | null>(null);
   const [contextMenu, setContextMenu] = useState<{ x: number; y: number } | null>(null);
+  const [nodeContextMenu, setNodeContextMenu] = useState<{ x: number; y: number } | null>(null);
   const [branchSelection, setBranchSelection] = useState<{
     isOpen: boolean;
     branches: WorkflowBranch[];
@@ -66,7 +68,7 @@ function WorkflowDesigner(props: WorkflowDesignerProps): React.JSX.Element {
     isEditing: false,
     editEdgeId: null,
   });
-  const { screenToFlowPosition, fitView, } = useReactFlow();
+  const { screenToFlowPosition, fitView, getNodes } = useReactFlow();
   const defaultDir = useSettingsStore.getState().layoutDirection
   const [layoutDirection, setLayoutDirection] = useState<LayoutDirection>(workflow?.layoutDirection || defaultDir || 'horizontal');
 
@@ -111,6 +113,49 @@ function WorkflowDesigner(props: WorkflowDesignerProps): React.JSX.Element {
   useEffect(() => { edgesRef.current = edges; }, [edges]);
   useEffect(() => { onSaveRef.current = onSave; }, [onSave]);
 
+  const clipboardRef = useRef<{ nodes: WorkflowNode[]; edges: WorkflowEdge[] } | null>(null);
+  const nodeMenuRef = useRef<HTMLDivElement>(null);
+
+  const handleCopySelectedNodes = useCallback(() => {
+    const selectedNodes = getNodes().filter(n => n.selected);
+    if (selectedNodes.length === 0) return;
+    const selectedNodeIds = new Set(selectedNodes.map(n => n.id));
+    const copiedEdges = edgesRef.current.filter(
+      e => selectedNodeIds.has(e.source) && selectedNodeIds.has(e.target)
+    );
+    clipboardRef.current = {
+      nodes: JSON.parse(JSON.stringify(selectedNodes)),
+      edges: JSON.parse(JSON.stringify(copiedEdges)),
+    };
+  }, [getNodes]);
+
+  const handlePasteNodes = useCallback(() => {
+    if (!clipboardRef.current || clipboardRef.current.nodes.length === 0) return;
+    const idMap = new Map<string, string>();
+    const newNodes: WorkflowNode[] = clipboardRef.current.nodes.map(n => {
+      const newId = `node-${uuidv4()}`;
+      idMap.set(n.id, newId);
+      return {
+        id: newId,
+        type: n.type,
+        position: { x: n.position.x + 80, y: n.position.y + 80 },
+        data: JSON.parse(JSON.stringify(n.data)),
+      };
+    });
+    const newEdges: WorkflowEdge[] = clipboardRef.current.edges.map(e => ({
+      id: `edge-${uuidv4()}`,
+      source: idMap.get(e.source) || e.source,
+      target: idMap.get(e.target) || e.target,
+      label: e.label,
+      condition: e.condition,
+    }));
+    const allNodes = [...nodesRef.current, ...newNodes];
+    const allEdges = [...edgesRef.current, ...newEdges];
+    setNodes(allNodes);
+    setEdges(allEdges);
+    recordHistory(allNodes, allEdges);
+  }, [setNodes, setEdges, recordHistory]);
+
   // 根据布局方向给每个节点加上 sourcePosition/targetPosition
   const positionedNodes = useMemo(() => {
     return nodes.map(node => ({
@@ -130,7 +175,7 @@ function WorkflowDesigner(props: WorkflowDesignerProps): React.JSX.Element {
     initHistory(initialNodes, initialEdges);
   }, [workflow?.id]); // eslint-disable-line react-hooks/exhaustive-deps
 
-  // 快捷键：Ctrl+Z 撤销, Ctrl+Shift+Z / Ctrl+Y 重做, Ctrl+S 保存
+  // 快捷键：Ctrl+Z 撤销, Ctrl+Shift+Z / Ctrl+Y 重做, Ctrl+S 保存, Ctrl+C 复制, Ctrl+V 粘贴
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
       if (
@@ -151,12 +196,18 @@ function WorkflowDesigner(props: WorkflowDesignerProps): React.JSX.Element {
         e.preventDefault();
         onSaveRef.current(nodesRef.current, edgesRef.current);
         setManualSaveVersion(v => v + 1);
+      } else if ((e.ctrlKey || e.metaKey) && e.key === 'c') {
+        e.preventDefault();
+        handleCopySelectedNodes();
+      } else if ((e.ctrlKey || e.metaKey) && e.key === 'v') {
+        e.preventDefault();
+        handlePasteNodes();
       }
     };
 
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [undo, redo, setNodes, setEdges]);
+  }, [undo, redo, setNodes, setEdges, getNodes, handleCopySelectedNodes, handlePasteNodes]);
 
   // 自动保存（从 settingsStore 读取，手动保存后重置间隔）
   useEffect(() => {
@@ -302,6 +353,7 @@ function WorkflowDesigner(props: WorkflowDesignerProps): React.JSX.Element {
 
   const handlePaneContextMenu = useCallback((event: React.MouseEvent) => {
     event.preventDefault();
+    setNodeContextMenu(null);
     setContextMenu({ x: event.pageX, y: event.pageY });
   }, []);
 
@@ -352,24 +404,75 @@ function WorkflowDesigner(props: WorkflowDesignerProps): React.JSX.Element {
 
   // 保存节点配置时同步分支边的标签
   const handleSaveNode = useCallback((nodeId: string, label: string, config: Record<string, any>) => {
-    const newNodes = nodes.map(n =>
+    const currentNodes = nodesRef.current;
+    const currentEdges = edgesRef.current;
+    const newNodes = currentNodes.map(n =>
       n.id === nodeId ? { ...n, data: { ...n.data, label, config } } : n
     );
     setNodes(newNodes);
 
     const sourceNode = newNodes.find(n => n.id === nodeId);
-    let newEdges = edges;
+    let newEdges = currentEdges;
     if (sourceNode?.type === 'branch') {
       const branches: WorkflowBranch[] = config.branches || [];
-      newEdges = edges.map(edge => {
+      newEdges = currentEdges.map(edge => {
         if (edge.source !== nodeId) return edge;
         const m = branches.find(b => b.id === edge.condition);
         return m ? { ...edge, label: m.label, condition: m.id } : edge;
       });
     }
-    if (newEdges !== edges) setEdges(newEdges);
+    if (newEdges !== currentEdges) setEdges(newEdges);
     recordHistory(newNodes, newEdges);
-  }, [nodes, edges, setNodes, setEdges, recordHistory]);
+  }, [setNodes, setEdges, recordHistory]);
+
+  const handleNodeContextMenu = useCallback((event: React.MouseEvent, node: WorkflowNode) => {
+    event.preventDefault();
+    event.stopPropagation();
+
+    const currentNodes = getNodes();
+    if (!currentNodes.find(n => n.id === node.id)?.selected) {
+      setNodes(currentNodes.map(n => ({ ...n, selected: n.id === node.id })) as unknown as WorkflowNode[]);
+    }
+
+    setContextMenu(null);
+    setNodeContextMenu({ x: event.pageX, y: event.pageY });
+  }, [getNodes, setNodes]);
+
+  // 节点右键菜单外部点击关闭
+  useEffect(() => {
+    if (!nodeContextMenu) return;
+
+    const handler = (e: MouseEvent) => {
+      if (nodeMenuRef.current && !nodeMenuRef.current.contains(e.target as Node)) {
+        setNodeContextMenu(null);
+      }
+    };
+
+    const id = setTimeout(() => {
+      window.addEventListener('click', handler);
+      window.addEventListener('contextmenu', handler);
+    }, 0);
+
+    return () => {
+      clearTimeout(id);
+      window.removeEventListener('click', handler);
+      window.removeEventListener('contextmenu', handler);
+    };
+  }, [nodeContextMenu]);
+
+  const handleDeleteSelectedNodes = useCallback(() => {
+    const selectedIds = new Set(getNodes().filter(n => n.selected).map(n => n.id));
+    if (selectedIds.size === 0) return;
+    const remainingNodes = nodesRef.current.filter(n => !selectedIds.has(n.id));
+    const remainingEdges = edgesRef.current.filter(
+      e => !selectedIds.has(e.source) && !selectedIds.has(e.target)
+    );
+    setNodes(remainingNodes);
+    setEdges(remainingEdges);
+    recordHistory(remainingNodes, remainingEdges);
+    setNodeContextMenu(null);
+    setSelectedNode(null);
+  }, [getNodes, setNodes, setEdges, recordHistory]);
 
   // 双击分支边重新选择分支
   const onEdgeDoubleClick = useCallback((_event: React.MouseEvent, edge: any) => {
@@ -413,6 +516,7 @@ function WorkflowDesigner(props: WorkflowDesignerProps): React.JSX.Element {
             deleteKeyCode="Delete"
             onNodesDelete={() => setSelectedNode(null)}
             onPaneClick={handlePaneClick}
+            onNodeContextMenu={handleNodeContextMenu}
             onContextMenu={handlePaneContextMenu}
             onEdgeDoubleClick={onEdgeDoubleClick}
             onDragOver={handleDragOver}
@@ -450,7 +554,41 @@ function WorkflowDesigner(props: WorkflowDesignerProps): React.JSX.Element {
               x: contextMenu.x,
               y: contextMenu.y,
             })}
+            onPaste={handlePasteNodes}
+            hasClipboard={!!(clipboardRef.current?.nodes.length)}
           />
+        )}
+
+        {/* 节点右键菜单 */}
+        {nodeContextMenu && createPortal(
+          <div
+            ref={nodeMenuRef}
+            className="fixed bg-white dark:bg-gray-800 rounded-lg shadow-xl border border-gray-200 dark:border-gray-600 py-1 z-50 min-w-[120px]"
+            style={{ left: nodeContextMenu.x, top: nodeContextMenu.y }}
+            onClick={(e) => e.stopPropagation()}
+            onContextMenu={(e) => e.stopPropagation()}
+          >
+              <button
+                onClick={() => { handleCopySelectedNodes(); setNodeContextMenu(null) }}
+                className="w-full px-3 py-2 text-left text-sm flex items-center gap-2 hover:bg-gray-50 dark:hover:bg-gray-700 text-gray-700 dark:text-gray-300"
+              >
+                <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                  <rect x="9" y="9" width="13" height="13" rx="2" ry="2" />
+                  <path d="M5 15H4a2 2 0 01-2-2V4a2 2 0 012-2h9a2 2 0 012 2v1" />
+                </svg>
+                复制
+              </button>
+              <button
+                onClick={() => { handleDeleteSelectedNodes(); setNodeContextMenu(null) }}
+                className="w-full px-3 py-2 text-left text-sm flex items-center gap-2 hover:bg-gray-50 dark:hover:bg-gray-700 text-red-600 dark:text-red-400"
+              >
+                <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                  <path d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                </svg>
+                删除
+              </button>
+            </div>,
+          document.body
         )}
 
         {/* 分支选择模态框 */}

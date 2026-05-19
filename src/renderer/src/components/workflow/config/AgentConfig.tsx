@@ -8,7 +8,7 @@ interface AgentConfigProps {
 }
 
 const AgentConfig: React.FC<AgentConfigProps> = ({ config, onConfigChange }) => {
-    const { agents } = useWorkflowStore();
+    const agents = useWorkflowStore((s) => s.agents);
   
   return (
     <div className="space-y-4">

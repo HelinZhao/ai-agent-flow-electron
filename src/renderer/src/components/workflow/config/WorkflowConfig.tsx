@@ -9,7 +9,7 @@ interface WorkflowConfigProps {
 }
 
 const WorkflowConfig: React.FC<WorkflowConfigProps> = ({ config, onConfigChange, workflowId }) => {
-    const { workflows } = useWorkflowStore();
+    const workflows = useWorkflowStore((s) => s.workflows);
     const availableWorkflows = workflows.filter(w => w.id !== workflowId);
 
   return (

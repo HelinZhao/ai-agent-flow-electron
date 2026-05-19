@@ -42,7 +42,7 @@ export default function SettingsLLM(): React.JSX.Element {
 
     const [isSaving, setIsSaving] = useState(false);
     const [isTesting, setIsTesting] = useState(false);
-    const [message, setMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
+    const [message, setMessage] = useState<{ type: 'success' | 'error'; text: string; scope?: 'page' | 'modal' } | null>(null);
     const [editingConfig, setEditingConfig] = useState<string | null>(null);
     const [showForm, setShowForm] = useState(false);
     const { register, handleSubmit, formState: { errors }, reset, watch, getValues, setValue } = useForm<LLMConfig>({
@@ -148,6 +148,7 @@ export default function SettingsLLM(): React.JSX.Element {
             if (result.success) {
                 setMessage({
                     type: 'success',
+                    scope: 'modal',
                     text: `连接测试成功！API响应正常。LLM回复: ${result.response}`
                 });
             } else {
@@ -157,6 +158,7 @@ export default function SettingsLLM(): React.JSX.Element {
             console.error('连接测试失败:', error);
             setMessage({
                 type: 'error',
+                scope: 'modal',
                 text: `连接测试失败: ${error instanceof Error ? error.message : '未知错误'}`
             });
         } finally {
@@ -192,7 +194,7 @@ export default function SettingsLLM(): React.JSX.Element {
                 </CustomButton>
             </div>
 
-            {message && (
+            {message && message.scope !== 'modal' && (
                 <MessageBanner
                     type={message.type}
                     text={message.text}
@@ -290,7 +292,7 @@ export default function SettingsLLM(): React.JSX.Element {
                     ) : (
                       <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M13 10V3L4 14h7v7l9-11h-7z" /></svg>
                     )}
-                    {isTesting ? '测试中...' : '测试连接'}
+                    <span>{isTesting ? '测试中...' : '测试连接'}</span>
                   </CustomButton>
                   <CustomButton
                     type="submit"
@@ -317,6 +319,13 @@ export default function SettingsLLM(): React.JSX.Element {
                 </>
               }
             >
+              {message?.scope === 'modal' && (
+                <MessageBanner
+                    type={message.type}
+                    text={message.text}
+                    onClose={() => setMessage(null)}
+                />
+              )}
               <form id="llm-config-form" onSubmit={handleSubmit(onSubmit)} className="space-y-4">
                             <div>
                                 <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5">

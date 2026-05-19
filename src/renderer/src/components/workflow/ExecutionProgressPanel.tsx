@@ -68,7 +68,7 @@ const ExecutionProgressPanel: React.FC<ExecutionProgressPanelProps> = ({
             <p className="text-xs text-gray-500 dark:text-gray-400 font-mono">ID: {progress.executionId}</p>
           </div>
 
-          <span className={`inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full text-xs font-medium shrink-0 ${badge.bg} ${badge.text}`}>
+          <span className={`inline-flex items-center gap-1.5 px-2 py-0.5 mr-4 rounded text-xs font-medium shrink-0 ${badge.bg} ${badge.text}`}>
             <span className={`w-1.5 h-1.5 rounded-full ${badge.dot}`} />
             {STATUS_LABEL[metrics?.status] || metrics?.status}
           </span>

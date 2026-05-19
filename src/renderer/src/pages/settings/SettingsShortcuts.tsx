@@ -3,6 +3,8 @@ const SHORTCUTS = [
   { keys: ['Ctrl', 'Shift', 'Z'], desc: '重做' },
   { keys: ['Ctrl', 'Y'], desc: '重做（备选）' },
   { keys: ['Ctrl', 'S'], desc: '保存当前工作流' },
+  { keys: ['Ctrl', 'C'], desc: '复制选中节点' },
+  { keys: ['Ctrl', 'V'], desc: '粘贴节点' },
   { keys: ['Delete'], desc: '删除选中节点或连线' },
   { keys: ['Shift', '点击'], desc: '多选节点' },
   { keys: ['滚轮'], desc: '画布缩放' },

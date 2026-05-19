@@ -161,7 +161,8 @@ const LLMConfig: React.FC<LLMConfigProps> = ({ config, onConfigChange }) => {
   const [showVariableModal, setShowVariableModal] = useState(false);
   const [editingVariable, setEditingVariable] = useState<VariableConfig | null>(null);
   const [variables, setVariables] = useState<VariableConfig[]>(config.variables || []);
-  const { knowledgeBases, getKnowledgeBases } = useWorkflowStore();
+  const knowledgeBases = useWorkflowStore((s) => s.knowledgeBases);
+  const getKnowledgeBases = useWorkflowStore((s) => s.getKnowledgeBases);
 
   React.useEffect(() => {
     if (knowledgeBases.length === 0) getKnowledgeBases()

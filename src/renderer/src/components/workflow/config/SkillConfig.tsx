@@ -9,7 +9,7 @@ interface SkillConfigProps {
 }
 
 const SkillConfig: React.FC<SkillConfigProps> = ({ config, onConfigChange }) => {
-  const { skills } = useWorkflowStore();
+  const skills = useWorkflowStore((s) => s.skills);
   const selectedSkill = skills.find(s => s.id === config.skillId);
   return (
     <div className="space-y-4">

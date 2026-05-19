@@ -1,4 +1,4 @@
-import { useState, useEffect, ReactNode } from 'react';
+import { useState, useEffect, ReactNode, memo } from 'react';
 import { WorkflowNode } from '@renderer/types';
 import { Panel, useReactFlow } from '@xyflow/react';
 import SkillConfig from './config/SkillConfig';
@@ -180,4 +180,4 @@ const NodeConfigPanel: React.FC<NodeConfigPanelProps> = ({ node, onClose, onSave
   );
 }
 
-export default NodeConfigPanel
+export default memo(NodeConfigPanel)
