@@ -379,7 +379,6 @@ const NodeResultItem: React.FC<{ node: NodeExecutionResult }> = ({ node }) => {
     }
   })()
   const statusText: Record<string, string> = { completed: '已完成', failed: '失败', running: '运行中', pending: '等待中' }
-
   return (
     <div className="bg-white/80 dark:bg-gray-800/80 backdrop-blur-sm rounded-xl border border-gray-200/50 dark:border-gray-700/50 p-4">
       <div className="flex items-center justify-between mb-2">
@@ -389,7 +388,7 @@ const NodeResultItem: React.FC<{ node: NodeExecutionResult }> = ({ node }) => {
             node.status === 'failed' ? 'bg-red-500' :
             node.status === 'running' ? 'bg-blue-500' : 'bg-gray-300 dark:bg-gray-600'
           }`} />
-          <span className="font-medium text-sm text-gray-900 dark:text-white">{node.nodeLabel || '--'}</span>
+          <span className="font-medium text-sm text-gray-900 dark:text-white">{node.metadata?.label || '--'}</span>
         </div>
         <span className={`px-2 py-0.5 rounded-full text-xs font-medium ${statusColor}`}>
           {statusText[node.status] || node.status}
@@ -416,15 +415,19 @@ const NodeResultItem: React.FC<{ node: NodeExecutionResult }> = ({ node }) => {
 const LogItem: React.FC<{ log: any }> = ({ log }) => {
   const levelColor: Record<string, string> = { error: 'text-red-600', warn: 'text-yellow-600', info: 'text-gray-600' }
   return (
-    <div className="flex items-start gap-2 text-sm py-1.5 px-2 -mx-2 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700/30 transition-colors">
-      <span className="text-gray-400 text-xs whitespace-nowrap shrink-0 font-mono">
-        {new Date(log.timestamp).toLocaleTimeString()}
-      </span>
-      <span className={`font-medium shrink-0 text-xs ${levelColor[log.level] || ''}`}>
-        {log.level.toUpperCase()}
-      </span>
-      <span className="text-gray-900 dark:text-white flex-1 text-xs">{log.message}</span>
-      {log.nodeId && <span className="text-gray-500 text-xs shrink-0 font-mono">[{log.nodeId}]</span>}
+    <div className="text-sm py-1.5 px-2 -mx-2 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700/30 transition-colors">
+      <div className="flex items-start gap-2">
+        <span className={`font-medium shrink-0 text-xs ${levelColor[log.level] || ''}`}>
+          {log.level.toUpperCase()}
+        </span>
+        <span className="text-gray-900 dark:text-white flex-1 text-xs">{log.message}</span>
+        {log.nodeId && <span className="text-gray-500 text-xs shrink-0 font-mono">[{log.nodeId}]</span>}
+      </div>
+      <div className="flex justify-end mt-0.5">
+        <span className="text-gray-400 text-xs font-mono">
+          {new Date(log.timestamp).toLocaleTimeString()}
+        </span>
+      </div>
     </div>
   )
 }
@@ -618,7 +621,7 @@ const DetailModal: React.FC<DetailModalProps> = ({ executionId, onClose, onStop,
                                   ? 'bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200'
                                   : 'bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-gray-200'
                           }`}>
-                          {nr?.nodeLabel || nodeId}
+                          {nr?.metadata?.label || nodeId}
                         </span>
                       )
                     })}

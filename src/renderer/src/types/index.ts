@@ -148,8 +148,6 @@ export interface WorkflowExecutionMetrics {
 
 export interface NodeExecutionResult {
   nodeId: string
-  nodeType: string
-  nodeLabel: string
   status: 'pending' | 'running' | 'completed' | 'failed'
   startTime?: Date
   endTime?: Date
@@ -157,7 +155,12 @@ export interface NodeExecutionResult {
   input?: string
   output?: string
   error?: string
-  metadata?: Record<string, any>
+  metadata?: {
+    nodeId: string
+    type: string
+    label: string
+    [key: string]: any
+  }
 }
 
 export interface WorkflowExecutionProgress {

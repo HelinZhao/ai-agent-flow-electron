@@ -309,7 +309,7 @@ export default function Workflow(): React.JSX.Element {
 
                 {/* 执行进度面板（在画布页显示） */}
                 {showProgressPanel && progress && (
-                    <div className="fixed bottom-4 right-4 w-96 z-50">
+                    <div className="fixed bottom-4 right-4 w-[500px] z-50">
                         <ExecutionProgressPanel
                             progress={progress}
                             isRunning={isRunning}
