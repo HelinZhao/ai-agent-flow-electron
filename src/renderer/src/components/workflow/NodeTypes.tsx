@@ -28,6 +28,7 @@ export function StartNode({ data, selected }: { data: any; selected: boolean }):
   const direction = useContext(LayoutDirectionContext)
   const def = NODE_DEFS_MAP['start']
   const sourcePos = direction === 'vertical' ? Position.Bottom : Position.Right
+  const paramsCount = data.config?.params?.length || 0
   return (
     <div className={`node-start group relative px-4 py-3 min-w-[120px] ${nodeBg(def)} rounded-lg transition-shadow duration-300  ${nodeBorder(def)} ${selected ? nodeRing(def) : 'hover:shadow-glow-md dark:hover:shadow-glow-md-w'}`}>
       <Handle type="source" position={sourcePos} className={handleClass(def)} />
@@ -35,6 +36,9 @@ export function StartNode({ data, selected }: { data: any; selected: boolean }):
         <div className="text-black text-lg mb-1">{def.icon}</div>
         <div className="font-bold text-gray-800 text-sm">{def.shortLabel}</div>
         <div className="text-xs text-gray-700 font-medium mt-1">{data.label}</div>
+        {paramsCount > 0 && (
+          <div className="text-xs text-green-700 font-medium mt-0.5 bg-green-100/50 rounded px-1.5 py-0.5 inline-block">{paramsCount} 个参数</div>
+        )}
       </div>
     </div>
   );

@@ -1,14 +1,6 @@
 import { Workflow, LLMConfig, WorkflowNode, WorkflowBranch } from '../types'
 import { SkillModel } from '../models'
-import {
-  StateGraph,
-  Annotation,
-  START,
-  END,
-  CompiledStateGraph,
-  interrupt,
-  Command
-} from '@langchain/langgraph'
+import { StateGraph, Annotation, START, END, CompiledStateGraph, interrupt, Command } from '@langchain/langgraph'
 import { BaseMessage, HumanMessage, AIMessage } from '@langchain/core/messages'
 import { callLLM } from './llm'
 import { executeApiCall } from './api'
@@ -46,8 +38,20 @@ interface ExecutionState {
   pendingApproval: { resolve: (response: HITLResponse) => void; reject: (error: Error) => void; request: HITLRequest } | null
   attachments?: AttachmentPayload[]
   abortController?: AbortController
+  params?: Record<string, any>
 }
 const checkpointer = SqliteSaver.fromConnString(getUserDataDir(DB_FILENAME));
+
+/** 节点执行上下文，替代平铺参数传递给各 executor */
+interface ExecCtx {
+  executionId: string
+  node: WorkflowNode
+  input: string
+  llmConfig: LLMConfig
+  conversationHistory?: BaseMessage[]
+  attachments?: AttachmentPayload[]
+  params?: Record<string, any>
+}
 
 // 手动终止时使用的专用错误，各 catch 块据此透传而非吞掉
 class ExecutionTerminatedError extends Error {
@@ -80,7 +84,8 @@ export class MonitoredLangGraphExecutor {
     agentId?: string,
     threadId?: string,
     attachments?: AttachmentPayload[],
-    autoApprovedTools?: string[]
+    autoApprovedTools?: string[],
+    params?: Record<string, any>
   ): Promise<string> {
     const executionId = uuidv4()
 
@@ -104,6 +109,7 @@ export class MonitoredLangGraphExecutor {
       autoApprovedToolTypes: new Set<string>(autoApprovedTools || []),
       pendingApproval: null,
       attachments: [], // 将在下方替换为filePath版本
+      params,
     }
 
     // 将附件数据保存到磁盘，释放内存中的base64字符串
@@ -282,14 +288,15 @@ export class MonitoredLangGraphExecutor {
           // 合并当前执行附件与线程级累积附件，确保后续对话也能获取图片数据
           const allAttachments = this.mergeThreadAttachments(execState)
 
-          const nodeResult = await this.executeMonitoredNode(
+          const nodeResult = await this.executeMonitoredNode({
             executionId,
             node,
             input,
             llmConfig,
             conversationHistory,
-            allAttachments
-          )
+            attachments: allAttachments,
+            params: execState?.params,
+          })
           nodeResults.set(node.id, nodeResult)
 
           if (execState) {
@@ -450,22 +457,15 @@ export class MonitoredLangGraphExecutor {
   }
 
   // 执行带监控的节点
-  private async executeMonitoredNode(
-    executionId: string,
-    node: WorkflowNode,
-    input: string,
-    llmConfig: LLMConfig,
-    conversationHistory?: BaseMessage[],
-    attachments?: AttachmentPayload[]
-  ) {
+  private async executeMonitoredNode(ctx: ExecCtx) {
     const startTime = Date.now()
 
     try {
-      const result = await this.executeNode(executionId, node, input, llmConfig, conversationHistory, attachments)
+      const result = await this.executeNode(ctx)
       const endTime = Date.now()
 
       return {
-        nodeId: node.id,
+        nodeId: ctx.node.id,
         ...result,
         startTime: new Date(startTime),
         endTime: new Date(endTime),
@@ -477,26 +477,20 @@ export class MonitoredLangGraphExecutor {
       const endTime = Date.now()
 
       return {
-        output: input,
+        output: ctx.input,
         error: error instanceof Error ? error.message : '节点执行失败',
         startTime: new Date(startTime),
         endTime: new Date(endTime),
         duration: endTime - startTime,
         status: 'failed',
-        metadata: { nodeId: node.id, type: node.type, label: node.data?.label }
+        metadata: { nodeId: ctx.node.id, type: ctx.node.type, label: ctx.node.data?.label }
       }
     }
   }
 
   // 原有的节点执行逻辑
-  private async executeNode(
-    executionId: string,
-    node: WorkflowNode,
-    input: string,
-    llmConfig: LLMConfig,
-    conversationHistory?: BaseMessage[],
-    attachments?: AttachmentPayload[]
-  ) {
+  private async executeNode(ctx: ExecCtx) {
+    const { node, input } = ctx
     switch (node.type) {
       case 'start':
         return {
@@ -505,31 +499,31 @@ export class MonitoredLangGraphExecutor {
         }
 
       case 'skill':
-        return await this.executeSkill(node, input, llmConfig, conversationHistory, attachments)
+        return await this.executeSkill(ctx)
 
       case 'branch':
-        return await this.executeBranch(node, input, llmConfig)
+        return await this.executeBranch(ctx)
 
       case 'api':
-        return await this.executeApi(node, input, llmConfig)
+        return await this.executeApi(ctx)
 
       case 'llm':
-        return await this.executeLLM(executionId, node, input, llmConfig, conversationHistory, attachments)
+        return await this.executeLLM(ctx)
 
       case 'agent':
-        return await this.executeAgent(executionId, node, input, llmConfig, conversationHistory, attachments)
+        return await this.executeAgent(ctx)
 
       case 'workflow':
-        return await this.executeSubWorkflow(executionId, node, input, llmConfig, conversationHistory, attachments)
+        return await this.executeSubWorkflow(ctx)
 
       case 'cli':
-        return await this.executeCli(node, input, llmConfig)
+        return await this.executeCli(ctx)
 
       case 'mcp':
-        return await this.executeMCP(node, input, llmConfig)
+        return await this.executeMCP(ctx)
 
       case 'text':
-        return await this.executeText(node, input)
+        return await this.executeText(ctx)
 
       case 'end':
         return {
@@ -546,13 +540,8 @@ export class MonitoredLangGraphExecutor {
   }
 
   // 原有的节点执行方法（skill, branch, api, llm, agent）保持不变
-  private async executeSkill(
-    node: WorkflowNode,
-    input: string,
-    llmConfig: LLMConfig,
-    conversationHistory?: BaseMessage[],
-    attachments?: AttachmentPayload[]
-  ) {
+  private async executeSkill(ctx: ExecCtx) {
+    const { node, input, llmConfig, conversationHistory, attachments } = ctx
     if (!node.data.config?.skillId) {
       return {
         output: input,
@@ -603,7 +592,8 @@ export class MonitoredLangGraphExecutor {
     }
   }
 
-  private async executeBranch(node: WorkflowNode, input: string, llmConfig: LLMConfig) {
+  private async executeBranch(ctx: ExecCtx) {
+    const { node, input, llmConfig } = ctx
     if (!node.data.config?.branches?.length) {
       return {
         output: input,
@@ -637,7 +627,21 @@ export class MonitoredLangGraphExecutor {
     }
   }
 
-  private async executeApi(node: WorkflowNode, input: string, llmConfig: LLMConfig) {
+  /**
+   * 替换模板中的 {{input}} 和 {{paramName}} 占位符
+   */
+  private resolveParams(template: string, input: string, params?: Record<string, any>): string {
+    let result = template.replace(/\{\{input\}\}/g, input)
+    if (params) {
+      for (const [key, value] of Object.entries(params)) {
+        result = result.replace(new RegExp(`\\{\\{${key}\\}\\}`, 'g'), String(value ?? ''))
+      }
+    }
+    return result
+  }
+
+  private async executeApi(ctx: ExecCtx) {
+    const { node, input, llmConfig } = ctx
     if (!node.data.config?.apiConfig?.url) {
       return {
         output: input,
@@ -674,7 +678,8 @@ export class MonitoredLangGraphExecutor {
     }
   }
 
-  private async executeMCP(node: WorkflowNode, input: string, llmConfig: LLMConfig) {
+  private async executeMCP(ctx: ExecCtx) {
+    const { node, input, params } = ctx
     const mcpConfig = node.data.config?.mcpConfig
     if (!mcpConfig?.serverId || !mcpConfig?.toolName) {
       return {
@@ -685,10 +690,9 @@ export class MonitoredLangGraphExecutor {
 
     try {
       const args = mcpConfig.params || {}
-      // 替换 {{input}} 占位符
       const resolvedArgs: Record<string, any> = {}
       for (const [key, value] of Object.entries(args)) {
-        resolvedArgs[key] = typeof value === 'string' ? value.replace(/\{\{input\}\}/g, input) : value
+        resolvedArgs[key] = typeof value === 'string' ? this.resolveParams(value, input, params) : value
       }
 
       const mcpResult = await mcpConnectionManager.callTool(mcpConfig.serverId, mcpConfig.toolName, resolvedArgs)
@@ -718,14 +722,8 @@ export class MonitoredLangGraphExecutor {
     }
   }
 
-  private async executeAgent(
-    executionId: string,
-    node: WorkflowNode,
-    input: string,
-    llmConfig: LLMConfig,
-    _conversationHistory?: BaseMessage[],
-    attachments?: AttachmentPayload[]
-  ) {
+  private async executeAgent(ctx: ExecCtx) {
+    const { executionId, node, input, llmConfig, attachments } = ctx
     if (!node.data.config?.agentId) {
       return { output: input, metadata: { nodeId: node.id, type: 'agent', error: '未配置Agent ID', label: node.data?.label } }
     }
@@ -817,14 +815,8 @@ export class MonitoredLangGraphExecutor {
     }
   }
 
-  private async executeSubWorkflow(
-    executionId: string,
-    node: WorkflowNode,
-    input: string,
-    llmConfig: LLMConfig,
-    _conversationHistory?: BaseMessage[],
-    attachments?: AttachmentPayload[]
-  ) {
+  private async executeSubWorkflow(ctx: ExecCtx) {
+    const { executionId, node, input, llmConfig, attachments } = ctx
     const workflowId = node.data.config?.workflowId as string | undefined
     if (!workflowId) {
       return { output: input, metadata: { nodeId: node.id, type: 'workflow', error: '未配置工作流ID', label: node.data?.label } }
@@ -909,14 +901,9 @@ export class MonitoredLangGraphExecutor {
     }
   }
 
-  private async executeLLM(
-    executionId: string,
-    node: WorkflowNode,
-    input: string,
-    llmConfig: LLMConfig,
-    conversationHistory?: BaseMessage[],
-    attachments?: AttachmentPayload[]
-  ) {
+  private async executeLLM(ctx: ExecCtx) {
+    const { executionId, node, input, llmConfig: defaultLlmConfig, conversationHistory, attachments, params } = ctx
+    let llmConfig = defaultLlmConfig
     try {
       // 如果节点指定了 LLM 配置 ID，从数据库读取并覆盖
       const nodeLlmConfigId = node.data.config?.llmConfigId as string | undefined
@@ -948,6 +935,9 @@ export class MonitoredLangGraphExecutor {
         const placeholder = `{{${key}}}`
         promptTemplate = promptTemplate.replace(new RegExp(placeholder, 'g'), variablesMap[key])
       })
+
+      // 解析 {{input}} 和 {{paramName}} 占位符
+      promptTemplate = this.resolveParams(promptTemplate, input, params)
 
       const finalPrompt = promptTemplate ? `${promptTemplate}\n\n当前用户输入: ${input}` : input
       const enabledTools = node.data.config?.enabledTools || []
@@ -1058,7 +1048,8 @@ export class MonitoredLangGraphExecutor {
     }
   }
 
-  private async executeCli(node: WorkflowNode, input: string, llmConfig: LLMConfig) {
+  private async executeCli(ctx: ExecCtx) {
+    const { node, input, llmConfig, params } = ctx
     const cliConfig = node.data.config?.cliConfig
     const templateId = cliConfig?.templateId || 'custom'
 
@@ -1090,7 +1081,7 @@ export class MonitoredLangGraphExecutor {
         Object.entries(variables).forEach(([key, value]) => {
           resolvedCommand = resolvedCommand.replace(new RegExp(`\\{\\{${key}\\}\\}`, 'g'), value || '')
         })
-        resolvedCommand = resolvedCommand.replace(/\{\{input\}\}/g, input)
+        resolvedCommand = this.resolveParams(resolvedCommand, input, params)
         result = await executeCliCommand({
           command: resolvedCommand,
           workingDirectory: cliConfig.workingDirectory,
@@ -1163,7 +1154,8 @@ export class MonitoredLangGraphExecutor {
     }
   }
 
-  private async executeText(node: WorkflowNode, _input: string) {
+  private async executeText(ctx: ExecCtx) {
+    const { node, input, params } = ctx
     let textTemplate = node.data.config?.text || ''
     const variables = node.data.config?.variables || []
 
@@ -1176,6 +1168,8 @@ export class MonitoredLangGraphExecutor {
       const placeholder = `{{${key}}}`
       textTemplate = textTemplate.replace(new RegExp(placeholder, 'g'), variablesMap[key])
     })
+
+    textTemplate = this.resolveParams(textTemplate, input, params)
 
     return {
       output: textTemplate,

@@ -1,7 +1,7 @@
 import React, { useState, useCallback, useRef, useMemo } from 'react';
 import WorkflowDesigner from '@renderer/components/workflow/WorkflowDesigner';
 import { useWorkflowStore } from '@renderer/store/workflowStore';
-import { WorkflowNode, WorkflowEdge, type Workflow } from '@renderer/types';
+import { WorkflowNode, WorkflowEdge, VariableConfig, type Workflow } from '@renderer/types';
 import { useMemoizedFn } from 'ahooks';
 import { ReactFlowProvider } from '@xyflow/react';
 import { useWorkflowExecution } from '@renderer/hooks/useWorkflowExecution';
@@ -41,6 +41,7 @@ export default function Workflow(): React.JSX.Element {
     const [importError, setImportError] = useState<string | null>(null);
     const [showInputDialog, setShowInputDialog] = useState(false);
     const [workflowInput, setWorkflowInput] = useState('');
+    const [inputParams, setInputParams] = useState<Record<string, any>>({});
     const [pendingExecution, setPendingExecution] = useState(false);
     const [showProgressPanel, setShowProgressPanel] = useState(false);
 
@@ -148,7 +149,7 @@ export default function Workflow(): React.JSX.Element {
     }, [selectedWorkflow, activeLLMConfig]);
 
     const handleExecute = useCallback(async () => {
-        if (!selectedWorkflow || !workflowInput.trim()) return;
+        if (!selectedWorkflow) return;
 
         // 使用画布当前编辑中的数据而非已持久化的数据
         const canvasData = canvasDataRef.current;
@@ -164,14 +165,15 @@ export default function Workflow(): React.JSX.Element {
         setShowProgressPanel(true);
 
         try {
-            await executeWorkflow(workflowToRun, workflowInput);
+            await executeWorkflow(workflowToRun, workflowInput, undefined, undefined, inputParams);
         } catch (error) {
             console.error('工作流执行失败:', error);
         } finally {
             setPendingExecution(false);
             setWorkflowInput('');
+            setInputParams({});
         }
-    }, [selectedWorkflow, workflowInput, executeWorkflow]);
+    }, [selectedWorkflow, workflowInput, inputParams, executeWorkflow]);
 
     const handleImport = useCallback(() => {
         try {
@@ -354,49 +356,130 @@ export default function Workflow(): React.JSX.Element {
                 )}
 
                 {/* 工作流输入对话框 */}
-                {showInputDialog && (
-                    <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50 p-4">
-                        <div className="bg-white/95 dark:bg-gray-800/95 backdrop-blur-md rounded-2xl p-8 max-w-2xl w-full shadow-2xl border border-gray-200/50 dark:border-gray-700/50">
-                            <div className="text-center mb-6">
-                                <div className="w-16 h-16 bg-green-100 dark:bg-green-900/30 rounded-full flex items-center justify-center mx-auto mb-4">
-                                    <span className="text-2xl text-green-600">🚀</span>
+                {showInputDialog && (() => {
+                    // 读取 Start 节点参数定义
+                    const canvasData = canvasDataRef.current;
+                    const nodes = canvasData.nodes.length > 0 ? canvasData.nodes : (selectedWorkflow?.nodes || []);
+                    const startNode = nodes.find((n: WorkflowNode) => n.type === 'start');
+                    const startParams = (startNode?.data?.config?.params as VariableConfig[]) || [];
+
+                    const hasParams = startParams.length > 0
+                    const canExecute = hasParams ? true : workflowInput.trim().length > 0
+
+                    return (
+                        <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+                            <div className="bg-white/95 dark:bg-gray-800/95 backdrop-blur-md rounded-2xl p-8 max-w-2xl w-full shadow-2xl border border-gray-200/50 dark:border-gray-700/50">
+                                <div className="text-center mb-6">
+                                    <div className="w-16 h-16 bg-green-100 dark:bg-green-900/30 rounded-full flex items-center justify-center mx-auto mb-4">
+                                        <span className="text-2xl text-green-600">🚀</span>
+                                    </div>
+                                    <h3 className="text-xl font-semibold text-gray-900 dark:text-white mb-2">
+                                        {hasParams ? '填写工作流参数' : '输入工作流参数'}
+                                    </h3>
+                                    <p className="text-gray-600 dark:text-gray-400">
+                                        {hasParams ? '填写参数后点击执行，下游节点可通过 {{paramName}} 引用' : '请输入要传递给工作流的初始参数'}
+                                    </p>
                                 </div>
-                                <h3 className="text-xl font-semibold text-gray-900 dark:text-white mb-2">输入工作流参数</h3>
-                                <p className="text-gray-600 dark:text-gray-400">请输入要传递给工作流的初始参数</p>
-                            </div>
-                            <div className="space-y-4">
-                                <CustomTextarea
-                                    value={workflowInput}
-                                    onChange={(e) => setWorkflowInput(e.target.value)}
-                                    placeholder="输入工作流参数..."
-                                    className="min-h-[150px]"
-                                    autoFocus
-                                />
-                                <div className="flex space-x-3">
-                                    <CustomButton
-                                        onClick={handleExecute}
-                                        variant="primary"
-                                        className="flex-1"
-                                        disabled={!workflowInput.trim() || pendingExecution}
-                                        loading={pendingExecution}
-                                    >
-                                        开始执行
-                                    </CustomButton>
-                                    <CustomButton
-                                        onClick={() => {
-                                            setShowInputDialog(false);
-                                            setWorkflowInput('');
-                                        }}
-                                        variant="secondary"
-                                        className="flex-1"
-                                    >
-                                        取消
-                                    </CustomButton>
+                                <div className="space-y-4">
+                                    {/* 参数表单 */}
+                                    {hasParams ? (
+                                        <div className="space-y-3">
+                                            {startParams.map((param) => {
+                                                const val = inputParams[param.name] ?? param.defaultValue ?? ''
+                                                const isMissing = param.required && (val === undefined || val === null || val === '')
+                                                return (
+                                                    <div key={param.name}>
+                                                        <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                                                            {param.displayName || param.name}
+                                                            {param.required && <span className="text-red-500 ml-0.5">*</span>}
+                                                        </label>
+                                                        {param.type === 'boolean' ? (
+                                                            <label className="flex items-center gap-2 cursor-pointer">
+                                                                <input
+                                                                    type="checkbox"
+                                                                    checked={!!val}
+                                                                    onChange={(e) => setInputParams(p => ({ ...p, [param.name]: e.target.checked }))}
+                                                                    className="w-4 h-4 text-blue-600 rounded border-gray-300 dark:border-gray-600"
+                                                                />
+                                                                <span className="text-sm text-gray-600 dark:text-gray-400">{param.description || param.displayName}</span>
+                                                            </label>
+                                                        ) : param.type === 'number' ? (
+                                                            <input
+                                                                type="number"
+                                                                value={String(val)}
+                                                                onChange={(e) => setInputParams(p => ({ ...p, [param.name]: parseFloat(e.target.value) || 0 }))}
+                                                                placeholder={param.description || `输入${param.displayName}`}
+                                                                className="w-full px-3 py-2 text-sm rounded-lg border border-gray-200 dark:border-gray-600 bg-white dark:bg-gray-800 text-gray-800 dark:text-gray-200 placeholder-gray-400 dark:placeholder-gray-500 focus:ring-2 focus:ring-blue-500/50 focus:border-blue-500/50 transition-colors"
+                                                            />
+                                                        ) : param.type === 'array' ? (
+                                                            <textarea
+                                                                value={val}
+                                                                onChange={(e) => setInputParams(p => ({ ...p, [param.name]: e.target.value }))}
+                                                                placeholder={param.description || `输入${param.displayName}，每行一个`}
+                                                                rows={3}
+                                                                className="w-full px-3 py-2 text-sm rounded-lg border border-gray-200 dark:border-gray-600 bg-white dark:bg-gray-800 text-gray-800 dark:text-gray-200 placeholder-gray-400 dark:placeholder-gray-500 focus:ring-2 focus:ring-blue-500/50 focus:border-blue-500/50 transition-colors resize-none"
+                                                            />
+                                                        ) : (
+                                                            <input
+                                                                type="text"
+                                                                value={val}
+                                                                onChange={(e) => setInputParams(p => ({ ...p, [param.name]: e.target.value }))}
+                                                                placeholder={param.description || `输入${param.displayName}`}
+                                                                className="w-full px-3 py-2 text-sm rounded-lg border border-gray-200 dark:border-gray-600 bg-white dark:bg-gray-800 text-gray-800 dark:text-gray-200 placeholder-gray-400 dark:placeholder-gray-500 focus:ring-2 focus:ring-blue-500/50 focus:border-blue-500/50 transition-colors"
+                                                            />
+                                                        )}
+                                                        {isMissing && <p className="text-xs text-red-400 mt-0.5">此项必填</p>}
+                                                    </div>
+                                                )
+                                            })}
+                                            {/* 附加文本输入 */}
+                                            <details className="text-xs text-gray-500">
+                                                <summary className="cursor-pointer hover:text-gray-700 dark:hover:text-gray-300">附加文本输入（供 {'{{input}}'} 引用）</summary>
+                                                <textarea
+                                                    value={workflowInput}
+                                                    onChange={(e) => setWorkflowInput(e.target.value)}
+                                                    placeholder="可选：输入附加文本，下游节点通过 {{input}} 引用"
+                                                    rows={2}
+                                                    className="mt-2 w-full px-3 py-2 text-sm rounded-lg border border-gray-200 dark:border-gray-600 bg-white dark:bg-gray-800 text-gray-800 dark:text-gray-200 placeholder-gray-400 dark:placeholder-gray-500 focus:ring-2 focus:ring-blue-500/50 focus:border-blue-500/50 transition-colors resize-none"
+                                                />
+                                            </details>
+                                        </div>
+                                    ) : (
+                                        <CustomTextarea
+                                            value={workflowInput}
+                                            onChange={(e) => setWorkflowInput(e.target.value)}
+                                            placeholder="输入工作流参数..."
+                                            className="min-h-[150px]"
+                                            autoFocus
+                                        />
+                                    )}
+                                    <div className="flex space-x-3">
+                                        <CustomButton
+                                            onClick={handleExecute}
+                                            variant="primary"
+                                            className="flex-1"
+                                            disabled={!canExecute || pendingExecution}
+                                            loading={pendingExecution}
+                                        >
+                                            开始执行
+                                        </CustomButton>
+                                        <CustomButton
+                                            onClick={() => {
+                                                setShowInputDialog(false);
+                                                setWorkflowInput('');
+                                                setInputParams({});
+                                            }}
+                                            variant="secondary"
+                                            className="flex-1"
+                                        >
+                                            取消
+                                        </CustomButton>
+                                    </div>
                                 </div>
                             </div>
                         </div>
-                    </div>
-                )}
+                    )
+                })()}
 
                 {/* 删除确认对话框 */}
                 {workflowToDelete && (

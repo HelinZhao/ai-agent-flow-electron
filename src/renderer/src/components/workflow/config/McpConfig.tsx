@@ -161,20 +161,24 @@ const McpConfig: React.FC<McpConfigProps> = ({ config, onConfigChange }) => {
 
   // 当服务器切换时，获取该服务器的工具列表
   const handleServerChange = async (serverId: string) => {
-    onConfigChange({
-      ...config,
-      mcpConfig: { ...mcpConfig, serverId, serverName: '', toolName: '', params: {} },
-    })
     setSelectedToolSchema(null)
+    setSelectedServerTools([])
     if (serverId) {
       try {
         const detail = await mcpApi.getById(serverId)
         setSelectedServerTools(detail.tools || [])
+        onConfigChange({
+          ...config,
+          mcpConfig: { ...mcpConfig, serverId, serverName: detail.name, toolName: '', params: {} },
+        })
       } catch {
         setSelectedServerTools([])
       }
     } else {
-      setSelectedServerTools([])
+      onConfigChange({
+        ...config,
+        mcpConfig: { ...mcpConfig, serverId: '', serverName: '', toolName: '', params: {} },
+      })
     }
   }
 

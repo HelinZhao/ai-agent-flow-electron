@@ -108,14 +108,14 @@ export function useWorkflowExecution({
 
   // 执行工作流
   const executeWorkflow = useMemoizedFn(
-    async (workflow: Workflow, input: string, agentId?: string, threadId?: string) => {
+    async (workflow: Workflow, input: string, agentId?: string, threadId?: string, params?: Record<string, any>) => {
       try {
         setIsRunning(true)
         setError(null)
         setProgress(null)
         setNodeResults([])
 
-        const response = await workflowExecutionApi.execute(workflow, input, agentId, threadId)
+        const response = await workflowExecutionApi.execute(workflow, input, agentId, threadId, params)
         setExecutionId(response.executionId)
 
         // 开始轮询进度

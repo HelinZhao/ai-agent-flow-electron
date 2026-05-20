@@ -13,7 +13,7 @@ export const monitoredExecutor = new MonitoredLangGraphExecutor()
 // 执行工作流的路由（带监控）
 router.post('/monitor', async (req, res) => {
   try {
-    const { workflow, input, agentId, threadId } = req.body
+    const { workflow, input, agentId, threadId, params } = req.body
 
     // 验证必要参数
     if (!workflow || !input) {
@@ -48,7 +48,10 @@ router.post('/monitor', async (req, res) => {
       input,
       llmConfig,
       agentId,
-      threadId
+      threadId,
+      undefined,
+      undefined,
+      params
     )
 
     return res.status(200).json({
@@ -376,7 +379,7 @@ router.delete('/delete-thread/:threadId', async (req, res) => {
 // 原有的同步执行接口（保持向后兼容）
 router.post('/', async (req, res) => {
   try {
-    const { workflow, input, agentId, threadId } = req.body
+    const { workflow, input, agentId, threadId, params } = req.body
 
     // 验证必要参数
     if (!workflow || !input) {
@@ -411,7 +414,10 @@ router.post('/', async (req, res) => {
       input,
       llmConfig,
       agentId,
-      threadId
+      threadId,
+      undefined,
+      undefined,
+      params
     )
 
     // 等待执行完成（简化处理）

@@ -190,13 +190,15 @@ export const workflowExecutionApi = {
     workflow: Workflow,
     input: string,
     agentId?: string,
-    threadId?: string
+    threadId?: string,
+    params?: Record<string, any>
   ): Promise<{ executionId: string; message: string }> =>
     api.post('/execute-workflow/monitor', {
       workflow,
       input,
       agentId,
-      threadId
+      threadId,
+      params
     }),
 
   // 获取执行进度

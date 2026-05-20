@@ -10,6 +10,7 @@ import CLIConfig from './config/CliConfig';
 import TextConfig from './config/TextConfig';
 import WorkflowConfig from './config/WorkflowConfig';
 import McpConfig from './config/McpConfig';
+import StartConfig from './config/StartConfig';
 import CustomInput from '../ui/CustomInput';
 import CustomButton from '../ui/CustomButton';
 import { getNodeDefaultLabel, NODE_DEFS_MAP } from './nodes';
@@ -64,6 +65,9 @@ const NodeConfigPanel: React.FC<NodeConfigPanelProps> = ({ node, onClose, onSave
     if (!node) return null;
 
     switch (node.type) {
+      case 'start':
+        return <StartConfig config={config} onConfigChange={setConfig} />;
+
       case 'skill':
         return <SkillConfig config={config} onConfigChange={setConfig} />;
 
