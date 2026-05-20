@@ -333,7 +333,7 @@ const LLMConfig: React.FC<LLMConfigProps> = ({ config, onConfigChange }) => {
                           )}
                           {variable.defaultValue && (
                             <span className="text-xs text-gray-500 dark:text-gray-400 flex-shrink-0">
-                              默认值: <code className="bg-gray-100 dark:bg-gray-700 text-gray-800 dark:text-gray-200 px-1.5 py-0.5 rounded text-xs ml-1">
+                              值: <code className="bg-gray-100 dark:bg-gray-700 text-gray-800 dark:text-gray-200 px-1.5 py-0.5 rounded text-xs ml-1">
                                 {String(variable.defaultValue)}
                               </code>
                             </span>
@@ -390,6 +390,7 @@ const LLMConfig: React.FC<LLMConfigProps> = ({ config, onConfigChange }) => {
         onSave={handleSaveVariable}
         initialVariable={editingVariable || undefined}
         existingVariables={variables}
+        defaultLabel="值"
       />
 
       {/* 知识库增强 */}

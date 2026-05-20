@@ -117,7 +117,7 @@ const TextConfig: React.FC<TextConfigProps> = ({ config, onConfigChange }) => {
                           )}
                           {variable.defaultValue && (
                             <span className="text-xs text-gray-500 dark:text-gray-400 flex-shrink-0">
-                              默认值: <code className="bg-gray-100 dark:bg-gray-700 text-gray-800 dark:text-gray-200 px-1.5 py-0.5 rounded text-xs ml-1">
+                              值: <code className="bg-gray-100 dark:bg-gray-700 text-gray-800 dark:text-gray-200 px-1.5 py-0.5 rounded text-xs ml-1">
                                 {String(variable.defaultValue)}
                               </code>
                             </span>
@@ -160,7 +160,7 @@ const TextConfig: React.FC<TextConfigProps> = ({ config, onConfigChange }) => {
         <p className="font-medium mb-1">文本模板说明：</p>
         <ul className="list-disc list-inside space-y-1">
           <li>使用 {'{'}&#123;variableName&#125;{'}'} 格式插入变量</li>
-          <li>变量会在执行时动态替换为配置的默认值</li>
+          <li>变量会在执行时动态替换为配置的值</li>
           <li>文本节点不会调用 LLM，仅输出渲染后的文本</li>
         </ul>
       </div>
@@ -174,6 +174,7 @@ const TextConfig: React.FC<TextConfigProps> = ({ config, onConfigChange }) => {
         onSave={handleSaveVariable}
         initialVariable={editingVariable || undefined}
         existingVariables={variables}
+        defaultLabel="值"
       />
     </div>
   );

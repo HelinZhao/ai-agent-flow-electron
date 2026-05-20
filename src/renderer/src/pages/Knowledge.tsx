@@ -138,7 +138,8 @@ export default function Knowledge(): React.JSX.Element {
       }
       setModelExists(status.modelExists)
       setModelPulling(status.pulling)
-      // 始终订阅，确保小窗触发下载时页面也能同步状态
+      // 仅当模型未就绪时订阅进度，避免闲置 SSE 连接
+      if (status.modelExists) return
       cancel = ollamaApi.subscribePullProgress(progress => {
         setModelPullProgress(progress)
         if (progress.status === 'success') {

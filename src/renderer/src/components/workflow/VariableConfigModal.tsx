@@ -12,6 +12,7 @@ interface VariableConfigModalProps {
   onSave: (variable: VariableConfig) => void;
   initialVariable?: VariableConfig;
   existingVariables?: VariableConfig[];
+  defaultLabel?: string;
 }
 
 const VariableConfigModal: React.FC<VariableConfigModalProps> = ({
@@ -19,7 +20,8 @@ const VariableConfigModal: React.FC<VariableConfigModalProps> = ({
   onClose,
   onSave,
   initialVariable,
-  existingVariables
+  existingVariables,
+  defaultLabel = '默认值'
 }) => {
   const [formData, setFormData] = useState<VariableConfig>(() => ({
     name: initialVariable?.name || '',
@@ -192,13 +194,13 @@ const VariableConfigModal: React.FC<VariableConfigModalProps> = ({
 
           <div>
             <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-              默认值
+              {defaultLabel}
             </label>
             <CustomInput
               type={formData.type === 'number' ? 'number' : 'text'}
               value={formData.defaultValue || ''}
               onChange={(e) => handleInputChange('defaultValue', e.target.value)}
-              placeholder="默认值"
+              placeholder={defaultLabel}
               size="sm"
             />
           </div>

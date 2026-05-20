@@ -78,7 +78,6 @@ router.get('/:id', async (req, res) => {
     if (!workflow) {
       return res.status(404).json({ error: '工作流不存在' })
     }
-    console.log(workflow)
     return res.status(200).json({
       ...workflow.toJSON(),
       nodes: safeJsonParse(workflow.nodes, []),
