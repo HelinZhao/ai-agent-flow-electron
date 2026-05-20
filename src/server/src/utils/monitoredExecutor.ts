@@ -513,7 +513,7 @@ export class MonitoredLangGraphExecutor {
       case 'agent':
         return await this.executeAgent(ctx)
 
-      case 'workflow':
+      case 'subWorkflow':
         return await this.executeSubWorkflow(ctx)
 
       case 'cli':
@@ -629,6 +629,13 @@ export class MonitoredLangGraphExecutor {
 
   /**
    * 替换模板中的 {{input}} 和 {{paramName}} 占位符
+   */
+  /**
+   * 解析模板中的占位符：
+   * - {{input}} → 当前节点接收到的上游输入
+   * - {{paramName}} → 当前执行上下文中 Start 节点定义的参数值
+   *
+   * 子工作流的参数值也支持 {{name}} 语法，执行时从父工作流的 params 中解析（见下方）。
    */
   private resolveParams(template: string, input: string, params?: Record<string, any>): string {
     let result = template.replace(/\{\{input\}\}/g, input)
@@ -816,23 +823,23 @@ export class MonitoredLangGraphExecutor {
   }
 
   private async executeSubWorkflow(ctx: ExecCtx) {
-    const { executionId, node, input, llmConfig, attachments } = ctx
+    const { executionId, node, input, llmConfig, attachments, params: parentParams } = ctx
     const workflowId = node.data.config?.workflowId as string | undefined
     if (!workflowId) {
-      return { output: input, metadata: { nodeId: node.id, type: 'workflow', error: '未配置工作流ID', label: node.data?.label } }
+      return { output: input, metadata: { nodeId: node.id, type: 'subWorkflow', error: '未配置工作流ID', label: node.data?.label } }
     }
 
     // 检测循环调用
     if (this.workflowCallStack.has(workflowId)) {
       const chain = [...this.workflowCallStack, workflowId].join(' → ')
       console.warn('[循环检测] Workflow:', chain)
-      return { output: input, metadata: { nodeId: node.id, type: 'workflow', error: '检测到循环调用(' + chain + ')', workflowId } }
+      return { output: input, metadata: { nodeId: node.id, type: 'subWorkflow', error: '检测到循环调用(' + chain + ')', workflowId } }
     }
 
     try {
       const workflow = await WorkflowModel.findByPk(workflowId)
       if (!workflow) {
-        return { output: input, metadata: { nodeId: node.id, type: 'workflow', error: '工作流不存在', workflowId } }
+        return { output: input, metadata: { nodeId: node.id, type: 'subWorkflow', error: '工作流不存在', workflowId } }
       }
 
       const workflowObj: Workflow = {
@@ -847,7 +854,7 @@ export class MonitoredLangGraphExecutor {
 
       // 空工作流检查
       if (!workflowObj.nodes || workflowObj.nodes.length === 0) {
-        return { output: input, metadata: { nodeId: node.id, type: 'workflow', error: '工作流为空，没有任何节点', workflowId, workflowName: workflow.name } }
+        return { output: input, metadata: { nodeId: node.id, type: 'subWorkflow', error: '工作流为空，没有任何节点', workflowId, workflowName: workflow.name } }
       }
 
       // 为子工作流创建独立 executionId，继承父状态的放权工具列表
@@ -870,6 +877,15 @@ export class MonitoredLangGraphExecutor {
         autoApprovedToolTypes: inheritedAutoApprove,
         pendingApproval: null,
         attachments: undefined,
+        // 子工作流参数：先解析父级 {{name}} 占位符再传给子工作流
+        // 即用户在子工作流节点配置中填入的 {{name}} 会被父工作流的 params.name 替换
+        params: (() => {
+          const resolved: Record<string, any> = {}
+          for (const [k, v] of Object.entries(node.data.config?.params || {})) {
+            resolved[k] = typeof v === 'string' ? this.resolveParams(v, input, parentParams) : v
+          }
+          return resolved
+        })(),
       })
 
       this.workflowCallStack.add(workflowId)
@@ -882,7 +898,7 @@ export class MonitoredLangGraphExecutor {
           metadata: {
             nodeId: node.id,
             label: node.data?.label,
-            type: 'workflow',
+            type: 'subWorkflow',
             workflowId: workflow.id,
             workflowName: workflow.name,
           },
@@ -897,7 +913,7 @@ export class MonitoredLangGraphExecutor {
         throw error
       }
       const errorMsg = error instanceof Error ? error.message : '工作流执行失败'
-      return { output: errorMsg, metadata: { nodeId: node.id, type: 'workflow', error: errorMsg, workflowId } }
+      return { output: errorMsg, metadata: { nodeId: node.id, type: 'subWorkflow', error: errorMsg, workflowId } }
     }
   }
 

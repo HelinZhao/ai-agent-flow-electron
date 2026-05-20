@@ -228,15 +228,15 @@ export function AgentNode({ data, selected }: { data: any; selected: boolean }):
 }
 
 // ============================================================
-//  WorkflowNode
+//  SubWorkflow
 // ============================================================
-export function WorkflowNode({ data, selected }: { data: any; selected: boolean }): React.JSX.Element {
+export function SubWorkflow({ data, selected }: { data: any; selected: boolean }): React.JSX.Element {
   const direction = useContext(LayoutDirectionContext)
-  const def = NODE_DEFS_MAP['workflow']
+  const def = NODE_DEFS_MAP['subWorkflow']
   const targetPos = direction === 'vertical' ? Position.Top : Position.Left
   const sourcePos = direction === 'vertical' ? Position.Bottom : Position.Right
   return (
-    <div className={`node-workflow group relative px-4 py-3 min-w-[160px] ${nodeBg(def)} rounded-lg transition-shadowduration-300 ${nodeBorder(def)} ${selected ? nodeRing(def) : 'hover:shadow-glow-md dark:hover:shadow-glow-md-w'}`}>
+    <div className={`node-subworkflow group relative px-4 py-3 min-w-[160px] ${nodeBg(def)} rounded-lg transition-shadowduration-300 ${nodeBorder(def)} ${selected ? nodeRing(def) : 'hover:shadow-glow-md dark:hover:shadow-glow-md-w'}`}>
       <Handle type="target" position={targetPos} className={handleClass(def)} />
       <Handle type="source" position={sourcePos} className={handleClass(def)} />
       <div className="flex items-center space-x-3">

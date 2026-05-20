@@ -29,7 +29,7 @@ const BG_COLORS: Record<string, string> = {
   llm: 'bg-indigo-500',
   api: 'bg-purple-500',
   agent: 'bg-red-500',
-  workflow: 'bg-cyan-500',
+  subWorkflow: 'bg-cyan-500',
   cli: 'bg-orange-500',
   text: 'bg-teal-500',
   end: 'bg-gray-500',
@@ -83,7 +83,7 @@ const NodeConfigPanel: React.FC<NodeConfigPanelProps> = ({ node, onClose, onSave
       case 'agent':
         return <AgentConfig config={config} onConfigChange={setConfig} />;
 
-      case 'workflow':
+      case 'subWorkflow':
         return <WorkflowConfig config={config} onConfigChange={setConfig} workflowId={workflowId} />;
 
       case 'cli':
