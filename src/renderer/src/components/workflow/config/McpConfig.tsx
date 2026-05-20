@@ -41,7 +41,7 @@ function renderParamFields(
                 {label}{required && <span className="text-red-500 ml-0.5">*</span>}
               </label>
               <CustomSelect
-                size="xs"
+                size="sm"
                 value={value}
                 onChange={(v) => onChange(key, v)}
                 options={propSchema.enum.map((e: string) => ({ value: e, label: e }))}
@@ -134,10 +134,30 @@ const McpConfig: React.FC<McpConfigProps> = ({ config, onConfigChange }) => {
 
   // 加载服务器列表
   useEffect(() => {
-    mcpApi.getAll().then(setServers).catch(() => {})
+    mcpApi.getAll().then(setServers).catch(() => { })
   }, [])
 
   const mcpConfig = config.mcpConfig || {}
+
+  // 初始化时回显：加载已保存 serverId 的工具列表和 schema
+  useEffect(() => {
+    if (!mcpConfig.serverId) return
+    let cancelled = false
+    mcpApi.getById(mcpConfig.serverId).then(detail => {
+      if (cancelled) return
+      const tools = detail.tools || []
+      setSelectedServerTools(tools)
+      // 再回显已保存的 toolName 对应的 schema
+      if (mcpConfig.toolName) {
+        const tool = tools.find((t: any) => t.name === mcpConfig.toolName)
+        if (tool) setSelectedToolSchema(tool.inputSchema || null)
+      }
+    }).catch(() => {
+      if (!cancelled) setSelectedServerTools([])
+    })
+    return () => { cancelled = true }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [mcpConfig.serverId])
 
   // 当服务器切换时，获取该服务器的工具列表
   const handleServerChange = async (serverId: string) => {
@@ -179,6 +199,21 @@ const McpConfig: React.FC<McpConfigProps> = ({ config, onConfigChange }) => {
   // 只展示已连接的服务器
   const connectedServers = servers.filter(s => s.connectionStatus === 'connected')
 
+  // 校验：必填项是否已填
+  const validationMessages: string[] = []
+  if (!mcpConfig.serverId) validationMessages.push('请选择 MCP 服务器')
+  else if (!mcpConfig.toolName) validationMessages.push('请选择工具')
+  else if (mcpConfig.toolName && selectedToolSchema?.required && Array.isArray(selectedToolSchema.required)) {
+    const params = mcpConfig.params || {}
+    for (const key of selectedToolSchema.required) {
+      const val = params[key]
+      if (val === undefined || val === null || val === '') {
+        const label = selectedToolSchema.properties?.[key]?.title || key
+        validationMessages.push(`请填写必填参数「${label}」`)
+      }
+    }
+  }
+
   return (
     <div className="space-y-4">
       {/* 服务器选择 */}
@@ -192,14 +227,17 @@ const McpConfig: React.FC<McpConfigProps> = ({ config, onConfigChange }) => {
           onChange={handleServerChange}
           options={[
             { value: '', label: '选择服务器' },
-            ...connectedServers.map(s => ({
+            ...servers.map(s => ({
               value: s.id,
-              label: `${s.name} (${s.toolsCount || 0} 工具)`,
+              label: `${s.name} (${s.toolsCount || 0} 工具) ${s.connectionStatus === 'connected' ? '' : '[未连接]'}`,
             })),
           ]}
-          placeholder={connectedServers.length === 0 ? '暂无已连接的 MCP 服务器' : '选择服务器'}
+          placeholder={servers.length === 0 ? '暂无 MCP 服务器' : '选择服务器'}
         />
-        {connectedServers.length === 0 && (
+        {mcpConfig.serverId && !connectedServers.find(s => s.id === mcpConfig.serverId) && (
+          <p className="text-xs text-amber-500 mt-1">⚠ 该服务器未连接，请先连接或切换</p>
+        )}
+        {servers.length === 0 && (
           <p className="text-xs text-amber-500 mt-1">请先在 MCP 服务页面添加并连接服务器</p>
         )}
       </div>
@@ -233,13 +271,19 @@ const McpConfig: React.FC<McpConfigProps> = ({ config, onConfigChange }) => {
             <div className="w-1 h-4 bg-purple-500 rounded-full" />
             <h4 className="text-sm font-semibold text-gray-700 dark:text-gray-300">参数配置</h4>
           </div>
-          <div className="bg-gray-50 dark:bg-gray-800/50 rounded-lg border border-gray-200/50 dark:border-gray-700/50 p-3">
-            {renderParamFields(
-              mcpConfig.params || {},
-              selectedToolSchema,
-              updateParam,
-            )}
-          </div>
+          {selectedToolSchema.properties && Object.keys(selectedToolSchema.properties).length > 0 ? (
+            <div className="bg-gray-50 dark:bg-gray-800/50 rounded-lg border border-gray-200/50 dark:border-gray-700/50 p-3">
+              {renderParamFields(
+                mcpConfig.params || {},
+                selectedToolSchema,
+                updateParam,
+              )}
+            </div>
+          ) : (
+            <div className="bg-gray-50 dark:bg-gray-800/50 rounded-lg border border-gray-200/50 dark:border-gray-700/50 p-4 text-center text-xs text-gray-400 dark:text-gray-500">
+              该工具无需额外参数配置
+            </div>
+          )}
           <p className="text-xs text-gray-400 mt-1">
             使用 {'{{input}}'} 引用工作流上游传入的输入内容
           </p>
@@ -250,6 +294,16 @@ const McpConfig: React.FC<McpConfigProps> = ({ config, onConfigChange }) => {
       {mcpConfig.toolName && selectedToolSchema?.description && (
         <div className="bg-blue-50 dark:bg-blue-900/10 rounded-lg p-3 text-xs text-blue-700 dark:text-blue-300 border border-blue-200 dark:border-blue-800">
           {selectedToolSchema.description}
+        </div>
+      )}
+
+      {/* 校验提示 */}
+      {validationMessages.length > 0 && (
+        <div className="bg-amber-50 dark:bg-amber-900/10 rounded-lg p-3 text-xs text-amber-700 dark:text-amber-300 border border-amber-200 dark:border-amber-800 space-y-1">
+          <p className="font-medium">配置未完成：</p>
+          <ul className="list-disc list-inside space-y-0.5">
+            {validationMessages.map((msg, i) => <li key={i}>{msg}</li>)}
+          </ul>
         </div>
       )}
     </div>

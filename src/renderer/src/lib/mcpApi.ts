@@ -21,6 +21,7 @@ export interface McpDiscoveredTool {
   toolId: string
   name: string
   description: string
+  inputSchema?: any
 }
 
 export interface McpToolDefinition {

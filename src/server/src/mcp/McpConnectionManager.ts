@@ -23,6 +23,8 @@ export interface McpDiscoveredTool {
   name: string
   description?: string
   inputSchema: any
+  /** 注册后由 registerTools 填入 */
+  toolId?: string
 }
 
 /** MCP 工具信息（注册用） */
@@ -60,8 +62,6 @@ export class McpConnectionManager {
   private connections = new Map<string, McpClientConnection>()
   /** 工具 ID → DynamicStructuredTool */
   private mcpTools = new Map<string, DynamicStructuredTool>()
-  /** 工具 ID → 元信息 */
-  private mcpToolInfos = new Map<string, McpToolInfo>()
   private reconnectTimers = new Map<string, ReturnType<typeof setTimeout>>()
   private initialized = false
 
@@ -104,7 +104,6 @@ export class McpConnectionManager {
     }
     await Promise.allSettled(disconnectPromises)
     this.mcpTools.clear()
-    this.mcpToolInfos.clear()
     console.log('[MCP] 所有连接已关闭')
   }
 
@@ -306,13 +305,16 @@ export class McpConnectionManager {
    */
   getMcpToolDefinitions(): McpToolDefinition[] {
     const defs: McpToolDefinition[] = []
-    for (const info of this.mcpToolInfos.values()) {
-      defs.push({
-        id: info.toolId,
-        label: `${info.serverName}: ${info.toolName}`,
-        description: info.description || `MCP 工具 (${info.serverName})`,
-        serverName: info.serverName,
-      })
+    for (const [, conn] of this.connections) {
+      for (const tool of conn.tools) {
+        if (!tool.toolId) continue
+        defs.push({
+          id: tool.toolId,
+          label: `${conn.serverName}: ${tool.name}`,
+          description: tool.description || `MCP 工具 (${conn.serverName})`,
+          serverName: conn.serverName,
+        })
+      }
     }
     return defs
   }
@@ -321,7 +323,20 @@ export class McpConnectionManager {
    * 获取所有 MCP 工具元信息
    */
   getMcpToolInfos(): McpToolInfo[] {
-    return Array.from(this.mcpToolInfos.values())
+    const infos: McpToolInfo[] = []
+    for (const [, conn] of this.connections) {
+      for (const tool of conn.tools) {
+        if (!tool.toolId) continue
+        infos.push({
+          toolId: tool.toolId,
+          serverId: conn.serverId,
+          serverName: conn.serverName,
+          toolName: tool.name,
+          description: tool.description || '',
+        })
+      }
+    }
+    return infos
   }
 
   /**
@@ -423,6 +438,7 @@ export class McpConnectionManager {
     let registered = 0
     for (const tool of tools) {
       const toolId = this.getMcpToolId(serverName, tool.name)
+      tool.toolId = toolId // 缓存 toolId，供 getServerDetail 直接读取
 
       // 跳过已注册的工具（避免重复）
       if (this.mcpTools.has(toolId)) continue
@@ -454,13 +470,6 @@ export class McpConnectionManager {
       })
 
       this.mcpTools.set(toolId, structuredTool)
-      this.mcpToolInfos.set(toolId, {
-        toolId,
-        serverId,
-        serverName,
-        toolName: tool.name,
-        description: tool.description || '',
-      })
       registered++
     }
 
@@ -473,18 +482,17 @@ export class McpConnectionManager {
    * 移除指定服务器注册的所有工具
    */
   private removeTools(serverId: string): void {
-    const toolIdsToRemove: string[] = []
-    for (const [toolId, info] of this.mcpToolInfos) {
-      if (info.serverId === serverId) {
-        toolIdsToRemove.push(toolId)
+    const conn = this.connections.get(serverId)
+    if (!conn) return
+    let removed = 0
+    for (const tool of conn.tools) {
+      if (tool.toolId && this.mcpTools.has(tool.toolId)) {
+        this.mcpTools.delete(tool.toolId)
+        removed++
       }
     }
-    for (const toolId of toolIdsToRemove) {
-      this.mcpTools.delete(toolId)
-      this.mcpToolInfos.delete(toolId)
-    }
-    if (toolIdsToRemove.length > 0) {
-      console.log(`[MCP] 已移除服务器 ${serverId} 的 ${toolIdsToRemove.length} 个工具`)
+    if (removed > 0) {
+      console.log(`[MCP] 已移除服务器 ${serverId} 的 ${removed} 个工具`)
     }
   }
 
@@ -568,13 +576,12 @@ export class McpConnectionManager {
     if (!server) return null
 
     const conn = this.connections.get(serverId)
-    const toolInfos = Array.from(this.mcpToolInfos.values())
-      .filter(info => info.serverId === serverId)
-      .map(info => ({
-        toolId: info.toolId,
-        name: info.toolName,
-        description: info.description,
-      }))
+    const toolInfos = conn?.tools.map(t => ({
+      toolId: t.toolId || this.getMcpToolId(conn.serverName, t.name),
+      name: t.name,
+      description: t.description || '',
+      inputSchema: t.inputSchema || null,
+    })) || []
 
     return {
       id: server.id,
