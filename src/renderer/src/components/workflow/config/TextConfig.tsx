@@ -1,8 +1,8 @@
 import React, { useState } from 'react';
 import { VariableConfig } from '@renderer/types';
 import VariableConfigModal from '../VariableConfigModal';
-import CustomTextarea from '../../ui/CustomTextarea';
 import CustomButton from '../../ui/CustomButton';
+import TemplateEditor from '../../ui/TemplateEditor';
 
 interface TextConfigProps {
   config: Record<string, any>;
@@ -60,12 +60,12 @@ const TextConfig: React.FC<TextConfigProps> = ({ config, onConfigChange }) => {
         <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
           文本模板 *
         </label>
-        <CustomTextarea
+        <TemplateEditor
           value={config.text || ''}
-          onChange={(e) => onConfigChange({ ...config, text: e.target.value })}
-          rows={4}
+          onChange={(v) => onConfigChange({ ...config, text: v })}
           placeholder="输入文本内容，可以使用 {{variableName}} 格式的变量"
-          size="sm"
+          rows={4}
+          minHeight="100px"
         />
       </div>
 

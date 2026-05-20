@@ -4,6 +4,7 @@ import { VariableConfig } from '@renderer/types';
 import CustomSelect from '../ui/CustomSelect';
 import CustomInput from '../ui/CustomInput';
 import CustomButton from '../ui/CustomButton';
+import TemplateEditor from '../ui/TemplateEditor';
 import CustomTextarea from '../ui/CustomTextarea';
 
 interface VariableConfigModalProps {
@@ -196,13 +197,22 @@ const VariableConfigModal: React.FC<VariableConfigModalProps> = ({
             <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
               {defaultLabel}
             </label>
-            <CustomInput
-              type={formData.type === 'number' ? 'number' : 'text'}
-              value={formData.defaultValue || ''}
-              onChange={(e) => handleInputChange('defaultValue', e.target.value)}
-              placeholder={defaultLabel}
-              size="sm"
-            />
+            {formData.type === 'number' ? (
+              <CustomInput
+                type="number"
+                value={String(formData.defaultValue ?? '')}
+                onChange={(e) => handleInputChange('defaultValue', e.target.value)}
+                placeholder={defaultLabel}
+                size="sm"
+              />
+            ) : (
+              <TemplateEditor
+                value={formData.defaultValue ?? ''}
+                onChange={(v) => handleInputChange('defaultValue', v)}
+                placeholder={defaultLabel}
+                minHeight="60px"
+              />
+            )}
           </div>
 
           <div>

@@ -59,6 +59,7 @@
     "react-hook-form": "^7.72.1",
     "react-markdown-editor-lite": "^1.4.2",
     "react-router-dom": "^7.14.0",
+    "react-simple-code-editor": "^0.14.1",
     "redis": "^5.12.1",
     "sequelize": "^6.37.8",
     "sqlite-vec": "^0.1.9",

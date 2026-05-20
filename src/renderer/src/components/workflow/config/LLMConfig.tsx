@@ -4,7 +4,7 @@ import { useWorkflowStore } from '@renderer/store/workflowStore';
 import { TOOL_DEFINITIONS } from '@renderer/config';
 import { mcpApi } from '@renderer/lib/mcpApi';
 import VariableConfigModal from '../VariableConfigModal';
-import CustomTextarea from '../../ui/CustomTextarea';
+import TemplateEditor from '../../ui/TemplateEditor';
 import CustomButton from '../../ui/CustomButton';
 import CustomSelect from '../../ui/CustomSelect';
 import ItemPickerModal from '../../ui/ItemPickerModal';
@@ -260,12 +260,12 @@ const LLMConfig: React.FC<LLMConfigProps> = ({ config, onConfigChange }) => {
         <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
           提示词模板 *
         </label>
-        <CustomTextarea
+        <TemplateEditor
           value={config.prompt || ''}
-          onChange={(e) => onConfigChange({ ...config, prompt: e.target.value })}
-          rows={4}
+          onChange={(v) => onConfigChange({ ...config, prompt: v })}
           placeholder="输入提示词模板，可以使用 {{variableName}} 格式的变量"
-          size="sm"
+          rows={4}
+          minHeight="100px"
         />
       </div>
 
