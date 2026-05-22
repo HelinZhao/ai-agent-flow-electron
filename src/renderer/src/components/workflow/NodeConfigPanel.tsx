@@ -10,6 +10,7 @@ import CLIConfig from './config/CliConfig';
 import TextConfig from './config/TextConfig';
 import SubWorkflowConfig from './config/SubWorkflowConfig';
 import CodeConfig from './config/CodeConfig';
+import NoteConfig from './config/NoteConfig';
 import McpConfig from './config/McpConfig';
 import StartConfig from './config/StartConfig';
 import CustomInput from '../ui/CustomInput';
@@ -35,6 +36,7 @@ const BG_COLORS: Record<string, string> = {
   text: 'bg-teal-500',
   end: 'bg-gray-500',
   mcp: 'bg-purple-500',
+  note: 'bg-amber-500',
 }
 
 const NodeConfigPanel: React.FC<NodeConfigPanelProps> = ({ node, onClose, onSave, workflowId }: NodeConfigPanelProps) => {
@@ -95,6 +97,9 @@ const NodeConfigPanel: React.FC<NodeConfigPanelProps> = ({ node, onClose, onSave
 
       case 'code':
         return <CodeConfig config={config} onConfigChange={setConfig} />;
+
+      case 'note':
+        return <NoteConfig config={config} onConfigChange={setConfig} />;
 
       case 'text':
         return <TextConfig config={config} onConfigChange={setConfig} />;

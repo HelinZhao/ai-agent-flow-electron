@@ -19,16 +19,9 @@ const groupedNodes = NODE_CATEGORIES.map(cat => ({
   nodes: NODE_DEFS.filter(n => n.category === cat.key)
 }))
 
-const NODE_ICON_GRADIENTS: Record<string, string> = {
-  green: 'from-green-400 to-emerald-600',
-  blue: 'from-blue-400 to-blue-600',
-  yellow: 'from-yellow-400 to-amber-600',
-  indigo: 'from-indigo-400 to-indigo-600',
-  purple: 'from-purple-400 to-purple-600',
-  red: 'from-red-400 to-rose-600',
-  orange: 'from-orange-400 to-orange-600',
-  teal: 'from-teal-400 to-teal-600',
-  gray: 'from-gray-400 to-gray-600',
+/** 从 NODE_DEFS 的颜色定义自动生成渐变类名，新增节点无需再维护 */
+function nodeGradient(color: string): string {
+  return `from-${color}-400 to-${color}-600`
 }
 
 const ContextMenu: React.FC<ContextMenuProps> = ({ x, y, onAddNode, onClose, flowPosition, onPaste, hasClipboard }) => {
@@ -55,7 +48,7 @@ const ContextMenu: React.FC<ContextMenuProps> = ({ x, y, onAddNode, onClose, flo
   }
 
   const menuWidth = menuRef.current?.offsetWidth || 180
-  
+
   useClickAway(() => {
     onClose()
   }, menuRef)
@@ -114,7 +107,7 @@ const ContextMenu: React.FC<ContextMenuProps> = ({ x, y, onAddNode, onClose, flo
           </div>
           <div className="py-1">
             {hoveredData.nodes.map((nodeType) => {
-              const gradient = NODE_ICON_GRADIENTS[nodeType.color] || NODE_ICON_GRADIENTS.gray
+              const gradient = nodeGradient(nodeType.color)
               return (
                 <button
                   key={nodeType.type}
@@ -132,10 +125,10 @@ const ContextMenu: React.FC<ContextMenuProps> = ({ x, y, onAddNode, onClose, flo
                     <div className="text-xs text-slate-500 dark:text-slate-400 truncate mt-0.5">{nodeType.defaultLabel}</div>
                   </div>
                   <div className="flex flex-col gap-0.5 mt-0.5 opacity-0 group-hover/item:opacity-100 transition-opacity shrink-0">
-                    {!nodeType.hasTargetHandle && (
+                    {nodeType.type === 'start' && (
                       <span className="text-[10px] text-slate-500 dark:text-slate-400 bg-slate-100 dark:bg-slate-700 px-1.5 py-0.5 rounded-full leading-none">起点</span>
                     )}
-                    {!nodeType.hasSourceHandle && (
+                    {nodeType.type === 'end' && (
                       <span className="text-[10px] text-slate-500 dark:text-slate-400 bg-slate-100 dark:bg-slate-700 px-1.5 py-0.5 rounded-full leading-none">终点</span>
                     )}
                   </div>

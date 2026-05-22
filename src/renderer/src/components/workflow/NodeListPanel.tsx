@@ -67,10 +67,10 @@ const NodeListPanel = (): React.JSX.Element => {
                     <div className="text-xs text-slate-500 dark:text-slate-400 truncate">{def.defaultLabel}</div>
                   </div>
                   <div className="flex flex-col space-y-1 opacity-0 group-hover/item:opacity-100 transition-all duration-200">
-                    {!def.hasTargetHandle && (
+                    {def.type === 'start' && (
                       <span className="text-[10px] text-slate-500 dark:text-slate-400 bg-slate-100 dark:bg-slate-700 px-2 py-1 rounded-full">起点</span>
                     )}
-                    {!def.hasSourceHandle && (
+                    {def.type === 'end' && (
                       <span className="text-[10px] text-slate-500 dark:text-slate-400 bg-slate-100 dark:bg-slate-700 px-2 py-1 rounded-full">终点</span>
                     )}
                   </div>

@@ -378,3 +378,27 @@ export function EndNode({ data, selected }: { data: any; selected: boolean }): R
   );
 }
 
+// ============================================================
+//  NoteNode
+// ============================================================
+export function NoteNode({ data, selected }: { data: any; selected: boolean }): React.JSX.Element {
+  const content = data.config?.content || ''
+  const preview = content.split('\n').slice(0, 3).join('\n')
+  return (
+    <div className={`node-note group relative px-4 py-3 min-w-[180px] max-w-[260px] bg-amber-50 dark:bg-amber-900/20 border-2 border-amber-300 dark:border-amber-700/50 rounded-lg transition-shadowduration-300 ${selected ? 'ring-2 ring-amber-400 shadow-glow-lg dark:shadow-glow-lg-w' : 'hover:shadow-glow-md dark:hover:shadow-glow-md-w'}`}>
+      <div className="flex items-center gap-2 mb-1.5">
+        <span className="text-base">📌</span>
+        <span className="font-bold text-sm text-amber-800 dark:text-amber-200">{data.label || '注释'}</span>
+      </div>
+      {preview ? (
+        <div className="text-xs text-amber-700 dark:text-amber-300/80 leading-relaxed whitespace-pre-wrap break-words">
+          {preview}
+          {content.split('\n').length > 3 && <span className="text-amber-500 dark:text-amber-400 font-medium">…</span>}
+        </div>
+      ) : (
+        <div className="text-xs text-amber-400 dark:text-amber-500 italic">双击或右键编辑注释内容</div>
+      )}
+    </div>
+  );
+}
+
