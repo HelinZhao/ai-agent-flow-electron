@@ -622,6 +622,12 @@ export class MonitoredLangGraphExecutor {
       case 'loop':
         return await this.executeLoop(ctx)
 
+      case 'transform':
+        return await this.executeTransform(ctx)
+
+      case 'split':
+        return await this.executeSplit(ctx)
+
       case 'catch':
         return await this.executeCatch(ctx)
 
@@ -1355,6 +1361,156 @@ export class MonitoredLangGraphExecutor {
         upstreamError: errorMsg,
         upstreamNodeLabel: failedNodeLabel,
       }
+    }
+  }
+
+
+  private async executeTransform(ctx: ExecCtx) {
+    const { node, input, nodeResults } = ctx
+    const operation = node.data.config?.operation || 'jsonpath'
+    const expression = node.data.config?.expression || ''
+
+    if (!input && input !== '') {
+      return { output: '', metadata: { nodeId: node.id, type: 'transform', label: node.data?.label } }
+    }
+
+    try {
+      switch (operation) {
+        case 'jsonpath': {
+          if (!expression.trim()) {
+            return { output: input, metadata: { nodeId: node.id, type: 'transform', label: node.data?.label } }
+          }
+          const parsed = JSON.parse(input)
+          // 用 matchAll 提取所有 token：属性名 或 [n]
+          // 支持 data.name、data[0]、[0]、data[0].name、data[0][1] 等
+          const tokens: string[] = []
+          const tokenRegex = /\.(\w+)|\[(\d+)\]/g
+          let firstMatch = expression.match(/^(\w+)/)  // 开头可能有无点号前缀的属性名
+          if (firstMatch) {
+            tokens.push(firstMatch[1])
+          }
+          let m: RegExpExecArray | null
+          while ((m = tokenRegex.exec(expression)) !== null) {
+            if (m[1] !== undefined) tokens.push(m[1])     // .name
+            if (m[2] !== undefined) tokens.push('$idx$' + m[2])  // [0]
+          }
+          let result: any = parsed
+          for (const token of tokens) {
+            if (result == null) break
+            const idxMatch = token.match(/^\$idx\$(\d+)$/)
+            if (idxMatch) {
+              result = result[parseInt(idxMatch[1])]
+            } else {
+              result = result[token]
+            }
+          }
+          const output = result !== undefined ? (typeof result === 'object' ? JSON.stringify(result, null, 2) : String(result)) : ''
+          return {
+            output,
+            metadata: { nodeId: node.id, type: 'transform', operation, expression, label: node.data?.label }
+          }
+        }
+        case 'parse-json': {
+          const parsed = JSON.parse(input)
+          return {
+            output: JSON.stringify(parsed, null, 2),
+            metadata: { nodeId: node.id, type: 'transform', operation, label: node.data?.label }
+          }
+        }
+        case 'to-json': {
+          return {
+            output: JSON.stringify(input),
+            metadata: { nodeId: node.id, type: 'transform', operation, label: node.data?.label }
+          }
+        }
+        default:
+          return { output: input, metadata: { nodeId: node.id, type: 'transform', error: '未知操作', label: node.data?.label } }
+      }
+    } catch (error) {
+      const errorMsg = error instanceof Error ? error.message : '转换失败'
+      return { output: input, metadata: { nodeId: node.id, type: 'transform', error: errorMsg, label: node.data?.label } }
+    }
+  }
+
+  private async executeSplit(ctx: ExecCtx) {
+    const { executionId, node, input, llmConfig } = ctx
+    const workflowId = node.data.config?.workflowId as string | undefined
+    if (!workflowId) {
+      return { output: input, metadata: { nodeId: node.id, type: 'split', error: '未配置工作流ID', label: node.data?.label } }
+    }
+
+    const maxItems = Math.min(Math.max(1, node.data.config?.maxItems || 100), 1000)
+
+    try {
+      const workflow = await WorkflowModel.findByPk(workflowId)
+      if (!workflow) {
+        return { output: input, metadata: { nodeId: node.id, type: 'split', error: '工作流不存在', label: node.data?.label } }
+      }
+
+      const workflowObj: Workflow = {
+        id: workflow.id,
+        name: workflow.name,
+        description: workflow.description,
+        nodes: safeJsonParse(workflow.nodes, []),
+        edges: safeJsonParse(workflow.edges, []),
+        envVars: safeJsonParse(workflow.envVars, {}),
+        createdAt: workflow.createdAt,
+        updatedAt: workflow.updatedAt,
+      }
+
+      const parentState = this.executionStates.get(executionId)
+      const inheritedAutoApprove = parentState?.autoApprovedToolTypes
+        ? new Set(parentState.autoApprovedToolTypes)
+        : new Set<string>()
+
+      const items = this.parseInputAsArray(input)
+      const actualItems = Math.min(items.length, maxItems)
+      const results: string[] = []
+
+      for (let i = 0; i < actualItems; i++) {
+        if (parentState?.status === 'paused' || parentState?.status === 'completed') break
+
+        const subExecutionId = executionId + ':split:' + node.id + ':' + i
+        this.executionStates.set(subExecutionId, {
+          executionId: subExecutionId,
+          workflow: workflowObj,
+          status: 'running',
+          startTime: new Date(),
+          nodeResults: new Map(),
+          progress: 0,
+          logs: [],
+          autoApprovedToolTypes: inheritedAutoApprove,
+          pendingApproval: null,
+          attachments: undefined,
+          params: { _index: i },
+        })
+
+        try {
+          const subGraph = await this.buildMonitoredLangGraph(subExecutionId, workflowObj, llmConfig)
+          const subResult = await this.executeMonitoredLangGraph(subGraph, String(items[i]), subExecutionId, undefined, subExecutionId)
+          results.push(subResult)
+          this.executionStates.delete(subExecutionId)
+        } catch (error) {
+          this.executionStates.delete(subExecutionId)
+          results.push('[拆分 ' + i + ' 失败] ' + (error instanceof Error ? error.message : '未知错误'))
+        }
+      }
+
+      return {
+        output: results.join('\n'),
+        metadata: {
+          nodeId: node.id,
+          label: node.data?.label,
+          type: 'split',
+          items: results.length,
+          total: items.length,
+          workflowId,
+          workflowName: workflow.name,
+        }
+      }
+    } catch (error) {
+      const errorMsg = error instanceof Error ? error.message : '拆分执行失败'
+      return { output: errorMsg, metadata: { nodeId: node.id, type: 'split', error: errorMsg, label: node.data?.label } }
     }
   }
 

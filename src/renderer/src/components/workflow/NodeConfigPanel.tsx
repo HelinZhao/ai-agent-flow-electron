@@ -13,6 +13,8 @@ import CodeConfig from './config/CodeConfig';
 import NoteConfig from './config/NoteConfig';
 import LoopConfig from './config/LoopConfig';
 import CatchConfig from './config/CatchConfig';
+import TransformConfig from './config/TransformConfig';
+import SplitConfig from './config/SplitConfig';
 import McpConfig from './config/McpConfig';
 import StartConfig from './config/StartConfig';
 import CustomInput from '../ui/CustomInput';
@@ -41,6 +43,8 @@ const BG_COLORS: Record<string, string> = {
   note: 'bg-amber-500',
   loop: 'bg-violet-500',
   catch: 'bg-red-500',
+  transform: 'bg-emerald-500',
+  split: 'bg-amber-500',
 }
 
 const NodeConfigPanel: React.FC<NodeConfigPanelProps> = ({ node, onClose, onSave, workflowId }: NodeConfigPanelProps) => {
@@ -98,6 +102,12 @@ const NodeConfigPanel: React.FC<NodeConfigPanelProps> = ({ node, onClose, onSave
 
       case 'mcp':
         return <McpConfig config={config} onConfigChange={setConfig} />;
+
+      case 'transform':
+        return <TransformConfig config={config} onConfigChange={setConfig} />;
+
+      case 'split':
+        return <SplitConfig config={config} onConfigChange={setConfig} workflowId={workflowId} />;
 
       case 'loop':
         return <LoopConfig config={config} onConfigChange={setConfig} workflowId={workflowId} />;

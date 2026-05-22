@@ -22,6 +22,8 @@ export const NODE_DEFS: NodeDef[] = [
   { type: 'agent', shortLabel: 'Agent', defaultLabel: 'Agent节点', color: 'red', category: 'integration', hasTargetHandle: true, hasSourceHandle: true, icon: '🤖' },
   { type: 'subWorkflow', shortLabel: '子工作流', defaultLabel: '子工作流节点', color: 'cyan', category: 'integration', hasTargetHandle: true, hasSourceHandle: true, icon: '🔗' },
   { type: 'loop', shortLabel: '循环', defaultLabel: '循环节点', color: 'violet', category: 'logic', hasTargetHandle: true, hasSourceHandle: true, icon: '🔄' },
+  { type: 'transform', shortLabel: '转换', defaultLabel: '数据转换节点', color: 'emerald', category: 'logic', hasTargetHandle: true, hasSourceHandle: true, icon: '🔧' },
+  { type: 'split', shortLabel: '拆分', defaultLabel: '拆分节点', color: 'amber', category: 'logic', hasTargetHandle: true, hasSourceHandle: true, icon: '✂️' },
   { type: 'cli', shortLabel: 'CLI', defaultLabel: 'CLI节点', color: 'orange', category: 'integration', hasTargetHandle: true, hasSourceHandle: true, icon: '💻' },
   { type: 'text', shortLabel: '文本', defaultLabel: '文本节点', color: 'teal', category: 'logic', hasTargetHandle: true, hasSourceHandle: true, icon: '📝' },
   { type: 'end', shortLabel: '结束', defaultLabel: '结束节点', color: 'gray', category: 'basic', hasTargetHandle: true, hasSourceHandle: false, icon: '⏹️' },

@@ -17,15 +17,13 @@ interface ExpressionInputProps {
   availableNodes?: NodeRef[]
 }
 
-/** 高亮 {{$input}}、{{$params}}、{{$nodes}}、{{$env}}、{{$global}}、{{$now}}、{{var}} 和裸写 $nodes */
+/** 高亮 {{$xxx}} 内置变量和裸写 $nodes，不认识的 {{xxx}} 不做高亮 */
 // 注意：只能用 text-* 和 bg-*，不能有 padding/border/margin/rounded 等影响尺寸的类
-// 否则 <pre> 高亮层和 <textarea> 输入层宽度不一致 → 光标错位
 function highlight(text: string): string {
-  const regex = /(\{\{\$nodes(?:\["[^"]+"\]|\.\w+)(?:\.[a-zA-Z_$][\w$]*)*\}\})|(\{\{\$(?:input|params\.\w+(?:\.\w+)*|env\.\w+|global\.\w+|now(?:\.\w+)?)\}\})|(\{\{\w+\}\})|(\$nodes(?:\["[^"]+"\]|\.\w+)(?:\.[a-zA-Z_$][\w$]*)?)/g
-  return text.replace(regex, (match, nodesBuiltin, dollarBuiltin, variable, bareNodes) => {
+  const regex = /(\{\{\$nodes(?:\["[^"]+"\]|\.\w+)(?:\.[a-zA-Z_$][\w$]*)*\}\})|(\{\{\$(?:input|params\.\w+(?:\.\w+)*|env\.\w+|global\.\w+|now(?:\.\w+)?)\}\})|(\$nodes(?:\["[^"]+"\]|\.\w+)(?:\.[a-zA-Z_$][\w$]*)?)/g
+  return text.replace(regex, (match, nodesBuiltin, dollarBuiltin, bareNodes) => {
     if (nodesBuiltin) return `<span class="text-purple-600 dark:text-purple-400 bg-purple-100/60 dark:bg-purple-900/30">${nodesBuiltin}</span>`
     if (dollarBuiltin) return `<span class="text-teal-600 dark:text-teal-400 bg-teal-100/60 dark:bg-teal-900/30">${dollarBuiltin}</span>`
-    if (variable) return `<span class="text-blue-600 dark:text-blue-400 bg-blue-100/60 dark:bg-blue-900/30">${variable}</span>`
     if (bareNodes) return `<span class="text-purple-600 dark:text-purple-400 bg-purple-100/60 dark:bg-purple-900/30">${bareNodes}</span>`
     return match
   })
