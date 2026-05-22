@@ -377,7 +377,7 @@ export default function Workflow(): React.JSX.Element {
                                         {hasParams ? '填写工作流参数' : '输入工作流参数'}
                                     </h3>
                                     <p className="text-gray-600 dark:text-gray-400">
-                                        {hasParams ? '填写参数后点击执行，下游节点可通过 {{paramName}} 引用' : '请输入要传递给工作流的初始参数'}
+                                        {hasParams ? '填写参数后点击执行，下游节点可通过 {{$params.xxx}} 引用' : '请输入要传递给工作流的初始参数'}
                                     </p>
                                 </div>
                                 <div className="space-y-4">
@@ -434,11 +434,11 @@ export default function Workflow(): React.JSX.Element {
                                             })}
                                             {/* 附加文本输入 */}
                                             <details className="text-xs text-gray-500">
-                                                <summary className="cursor-pointer hover:text-gray-700 dark:hover:text-gray-300">附加文本输入（供 {'{{input}}'} 引用）</summary>
+                                                <summary className="cursor-pointer hover:text-gray-700 dark:hover:text-gray-300">附加文本输入（供 {'{{$input}}'} 引用）</summary>
                                                 <textarea
                                                     value={workflowInput}
                                                     onChange={(e) => setWorkflowInput(e.target.value)}
-                                                    placeholder="可选：输入附加文本，下游节点通过 {{input}} 引用"
+                                                    placeholder="可选：输入附加文本，下游节点通过 {{$input}} 引用"
                                                     rows={2}
                                                     className="mt-2 w-full px-3 py-2 text-sm rounded-lg border border-gray-200 dark:border-gray-600 bg-white dark:bg-gray-800 text-gray-800 dark:text-gray-200 placeholder-gray-400 dark:placeholder-gray-500 focus:ring-2 focus:ring-blue-500/50 focus:border-blue-500/50 transition-colors resize-none"
                                                 />

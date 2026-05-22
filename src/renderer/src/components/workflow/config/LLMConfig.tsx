@@ -4,7 +4,7 @@ import { useWorkflowStore } from '@renderer/store/workflowStore';
 import { TOOL_DEFINITIONS } from '@renderer/config';
 import { mcpApi } from '@renderer/lib/mcpApi';
 import VariableConfigModal from '../VariableConfigModal';
-import TemplateEditor from '../../ui/TemplateEditor';
+import ExpressionInput from '../ExpressionInput';
 import CustomButton from '../../ui/CustomButton';
 import CustomSelect from '../../ui/CustomSelect';
 import ItemPickerModal from '../../ui/ItemPickerModal';
@@ -260,10 +260,10 @@ const LLMConfig: React.FC<LLMConfigProps> = ({ config, onConfigChange }) => {
         <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
           提示词模板 *
         </label>
-        <TemplateEditor
+        <ExpressionInput
           value={config.prompt || ''}
           onChange={(v) => onConfigChange({ ...config, prompt: v })}
-          placeholder="输入提示词模板，可以使用 {{variableName}} 格式的变量"
+          placeholder={'输入提示词模板，可使用 {{$input}}、{{$params.xxx}}、{{$nodes["nodeId"].output}} 引用数据'}
           rows={4}
           minHeight="100px"
         />
@@ -375,9 +375,13 @@ const LLMConfig: React.FC<LLMConfigProps> = ({ config, onConfigChange }) => {
       <div className="text-xs text-gray-500 bg-gray-50 dark:bg-gray-700 p-3 rounded">
         <p className="font-medium mb-1">提示词模板说明：</p>
         <ul className="list-disc list-inside space-y-1">
-          <li>使用 {'{'}&#123;variableName&#125;{'}'} 格式插入变量</li>
+          <li>使用 {'{'}&#123;$input&#125;{'}'} 引用上游输入</li>
+          <li>使用 {'{'}&#123;$params.xxx&#125;{'}'} 引用 Start 节点参数</li>
+          <li>使用 {'{'}&#123;$nodes["nodeId"].output&#125;{'}'} 引用任意节点输出</li>
+          <li>使用 {'{'}&#123;$env.xxx&#125;{'}'} 引用环境变量</li>
+          <li>使用 {'{'}&#123;$now&#125;{'}'} 获取当前时间（ISO），支持 .date / .time / .timestamp</li>
+          <li>使用 {'{'}&#123;variableName&#125;{'}'} 插入自定义变量</li>
           <li>用户输入会自动添加到提示词末尾</li>
-          <li>变量会在执行时动态替换</li>
         </ul>
       </div>
 

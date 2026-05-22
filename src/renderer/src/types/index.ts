@@ -10,7 +10,7 @@ export interface BranchNodeConfig {
 
 export interface WorkflowNode {
   id: string
-  type: 'start' | 'skill' | 'branch' | 'api' | 'llm' | 'agent' | 'cli' | 'text' | 'end' | 'subWorkflow' | 'mcp'
+  type: 'start' | 'skill' | 'branch' | 'api' | 'llm' | 'agent' | 'cli' | 'text' | 'end' | 'subWorkflow' | 'mcp' | 'code'
   position: { x: number; y: number }
   data: {
     label: string
@@ -192,6 +192,11 @@ export interface CliNodeConfig {
   timeout?: number
   outputMode: 'raw' | 'llm_process'
   llmProcessPrompt?: string
+}
+
+export interface CodeNodeConfig {
+  code: string
+  language: 'javascript'
 }
 
 // 执行列表摘要（轻量，不含 nodeResults/logs）

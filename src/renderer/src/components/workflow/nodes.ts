@@ -16,6 +16,7 @@ export const NODE_DEFS: NodeDef[] = [
   { type: 'llm', shortLabel: 'LLM', defaultLabel: 'LLM节点', color: 'indigo', category: 'logic', hasTargetHandle: true, hasSourceHandle: true, icon: '🧠' },
   { type: 'api', shortLabel: 'API', defaultLabel: 'API节点', color: 'purple', category: 'integration', hasTargetHandle: true, hasSourceHandle: true, icon: '🌐' },
   { type: 'mcp', shortLabel: 'MCP', defaultLabel: 'MCP节点', color: 'purple', category: 'integration', hasTargetHandle: true, hasSourceHandle: true, icon: '🔌' },
+  { type: 'code', shortLabel: '代码', defaultLabel: '代码节点', color: 'rose', category: 'logic', hasTargetHandle: true, hasSourceHandle: true, icon: '💻' },
   { type: 'agent', shortLabel: 'Agent', defaultLabel: 'Agent节点', color: 'red', category: 'integration', hasTargetHandle: true, hasSourceHandle: true, icon: '🤖' },
   { type: 'subWorkflow', shortLabel: '子工作流', defaultLabel: '子工作流节点', color: 'cyan', category: 'integration', hasTargetHandle: true, hasSourceHandle: true, icon: '🔗' },
   { type: 'cli', shortLabel: 'CLI', defaultLabel: 'CLI节点', color: 'orange', category: 'integration', hasTargetHandle: true, hasSourceHandle: true, icon: '💻' },

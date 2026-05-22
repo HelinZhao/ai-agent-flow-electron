@@ -51,6 +51,7 @@ interface ExecCtx {
   conversationHistory?: BaseMessage[]
   attachments?: AttachmentPayload[]
   params?: Record<string, any>
+  nodeResults?: Map<string, any>
 }
 
 // 手动终止时使用的专用错误，各 catch 块据此透传而非吞掉
@@ -296,6 +297,7 @@ export class MonitoredLangGraphExecutor {
             conversationHistory,
             attachments: allAttachments,
             params: execState?.params,
+            nodeResults,
           })
           nodeResults.set(node.id, nodeResult)
 
@@ -522,6 +524,9 @@ export class MonitoredLangGraphExecutor {
       case 'mcp':
         return await this.executeMCP(ctx)
 
+      case 'code':
+        return await this.executeCode(ctx)
+
       case 'text':
         return await this.executeText(ctx)
 
@@ -628,21 +633,58 @@ export class MonitoredLangGraphExecutor {
   }
 
   /**
-   * 替换模板中的 {{input}} 和 {{paramName}} 占位符
-   */
-  /**
-   * 解析模板中的占位符：
-   * - {{input}} → 当前节点接收到的上游输入
-   * - {{paramName}} → 当前执行上下文中 Start 节点定义的参数值
+   * 替换模板中的占位符：
+   * - {{$input}} → 当前节点接收到的上游输入
+   * - {{$params.xxx}} → 当前执行上下文中 Start 节点定义的参数 xxx
+   * - {{$nodes["id"].output}} → 引用任意已完成节点的输出
+   * - {{$env.xxx}} → 环境变量（如 {{$env.USER}}）
+   * - {{$now}} / {{$now.date}} / {{$now.time}} / {{$now.timestamp}} → 当前时间
    *
    * 子工作流的参数值也支持 {{name}} 语法，执行时从父工作流的 params 中解析（见下方）。
    */
-  private resolveParams(template: string, input: string, params?: Record<string, any>): string {
-    let result = template.replace(/\{\{input\}\}/g, input)
+  private resolveParams(template: string, input: string, params?: Record<string, any>, nodeResults?: Map<string, any>): string {
+    // {{$input}} → 上游输入
+    let result = template.replace(/\{\{\$input\}\}/g, input)
+
+    // {{$params.xxx.yyy}} → params 中按路径取值
     if (params) {
-      for (const [key, value] of Object.entries(params)) {
-        result = result.replace(new RegExp(`\\{\\{${key}\\}\\}`, 'g'), String(value ?? ''))
+      result = result.replace(/\{\{\$params\.([a-zA-Z_]\w*(?:\.[a-zA-Z_]\w*)*)\}\}/g, (match, path) => {
+        const keys = path.split('.')
+        let value: any = params
+        for (const key of keys) {
+          if (value == null || typeof value !== 'object') return match
+          value = value[key]
+        }
+        return value !== undefined && value !== null ? String(value) : match
+      })
+    }
+
+    // {{$env.xxx}} → 环境变量
+    result = result.replace(/\{\{\$env\.([a-zA-Z_]\w*)\}\}/g, (match, key) => {
+      return process.env[key] !== undefined ? process.env[key]! : match
+    })
+
+    // {{$now}} / {{$now.format}} → 当前时间
+    result = result.replace(/\{\{\$now(?:\.(\w+))?\}\}/g, (match, format) => {
+      const now = new Date()
+      switch (format) {
+        case 'timestamp': return String(now.getTime())
+        case 'date': return now.toISOString().slice(0, 10)
+        case 'time': return now.toTimeString().slice(0, 8)
+        case 'iso': return now.toISOString()
+        case 'year': return String(now.getFullYear())
+        case 'month': return String(now.getMonth() + 1).padStart(2, '0')
+        case 'day': return String(now.getDate()).padStart(2, '0')
+        case 'hour': return String(now.getHours()).padStart(2, '0')
+        case 'minute': return String(now.getMinutes()).padStart(2, '0')
+        case 'second': return String(now.getSeconds()).padStart(2, '0')
+        default: return now.toISOString()
       }
+    })
+
+    // {{$nodes["id"].output}} / $nodes["id"].output → 节点引用
+    if (nodeResults && nodeResults.size > 0) {
+      result = this.resolveNodeRefs(result, nodeResults)
     }
     return result
   }
@@ -657,11 +699,12 @@ export class MonitoredLangGraphExecutor {
     }
 
     try {
-      // 解析 API 配置中的 {{input}} 和 {{paramName}} 占位符
+      // 解析 API 配置中的 {{$input}}、{{$params.xxx}} 和 $nodes 占位符
       const apiConfig = node.data.config.apiConfig
-      const resolvedUrl = this.resolveParams(apiConfig.url || '', input, params)
-      const resolvedHeaders = apiConfig.headers ? this.resolveParams(apiConfig.headers, input, params) : apiConfig.headers
-      const resolvedBody = apiConfig.body ? this.resolveParams(apiConfig.body, input, params) : apiConfig.body
+      const { nodeResults } = ctx
+      const resolvedUrl = this.resolveParams(apiConfig.url || '', input, params, nodeResults)
+      const resolvedHeaders = apiConfig.headers ? this.resolveParams(apiConfig.headers, input, params, nodeResults) : apiConfig.headers
+      const resolvedBody = apiConfig.body ? this.resolveParams(apiConfig.body, input, params, nodeResults) : apiConfig.body
       const resolvedApiConfig = { ...apiConfig, url: resolvedUrl, headers: resolvedHeaders, body: resolvedBody }
 
       const apiResult = await executeApiCall(resolvedApiConfig)
@@ -693,7 +736,7 @@ export class MonitoredLangGraphExecutor {
   }
 
   private async executeMCP(ctx: ExecCtx) {
-    const { node, input, params } = ctx
+    const { node, input, params, nodeResults } = ctx
     const mcpConfig = node.data.config?.mcpConfig
     if (!mcpConfig?.serverId || !mcpConfig?.toolName) {
       return {
@@ -706,7 +749,7 @@ export class MonitoredLangGraphExecutor {
       const args = mcpConfig.params || {}
       const resolvedArgs: Record<string, any> = {}
       for (const [key, value] of Object.entries(args)) {
-        resolvedArgs[key] = typeof value === 'string' ? this.resolveParams(value, input, params) : value
+        resolvedArgs[key] = typeof value === 'string' ? this.resolveParams(value, input, params, nodeResults) : value
       }
 
       const mcpResult = await mcpConnectionManager.callTool(mcpConfig.serverId, mcpConfig.toolName, resolvedArgs)
@@ -830,7 +873,7 @@ export class MonitoredLangGraphExecutor {
   }
 
   private async executeSubWorkflow(ctx: ExecCtx) {
-    const { executionId, node, input, llmConfig, attachments, params: parentParams } = ctx
+    const { executionId, node, input, llmConfig, attachments, params: parentParams, nodeResults } = ctx
     const workflowId = node.data.config?.workflowId as string | undefined
     if (!workflowId) {
       return { output: input, metadata: { nodeId: node.id, type: 'subWorkflow', error: '未配置工作流ID', label: node.data?.label } }
@@ -884,12 +927,12 @@ export class MonitoredLangGraphExecutor {
         autoApprovedToolTypes: inheritedAutoApprove,
         pendingApproval: null,
         attachments: undefined,
-        // 子工作流参数：先解析父级 {{name}} 占位符再传给子工作流
-        // 即用户在子工作流节点配置中填入的 {{name}} 会被父工作流的 params.name 替换
+        // 子工作流参数：先解析父级 {{$params.xxx}} 占位符再传给子工作流
+        // 即用户在子工作流节点配置中填入的 {{$params.name}} 会被父工作流的 params.name 替换
         params: (() => {
           const resolved: Record<string, any> = {}
           for (const [k, v] of Object.entries(node.data.config?.params || {})) {
-            resolved[k] = typeof v === 'string' ? this.resolveParams(v, input, parentParams) : v
+            resolved[k] = typeof v === 'string' ? this.resolveParams(v, input, parentParams, nodeResults) : v
           }
           return resolved
         })(),
@@ -925,7 +968,7 @@ export class MonitoredLangGraphExecutor {
   }
 
   private async executeLLM(ctx: ExecCtx) {
-    const { executionId, node, input, llmConfig: defaultLlmConfig, conversationHistory, attachments, params } = ctx
+    const { executionId, node, input, llmConfig: defaultLlmConfig, conversationHistory, attachments, params, nodeResults } = ctx
     let llmConfig = defaultLlmConfig
     try {
       // 如果节点指定了 LLM 配置 ID，从数据库读取并覆盖
@@ -959,8 +1002,8 @@ export class MonitoredLangGraphExecutor {
         promptTemplate = promptTemplate.replace(new RegExp(placeholder, 'g'), variablesMap[key])
       })
 
-      // 解析 {{input}} 和 {{paramName}} 占位符
-      promptTemplate = this.resolveParams(promptTemplate, input, params)
+      // 解析 {{$input}} 和 {{$params.xxx}} 占位符
+      promptTemplate = this.resolveParams(promptTemplate, input, params, nodeResults)
 
       const finalPrompt = promptTemplate ? `${promptTemplate}\n\n当前用户输入: ${input}` : input
       const enabledTools = node.data.config?.enabledTools || []
@@ -1072,13 +1115,13 @@ export class MonitoredLangGraphExecutor {
   }
 
   private async executeCli(ctx: ExecCtx) {
-    const { node, input, llmConfig, params } = ctx
+    const { node, input, llmConfig, params, nodeResults } = ctx
     const cliConfig = node.data.config?.cliConfig
     const templateId = cliConfig?.templateId || 'custom'
 
     try {
       const resolvedWorkingDir = cliConfig?.workingDirectory
-        ? this.resolveParams(cliConfig.workingDirectory, input, params)
+        ? this.resolveParams(cliConfig.workingDirectory, input, params, nodeResults)
         : cliConfig?.workingDirectory
       // 预设模板走 Node.js 函数实现，自定义命令走 shell
       let result: { stdout: string; stderr: string; exitCode: number | null }
@@ -1086,8 +1129,8 @@ export class MonitoredLangGraphExecutor {
 
       if (templateId !== 'custom') {
         const variables = cliConfig?.templateVariables || {}
-        // 对于 fs 类模板，把 {{input}} 也加入变量替换
-        if (variables.content === '{{input}}') {
+        // 对于 fs 类模板，把 {{$input}} 也加入变量替换
+        if (variables.content === '{{$input}}') {
           variables.content = input
         }
         result = await executeCliTemplate(templateId, variables, {
@@ -1107,7 +1150,7 @@ export class MonitoredLangGraphExecutor {
         Object.entries(variables).forEach(([key, value]) => {
           resolvedCommand = resolvedCommand.replace(new RegExp(`\\{\\{${key}\\}\\}`, 'g'), value || '')
         })
-        resolvedCommand = this.resolveParams(resolvedCommand, input, params)
+        resolvedCommand = this.resolveParams(resolvedCommand, input, params, nodeResults)
         result = await executeCliCommand({
           command: resolvedCommand,
           workingDirectory: resolvedWorkingDir,
@@ -1181,7 +1224,7 @@ export class MonitoredLangGraphExecutor {
   }
 
   private async executeText(ctx: ExecCtx) {
-    const { node, input, params } = ctx
+    const { node, input, params, nodeResults } = ctx
     let textTemplate = node.data.config?.text || ''
     const variables = node.data.config?.variables || []
 
@@ -1195,7 +1238,7 @@ export class MonitoredLangGraphExecutor {
       textTemplate = textTemplate.replace(new RegExp(placeholder, 'g'), variablesMap[key])
     })
 
-    textTemplate = this.resolveParams(textTemplate, input, params)
+    textTemplate = this.resolveParams(textTemplate, input, params, nodeResults)
 
     return {
       output: textTemplate,
@@ -1205,6 +1248,98 @@ export class MonitoredLangGraphExecutor {
         type: 'text',
       }
     }
+  }
+
+  private async executeCode(ctx: ExecCtx) {
+    const { node, input, params, nodeResults } = ctx
+    const code = node.data.config?.code || ''
+
+    if (!code.trim()) {
+      return {
+        output: input,
+        metadata: { nodeId: node.id, type: 'code', label: node.data?.label, error: '代码为空' }
+      }
+    }
+
+    try {
+      // 解析代码中的 $nodes[...] 引用
+      const resolvedCode = this.resolveNodeRefs(code, nodeResults)
+
+      // 构建执行上下文：上游输入、Start 参数、所有已完成节点的输出
+      const $input = input
+      const $params = params || {}
+      const $nodes = this.buildNodeContext(nodeResults)
+
+      // 使用 new Function 执行（沙箱：不注入 require/process/module/global）
+      const fn = new Function('$input', '$params', '$nodes', resolvedCode)
+      const result = await fn($input, $params, $nodes)
+
+      return {
+        output: typeof result === 'object' ? JSON.stringify(result, null, 2) : String(result),
+        metadata: {
+          nodeId: node.id,
+          label: node.data?.label,
+          type: 'code',
+          returnType: typeof result,
+        }
+      }
+    } catch (error) {
+      const errorMsg = error instanceof Error ? error.message : '代码执行失败'
+      return {
+        output: errorMsg,
+        metadata: { nodeId: node.id, label: node.data?.label, type: 'code', error: errorMsg }
+      }
+    }
+  }
+
+  /**
+   * 将 nodeResults 构建为 $nodes 查找对象
+   * 结果格式: { nodeId: { output, metadata, status } }
+   */
+  private buildNodeContext(nodeResults?: Map<string, any>): Record<string, any> {
+    const ctx: Record<string, any> = {}
+    if (!nodeResults) return ctx
+    for (const [nodeId, result] of nodeResults) {
+      ctx[nodeId] = {
+        output: result.output,
+        metadata: result.metadata,
+        status: result.status,
+      }
+    }
+    return ctx
+  }
+
+  /**
+   * 解析字符串中的 $nodes["xxx"] 或 $nodes.xxx 表达式，替换为实际节点输出
+   * 同时支持 {{$nodes["nodeId"].output}} 花括号包裹形式（推荐）和裸写形式。
+   * 支持链式字段访问：$nodes["nodeId"].output 或 $nodes["nodeId"].metadata.field
+   *
+   * 匹配模式:
+   *   {{$nodes["nodeId"].field.subfield}}
+   *   {{$nodes.nodeId.field.subfield}}
+   *   $nodes["nodeId"].field.subfield  (bare)
+   */
+  private resolveNodeRefs(template: string, nodeResults?: Map<string, any>): string {
+    if (!nodeResults || nodeResults.size === 0) return template
+
+    return template.replace(/\{\{\$nodes(?:\["([^"]+)"\]|\.([a-zA-Z_]\w*))((?:\.[a-zA-Z_$][\w$]*)*)\}\}|\$nodes(?:\["([^"]+)"\]|\.([a-zA-Z_]\w*))((?:\.[a-zA-Z_$][\w$]*)*)/g, (match, id1, id2, fieldPath1, id3, id4, fieldPath2) => {
+      const nodeId = id1 || id2 || id3 || id4
+      const fieldPath = fieldPath1 || fieldPath2 || ''
+      const result = nodeResults.get(nodeId)
+      if (!result) return match
+
+      // 沿字段路径导航：.output -> ["output"], .metadata.label -> ["metadata","label"]
+      const fields = fieldPath ? fieldPath.split('.').filter(Boolean) : []
+      let value: any = result
+      for (const field of fields) {
+        if (value == null) return match
+        value = value[field]
+      }
+
+      if (value === undefined || value === null) return match
+      if (typeof value === 'object') return JSON.stringify(value, null, 2)
+      return String(value)
+    })
   }
 
   private async evaluateBranches(branches: WorkflowBranch[], input: string, llmConfig: LLMConfig) {

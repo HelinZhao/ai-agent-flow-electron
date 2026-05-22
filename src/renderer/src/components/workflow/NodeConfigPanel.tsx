@@ -8,7 +8,8 @@ import ApiConfig from './config/ApiConfig';
 import AgentConfig from './config/AgentConfig';
 import CLIConfig from './config/CliConfig';
 import TextConfig from './config/TextConfig';
-import WorkflowConfig from './config/WorkflowConfig';
+import SubWorkflowConfig from './config/SubWorkflowConfig';
+import CodeConfig from './config/CodeConfig';
 import McpConfig from './config/McpConfig';
 import StartConfig from './config/StartConfig';
 import CustomInput from '../ui/CustomInput';
@@ -84,13 +85,16 @@ const NodeConfigPanel: React.FC<NodeConfigPanelProps> = ({ node, onClose, onSave
         return <AgentConfig config={config} onConfigChange={setConfig} />;
 
       case 'subWorkflow':
-        return <WorkflowConfig config={config} onConfigChange={setConfig} workflowId={workflowId} />;
+        return <SubWorkflowConfig config={config} onConfigChange={setConfig} workflowId={workflowId} />;
 
       case 'cli':
         return <CLIConfig config={config} onConfigChange={setConfig} />;
 
       case 'mcp':
         return <McpConfig config={config} onConfigChange={setConfig} />;
+
+      case 'code':
+        return <CodeConfig config={config} onConfigChange={setConfig} />;
 
       case 'text':
         return <TextConfig config={config} onConfigChange={setConfig} />;

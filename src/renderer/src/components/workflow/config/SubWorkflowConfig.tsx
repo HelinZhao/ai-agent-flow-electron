@@ -3,6 +3,7 @@ import { VariableConfig, Workflow } from '@renderer/types';
 import { workflowApi } from '@renderer/lib/api';
 import { useWorkflowStore } from '@renderer/store/workflowStore';
 import CustomSelect from '../../ui/CustomSelect';
+import ExpressionInput from '../ExpressionInput';
 
 interface WorkflowConfigProps {
   config: Record<string, any>;
@@ -10,7 +11,7 @@ interface WorkflowConfigProps {
   workflowId?: string;
 }
 
-const WorkflowConfig: React.FC<WorkflowConfigProps> = ({ config, onConfigChange, workflowId }) => {
+const SubWorkflowConfig: React.FC<WorkflowConfigProps> = ({ config, onConfigChange, workflowId }) => {
   const workflows = useWorkflowStore((s) => s.workflows);
   const availableWorkflows = workflows.filter(w => w.id !== workflowId);
   const [targetParams, setTargetParams] = useState<VariableConfig[]>([]);
@@ -111,20 +112,20 @@ const WorkflowConfig: React.FC<WorkflowConfigProps> = ({ config, onConfigChange,
                       className="w-full px-3 py-1.5 text-sm rounded-lg border border-gray-200 dark:border-gray-600 bg-white dark:bg-gray-800 text-gray-800 dark:text-gray-200 placeholder-gray-400 focus:ring-2 focus:ring-blue-500/50 focus:border-blue-500/50 transition-colors"
                     />
                   ) : param.type === 'array' ? (
-                    <textarea
+                    <ExpressionInput
                       value={val}
-                      onChange={(e) => updateParam(param.name, e.target.value)}
+                      onChange={(v) => updateParam(param.name, v)}
                       placeholder={param.description || `输入${param.displayName}，每行一个`}
-                      rows={2}
-                      className="w-full px-3 py-1.5 text-sm rounded-lg border border-gray-200 dark:border-gray-600 bg-white dark:bg-gray-800 text-gray-800 dark:text-gray-200 placeholder-gray-400 focus:ring-2 focus:ring-blue-500/50 focus:border-blue-500/50 transition-colors resize-none"
+                      size="sm"
+                      minHeight="45px"
                     />
                   ) : (
-                    <input
-                      type="text"
+                    <ExpressionInput
                       value={val}
-                      onChange={(e) => updateParam(param.name, e.target.value)}
+                      onChange={(v) => updateParam(param.name, v)}
                       placeholder={param.description || `输入${param.displayName}`}
-                      className="w-full px-3 py-1.5 text-sm rounded-lg border border-gray-200 dark:border-gray-600 bg-white dark:bg-gray-800 text-gray-800 dark:text-gray-200 placeholder-gray-400 focus:ring-2 focus:ring-blue-500/50 focus:border-blue-500/50 transition-colors"
+                      size="sm"
+                      minHeight="36px"
                     />
                   )}
                 </div>
@@ -138,4 +139,4 @@ const WorkflowConfig: React.FC<WorkflowConfigProps> = ({ config, onConfigChange,
   );
 };
 
-export default WorkflowConfig;
+export default SubWorkflowConfig;

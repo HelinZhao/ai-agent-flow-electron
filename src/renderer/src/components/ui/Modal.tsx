@@ -7,9 +7,10 @@ interface ModalProps {
   title: React.ReactNode
   children: React.ReactNode
   footer?: React.ReactNode
+  wide?: boolean
 }
 
-export default function Modal({ open, onClose, title, children, footer }: ModalProps): React.ReactElement | null {
+export default function Modal({ open, onClose, title, children, footer, wide }: ModalProps): React.ReactElement | null {
   const mouseDownRef = useRef(false)
 
   if (!open) return null
@@ -25,7 +26,7 @@ export default function Modal({ open, onClose, title, children, footer }: ModalP
         mouseDownRef.current = false
       }}
     >
-      <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-2xl w-full max-w-lg mx-4 max-h-[calc(100vh-4rem)] flex flex-col"
+      <div className={`bg-white dark:bg-gray-800 rounded-2xl shadow-2xl w-full mx-4 max-h-[calc(100vh-4rem)] flex flex-col ${wide ? 'max-w-3xl' : 'max-w-lg'}`}
         onClick={e => e.stopPropagation()}>
 
         {/* header */}

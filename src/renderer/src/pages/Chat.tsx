@@ -103,10 +103,10 @@ export default function Chat(): React.JSX.Element {
                     </div>
 
                     {conv.selectedAgent && (
-                        <div className="flex items-center space-x-2">
+                        <div className="flex items-center space-x-2 h-6">
                             {conv.isLoadingHistory && (
-                                <div className="flex items-center space-x-2 text-sm text-gray-500 dark:text-gray-400 bg-gray-100/50 dark:bg-gray-700/50 px-3 py-1.5 rounded-full">
-                                    <div className="animate-spin rounded-full h-3 w-3 border-b-2 border-gray-500" />
+                                <div className="flex items-center space-x-1.5 text-xs text-gray-400 dark:text-gray-500">
+                                    <div className="animate-spin rounded-full h-3 w-3 border-b-2 border-gray-400" />
                                     <span>加载对话记录...</span>
                                 </div>
                             )}

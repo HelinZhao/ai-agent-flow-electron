@@ -30,15 +30,19 @@ export function StartNode({ data, selected }: { data: any; selected: boolean }):
   const sourcePos = direction === 'vertical' ? Position.Bottom : Position.Right
   const paramsCount = data.config?.params?.length || 0
   return (
-    <div className={`node-start group relative px-4 py-3 min-w-[120px] ${nodeBg(def)} rounded-lg transition-shadow duration-300  ${nodeBorder(def)} ${selected ? nodeRing(def) : 'hover:shadow-glow-md dark:hover:shadow-glow-md-w'}`}>
+    <div className={`node-start group relative px-4 py-3 min-w-[160px] ${nodeBg(def)} rounded-lg transition-shadowduration-300 ${nodeBorder(def)} ${selected ? nodeRing(def) : 'hover:shadow-glow-md dark:hover:shadow-glow-md-w'}`}>
       <Handle type="source" position={sourcePos} className={handleClass(def)} />
-      <div className="text-center">
-        <div className="text-black text-lg mb-1">{def.icon}</div>
-        <div className="font-bold text-gray-800 text-sm">{def.shortLabel}</div>
-        <div className="text-xs text-gray-700 font-medium mt-1">{data.label}</div>
-        {paramsCount > 0 && (
-          <div className="text-xs text-green-700 font-medium mt-0.5 bg-green-100/50 rounded px-1.5 py-0.5 inline-block">{paramsCount} 个参数</div>
-        )}
+      <div className="flex items-center space-x-3">
+        <div className={iconBox(def)}>
+          <span className="text-black text-base">{def.icon}</span>
+        </div>
+        <div className="flex-1 text-left">
+          <div className="font-bold text-gray-800">{def.shortLabel}</div>
+          <div className="text-xs text-gray-700 font-medium mt-0.5">{data.label}</div>
+          {paramsCount > 0 && (
+            <div className="inline-block text-xs text-green-700 font-medium mt-1 bg-green-100/50 rounded">{paramsCount} 个参数</div>
+          )}
+        </div>
       </div>
     </div>
   );
@@ -318,6 +322,40 @@ export function TextNode({ data, selected }: { data: any; selected: boolean }): 
 }
 
 // ============================================================
+//  CodeNode
+// ============================================================
+export function CodeNode({ data, selected }: { data: any; selected: boolean }): React.JSX.Element {
+  const direction = useContext(LayoutDirectionContext)
+  const def = NODE_DEFS_MAP['code']
+  const targetPos = direction === 'vertical' ? Position.Top : Position.Left
+  const sourcePos = direction === 'vertical' ? Position.Bottom : Position.Right
+  const codePreview = data.config?.code
+    ? data.config.code.split('\n').slice(0, 2).join('\n')
+    : undefined
+
+  return (
+    <div className={`node-code group relative px-4 py-3 min-w-[160px] ${nodeBg(def)} rounded-lg transition-shadowduration-300 ${nodeBorder(def)} ${selected ? nodeRing(def) : 'hover:shadow-glow-md dark:hover:shadow-glow-md-w'}`}>
+      <Handle type="target" position={targetPos} className={handleClass(def)} />
+      <Handle type="source" position={sourcePos} className={handleClass(def)} />
+      <div className="flex items-center space-x-3">
+        <div className={iconBox(def)}>
+          <span className="text-black text-base">{def.icon}</span>
+        </div>
+        <div className="flex-1 text-left min-w-0">
+          <div className="font-bold text-gray-800">{def.shortLabel}</div>
+          <div className="text-xs text-black/90 font-medium mt-0.5">{data.label}</div>
+          {codePreview && (
+            <div className="text-xs text-gray-700 font-medium mt-1 bg-white/30 rounded border border-white/40 max-w-[140px] truncate font-mono">
+              {codePreview}
+            </div>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ============================================================
 //  EndNode
 // ============================================================
 export function EndNode({ data, selected }: { data: any; selected: boolean }): React.JSX.Element {
@@ -325,13 +363,18 @@ export function EndNode({ data, selected }: { data: any; selected: boolean }): R
   const def = NODE_DEFS_MAP['end']
   const targetPos = direction === 'vertical' ? Position.Top : Position.Left
   return (
-    <div className={`node-end group relative px-4 py-3 min-w-[120px] ${nodeBg(def)} rounded-lg transition-shadowduration-300 ${nodeBorder(def)} ${selected ? nodeRing(def) : 'hover:shadow-glow-md dark:hover:shadow-glow-md-w'}`}>
+    <div className={`node-end group relative px-4 py-3 min-w-[160px] ${nodeBg(def)} rounded-lg transition-shadowduration-300 ${nodeBorder(def)} ${selected ? nodeRing(def) : 'hover:shadow-glow-md dark:hover:shadow-glow-md-w'}`}>
       <Handle type="target" position={targetPos} className={handleClass(def)} />
-      <div className="text-center">
-        <div className="text-black text-lg mb-1">{def.icon}</div>
-        <div className="font-bold text-gray-800 text-sm">{def.shortLabel}</div>
-        <div className="text-xs text-gray-700 font-medium mt-1">{data.label}</div>
+      <div className="flex items-center space-x-3">
+        <div className={iconBox(def)}>
+          <span className="text-black text-base">{def.icon}</span>
+        </div>
+        <div className="flex-1 text-left">
+          <div className="font-bold text-gray-800">{def.shortLabel}</div>
+          <div className="text-xs text-gray-700 font-medium mt-0.5">{data.label}</div>
+        </div>
       </div>
     </div>
   );
 }
+

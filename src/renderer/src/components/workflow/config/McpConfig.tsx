@@ -57,7 +57,7 @@ function renderParamFields(
             <div key={key}>
               <label className="block text-xs font-medium text-gray-600 dark:text-gray-400 mb-1">
                 {label}{required && <span className="text-red-500 ml-0.5">*</span>}
-                <span className="text-gray-400 font-normal ml-1">(支持 {'{{input}}'} 引用上游输入)</span>
+                <span className="text-gray-400 font-normal ml-1">(支持 {'{{$input}}'} 引用上游输入)</span>
               </label>
               <CustomTextarea
                 size="sm"
@@ -110,7 +110,7 @@ function renderParamFields(
           <div key={key}>
             <label className="block text-xs font-medium text-gray-600 dark:text-gray-400 mb-1">
               {label}{required && <span className="text-red-500 ml-0.5">*</span>}
-              <span className="text-gray-400 font-normal ml-1">(支持 {'{{input}}'} 引用上游输入)</span>
+              <span className="text-gray-400 font-normal ml-1">(支持 {'{{$input}}'} 引用上游输入)</span>
             </label>
             <CustomInput
               type="text"
@@ -289,7 +289,7 @@ const McpConfig: React.FC<McpConfigProps> = ({ config, onConfigChange }) => {
             </div>
           )}
           <p className="text-xs text-gray-400 mt-1">
-            使用 {'{{input}}'} 引用工作流上游传入的输入内容
+            使用 {'{{$input}}'} 引用工作流上游传入的输入内容
           </p>
         </div>
       )}

@@ -133,8 +133,8 @@ const StartConfig: React.FC<StartConfigProps> = ({ config, onConfigChange }) => 
         <p className="font-medium mb-1">参数说明：</p>
         <ul className="list-disc list-inside space-y-1">
           <li>参数会在运行工作流时以表单形式展示</li>
-          <li>下游节点可通过 {'{{paramName}}'} 引用参数值</li>
-          <li>参数也支持 {'{{input}}'} 引用附加的文本输入</li>
+          <li>下游节点可通过 {'{{$params.xxx}}'} 引用参数值</li>
+          <li>参数也支持 {'{{$input}}'} 引用附加的文本输入</li>
         </ul>
       </div>
 

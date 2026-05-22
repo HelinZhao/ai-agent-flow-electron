@@ -12,7 +12,7 @@ import {
 } from '@xyflow/react';
 import '@xyflow/react/dist/style.css';
 
-import { StartNode, SkillNode, BranchNode, ApiNode, AgentNode, EndNode, LLMNode, CliNode, TextNode, SubWorkflow, McpNode } from './NodeTypes';
+import { StartNode, SkillNode, BranchNode, ApiNode, AgentNode, EndNode, LLMNode, CliNode, TextNode, SubWorkflow, McpNode, CodeNode } from './NodeTypes';
 import NodeConfigPanel from './NodeConfigPanel';
 import { Workflow, WorkflowBranch, WorkflowEdge, WorkflowNode } from '@renderer/types';
 import NodeListPanel from './NodeListPanel';
@@ -39,6 +39,7 @@ const nodeTypes = {
   text: TextNode,
   end: EndNode,
   mcp: McpNode,
+  code: CodeNode,
 };
 
 interface WorkflowDesignerProps {
