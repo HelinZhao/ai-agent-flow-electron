@@ -72,6 +72,11 @@ async function migrateWorkflowColumns(): Promise<void> {
       await sequelize.query(`ALTER TABLE workflows ADD COLUMN layoutDirection TEXT;`)
       console.log('[Migration] layoutDirection 列添加成功')
     }
+    if (!tableInfo.envVars) {
+      console.log('[Migration] workflows 表缺少 envVars 列，执行迁移...')
+      await sequelize.query(`ALTER TABLE workflows ADD COLUMN envVars TEXT;`)
+      console.log('[Migration] envVars 列添加成功')
+    }
   } catch (error) {
     console.log('[Migration] 跳过 workflows 列迁移:', (error as Error).message)
   }

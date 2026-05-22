@@ -26,7 +26,7 @@ AI Agent Flow Electron 是一个基于 Electron + React + TypeScript 的**桌面
 - 无工作流时自动降级为 LLM 对话
 
 ### 🔄 可视化工作流
-- 基于 React Flow 的拖拽式编辑器，8 种节点类型组合编排
+- 基于 React Flow 的拖拽式编辑器，12 种节点类型组合编排
 - 一键 Dagre 自动布局
 - 实时执行进度、节点状态、耗时监控
 
@@ -52,6 +52,8 @@ AI Agent Flow Electron 是一个基于 Electron + React + TypeScript 的**桌面
 ### 🎨 更多功能
 - **多 LLM 配置** — OpenAI / Anthropic / Azure / 百炼 / LongCat 等，一键切换活跃配置
 - **LLM 缓存** — 自研 TTL 缓存，相同 Prompt 10 分钟内命中缓存，节省 API 费用
+- **表达式系统** — {{$input}}、{{$params.xxx}}、{{$nodes["id"].output}}、{{$env.xxx}}、{{$global.xxx}}、{{$now}} 等内置变量，所有模板字段通用
+- **环境变量管理** — 工作流级 {{$env.xxx}} + 全局级 {{$global.xxx}}，双层隔离，设置页面可视化 CRUD
 - **SSE 实时同步** — 多窗口间数据变更自动同步
 - **🤖 系统 AI 助手** — 悬浮式全局 AI 助手，可拖拽移动，随时对话，支持工具调用和 HITL 审批
 - **深色/浅色主题** — 统一的主题切换，节点颜色双模式一致
@@ -139,13 +141,17 @@ npm run download-model
 
 | 节点 | 功能 | 说明 |
 |------|------|------|
-| Start | 入口 | 接收用户输入，启动工作流 |
+| Start | 入口 | 接收用户输入，可定义参数，启动工作流 |
 | LLM | 大语言模型 | 调用 LLM 生成回复，支持工具调用、TTL 缓存、知识库增强 |
 | Skill | 技能 | 调用预定义的技能模板处理输入 |
+| Text | 文本 | 模板渲染 + 变量替换（{{$input}}、{{$env.xxx}} 等），不调用 LLM |
+| Code | 代码 | 运行 JavaScript 代码，注入 $input/$params/$nodes 变量，支持 async |
 | Branch | 条件分支 | LLM 语义评估后选择不同路径 |
 | API | HTTP 调用 | 调用外部 API 获取或处理数据 |
+| MCP | MCP 工具 | 调用 MCP 协议服务器的工具，支持动态参数表单 |
 | Agent | 智能体 | 调用已配置的 Agent 执行子任务 |
-| CLI | 命令行 | 执行 Shell 命令或预设模板 |
+| SubWorkflow | 子工作流 | 嵌套执行另一个工作流，支持参数透传 |
+| CLI | 命令行 | 执行 Shell 命令或预设模板（npm/pip/文件操作等） |
 | End | 出口 | 汇总并返回最终结果 |
 
 ---

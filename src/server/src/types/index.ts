@@ -36,6 +36,7 @@ export interface Workflow {
   description: string
   nodes: WorkflowNode[]
   edges: WorkflowEdge[]
+  envVars?: Record<string, string>
   createdAt: Date
   updatedAt: Date
 }

@@ -121,7 +121,7 @@ export default function Workflow(): React.JSX.Element {
         return null;
     }, []);
 
-    const handleSave = useCallback((nodes: WorkflowNode[], edges: WorkflowEdge[]) => {
+    const handleSave = useCallback((nodes: WorkflowNode[], edges: WorkflowEdge[], envVars?: Record<string, string>) => {
         if (!selectedWorkflow) return;
         const error = validateStartNode(nodes);
         if (error) {
@@ -129,7 +129,7 @@ export default function Workflow(): React.JSX.Element {
             return;
         }
         try {
-            const updated = { ...selectedWorkflow, nodes, edges, layoutDirection: canvasDataRef.current.layoutDirection, updatedAt: new Date() };
+            const updated = { ...selectedWorkflow, nodes, edges, envVars, layoutDirection: canvasDataRef.current.layoutDirection, updatedAt: new Date() };
             updateWorkflow(selectedWorkflow.id, updated);
             setSaveMessage({ type: 'success', text: '已保存' });
         } catch {

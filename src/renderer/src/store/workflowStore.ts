@@ -1,7 +1,7 @@
 import { create } from 'zustand'
 import { persist } from 'zustand/middleware'
-import { Workflow, Skill, Agent, LLMConfig, KnowledgeBase, Trigger } from '@renderer/types'
-import { workflowApi, skillApi, agentApi, llmConfigApi, knowledgeBaseApi, triggerApi, waitForServer } from '@renderer/lib/api'
+import { Workflow, Skill, Agent, LLMConfig, KnowledgeBase, Trigger, EnvVar } from '@renderer/types'
+import { workflowApi, skillApi, agentApi, llmConfigApi, knowledgeBaseApi, triggerApi, envVarApi, waitForServer } from '@renderer/lib/api'
 import { STORAGE_KEY, STORAGE_PERSIST_FIELDS, API_BASE_URL } from '@renderer/config'
 
 interface WorkflowState {
@@ -56,6 +56,11 @@ interface WorkflowState {
   setTriggers: (triggers: Trigger[]) => void
   fetchTriggers: () => Promise<void>
 
+  // Environment variables
+  envVars: EnvVar[]
+  setEnvVars: (vars: EnvVar[]) => void
+  fetchEnvVars: () => Promise<void>
+
   // SSE 事件流
   eventSource: EventSource | null
   connectEventStream: () => void
@@ -81,6 +86,7 @@ export const useWorkflowStore = create<WorkflowState>()(
       activeLLMConfig: null,
       knowledgeBases: [],
       triggers: [],
+      envVars: [],
       currentPage: '/',
       loading: false,
       error: null,
@@ -133,10 +139,15 @@ export const useWorkflowStore = create<WorkflowState>()(
       setKnowledgeBases: (kbs: KnowledgeBase[]) => set({ knowledgeBases: kbs }),
 
       setTriggers: (triggers: Trigger[]) => set({ triggers }),
+      setEnvVars: (vars: EnvVar[]) => set({ envVars: vars }),
 
       fetchTriggers: async () => {
         const triggers = await triggerApi.getAll().catch(() => [] as Trigger[])
         set({ triggers })
+      },
+      fetchEnvVars: async () => {
+        const vars = await envVarApi.getAll().catch(() => [] as EnvVar[])
+        set({ envVars: vars })
       },
       addWorkflow: async (workflow) => {
         const state = get()
@@ -575,6 +586,11 @@ export const useWorkflowStore = create<WorkflowState>()(
               case 'mcp-servers':
                 // MCP 服务器数据由 McpServers 页面自行管理
                 break
+              case 'environment-variables': {
+                const envVars = await envVarApi.getAll().catch(() => [] as EnvVar[])
+                set({ envVars })
+                break
+              }
             }
           } catch (err) {
             console.error('[EventStream] 解析事件失败:', err)

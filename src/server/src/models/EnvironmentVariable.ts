@@ -1,39 +1,33 @@
 import { DataTypes, Model } from 'sequelize'
 import sequelize from '../database'
 
-export interface WorkflowAttributes {
+export interface EnvVarAttributes {
   id: string
   name: string
+  value: string
   description: string
-  nodes: string // JSON string
-  edges: string // JSON string
-  layoutDirection?: string
-  envVars?: string // JSON string — 工作级环境变量
   createdAt: Date
   updatedAt: Date
 }
 
-export interface WorkflowCreationAttributes extends Omit<
-  WorkflowAttributes,
+export interface EnvVarCreationAttributes extends Omit<
+  EnvVarAttributes,
   'id' | 'createdAt' | 'updatedAt'
 > {}
 
-export class WorkflowModel
-  extends Model<WorkflowAttributes, WorkflowCreationAttributes>
-  implements WorkflowAttributes
+export class EnvVarModel
+  extends Model<EnvVarAttributes, EnvVarCreationAttributes>
+  implements EnvVarAttributes
 {
   declare id: string
   declare name: string
+  declare value: string
   declare description: string
-  declare nodes: string
-  declare edges: string
-  declare layoutDirection?: string
-  declare envVars?: string
   declare createdAt: Date
   declare updatedAt: Date
 }
 
-WorkflowModel.init(
+EnvVarModel.init(
   {
     id: {
       type: DataTypes.UUID,
@@ -42,27 +36,17 @@ WorkflowModel.init(
     },
     name: {
       type: DataTypes.STRING,
+      allowNull: false,
+      unique: true
+    },
+    value: {
+      type: DataTypes.TEXT,
       allowNull: false
     },
     description: {
       type: DataTypes.TEXT,
-      allowNull: false
-    },
-    nodes: {
-      type: DataTypes.TEXT,
-      allowNull: false
-    },
-    edges: {
-      type: DataTypes.TEXT,
-      allowNull: false
-    },
-    layoutDirection: {
-      type: DataTypes.STRING,
-      allowNull: true
-    },
-    envVars: {
-      type: DataTypes.TEXT,
-      allowNull: true
+      allowNull: false,
+      defaultValue: ''
     },
     createdAt: {
       type: DataTypes.DATE,
@@ -77,7 +61,7 @@ WorkflowModel.init(
   },
   {
     sequelize,
-    tableName: 'workflows',
+    tableName: 'environment_variables',
     timestamps: true
   }
 )

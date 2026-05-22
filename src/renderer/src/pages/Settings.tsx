@@ -8,6 +8,7 @@ import SettingsGeneral from './settings/SettingsGeneral';
 import SettingsProxy from './settings/SettingsProxy';
 import SettingsAbout from './settings/SettingsAbout';
 import SettingsSponsor from './settings/SettingsSponsor';
+import SettingsEnvVars from './settings/SettingsEnvVars';
 
 const TAB_ICONS: Record<string, React.ReactNode> = {
   llm: (
@@ -33,6 +34,11 @@ const TAB_ICONS: Record<string, React.ReactNode> = {
   proxy: (
     <svg className="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
       <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10zM12 8v4m0 4h.01" />
+    </svg>
+  ),
+  'env-vars': (
+    <svg className="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M4 6h16M4 12h16M4 18h16" />
     </svg>
   ),
   shortcuts: (
@@ -63,6 +69,7 @@ const SETTINGS_TABS = [
   { id: 'shortcuts', label: '快捷键', desc: '键盘与鼠标操作' },
   { id: 'backup', label: '备份', desc: '数据导入与导出' },
   { id: 'proxy', label: '代理', desc: 'HTTP 代理配置' },
+  { id: 'env-vars', label: '环境变量', desc: '工作流环境变量管理' },
   { id: 'theme', label: '外观主题', desc: '界面颜色与显示' },
   { id: 'data', label: '数据管理', desc: '数据库与存储空间' },
   { id: 'sponsor', label: '赞助支持', desc: '赞助项目发展' },
@@ -84,6 +91,8 @@ export default function Settings(): React.JSX.Element {
         return <SettingsBackup />;
       case 'proxy':
         return <SettingsProxy />;
+      case 'env-vars':
+        return <SettingsEnvVars />;
       case 'theme':
         return <SettingsTheme />;
       case 'data':

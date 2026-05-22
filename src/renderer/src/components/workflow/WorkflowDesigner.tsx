@@ -20,6 +20,7 @@ import { getNodeDefaultLabel } from './nodes';
 import ContextMenu from './ContextMenu';
 import ControlPanel from './ControlPanel';
 import BranchSelectionModal from './BranchSelectionModal';
+import WorkflowEnvVarsModal from './WorkflowEnvVarsModal';
 import { autoLayout } from './layoutUtils';
 import { LayoutDirectionContext, LayoutDirection } from './LayoutDirectionContext';
 import { useWorkflowHistory } from '@renderer/hooks/useWorkflowHistory';
@@ -44,7 +45,7 @@ const nodeTypes = {
 
 interface WorkflowDesignerProps {
   workflow: Workflow;
-  onSave: (nodes: WorkflowNode[], edges: WorkflowEdge[]) => void;
+  onSave: (nodes: WorkflowNode[], edges: WorkflowEdge[], envVars?: Record<string, string>) => void;
   onRun: () => void;
   isRunning: boolean;
   onCanvasChange?: (nodes: WorkflowNode[], edges: WorkflowEdge[], layoutDirection: LayoutDirection) => void;
@@ -55,6 +56,8 @@ function WorkflowDesigner(props: WorkflowDesignerProps): React.JSX.Element {
   const [selectedNode, setSelectedNode] = useState<WorkflowNode | null>(null);
   const [contextMenu, setContextMenu] = useState<{ x: number; y: number } | null>(null);
   const [nodeContextMenu, setNodeContextMenu] = useState<{ x: number; y: number } | null>(null);
+  const [showEnvVars, setShowEnvVars] = useState(false)
+  const [workflowEnvVars, setWorkflowEnvVars] = useState<Record<string, string>>(workflow.envVars || {})
   const [branchSelection, setBranchSelection] = useState<{
     isOpen: boolean;
     branches: WorkflowBranch[];
@@ -527,12 +530,19 @@ function WorkflowDesigner(props: WorkflowDesignerProps): React.JSX.Element {
             <Background />
             <Controls />
             <ControlPanel
-              onSave={() => { onSave(nodes, edges); setManualSaveVersion(v => v + 1) }}
+              onSave={() => { onSave(nodes, edges, workflowEnvVars); setManualSaveVersion(v => v + 1) }}
               onRun={onRun}
               isRunning={isRunning}
               onAutoLayout={handleAutoLayout}
               layoutDirection={layoutDirection}
               onToggleDirection={handleToggleDirection}
+              onOpenEnvVars={() => setShowEnvVars(true)}
+            />
+            <WorkflowEnvVarsModal
+              isOpen={showEnvVars}
+              onClose={() => setShowEnvVars(false)}
+              envVars={workflowEnvVars}
+              onSave={setWorkflowEnvVars}
             />
             {selectedNode && (
               <NodeConfigPanel

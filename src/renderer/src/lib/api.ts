@@ -10,7 +10,8 @@ import {
   ExecutionSummary,
   KnowledgeBase,
   KnowledgeChunk,
-  Trigger
+  Trigger,
+  EnvVar
 } from '@renderer/types'
 import { API_BASE_URL, POLL_MAX_ATTEMPTS, POLL_INTERVAL } from '@renderer/config'
 
@@ -512,6 +513,18 @@ export const dataApi = {
 }
 
 // 触发器 API
+export const envVarApi = {
+  getAll: (): Promise<EnvVar[]> => api.get('/environment-variables'),
+
+  create: (data: Omit<EnvVar, 'id' | 'createdAt' | 'updatedAt'>): Promise<EnvVar> =>
+    api.post('/environment-variables', data),
+
+  update: (id: string, data: Partial<EnvVar>): Promise<EnvVar> =>
+    api.put(`/environment-variables/${id}`, data),
+
+  delete: (id: string): Promise<void> => api.delete(`/environment-variables/${id}`),
+}
+
 export const triggerApi = {
   getAll: (): Promise<Trigger[]> => api.get('/triggers'),
 

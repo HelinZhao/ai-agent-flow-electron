@@ -12,7 +12,7 @@ import { retrieveContext } from './knowledge'
 import { v4 as uuidv4 } from 'uuid'
 import { SqliteSaver } from "@langchain/langgraph-checkpoint-sqlite";
 import { DB_FILENAME, DANGEROUS_TOOLS } from '../config'
-import { LLMConfigModel, AgentModel, WorkflowModel } from '../models'
+import { LLMConfigModel, AgentModel, WorkflowModel, EnvVarModel } from '../models'
 import { mcpConnectionManager } from '../mcp'
 
 // 执行状态存储
@@ -52,6 +52,7 @@ interface ExecCtx {
   attachments?: AttachmentPayload[]
   params?: Record<string, any>
   nodeResults?: Map<string, any>
+  workflowEnvVars?: Record<string, string>
 }
 
 // 手动终止时使用的专用错误，各 catch 块据此透传而非吞掉
@@ -68,6 +69,9 @@ export class MonitoredLangGraphExecutor {
   // 线程级对话历史：用于直接对话（无工作流）模式下的上下文记忆
   private threadMessages = new Map<string, BaseMessage[]>()
   // 当前正在执行的 agentId 栈，用于检测循环调用
+  // DB 环境变量缓存（全局，不受执行生命周期影响）
+  private envVarsCache: Record<string, string> | null = null
+
   private agentCallStack = new Set<string>()
   // 当前正在执行的 workflowId 栈，用于检测工作流节点循环调用
   private workflowCallStack = new Set<string>()
@@ -151,6 +155,10 @@ export class MonitoredLangGraphExecutor {
       }
       this.threadAttachments.set(threadKey, merged)
     }
+
+    // 刷新环境变量缓存（每次执行重新加载，确保编辑后即时生效）
+    this.envVarsCache = null
+    await this.ensureEnvVarsLoaded()
 
     // 在后台执行工作流
     this.executeWorkflowAsync(executionId, workflow, input, llmConfig, agentId, threadId, attachments)
@@ -298,6 +306,7 @@ export class MonitoredLangGraphExecutor {
             attachments: allAttachments,
             params: execState?.params,
             nodeResults,
+            workflowEnvVars: execState?.workflow?.envVars,
           })
           nodeResults.set(node.id, nodeResult)
 
@@ -637,12 +646,11 @@ export class MonitoredLangGraphExecutor {
    * - {{$input}} → 当前节点接收到的上游输入
    * - {{$params.xxx}} → 当前执行上下文中 Start 节点定义的参数 xxx
    * - {{$nodes["id"].output}} → 引用任意已完成节点的输出
-   * - {{$env.xxx}} → 环境变量（如 {{$env.USER}}）
+   * - {{$env.xxx}} → 工作流级环境变量（编辑器"环境变量"按钮配置）
+   * - {{$global.xxx}} → 全局环境变量（设置 → 环境变量页面管理）
    * - {{$now}} / {{$now.date}} / {{$now.time}} / {{$now.timestamp}} → 当前时间
-   *
-   * 子工作流的参数值也支持 {{name}} 语法，执行时从父工作流的 params 中解析（见下方）。
    */
-  private resolveParams(template: string, input: string, params?: Record<string, any>, nodeResults?: Map<string, any>): string {
+  private resolveParams(template: string, input: string, params?: Record<string, any>, nodeResults?: Map<string, any>, workflowEnvVars?: Record<string, string>): string {
     // {{$input}} → 上游输入
     let result = template.replace(/\{\{\$input\}\}/g, input)
 
@@ -659,10 +667,22 @@ export class MonitoredLangGraphExecutor {
       })
     }
 
-    // {{$env.xxx}} → 环境变量
-    result = result.replace(/\{\{\$env\.([a-zA-Z_]\w*)\}\}/g, (match, key) => {
-      return process.env[key] !== undefined ? process.env[key]! : match
-    })
+    // {{$env.xxx}} → 工作流级环境变量（通过 ExecCtx.workflowEnvVars 传入）
+    if (workflowEnvVars) {
+      result = result.replace(/\{\{\$env\.([a-zA-Z_]\w*)\}\}/g, (match, key) => {
+        return workflowEnvVars[key] !== undefined ? workflowEnvVars[key] : match
+      })
+    }
+
+    // {{$global.xxx}} → 全局环境变量（从 DB environment_variables 表加载）
+    {
+      const globalMap = this.envVarsCache
+      if (globalMap) {
+        result = result.replace(/\{\{\$global\.([a-zA-Z_]\w*)\}\}/g, (match, key) => {
+          return globalMap[key] !== undefined ? globalMap[key] : match
+        })
+      }
+    }
 
     // {{$now}} / {{$now.format}} → 当前时间
     result = result.replace(/\{\{\$now(?:\.(\w+))?\}\}/g, (match, format) => {
@@ -701,10 +721,10 @@ export class MonitoredLangGraphExecutor {
     try {
       // 解析 API 配置中的 {{$input}}、{{$params.xxx}} 和 $nodes 占位符
       const apiConfig = node.data.config.apiConfig
-      const { nodeResults } = ctx
-      const resolvedUrl = this.resolveParams(apiConfig.url || '', input, params, nodeResults)
-      const resolvedHeaders = apiConfig.headers ? this.resolveParams(apiConfig.headers, input, params, nodeResults) : apiConfig.headers
-      const resolvedBody = apiConfig.body ? this.resolveParams(apiConfig.body, input, params, nodeResults) : apiConfig.body
+      const { nodeResults, workflowEnvVars } = ctx
+      const resolvedUrl = this.resolveParams(apiConfig.url || '', input, params, nodeResults, workflowEnvVars)
+      const resolvedHeaders = apiConfig.headers ? this.resolveParams(apiConfig.headers, input, params, nodeResults, workflowEnvVars) : apiConfig.headers
+      const resolvedBody = apiConfig.body ? this.resolveParams(apiConfig.body, input, params, nodeResults, workflowEnvVars) : apiConfig.body
       const resolvedApiConfig = { ...apiConfig, url: resolvedUrl, headers: resolvedHeaders, body: resolvedBody }
 
       const apiResult = await executeApiCall(resolvedApiConfig)
@@ -736,7 +756,7 @@ export class MonitoredLangGraphExecutor {
   }
 
   private async executeMCP(ctx: ExecCtx) {
-    const { node, input, params, nodeResults } = ctx
+    const { node, input, params, nodeResults, workflowEnvVars } = ctx
     const mcpConfig = node.data.config?.mcpConfig
     if (!mcpConfig?.serverId || !mcpConfig?.toolName) {
       return {
@@ -749,7 +769,7 @@ export class MonitoredLangGraphExecutor {
       const args = mcpConfig.params || {}
       const resolvedArgs: Record<string, any> = {}
       for (const [key, value] of Object.entries(args)) {
-        resolvedArgs[key] = typeof value === 'string' ? this.resolveParams(value, input, params, nodeResults) : value
+        resolvedArgs[key] = typeof value === 'string' ? this.resolveParams(value, input, params, nodeResults, workflowEnvVars) : value
       }
 
       const mcpResult = await mcpConnectionManager.callTool(mcpConfig.serverId, mcpConfig.toolName, resolvedArgs)
@@ -815,6 +835,7 @@ export class MonitoredLangGraphExecutor {
         description: workflow.description,
         nodes: safeJsonParse(workflow.nodes, []),
         edges: safeJsonParse(workflow.edges, []),
+        envVars: safeJsonParse(workflow.envVars, {}),
         createdAt: workflow.createdAt,
         updatedAt: workflow.updatedAt,
       }
@@ -873,7 +894,7 @@ export class MonitoredLangGraphExecutor {
   }
 
   private async executeSubWorkflow(ctx: ExecCtx) {
-    const { executionId, node, input, llmConfig, attachments, params: parentParams, nodeResults } = ctx
+    const { executionId, node, input, llmConfig, attachments, params: parentParams, nodeResults, workflowEnvVars } = ctx
     const workflowId = node.data.config?.workflowId as string | undefined
     if (!workflowId) {
       return { output: input, metadata: { nodeId: node.id, type: 'subWorkflow', error: '未配置工作流ID', label: node.data?.label } }
@@ -898,6 +919,7 @@ export class MonitoredLangGraphExecutor {
         description: workflow.description,
         nodes: safeJsonParse(workflow.nodes, []),
         edges: safeJsonParse(workflow.edges, []),
+        envVars: safeJsonParse(workflow.envVars, {}),
         createdAt: workflow.createdAt,
         updatedAt: workflow.updatedAt,
       }
@@ -932,7 +954,7 @@ export class MonitoredLangGraphExecutor {
         params: (() => {
           const resolved: Record<string, any> = {}
           for (const [k, v] of Object.entries(node.data.config?.params || {})) {
-            resolved[k] = typeof v === 'string' ? this.resolveParams(v, input, parentParams, nodeResults) : v
+            resolved[k] = typeof v === 'string' ? this.resolveParams(v, input, parentParams, nodeResults, workflowEnvVars) : v
           }
           return resolved
         })(),
@@ -968,7 +990,7 @@ export class MonitoredLangGraphExecutor {
   }
 
   private async executeLLM(ctx: ExecCtx) {
-    const { executionId, node, input, llmConfig: defaultLlmConfig, conversationHistory, attachments, params, nodeResults } = ctx
+    const { executionId, node, input, llmConfig: defaultLlmConfig, conversationHistory, attachments, params, nodeResults, workflowEnvVars } = ctx
     let llmConfig = defaultLlmConfig
     try {
       // 如果节点指定了 LLM 配置 ID，从数据库读取并覆盖
@@ -1003,7 +1025,7 @@ export class MonitoredLangGraphExecutor {
       })
 
       // 解析 {{$input}} 和 {{$params.xxx}} 占位符
-      promptTemplate = this.resolveParams(promptTemplate, input, params, nodeResults)
+      promptTemplate = this.resolveParams(promptTemplate, input, params, nodeResults, workflowEnvVars)
 
       const finalPrompt = promptTemplate ? `${promptTemplate}\n\n当前用户输入: ${input}` : input
       const enabledTools = node.data.config?.enabledTools || []
@@ -1115,13 +1137,13 @@ export class MonitoredLangGraphExecutor {
   }
 
   private async executeCli(ctx: ExecCtx) {
-    const { node, input, llmConfig, params, nodeResults } = ctx
+    const { node, input, llmConfig, params, nodeResults, workflowEnvVars } = ctx
     const cliConfig = node.data.config?.cliConfig
     const templateId = cliConfig?.templateId || 'custom'
 
     try {
       const resolvedWorkingDir = cliConfig?.workingDirectory
-        ? this.resolveParams(cliConfig.workingDirectory, input, params, nodeResults)
+        ? this.resolveParams(cliConfig.workingDirectory, input, params, nodeResults, workflowEnvVars)
         : cliConfig?.workingDirectory
       // 预设模板走 Node.js 函数实现，自定义命令走 shell
       let result: { stdout: string; stderr: string; exitCode: number | null }
@@ -1150,7 +1172,7 @@ export class MonitoredLangGraphExecutor {
         Object.entries(variables).forEach(([key, value]) => {
           resolvedCommand = resolvedCommand.replace(new RegExp(`\\{\\{${key}\\}\\}`, 'g'), value || '')
         })
-        resolvedCommand = this.resolveParams(resolvedCommand, input, params, nodeResults)
+        resolvedCommand = this.resolveParams(resolvedCommand, input, params, nodeResults, workflowEnvVars)
         result = await executeCliCommand({
           command: resolvedCommand,
           workingDirectory: resolvedWorkingDir,
@@ -1224,7 +1246,7 @@ export class MonitoredLangGraphExecutor {
   }
 
   private async executeText(ctx: ExecCtx) {
-    const { node, input, params, nodeResults } = ctx
+    const { node, input, params, nodeResults, workflowEnvVars } = ctx
     let textTemplate = node.data.config?.text || ''
     const variables = node.data.config?.variables || []
 
@@ -1238,7 +1260,7 @@ export class MonitoredLangGraphExecutor {
       textTemplate = textTemplate.replace(new RegExp(placeholder, 'g'), variablesMap[key])
     })
 
-    textTemplate = this.resolveParams(textTemplate, input, params, nodeResults)
+    textTemplate = this.resolveParams(textTemplate, input, params, nodeResults, workflowEnvVars)
 
     return {
       output: textTemplate,
@@ -1251,7 +1273,7 @@ export class MonitoredLangGraphExecutor {
   }
 
   private async executeCode(ctx: ExecCtx) {
-    const { node, input, params, nodeResults } = ctx
+    const { node, input, params, nodeResults, workflowEnvVars } = ctx
     const code = node.data.config?.code || ''
 
     if (!code.trim()) {
@@ -1340,6 +1362,29 @@ export class MonitoredLangGraphExecutor {
       if (typeof value === 'object') return JSON.stringify(value, null, 2)
       return String(value)
     })
+  }
+
+  /**
+   * 从数据库加载环境变量并缓存（惰性加载，仅在首次调用时查询 DB）
+   */
+  private async ensureEnvVarsLoaded(): Promise<Record<string, string>> {
+    if (this.envVarsCache) return this.envVarsCache
+    try {
+      const rows = await EnvVarModel.findAll()
+      const map: Record<string, string> = {}
+      for (const row of rows) {
+        map[row.name] = row.value
+      }
+      this.envVarsCache = map
+      return map
+    } catch {
+      return {}
+    }
+  }
+
+  /** 清除环境变量缓存（增/删/改后由外部调用，未来可接入 SSE） */
+  clearEnvVarsCache(): void {
+    this.envVarsCache = null
   }
 
   private async evaluateBranches(branches: WorkflowBranch[], input: string, llmConfig: LLMConfig) {

@@ -11,6 +11,7 @@ interface ControlPanelProps {
     isRunning: boolean
     layoutDirection: LayoutDirection
     onToggleDirection: () => void
+    onOpenEnvVars?: () => void
 }
 
 const ControlPanel: React.FC<ControlPanelProps> = (props: ControlPanelProps) => {
@@ -29,6 +30,16 @@ const ControlPanel: React.FC<ControlPanelProps> = (props: ControlPanelProps) => 
                             <path d="M4 6h16M4 12h16M4 18h16" />
                         </svg>
                         变量
+                    </CustomButton>
+                    <CustomButton
+                        onClick={props.onOpenEnvVars}
+                        variant="ghost"
+                        size="sm"
+                    >
+                        <svg className="w-3.5 h-3.5 mr-1" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                            <path d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4" />
+                        </svg>
+                        环境变量
                     </CustomButton>
                     <CustomButton
                         onClick={props.onToggleDirection}

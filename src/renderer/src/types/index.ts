@@ -37,6 +37,7 @@ export interface Workflow {
   nodes: WorkflowNode[]
   edges: WorkflowEdge[]
   layoutDirection?: 'horizontal' | 'vertical'
+  envVars?: Record<string, string>
   createdAt: Date
   updatedAt: Date
 }
@@ -271,6 +272,16 @@ export interface KnowledgeChunk {
   enabled: boolean
   createdAt: Date
   updatedAt: Date
+}
+
+// 环境变量类型
+export interface EnvVar {
+  id: string
+  name: string
+  value: string
+  description: string
+  createdAt: string
+  updatedAt: string
 }
 
 // 触发器类型

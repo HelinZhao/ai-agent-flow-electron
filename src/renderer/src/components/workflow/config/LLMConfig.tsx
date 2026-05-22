@@ -378,7 +378,8 @@ const LLMConfig: React.FC<LLMConfigProps> = ({ config, onConfigChange }) => {
           <li>使用 {'{'}&#123;$input&#125;{'}'} 引用上游输入</li>
           <li>使用 {'{'}&#123;$params.xxx&#125;{'}'} 引用 Start 节点参数</li>
           <li>使用 {'{'}&#123;$nodes["nodeId"].output&#125;{'}'} 引用任意节点输出</li>
-          <li>使用 {'{'}&#123;$env.xxx&#125;{'}'} 引用环境变量</li>
+          <li>使用 {'{'}&#123;$env.xxx&#125;{'}'} 引用工作流环境变量</li>
+          <li>使用 {'{'}&#123;$global.xxx&#125;{'}'} 引用全局环境变量</li>
           <li>使用 {'{'}&#123;$now&#125;{'}'} 获取当前时间（ISO），支持 .date / .time / .timestamp</li>
           <li>使用 {'{'}&#123;variableName&#125;{'}'} 插入自定义变量</li>
           <li>用户输入会自动添加到提示词末尾</li>

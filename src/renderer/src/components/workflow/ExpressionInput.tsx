@@ -17,53 +17,18 @@ interface ExpressionInputProps {
   availableNodes?: NodeRef[]
 }
 
-/** 高亮 {{$input}}、{{$params}}、{{$nodes}}、{{$env}}、{{$now}}、{{var}} 和裸写 $nodes */
-function highlight(text: string): React.ReactNode {
-  const parts: React.ReactNode[] = []
-  // 匹配优先级: {{$nodes[...]}} > 其他$内置变量 > {{variable}} > bare $nodes
-  const regex = /(\{\{\$nodes(?:\["[^"]+"\]|\.\w+)(?:\.[a-zA-Z_$][\w$]*)*\}\})|(\{\{\$(?:input|params\.\w+(?:\.\w+)*|env\.\w+|now(?:\.\w+)?)\}\})|(\{\{\w+\}\})|(\$nodes(?:\["[^"]+"\]|\.\w+)(?:\.[a-zA-Z_$][\w$]*)?)/g
-  let lastIndex = 0
-  let match: RegExpExecArray | null
-
-  while ((match = regex.exec(text)) !== null) {
-    if (match.index > lastIndex) {
-      parts.push(text.slice(lastIndex, match.index))
-    }
-    if (match[1]) {
-      // {{$nodes["id"].output}} 高亮（紫色）
-      parts.push(
-        <span key={match.index} className="text-purple-600 dark:text-purple-400 bg-purple-100/60 dark:bg-purple-900/30 rounded px-0.5">
-          {match[1]}
-        </span>
-      )
-    } else if (match[2]) {
-      // {{$input}} / {{$params.xxx}} 高亮（青色 - 内置变量）
-      parts.push(
-        <span key={match.index} className="text-teal-600 dark:text-teal-400 bg-teal-100/60 dark:bg-teal-900/30 rounded px-0.5">
-          {match[2]}
-        </span>
-      )
-    } else if (match[3]) {
-      // {{variable}} 高亮（蓝色 - 自定义变量）
-      parts.push(
-        <span key={match.index} className="text-blue-600 dark:text-blue-400 bg-blue-100/60 dark:bg-blue-900/30 rounded px-0.5">
-          {match[3]}
-        </span>
-      )
-    } else if (match[4]) {
-      // 裸写 $nodes[...] 高亮（紫色）
-      parts.push(
-        <span key={match.index} className="text-purple-600 dark:text-purple-400 bg-purple-100/60 dark:bg-purple-900/30 rounded px-0.5">
-          {match[4]}
-        </span>
-      )
-    }
-    lastIndex = match.index + match[0].length
-  }
-  if (lastIndex < text.length) {
-    parts.push(text.slice(lastIndex))
-  }
-  return <>{parts}</>
+/** 高亮 {{$input}}、{{$params}}、{{$nodes}}、{{$env}}、{{$global}}、{{$now}}、{{var}} 和裸写 $nodes */
+// 注意：只能用 text-* 和 bg-*，不能有 padding/border/margin/rounded 等影响尺寸的类
+// 否则 <pre> 高亮层和 <textarea> 输入层宽度不一致 → 光标错位
+function highlight(text: string): string {
+  const regex = /(\{\{\$nodes(?:\["[^"]+"\]|\.\w+)(?:\.[a-zA-Z_$][\w$]*)*\}\})|(\{\{\$(?:input|params\.\w+(?:\.\w+)*|env\.\w+|global\.\w+|now(?:\.\w+)?)\}\})|(\{\{\w+\}\})|(\$nodes(?:\["[^"]+"\]|\.\w+)(?:\.[a-zA-Z_$][\w$]*)?)/g
+  return text.replace(regex, (match, nodesBuiltin, dollarBuiltin, variable, bareNodes) => {
+    if (nodesBuiltin) return `<span class="text-purple-600 dark:text-purple-400 bg-purple-100/60 dark:bg-purple-900/30">${nodesBuiltin}</span>`
+    if (dollarBuiltin) return `<span class="text-teal-600 dark:text-teal-400 bg-teal-100/60 dark:bg-teal-900/30">${dollarBuiltin}</span>`
+    if (variable) return `<span class="text-blue-600 dark:text-blue-400 bg-blue-100/60 dark:bg-blue-900/30">${variable}</span>`
+    if (bareNodes) return `<span class="text-purple-600 dark:text-purple-400 bg-purple-100/60 dark:bg-purple-900/30">${bareNodes}</span>`
+    return match
+  })
 }
 
 const PADDING_CLASS = { xs: '!px-2 !py-1', sm: '!px-3 !py-1.5', md: '!px-4 !py-2.5' }
