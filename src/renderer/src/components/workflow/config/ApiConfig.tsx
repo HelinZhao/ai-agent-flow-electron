@@ -1,7 +1,6 @@
 import React from 'react';
 import CustomSelect from '../../ui/CustomSelect';
-import CustomInput from '../../ui/CustomInput';
-import CustomTextarea from '../../ui/CustomTextarea';
+import TemplateEditor from '../../ui/TemplateEditor';
 
 interface ApiConfigProps {
   config: Record<string, any>;
@@ -22,13 +21,14 @@ const ApiConfig: React.FC<ApiConfigProps> = ({ config, onConfigChange }) => {
         <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
           API URL *
         </label>
-        <CustomInput
-          type="url"
+        <TemplateEditor
           value={config.apiConfig?.url || ''}
-          onChange={(e) => updateApiConfig('url', e.target.value)}
+          onChange={(v) => updateApiConfig('url', v)}
           placeholder="https://api.example.com/endpoint"
+          minHeight="36px"
           size="sm"
         />
+        <p className="text-xs text-gray-400 mt-1">支持 {'{{paramName}}'} 引用 Start 节点参数</p>
       </div>
 
       <div>
@@ -53,11 +53,11 @@ const ApiConfig: React.FC<ApiConfigProps> = ({ config, onConfigChange }) => {
         <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
           请求头 (JSON格式)
         </label>
-        <CustomTextarea
+        <TemplateEditor
           value={config.apiConfig?.headers || ''}
-          onChange={(e) => updateApiConfig('headers', e.target.value)}
-          rows={3}
+          onChange={(v) => updateApiConfig('headers', v)}
           placeholder='{"Content-Type": "application/json"}'
+          minHeight="60px"
           size="sm"
         />
       </div>
@@ -67,10 +67,10 @@ const ApiConfig: React.FC<ApiConfigProps> = ({ config, onConfigChange }) => {
           <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
             请求体 (JSON格式)
           </label>
-          <CustomTextarea
+          <TemplateEditor
             value={config.apiConfig?.body || ''}
-            onChange={(e) => updateApiConfig('body', e.target.value)}
-            rows={3}
+            onChange={(v) => updateApiConfig('body', v)}
+            minHeight="60px"
             size="sm"
           />
         </div>

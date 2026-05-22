@@ -648,7 +648,7 @@ export class MonitoredLangGraphExecutor {
   }
 
   private async executeApi(ctx: ExecCtx) {
-    const { node, input, llmConfig } = ctx
+    const { node, input, llmConfig, params } = ctx
     if (!node.data.config?.apiConfig?.url) {
       return {
         output: input,
@@ -657,7 +657,14 @@ export class MonitoredLangGraphExecutor {
     }
 
     try {
-      const apiResult = await executeApiCall(node.data.config.apiConfig)
+      // 解析 API 配置中的 {{input}} 和 {{paramName}} 占位符
+      const apiConfig = node.data.config.apiConfig
+      const resolvedUrl = this.resolveParams(apiConfig.url || '', input, params)
+      const resolvedHeaders = apiConfig.headers ? this.resolveParams(apiConfig.headers, input, params) : apiConfig.headers
+      const resolvedBody = apiConfig.body ? this.resolveParams(apiConfig.body, input, params) : apiConfig.body
+      const resolvedApiConfig = { ...apiConfig, url: resolvedUrl, headers: resolvedHeaders, body: resolvedBody }
+
+      const apiResult = await executeApiCall(resolvedApiConfig)
       const processPrompt = `请处理以下API调用结果，并结合原始输入给出最终答案:\n\n原始输入: ${input}\n\nAPI结果: ${JSON.stringify(apiResult, null, 2)}`
       const result = await callLLM(processPrompt, llmConfig)
 
@@ -1070,6 +1077,9 @@ export class MonitoredLangGraphExecutor {
     const templateId = cliConfig?.templateId || 'custom'
 
     try {
+      const resolvedWorkingDir = cliConfig?.workingDirectory
+        ? this.resolveParams(cliConfig.workingDirectory, input, params)
+        : cliConfig?.workingDirectory
       // 预设模板走 Node.js 函数实现，自定义命令走 shell
       let result: { stdout: string; stderr: string; exitCode: number | null }
       let executedCommand: string
@@ -1081,7 +1091,7 @@ export class MonitoredLangGraphExecutor {
           variables.content = input
         }
         result = await executeCliTemplate(templateId, variables, {
-          workingDirectory: cliConfig?.workingDirectory,
+          workingDirectory: resolvedWorkingDir,
           timeout: cliConfig?.timeout,
         })
         executedCommand = `[预设模板: ${templateId}]`
@@ -1100,7 +1110,7 @@ export class MonitoredLangGraphExecutor {
         resolvedCommand = this.resolveParams(resolvedCommand, input, params)
         result = await executeCliCommand({
           command: resolvedCommand,
-          workingDirectory: cliConfig.workingDirectory,
+          workingDirectory: resolvedWorkingDir,
           timeout: cliConfig.timeout,
         })
         executedCommand = resolvedCommand

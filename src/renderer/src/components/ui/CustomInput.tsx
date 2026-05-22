@@ -31,8 +31,8 @@ const CustomInput: React.FC<CustomInputProps> = ({
   ...props
 }) => {
   const sizeClasses = {
-    xs: 'px-2 py-1 text-xs min-h-[24px] rounded-md',
-    sm: 'px-3 py-1.5 text-sm min-h-[32px] rounded-md',
+    xs: 'px-2 py-1 text-xs min-h-[24px] rounded',
+    sm: 'px-3 py-1.5 text-sm min-h-[32px] rounded',
     md: 'px-4 py-2.5 text-base min-h-[44px] rounded-md',
     lg: 'px-5 py-3 text-lg min-h-[52px] rounded-xl'
   };

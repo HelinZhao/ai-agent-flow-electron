@@ -1,7 +1,7 @@
 import React from 'react';
 import CustomSelect from '../../ui/CustomSelect';
 import CustomInput from '../../ui/CustomInput';
-import CustomTextarea from '../../ui/CustomTextarea';
+import TemplateEditor from '../../ui/TemplateEditor';
 import { CLI_DEFAULTS } from '@renderer/config';
 
 interface TemplateVariable {
@@ -114,11 +114,11 @@ const CliConfig: React.FC<CliConfigProps> = ({ config, onConfigChange }) => {
           <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
             命令
           </label>
-          <CustomTextarea
+          <TemplateEditor
             value={cliConfig.command || ''}
-            onChange={(e) => updateCliConfig('command', e.target.value)}
-            rows={3}
+            onChange={(v) => updateCliConfig('command', v)}
             placeholder="输入要执行的shell命令"
+            minHeight="60px"
             size="sm"
           />
         </div>
@@ -134,10 +134,11 @@ const CliConfig: React.FC<CliConfigProps> = ({ config, onConfigChange }) => {
         <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
           工作目录 (可选)
         </label>
-        <CustomInput
+        <TemplateEditor
           value={cliConfig.workingDirectory || ''}
-          onChange={(e) => updateCliConfig('workingDirectory', e.target.value)}
+          onChange={(v) => updateCliConfig('workingDirectory', v)}
           placeholder="留空使用默认目录"
+          minHeight="36px"
           size="sm"
         />
       </div>
@@ -176,11 +177,11 @@ const CliConfig: React.FC<CliConfigProps> = ({ config, onConfigChange }) => {
           <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
             LLM处理提示词
           </label>
-          <CustomTextarea
+          <TemplateEditor
             value={cliConfig.llmProcessPrompt || ''}
-            onChange={(e) => updateCliConfig('llmProcessPrompt', e.target.value)}
-            rows={3}
+            onChange={(v) => updateCliConfig('llmProcessPrompt', v)}
             placeholder="请分析以下命令输出并提取关键信息:\n\n{{output}}"
+            minHeight="60px"
             size="sm"
           />
           <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">

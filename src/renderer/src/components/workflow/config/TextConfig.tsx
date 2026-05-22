@@ -66,6 +66,7 @@ const TextConfig: React.FC<TextConfigProps> = ({ config, onConfigChange }) => {
           placeholder="输入文本内容，可以使用 {{variableName}} 格式的变量"
           rows={4}
           minHeight="100px"
+          size="sm"
         />
       </div>
 

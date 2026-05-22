@@ -7,6 +7,7 @@ interface TemplateEditorProps {
   placeholder?: string
   rows?: number
   minHeight?: string
+  size?: 'xs' | 'sm' | 'md'
 }
 
 /** 将文本中的 {{placeholder}} 用 span 包裹用于高亮 */
@@ -33,11 +34,15 @@ function highlight(text: string): React.ReactNode {
   return <>{parts}</>
 }
 
+const PADDING_CLASS = { xs: '!px-2 !py-1', sm: '!px-3 !py-1.5', md: '!px-4 !py-2.5' }
+const TEXT_CLASS = { xs: 'text-xs leading-5 rounded', sm: 'text-sm leading-5 rounded', md: 'text-sm leading-6 rounded-md' }
+
 const TemplateEditor: React.FC<TemplateEditorProps> = ({
   value,
   onChange,
   placeholder,
   minHeight,
+  size = 'md',
 }) => {
   return (
     <Editor
@@ -45,13 +50,11 @@ const TemplateEditor: React.FC<TemplateEditorProps> = ({
       onValueChange={onChange}
       highlight={highlight}
       placeholder={placeholder}
-      padding={12}
-      textareaClassName="focus:outline-none bg-transparent"
-      className="border border-gray-200 dark:border-gray-600 rounded-lg text-gray-800 dark:text-gray-200"
+      textareaClassName={`focus:outline-none bg-transparent ${PADDING_CLASS[size]}`}
+      preClassName={PADDING_CLASS[size]}
+      className={`border border-gray-200 dark:border-gray-600 text-gray-800 dark:text-gray-200 ${TEXT_CLASS[size]}`}
       style={{
         fontFamily: 'ui-sans-serif, system-ui, -apple-system, sans-serif',
-        fontSize: 14,
-        lineHeight: '24px',
         minHeight: minHeight || '100px',
       }}
       tabSize={2}

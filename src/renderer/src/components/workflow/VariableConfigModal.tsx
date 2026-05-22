@@ -211,6 +211,7 @@ const VariableConfigModal: React.FC<VariableConfigModalProps> = ({
                 onChange={(v) => handleInputChange('defaultValue', v)}
                 placeholder={defaultLabel}
                 minHeight="60px"
+                size="sm"
               />
             )}
           </div>

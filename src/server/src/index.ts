@@ -352,8 +352,8 @@ export class LocalServer {
     // 初始化 Ollama 服务（知识库 embedding 依赖）
     await this.initOllama()
 
-    // 初始化 MCP 连接
-    await this.mcpManager.initialize()
+    // 初始化 MCP 连接（后台异步，不阻塞服务启动）
+    this.mcpManager.initialize()
 
     return new Promise((resolve, reject) => {
       if (port) {
