@@ -11,6 +11,7 @@ import TextConfig from './config/TextConfig';
 import SubWorkflowConfig from './config/SubWorkflowConfig';
 import CodeConfig from './config/CodeConfig';
 import NoteConfig from './config/NoteConfig';
+import LoopConfig from './config/LoopConfig';
 import McpConfig from './config/McpConfig';
 import StartConfig from './config/StartConfig';
 import CustomInput from '../ui/CustomInput';
@@ -37,6 +38,7 @@ const BG_COLORS: Record<string, string> = {
   end: 'bg-gray-500',
   mcp: 'bg-purple-500',
   note: 'bg-amber-500',
+  loop: 'bg-violet-500',
 }
 
 const NodeConfigPanel: React.FC<NodeConfigPanelProps> = ({ node, onClose, onSave, workflowId }: NodeConfigPanelProps) => {
@@ -94,6 +96,9 @@ const NodeConfigPanel: React.FC<NodeConfigPanelProps> = ({ node, onClose, onSave
 
       case 'mcp':
         return <McpConfig config={config} onConfigChange={setConfig} />;
+
+      case 'loop':
+        return <LoopConfig config={config} onConfigChange={setConfig} workflowId={workflowId} />;
 
       case 'code':
         return <CodeConfig config={config} onConfigChange={setConfig} />;

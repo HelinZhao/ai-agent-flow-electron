@@ -536,6 +536,9 @@ export class MonitoredLangGraphExecutor {
       case 'code':
         return await this.executeCode(ctx)
 
+      case 'loop':
+        return await this.executeLoop(ctx)
+
       case 'text':
         return await this.executeText(ctx)
 
@@ -1311,6 +1314,125 @@ export class MonitoredLangGraphExecutor {
         output: errorMsg,
         metadata: { nodeId: node.id, label: node.data?.label, type: 'code', error: errorMsg }
       }
+    }
+  }
+
+  private async executeLoop(ctx: ExecCtx) {
+    const { executionId, node, input, llmConfig } = ctx
+    const workflowId = node.data.config?.workflowId as string | undefined
+    if (!workflowId) {
+      return { output: input, metadata: { nodeId: node.id, type: 'loop', error: '未配置工作流ID', label: node.data?.label } }
+    }
+
+    const maxIter = Math.min(Math.max(1, node.data.config?.maxIterations || 100), 1000)
+    const conditionText = (node.data.config?.condition || '').trim()
+
+    try {
+      const workflow = await WorkflowModel.findByPk(workflowId)
+      if (!workflow) {
+        return { output: input, metadata: { nodeId: node.id, type: 'loop', error: '工作流不存在', workflowId, label: node.data?.label } }
+      }
+
+      const workflowObj: Workflow = {
+        id: workflow.id,
+        name: workflow.name,
+        description: workflow.description,
+        nodes: safeJsonParse(workflow.nodes, []),
+        edges: safeJsonParse(workflow.edges, []),
+        envVars: safeJsonParse(workflow.envVars, {}),
+        createdAt: workflow.createdAt,
+        updatedAt: workflow.updatedAt,
+      }
+
+      const parentState = this.executionStates.get(executionId)
+      const inheritedAutoApprove = parentState?.autoApprovedToolTypes
+        ? new Set(parentState.autoApprovedToolTypes)
+        : new Set<string>()
+
+      const results: string[] = []
+      let currentInput = input  // 初始输入，之后每轮取上一轮的输出
+
+      for (let i = 0; i < maxIter; i++) {
+        if (parentState?.status === 'paused' || parentState?.status === 'completed') break
+
+        // 执行一轮子工作流
+        const subExecutionId = `${executionId}:loop:${node.id}:${i}`
+        // 解析用户配置的参数（支持 {{$input}}、{{$params._index}} 等表达式）
+        const loopParams = node.data.config?.params || {}
+        const resolvedParams: Record<string, any> = { _index: i }
+        for (const [k, v] of Object.entries(loopParams)) {
+          resolvedParams[k] = typeof v === 'string' ? this.resolveParams(v, currentInput, { _index: i }) : v
+        }
+
+        this.executionStates.set(subExecutionId, {
+          executionId: subExecutionId,
+          workflow: workflowObj,
+          status: 'running',
+          startTime: new Date(),
+          nodeResults: new Map(),
+          progress: 0,
+          logs: [],
+          autoApprovedToolTypes: inheritedAutoApprove,
+          pendingApproval: null,
+          attachments: undefined,
+          params: resolvedParams,
+        })
+
+        let subOutput: string
+        try {
+          const subGraph = await this.buildMonitoredLangGraph(subExecutionId, workflowObj, llmConfig)
+          subOutput = await this.executeMonitoredLangGraph(subGraph, currentInput, subExecutionId, undefined, subExecutionId)
+          this.executionStates.delete(subExecutionId)
+        } catch (error) {
+          this.executionStates.delete(subExecutionId)
+          subOutput = error instanceof Error ? error.message : '迭代执行失败'
+        }
+
+        results.push(subOutput)
+
+        // 有终止条件时，JS 表达式评估（注入 $input 为上一轮输出）
+        if (conditionText) {
+          try {
+            const fn = new Function('$input', `return Boolean(${conditionText})`)
+            if (fn(subOutput)) break
+          } catch {
+            // 表达式有语法错误时忽略，继续循环
+          }
+        }
+
+        // 本轮输出作为下一轮的输入（反馈回路）
+        currentInput = subOutput
+      }
+
+      return {
+        output: results.join('\n'),
+        metadata: {
+          nodeId: node.id,
+          label: node.data?.label,
+          type: 'loop',
+          iterations: results.length,
+          maxIterations: maxIter,
+          workflowId,
+          workflowName: workflow.name,
+        }
+      }
+    } catch (error) {
+      const errorMsg = error instanceof Error ? error.message : '循环执行失败'
+      return { output: errorMsg, metadata: { nodeId: node.id, type: 'loop', error: errorMsg, label: node.data?.label } }
+    }
+  }
+
+  /** 将输入解析为数组：优先 JSON.parse，否则按换行拆分 */
+  private parseInputAsArray(input: string): string[] {
+    if (!input || input.trim().length === 0) return []
+    try {
+      const parsed = JSON.parse(input)
+      if (Array.isArray(parsed)) {
+        return parsed.map(item => typeof item === 'object' ? JSON.stringify(item) : String(item))
+      }
+      return [String(parsed)]
+    } catch {
+      return input.split('\n').filter(line => line.trim().length > 0)
     }
   }
 
