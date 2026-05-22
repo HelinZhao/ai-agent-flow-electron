@@ -413,6 +413,31 @@ export function EndNode({ data, selected }: { data: any; selected: boolean }): R
 }
 
 // ============================================================
+//  CatchNode
+// ============================================================
+export function CatchNode({ data, selected }: { data: any; selected: boolean }): React.JSX.Element {
+  const direction = useContext(LayoutDirectionContext)
+  const def = NODE_DEFS_MAP['catch']
+  const targetPos = direction === 'vertical' ? Position.Top : Position.Left
+  const sourcePos = direction === 'vertical' ? Position.Bottom : Position.Right
+  return (
+    <div className={`node-catch group relative px-4 py-3 min-w-[160px] ${nodeBg(def)} rounded-lg transition-shadowduration-300 ${nodeBorder(def)} ${selected ? nodeRing(def) : 'hover:shadow-glow-md dark:hover:shadow-glow-md-w'}`}>
+      <Handle type="target" position={targetPos} className={handleClass(def)} />
+      <Handle type="source" position={sourcePos} className={handleClass(def)} />
+      <div className="flex items-center space-x-3">
+        <div className={iconBox(def)}>
+          <span className="text-black text-base">{def.icon}</span>
+        </div>
+        <div className="flex-1 text-left">
+          <div className="font-bold text-gray-800">{def.shortLabel}</div>
+          <div className="text-xs text-gray-700 font-medium mt-0.5">{data.label}</div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ============================================================
 //  NoteNode
 // ============================================================
 export function NoteNode({ data, selected }: { data: any; selected: boolean }): React.JSX.Element {

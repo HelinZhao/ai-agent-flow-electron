@@ -12,6 +12,7 @@ import SubWorkflowConfig from './config/SubWorkflowConfig';
 import CodeConfig from './config/CodeConfig';
 import NoteConfig from './config/NoteConfig';
 import LoopConfig from './config/LoopConfig';
+import CatchConfig from './config/CatchConfig';
 import McpConfig from './config/McpConfig';
 import StartConfig from './config/StartConfig';
 import CustomInput from '../ui/CustomInput';
@@ -39,6 +40,7 @@ const BG_COLORS: Record<string, string> = {
   mcp: 'bg-purple-500',
   note: 'bg-amber-500',
   loop: 'bg-violet-500',
+  catch: 'bg-red-500',
 }
 
 const NodeConfigPanel: React.FC<NodeConfigPanelProps> = ({ node, onClose, onSave, workflowId }: NodeConfigPanelProps) => {
@@ -103,6 +105,9 @@ const NodeConfigPanel: React.FC<NodeConfigPanelProps> = ({ node, onClose, onSave
       case 'code':
         return <CodeConfig config={config} onConfigChange={setConfig} />;
 
+      case 'catch':
+        return <CatchConfig />;
+
       case 'note':
         return <NoteConfig config={config} onConfigChange={setConfig} />;
 
@@ -145,7 +150,15 @@ const NodeConfigPanel: React.FC<NodeConfigPanelProps> = ({ node, onClose, onSave
             </div>
             <div className="min-w-0">
               <h3 className="text-sm font-semibold text-gray-900 dark:text-white truncate">{getNodeDefaultLabel(node.type)}</h3>
-              <p className="text-[11px] text-gray-500 dark:text-gray-400 mt-0.5">节点配置 · ID: <span className="max-w-[180px] inline-block truncate align-bottom" title={node.id}>{node.id}</span></p>
+              <p className="text-[11px] text-gray-500 dark:text-gray-400 mt-0.5">节点配置 · ID: <span className="max-w-[160px] inline-block truncate align-bottom" title={node.id}>{node.id}</span>
+                <button
+                  onClick={() => navigator.clipboard.writeText(node.id)}
+                  className="inline-flex items-center justify-center w-4 h-4 rounded text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors ml-0.5 align-text-bottom"
+                  title="复制节点ID"
+                >
+                  <svg className="w-3 h-3" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"/><path d="M5 15H4a2 2 0 01-2-2V4a2 2 0 012-2h9a2 2 0 012 2v1"/></svg>
+                </button>
+              </p>
             </div>
           </div>
           <button
@@ -173,6 +186,69 @@ const NodeConfigPanel: React.FC<NodeConfigPanelProps> = ({ node, onClose, onSave
               size="sm"
             />
           </div>
+
+          {/* 错误处理与重试配置（start/end/note/catch 等跳过） */}
+          {node.type !== 'start' && node.type !== 'end' && node.type !== 'note' && node.type !== 'catch' && (
+            <details className="group">
+              <summary className="text-xs font-medium text-gray-500 dark:text-gray-400 cursor-pointer hover:text-gray-700 dark:hover:text-gray-300 transition-colors select-none">
+                错误处理与重试
+              </summary>
+              <div className="mt-3 space-y-3 pl-2 border-l-2 border-red-200 dark:border-red-800/50">
+                <div>
+                  <label className="block text-xs font-medium text-gray-600 dark:text-gray-400 mb-1">
+                    重试次数
+                  </label>
+                  <div className="flex items-center gap-2">
+                    <CustomInput
+                      type="number"
+                      value={String(config.retryCount ?? 0)}
+                      onChange={(e) => setConfig({ ...config, retryCount: Math.max(0, parseInt(e.target.value) || 0) })}
+                      min={0}
+                      max={10}
+                      size="xs"
+                      className="w-20"
+                    />
+                    <span className="text-xs text-gray-400">次</span>
+                  </div>
+                </div>
+                {config.retryCount > 0 && (
+                  <>
+                    <div>
+                      <label className="block text-xs font-medium text-gray-600 dark:text-gray-400 mb-1">
+                        重试间隔
+                      </label>
+                      <div className="flex items-center gap-2">
+                        <CustomInput
+                          type="number"
+                          value={String(config.retryDelay ?? 1000)}
+                          onChange={(e) => setConfig({ ...config, retryDelay: Math.max(100, parseInt(e.target.value) || 1000) })}
+                          min={100}
+                          max={60000}
+                          size="xs"
+                          className="w-20"
+                        />
+                        <span className="text-xs text-gray-400">ms</span>
+                      </div>
+                    </div>
+                    <div>
+                      <label className="block text-xs font-medium text-gray-600 dark:text-gray-400 mb-1">
+                        退避策略
+                      </label>
+                      <select
+                        value={config.retryBackoff || 'fixed'}
+                        onChange={(e) => setConfig({ ...config, retryBackoff: e.target.value })}
+                        className="text-xs px-2 py-1.5 rounded-lg border border-gray-200 dark:border-gray-600 bg-white dark:bg-gray-800 text-gray-800 dark:text-gray-200"
+                      >
+                        <option value="fixed">固定间隔</option>
+                        <option value="exponential">指数退避</option>
+                      </select>
+                    </div>
+                  </>
+                )}
+              </div>
+            </details>
+          )}
+
           {renderConfigFields()}
         </div>
 

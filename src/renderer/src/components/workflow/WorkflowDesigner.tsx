@@ -12,7 +12,7 @@ import {
 } from '@xyflow/react';
 import '@xyflow/react/dist/style.css';
 
-import { StartNode, SkillNode, BranchNode, ApiNode, AgentNode, EndNode, LLMNode, CliNode, TextNode, SubWorkflow, McpNode, CodeNode, NoteNode, LoopNode } from './NodeTypes';
+import { StartNode, SkillNode, BranchNode, ApiNode, AgentNode, EndNode, LLMNode, CliNode, TextNode, SubWorkflow, McpNode, CodeNode, NoteNode, LoopNode, CatchNode } from './NodeTypes';
 import NodeConfigPanel from './NodeConfigPanel';
 import { Workflow, WorkflowBranch, WorkflowEdge, WorkflowNode } from '@renderer/types';
 import NodeListPanel from './NodeListPanel';
@@ -43,6 +43,7 @@ const nodeTypes = {
   code: CodeNode,
   note: NoteNode,
   loop: LoopNode,
+  catch: CatchNode,
 };
 
 interface WorkflowDesignerProps {
@@ -106,6 +107,11 @@ function WorkflowDesigner(props: WorkflowDesignerProps): React.JSX.Element {
       target: edge.target,
       label: edge.label,
       condition: edge.condition,
+      sourceType: edge.sourceType,
+      ...(edge.sourceType === 'error' ? {
+        style: { stroke: '#ef4444', strokeDasharray: '6 3', strokeWidth: 2 },
+        markerEnd: { type: 'arrowclosed', color: '#ef4444' },
+      } : {}),
     })) || [];
   }, [workflow?.edges]);
 
@@ -204,6 +210,8 @@ function WorkflowDesigner(props: WorkflowDesignerProps): React.JSX.Element {
         onSaveRef.current(nodesRef.current, edgesRef.current);
         setManualSaveVersion(v => v + 1);
       } else if ((e.ctrlKey || e.metaKey) && e.key === 'c') {
+        // 有文本选中时不拦截，交给浏览器默认复制行为
+        if (window.getSelection()?.toString().trim()) return;
         e.preventDefault();
         handleCopySelectedNodes();
       } else if ((e.ctrlKey || e.metaKey) && e.key === 'v') {
@@ -283,15 +291,19 @@ function WorkflowDesigner(props: WorkflowDesignerProps): React.JSX.Element {
         }
       }
 
+      const isErrorEdge = getNodes().find(n => n.id === params.target)?.type === 'catch'
       const newEdge: WorkflowEdge = {
         ...params,
-        id: `edge-${uuidv4()}`
+        id: `edge-${uuidv4()}`,
+        sourceType: isErrorEdge ? 'error' : undefined,
+        style: isErrorEdge ? { stroke: '#ef4444', strokeDasharray: '6 3', strokeWidth: 2 } : undefined,
+        markerEnd: isErrorEdge ? { type: 'arrowclosed', color: '#ef4444' } : undefined,
       };
       const newEdges = [...edges, newEdge];
       setEdges(newEdges);
       recordHistory(nodes, newEdges);
     },
-    [nodes, edges, setEdges, recordHistory]
+    [nodes, edges, setEdges, recordHistory, getNodes]
   );
 
   const handleBranchSelectionConfirm = useCallback(() => {

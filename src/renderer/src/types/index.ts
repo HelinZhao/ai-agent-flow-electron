@@ -1,3 +1,5 @@
+import { Edge } from "@xyflow/react"
+
 export interface BranchCondition {
   id: string
   label: string
@@ -10,7 +12,7 @@ export interface BranchNodeConfig {
 
 export interface WorkflowNode {
   id: string
-  type: 'start' | 'skill' | 'branch' | 'api' | 'llm' | 'agent' | 'cli' | 'text' | 'end' | 'subWorkflow' | 'mcp' | 'code' | 'note' | 'loop'
+  type: 'start' | 'skill' | 'branch' | 'api' | 'llm' | 'agent' | 'cli' | 'text' | 'end' | 'subWorkflow' | 'mcp' | 'code' | 'note' | 'loop' | 'catch'
   position: { x: number; y: number }
   data: {
     label: string
@@ -22,12 +24,13 @@ export interface WorkflowBranch {
   condition: string
   label: string
 }
-export interface WorkflowEdge {
+export interface WorkflowEdge extends Edge{
   id: string
   source: string
   target: string
   label?: string
   condition?: string
+  sourceType?: 'normal' | 'error'
 }
 
 export interface Workflow {

@@ -10,7 +10,7 @@ export interface BranchNodeConfig {
 
 export interface WorkflowNode {
   id: string
-  type: 'start' | 'skill' | 'branch' | 'api' | 'llm' | 'agent' | 'cli' | 'text' | 'end' | 'subWorkflow' | 'mcp' | 'code' | 'note' | 'loop'
+  type: 'start' | 'skill' | 'branch' | 'api' | 'llm' | 'agent' | 'cli' | 'text' | 'end' | 'subWorkflow' | 'mcp' | 'code' | 'note' | 'loop' | 'catch'
   position: { x: number; y: number }
   data: {
     label: string
@@ -28,6 +28,7 @@ export interface WorkflowEdge {
   target: string
   label?: string
   condition?: string
+  sourceType?: 'normal' | 'error'
 }
 
 export interface Workflow {

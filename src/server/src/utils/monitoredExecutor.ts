@@ -378,12 +378,43 @@ export class MonitoredLangGraphExecutor {
       }
     }
 
+    // ---- 构建边（支持 error 类型边） ----
+    const edgeGroups = new Map<string, { normal: string[]; error: string | null }>()
     for (const edge of edges) {
-      if (edge.condition) {
-        const value = branch2NodeMap.get(edge.condition)
-        value?.push(edge.target)
+      if (!edgeGroups.has(edge.source)) {
+        edgeGroups.set(edge.source, { normal: [], error: null })
+      }
+      const g = edgeGroups.get(edge.source)!
+      if (edge.sourceType === 'error') {
+        g.error = edge.target
       } else {
-        graph.addEdge(edge.source as any, edge.target as any)
+        g.normal.push(edge.target)
+      }
+    }
+    for (const [source, group] of edgeGroups) {
+      const srcNode = validNodes.find(n => n.id === source)
+      if (srcNode?.type === 'branch') {
+        for (const t of group.normal) {
+          const e = edges.find(edge => edge.source === source && edge.target === t)
+          if (e?.condition) {
+            const v = branch2NodeMap.get(e.condition)
+            v?.push(t)
+          } else {
+            graph.addEdge(source as any, t as any)
+          }
+        }
+        continue
+      }
+      if (group.error) {
+        graph.addConditionalEdges(source as any, () => {
+          const r = nodeResults.get(source)
+          if (r?.status === 'failed') return [group.error!]
+          return group.normal
+        })
+      } else {
+        for (const t of group.normal) {
+          graph.addEdge(source as any, t as any)
+        }
       }
     }
 
@@ -467,36 +498,88 @@ export class MonitoredLangGraphExecutor {
     }
   }
 
-  // 执行带监控的节点
+  // 执行带监控的节点（含自动重试）
   private async executeMonitoredNode(ctx: ExecCtx) {
     const startTime = Date.now()
+    const retryCount = Math.max(0, ctx.node.data.config?.retryCount ?? 0)
+    const retryDelay = Math.max(0, ctx.node.data.config?.retryDelay ?? 1000)
+    const backoff = ctx.node.data.config?.retryBackoff ?? 'fixed'
 
-    try {
-      const result = await this.executeNode(ctx)
-      const endTime = Date.now()
+    // 记录原始执行到日志
+    const execState = this.executionStates.get(ctx.executionId)
+    if (retryCount > 0 && execState) {
+      execState.logs.push({
+        timestamp: new Date(),
+        level: 'info',
+        message: `节点已配置重试: 最多 ${retryCount} 次, 间隔 ${retryDelay}ms, 退避策略: ${backoff}`,
+        nodeId: ctx.node.id
+      })
+    }
 
-      return {
-        nodeId: ctx.node.id,
-        ...result,
-        startTime: new Date(startTime),
-        endTime: new Date(endTime),
-        duration: endTime - startTime,
-        status: (result as any).error ? 'failed' : 'completed'
+    for (let attempt = 0; attempt <= retryCount; attempt++) {
+      if (attempt > 0) {
+        const delay = backoff === 'exponential'
+          ? retryDelay * Math.pow(2, attempt - 1)
+          : retryDelay
+
+        if (execState) {
+          execState.logs.push({
+            timestamp: new Date(),
+            level: 'warn',
+            message: `第 ${attempt}/${retryCount} 次重试 (等待 ${delay}ms)...`,
+            nodeId: ctx.node.id
+          })
+        }
+
+        await new Promise(resolve => setTimeout(resolve, delay))
       }
-    } catch (error) {
-      if (error instanceof ExecutionTerminatedError) throw error
-      const endTime = Date.now()
 
-      return {
-        output: ctx.input,
-        error: error instanceof Error ? error.message : '节点执行失败',
-        startTime: new Date(startTime),
-        endTime: new Date(endTime),
-        duration: endTime - startTime,
-        status: 'failed',
-        metadata: { nodeId: ctx.node.id, type: ctx.node.type, label: ctx.node.data?.label }
+      try {
+        const result = await this.executeNode(ctx)
+
+        // 节点自身已捕获错误（error 可能在顶层或 metadata.error 中）
+        if ((result as any).error || (result as any).metadata?.error) {
+          if (attempt < retryCount) continue  // 还有重试机会
+          const endTime = Date.now()
+          return {
+            nodeId: ctx.node.id,
+            ...result,
+            startTime: new Date(startTime),
+            endTime: new Date(endTime),
+            duration: endTime - startTime,
+            status: 'failed'
+          }
+        }
+
+        const endTime = Date.now()
+        return {
+          nodeId: ctx.node.id,
+          ...result,
+          startTime: new Date(startTime),
+          endTime: new Date(endTime),
+          duration: endTime - startTime,
+          status: 'completed'
+        }
+      } catch (error) {
+        if (error instanceof ExecutionTerminatedError) throw error
+
+        if (attempt < retryCount) continue  // 还有重试机会
+
+        const endTime = Date.now()
+        return {
+          output: ctx.input,
+          error: error instanceof Error ? error.message : '节点执行失败',
+          startTime: new Date(startTime),
+          endTime: new Date(endTime),
+          duration: endTime - startTime,
+          status: 'failed',
+          metadata: { nodeId: ctx.node.id, type: ctx.node.type, label: ctx.node.data?.label }
+        }
       }
     }
+
+    // unreachable, but TS needs it
+    throw new Error('unreachable')
   }
 
   // 原有的节点执行逻辑
@@ -538,6 +621,9 @@ export class MonitoredLangGraphExecutor {
 
       case 'loop':
         return await this.executeLoop(ctx)
+
+      case 'catch':
+        return await this.executeCatch(ctx)
 
       case 'text':
         return await this.executeText(ctx)
@@ -1244,6 +1330,30 @@ export class MonitoredLangGraphExecutor {
           type: 'cli',
           error: errorMsg,
         }
+      }
+    }
+  }
+
+  private async executeCatch(ctx: ExecCtx) {
+    const { node, input, nodeResults } = ctx
+    let errorMsg = '未知错误'
+    let failedNodeLabel = ''
+    if (nodeResults) {
+      for (const [, result] of nodeResults) {
+        if (result?.status === 'failed') {
+          errorMsg = result.error || result.metadata?.error || '节点执行失败'
+          failedNodeLabel = result.metadata?.label || result.metadata?.nodeId || ''
+        }
+      }
+    }
+    return {
+      output: '[' + failedNodeLabel + ' 执行失败] ' + errorMsg + '\n\n' + input,
+      metadata: {
+        nodeId: node.id,
+        label: node.data?.label,
+        type: 'catch',
+        upstreamError: errorMsg,
+        upstreamNodeLabel: failedNodeLabel,
       }
     }
   }

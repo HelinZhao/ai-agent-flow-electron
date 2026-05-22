@@ -18,6 +18,7 @@ export const NODE_DEFS: NodeDef[] = [
   { type: 'mcp', shortLabel: 'MCP', defaultLabel: 'MCP节点', color: 'purple', category: 'integration', hasTargetHandle: true, hasSourceHandle: true, icon: '🔌' },
   { type: 'code', shortLabel: '代码', defaultLabel: '代码节点', color: 'rose', category: 'logic', hasTargetHandle: true, hasSourceHandle: true, icon: '💻' },
   { type: 'note', shortLabel: '注释', defaultLabel: '注释节点', color: 'yellow', category: 'basic', hasTargetHandle: false, hasSourceHandle: false, icon: '📌' },
+  { type: 'catch', shortLabel: '错误处理', defaultLabel: '错误处理节点', color: 'red', category: 'logic', hasTargetHandle: true, hasSourceHandle: true, icon: '🛡️' },
   { type: 'agent', shortLabel: 'Agent', defaultLabel: 'Agent节点', color: 'red', category: 'integration', hasTargetHandle: true, hasSourceHandle: true, icon: '🤖' },
   { type: 'subWorkflow', shortLabel: '子工作流', defaultLabel: '子工作流节点', color: 'cyan', category: 'integration', hasTargetHandle: true, hasSourceHandle: true, icon: '🔗' },
   { type: 'loop', shortLabel: '循环', defaultLabel: '循环节点', color: 'violet', category: 'logic', hasTargetHandle: true, hasSourceHandle: true, icon: '🔄' },
