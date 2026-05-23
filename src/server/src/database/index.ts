@@ -169,6 +169,17 @@ async function migrateMcpServersTable(): Promise<void> {
   }
 }
 
+async function migrateParamsColumn(): Promise<void> {
+  try {
+    const q = sequelize.getQueryInterface()
+    const table = await q.describeTable('triggers') as Record<string, unknown>
+    if (!table.params) {
+      await sequelize.query('ALTER TABLE triggers ADD COLUMN params TEXT;')
+      console.log('[Migration] triggers.params column added')
+    }
+  } catch {}
+}
+
 // 测试数据库连接
 async function seedTemplates(): Promise<void> {
   try {
@@ -197,6 +208,7 @@ export const initDatabase = async (): Promise<void> => {
     await migrateAgentColumns()
     await migrateTriggerTable()
     await seedTemplates()
+    await migrateParamsColumn()
     await migrateMcpServersTable()
   } catch (error) {
     console.error('数据库连接失败:', error)

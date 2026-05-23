@@ -42,13 +42,18 @@ async function getActiveLLMConfig(): Promise<LLMConfig> {
 }
 
 // 执行触发器目标
-async function fireTrigger(triggerId: string, payload?: string): Promise<string | null | undefined> {
+async function fireTrigger(triggerId: string, payload?: { input?: string; params?: Record<string, any> }): Promise<string | null | undefined> {
   const trigger = await TriggerModel.findByPk(triggerId)
   if (!trigger || !trigger.enabled) return null
 
   // 防止重复触发：上次还在执行中
   if (trigger.lastRunStatus === 'running') {
-    console.log(`[Trigger] ${trigger.name}: 上次执行尚未完成，跳过本次触发`)
+    console.log(`[Trigger] ${trigger.name}: 上次执行未完成，跳过本次触发，重新调度下一次`)
+    const nextTime = cronToNextTime(trigger.cronExpression || '')
+    if (nextTime > 0) {
+      timingWheel.schedule(trigger.id, nextTime)
+      await trigger.update({ nextRunAt: new Date(nextTime) })
+    }
     return null
   }
 
@@ -58,8 +63,10 @@ async function fireTrigger(triggerId: string, payload?: string): Promise<string 
 
     const llmConfig = await getActiveLLMConfig()
     let executionId: string | null = null
-    const input = payload ?? trigger.input
+    const input = payload?.input ?? trigger.input
 
+    let triggerParams = payload?.params ?? safeJsonParse(trigger.params, {})
+    const triggerInput = String(input || '')
     if (trigger.targetType === 'workflow') {
       const workflow = await WorkflowModel.findByPk(trigger.targetId)
       if (!workflow) throw new Error(`工作流 ${trigger.targetId} 不存在`)
@@ -68,18 +75,21 @@ async function fireTrigger(triggerId: string, payload?: string): Promise<string 
         id: workflow.id,
         name: workflow.name,
         description: workflow.description,
-        nodes: JSON.parse(workflow.nodes),
-        edges: JSON.parse(workflow.edges),
+        nodes: safeJsonParse(workflow.nodes, []),
+        edges: safeJsonParse(workflow.edges, []),
         createdAt: workflow.createdAt,
         updatedAt: workflow.updatedAt
       }
 
       await monitoredExecutor.startExecution(
         workflowObj,
-        input,
+        triggerInput,
         llmConfig,
         undefined,
-        `trigger-${trigger.id}-${Date.now()}`
+        `trigger-${trigger.id}-${Date.now()}`,
+        undefined,
+        undefined,
+        triggerParams
       )
     } else if (trigger.targetType === 'agent') {
       const agent = await AgentModel.findByPk(trigger.targetId)
@@ -95,18 +105,21 @@ async function fireTrigger(triggerId: string, payload?: string): Promise<string 
           id: workflow.id,
           name: workflow.name,
           description: workflow.description,
-          nodes: JSON.parse(workflow.nodes),
-          edges: JSON.parse(workflow.edges),
+          nodes: safeJsonParse(workflow.nodes, []),
+          edges: safeJsonParse(workflow.edges, []),
           createdAt: workflow.createdAt,
           updatedAt: workflow.updatedAt
         }
 
         await monitoredExecutor.startExecution(
           workflowObj,
-          input,
+          triggerInput,
           llmConfig,
           agent.id,
-          `trigger-${trigger.id}-${Date.now()}`
+          `trigger-${trigger.id}-${Date.now()}`,
+          undefined,
+          undefined,
+          triggerParams
         )
       } else {
         const skillIds = safeJsonParse<string[]>(agent.skillIds, [])
@@ -127,6 +140,18 @@ async function fireTrigger(triggerId: string, payload?: string): Promise<string 
 
     await trigger.update({ lastRunStatus: 'success' })
     console.log(`[Trigger] ${trigger.name}: 执行成功`)
+
+    // 成功时也重新调度
+    const successUpdated = await TriggerModel.findByPk(triggerId)
+    if (successUpdated && successUpdated.type === 'cron' && successUpdated.enabled && successUpdated.cronExpression) {
+      const st = cronToNextTime(successUpdated.cronExpression)
+      if (st > 0) {
+        timingWheel.schedule(successUpdated.id, st)
+        await successUpdated.update({ nextRunAt: new Date(st) })
+        console.log(`[Trigger] ${successUpdated.name}: 下次执行时间 ${new Date(st).toLocaleString()}`)
+      }
+    }
+
     return executionId
   } catch (error) {
     const msg = error instanceof Error ? error.message : '未知错误'
@@ -182,7 +207,7 @@ router.get('/', async (req, res) => {
 // 创建触发器
 router.post('/', async (req, res) => {
   try {
-    const { name, type, cronExpression, targetType, targetId, input, enabled } = req.body
+    const { name, type, cronExpression, targetType, targetId, input, params, enabled } = req.body
 
     if (!name || !type || !targetType || !targetId) {
       return res.status(400).json({ error: '缺少必要参数 (name, type, targetType, targetId)' })
@@ -201,6 +226,7 @@ router.post('/', async (req, res) => {
       targetType,
       targetId,
       input: input || '',
+      params: params || undefined,
       webhookToken: webhookToken || undefined,
       enabled: enabled !== false
     })
@@ -240,7 +266,7 @@ router.put('/:id', async (req, res) => {
     const trigger = await TriggerModel.findByPk(id)
     if (!trigger) return res.status(404).json({ error: '触发器不存在' })
 
-    const { name, cronExpression, targetType, targetId, input, enabled } = req.body
+    const { name, cronExpression, targetType, targetId, input, params, enabled } = req.body
 
     // 先取消时间轮中的旧任务
     timingWheel.cancel(id)
@@ -250,7 +276,8 @@ router.put('/:id', async (req, res) => {
       cronExpression: cronExpression !== undefined ? (cronExpression || undefined) : trigger.cronExpression,
       targetType: targetType ?? trigger.targetType,
       targetId: targetId ?? trigger.targetId,
-      input: input !== undefined ? input : input,
+      input: input !== undefined ? input : trigger.input,
+      params: params !== undefined ? params : trigger.params,
       enabled: enabled !== undefined ? enabled : trigger.enabled,
       nextRunAt: undefined
     })
@@ -323,8 +350,9 @@ webhookRouter.post('/:token', async (req, res) => {
     })
     if (!trigger) return res.status(404).json({ error: '触发器不存在或已禁用' })
 
-    const input = req.body?.input
-    const payload = typeof input === 'string' ? input : JSON.stringify(req.body || '')
+    const input = req.body?.input || ''
+    const params = req.body?.params || {}
+    const payload = { input, params }
     const executionId = await fireTrigger(trigger.id, payload)
     return res.status(200).json({
       message: 'Webhook 触发成功',

@@ -129,7 +129,7 @@ export const useWorkflowStore = create<WorkflowState>()(
 
           // 加载知识库和LLM配置
           await Promise.all([
-            state.getKnowledgeBases().catch(() => {}),
+            state.getKnowledgeBases().catch(() => { }),
             state.getLLMConfigs()
           ])
 
@@ -595,6 +595,7 @@ export const useWorkflowStore = create<WorkflowState>()(
         const es = new EventSource(`${API_BASE_URL}/events`)
         es.onmessage = async (e) => {
           try {
+            state.setLoading(true)
             const { resource } = JSON.parse(e.data)
             switch (resource) {
               case 'workflows': {
@@ -636,6 +637,8 @@ export const useWorkflowStore = create<WorkflowState>()(
             }
           } catch (err) {
             console.error('[EventStream] 解析事件失败:', err)
+          } finally {
+            state.setLoading(false)
           }
         }
         es.onerror = () => {

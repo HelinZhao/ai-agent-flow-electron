@@ -9,6 +9,7 @@ export interface TriggerAttributes {
   targetType: 'workflow' | 'agent'
   targetId: string
   input: string
+  params?: string
   webhookToken?: string
   enabled: boolean
   nextRunAt?: Date
@@ -34,6 +35,7 @@ export class TriggerModel
   declare targetType: 'workflow' | 'agent'
   declare targetId: string
   declare input: string
+  declare params?: string
   declare webhookToken?: string
   declare enabled: boolean
   declare nextRunAt?: Date

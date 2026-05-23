@@ -248,13 +248,13 @@ export const STORAGE_PERSIST_FIELDS = ['workflows', 'skills', 'agents', 'llmConf
 
 /** Cron 预设模板 */
 export const CRON_PRESETS = [
-  { label: '每 5 分钟', value: '*/5 * * * *' },
-  { label: '每 30 分钟', value: '*/30 * * * *' },
-  { label: '每小时', value: '0 * * * *' },
-  { label: '每天 9:00', value: '0 9 * * *' },
-  { label: '每天 18:00', value: '0 18 * * *' },
-  { label: '每个工作日 9:00', value: '0 9 * * 1-5' },
-  { label: '每周一 9:00', value: '0 9 * * 1' },
+  { label: '每 5 分钟', value: '0 */5 * * * *' },
+  { label: '每 30 分钟', value: '0 */30 * * * *' },
+  { label: '每小时', value: '0 0 * * * *' },
+  { label: '每天 9:00', value: '0 0 9 * * *' },
+  { label: '每天 18:00', value: '0 0 18 * * *' },
+  { label: '每个工作日 9:00', value: '0 0 9 * * 1-5' },
+  { label: '每周一 9:00', value: '0 0 9 * * 1' },
 ]
 
 /** Webhook 基础 URL */

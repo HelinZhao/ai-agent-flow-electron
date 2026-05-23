@@ -311,6 +311,7 @@ export interface Trigger {
   targetType: 'workflow' | 'agent'
   targetId: string
   input: string
+  params?: string
   webhookToken?: string
   enabled: boolean
   nextRunAt?: string

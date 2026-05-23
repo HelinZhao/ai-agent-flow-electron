@@ -17,7 +17,7 @@ export default function CronBuilder({ value, onChange, className = '', includeSe
   useEffect(() => {
     const parts = value.trim().split(/\s+/)
     const expectedLength = includeSeconds ? 6 : 5
-    if (parts.length === expectedLength) {
+    if (parts.length === expectedLength || parts.length > 0) {
       setCronParts(parts)
     }
   }, [value, includeSeconds])
@@ -51,7 +51,7 @@ export default function CronBuilder({ value, onChange, className = '', includeSe
       if (sec.startsWith('*/') && min === '*' && hour === '*') return 'seconds'
     }
 
-    if (min === '0' && dom === '*' && month === '*' && dow === '*') return 'hourly'
+    if (min === '0' && hour === '*' && dom === '*' && month === '*' && dow === '*') return 'hourly'
     if (min === '0' && dow === '*' && month === '*') return 'daily'
     if (min === '0' && dom === '*' && month === '*') return 'weekly'
     if (min === '0' && hour === '9' && dow === '*') return 'monthly'

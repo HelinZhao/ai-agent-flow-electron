@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
-import { Trigger } from '@renderer/types'
-import { triggerApi } from '@renderer/lib/api'
+import { Trigger, VariableConfig } from '@renderer/types'
+import { triggerApi, workflowApi } from '@renderer/lib/api'
 import { useWorkflowStore } from '@renderer/store/workflowStore'
 import { CRON_PRESETS, WEBHOOK_BASE_URL } from '@renderer/config'
 import Modal from '@renderer/components/ui/Modal'
@@ -50,10 +50,12 @@ export default function Triggers(): React.JSX.Element {
   // form state
   const [formName, setFormName] = useState('')
   const [formType, setFormType] = useState<'cron' | 'webhook'>('cron')
-  const [formCron, setFormCron] = useState('0 9 * * *')
+  const [formCron, setFormCron] = useState('0 0 9 * * * ')
   const [formTargetType, setFormTargetType] = useState<'workflow' | 'agent'>('workflow')
   const [formTargetId, setFormTargetId] = useState('')
   const [formInput, setFormInput] = useState('')
+  const [targetParams, setTargetParams] = useState<VariableConfig[]>([])
+  const [formParams, setFormParams] = useState<Record<string, any>>({})
   const [saving, setSaving] = useState(false)
 
   const triggers = useWorkflowStore(s => s.triggers)
@@ -81,7 +83,7 @@ export default function Triggers(): React.JSX.Element {
     setEditingId(null)
     setFormName('')
     setFormType('cron')
-    setFormCron('0 9 * * *')
+    setFormCron('0 0 9 * * *')
     setFormTargetType('workflow')
     setFormTargetId(targetOptions[0]?.value || '')
     setFormInput('')
@@ -92,10 +94,11 @@ export default function Triggers(): React.JSX.Element {
     setEditingId(t.id)
     setFormName(t.name)
     setFormType(t.type)
-    setFormCron(t.cronExpression || '0 9 * * *')
+    setFormCron(t.cronExpression || '0 0 9 * * *')
     setFormTargetType(t.targetType)
     setFormTargetId(t.targetId)
     setFormInput(t.input)
+    try { setFormParams(JSON.parse(t.params || t.input)) } catch { setFormParams({}) }
     setShowModal(true)
   }
 
@@ -103,22 +106,20 @@ export default function Triggers(): React.JSX.Element {
     if (!formName.trim() || !formTargetId) return
     setSaving(true)
     try {
+      const info = {
+        name: formName,
+        cronExpression: formType === 'cron' ? formCron : undefined,
+        targetType: formTargetType,
+        targetId: formTargetId,
+        input: (formTargetType === 'workflow' && targetParams.length > 0) ? (formParams.input || '') : formInput,
+        params: (formTargetType === 'workflow' && targetParams.length > 0) ? JSON.stringify(formParams) : undefined
+      }
       if (editingId) {
-        await triggerApi.update(editingId, {
-          name: formName,
-          cronExpression: formType === 'cron' ? formCron : undefined,
-          targetType: formTargetType,
-          targetId: formTargetId,
-          input: formInput
-        })
+        await triggerApi.update(editingId, info)
       } else {
         await triggerApi.create({
-          name: formName,
+          ...info,
           type: formType,
-          cronExpression: formType === 'cron' ? formCron : undefined,
-          targetType: formTargetType,
-          targetId: formTargetId,
-          input: formInput,
           enabled: true
         })
       }
@@ -148,6 +149,21 @@ export default function Triggers(): React.JSX.Element {
   const handleCopyWebhook = (token: string) => {
     navigator.clipboard.writeText(`${WEBHOOK_BASE_URL}/${token}`)
   }
+
+  useEffect(() => {
+    if (formTargetType !== 'workflow' || !formTargetId) {
+      setTargetParams([])
+      return
+    }
+    let cancelled = false
+    workflowApi.getById(formTargetId).then((wf: any) => {
+      if (cancelled) return
+      const startNode = wf.nodes?.find((n: any) => n.type === 'start')
+      const params = (startNode?.data?.config?.params as any[]) || []
+      setTargetParams(params)
+    }).catch(() => { if (!cancelled) setTargetParams([]) })
+    return () => { cancelled = true }
+  }, [formTargetId, formTargetType])
 
   const handleTargetTypeChange = (v: string) => {
     setFormTargetType(v as 'workflow' | 'agent')
@@ -203,11 +219,10 @@ export default function Triggers(): React.JSX.Element {
                 className="group/trigger bg-white/80 dark:bg-gray-800/80 backdrop-blur-sm rounded-xl border border-gray-200/50 dark:border-gray-700/50 p-4 flex items-center gap-4 hover:border-blue-300 dark:hover:border-blue-600/50 hover:shadow-lg hover:-translate-y-0.5 transition-all duration-200"
               >
                 {/* type icon */}
-                <div className={`flex items-center justify-center w-10 h-10 rounded-lg flex-shrink-0 ${
-                  t.type === 'cron'
+                <div className={`flex items-center justify-center w-10 h-10 rounded-lg flex-shrink-0 ${t.type === 'cron'
                     ? 'bg-blue-50 dark:bg-blue-900/20'
                     : 'bg-green-50 dark:bg-green-900/20'
-                }`}>
+                  }`}>
                   {t.type === 'cron' ? (
                     <svg className="w-5 h-5 text-blue-500" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
                       <circle cx="12" cy="12" r="10" />
@@ -223,11 +238,10 @@ export default function Triggers(): React.JSX.Element {
                 {/* left: info */}
                 <div className="flex-1 min-w-0">
                   <div className="flex items-center gap-2">
-                    <span className={`inline-flex items-center px-2 py-0.5 text-xs font-medium rounded-full border ${
-                      t.type === 'cron'
+                    <span className={`inline-flex items-center px-2 py-0.5 text-xs font-medium rounded-full border ${t.type === 'cron'
                         ? 'bg-blue-50 dark:bg-blue-900/20 text-blue-600 dark:text-blue-400 border-blue-200 dark:border-blue-800'
                         : 'bg-green-50 dark:bg-green-900/20 text-green-600 dark:text-green-400 border-green-200 dark:border-green-800'
-                    }`}>
+                      }`}>
                       {t.type === 'cron' ? '定时' : 'Webhook'}
                     </span>
                     <span className="font-medium text-gray-800 dark:text-gray-100 truncate">{t.name}</span>
@@ -413,15 +427,54 @@ export default function Triggers(): React.JSX.Element {
         {/* input */}
         <div>
           <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5">
-            输入文本
+            {(formTargetType === "workflow" && targetParams.length > 0) ? "工作流参数" : "输入文本"}
           </label>
-          <CustomTextarea
-            size="sm"
-            value={formInput}
-            onChange={e => setFormInput(e.target.value)}
-            placeholder="传给工作流 Start 节点的输入内容"
-            rows={3}
-          />
+          {(formTargetType === "workflow" && targetParams.length > 0) ? (
+            <div className="space-y-3 p-3 bg-gray-50 dark:bg-gray-800/50 rounded-lg border border-gray-200 dark:border-gray-700">
+              <div>
+                <label className="block text-xs font-medium text-gray-500 mb-1">
+                  文本输入 <span className="text-gray-400 font-normal">({"{{$input}}"}，可选)</span>
+                </label>
+                <input
+                  type="text"
+                  value={(formParams as any).input || ""}
+                  onChange={e => setFormParams(v => ({ ...v, input: e.target.value }))}
+                  placeholder="文本内容"
+                  className="w-full px-3 py-1.5 text-sm rounded-lg border border-gray-200 dark:border-gray-600 bg-white dark:bg-gray-800 text-gray-800 dark:text-gray-200"
+                />
+              </div>
+              {targetParams.map(p => {
+                const val = (formParams as any)[p.name] ?? p.defaultValue ?? ""
+                return (
+                  <div key={p.name}>
+                    <label className="block text-xs font-medium text-gray-600 dark:text-gray-400 mb-1">
+                      {p.displayName || p.name}
+                      {p.required && <span className="text-red-500 ml-0.5">*</span>}
+                      <span className="text-gray-400 font-normal ml-1">({p.type})</span>
+                    </label>
+                    {p.type === "boolean" ? (
+                      <label className="flex items-center gap-2 cursor-pointer">
+                        <input type="checkbox" checked={!!val} onChange={e => setFormParams(v => ({ ...v, [p.name]: e.target.checked }))} className="w-4 h-4 text-blue-600 rounded border-gray-300" />
+                      </label>
+                    ) : p.type === "number" ? (
+                      <input type="number" value={String(val)} onChange={e => setFormParams(v => ({ ...v, [p.name]: parseFloat(e.target.value) || 0 }))} className="w-full px-3 py-1.5 text-sm rounded-lg border border-gray-200 dark:border-gray-600 bg-white dark:bg-gray-800 text-gray-800 dark:text-gray-200" />
+                    ) : (
+                      <input type="text" value={val} onChange={e => setFormParams(v => ({ ...v, [p.name]: e.target.value }))} placeholder={p.description || "输入" + (p.displayName || p.name)} className="w-full px-3 py-1.5 text-sm rounded-lg border border-gray-200 dark:border-gray-600 bg-white dark:bg-gray-800 text-gray-800 dark:text-gray-200" />
+                    )}
+                  </div>
+                )
+              })}
+              <p className="text-xs text-gray-400 pt-1 border-t border-gray-200 dark:border-gray-700">触发时这些参数将传递给工作流的 Start 节点</p>
+            </div>
+          ) : (
+            <CustomTextarea
+              size="sm"
+              value={formInput}
+              onChange={e => setFormInput(e.target.value)}
+              placeholder="传给工作流 Start 节点的输入内容"
+              rows={3}
+            />
+          )}
         </div>
       </Modal>
     </div>
