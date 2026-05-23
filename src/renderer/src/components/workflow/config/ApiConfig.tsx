@@ -1,6 +1,7 @@
-import React from 'react';
+import React, { useState } from 'react';
 import CustomSelect from '../../ui/CustomSelect';
 import TemplateEditor from '../../ui/TemplateEditor';
+import TemplatePickerModal from '../TemplatePickerModal';
 
 interface ApiConfigProps {
   config: Record<string, any>;
@@ -8,6 +9,7 @@ interface ApiConfigProps {
 }
 
 const ApiConfig: React.FC<ApiConfigProps> = ({ config, onConfigChange }) => {
+  const [showPicker, setShowPicker] = useState(false)
   const updateApiConfig = (field: string, value: any) => {
     onConfigChange({
       ...config,
@@ -75,6 +77,35 @@ const ApiConfig: React.FC<ApiConfigProps> = ({ config, onConfigChange }) => {
           />
         </div>
       )}
+
+      <div className="pt-2">
+        <button
+          onClick={() => setShowPicker(true)}
+          className="text-xs text-blue-600 dark:text-blue-400 hover:text-blue-800 dark:hover:text-blue-300 transition-colors"
+        >
+          + 从模板导入
+        </button>
+      </div>
+
+      <TemplatePickerModal
+        isOpen={showPicker}
+        onClose={() => setShowPicker(false)}
+        type="api"
+        onSelect={(t) => {
+          try {
+            const content = JSON.parse(t.content)
+            onConfigChange({
+              ...config,
+              apiConfig: {
+                url: content.url || '',
+                method: content.method || 'GET',
+                headers: content.headers || '',
+                body: content.body || '',
+              }
+            })
+          } catch {}
+        }}
+      />
     </div>
   );
 };

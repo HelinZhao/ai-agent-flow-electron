@@ -3,6 +3,7 @@ import { getUserDataDir } from '../utils/file'
 import { DB_FILENAME } from '../config'
 import fs from 'fs'
 import path from 'path'
+import { SEED_TEMPLATES } from '../seeds/templates'
 const datPath = getUserDataDir(DB_FILENAME)  // 数据库文件存储路径
 fs.mkdirSync(path.dirname(datPath), { recursive: true })
 
@@ -169,6 +170,19 @@ async function migrateMcpServersTable(): Promise<void> {
 }
 
 // 测试数据库连接
+async function seedTemplates(): Promise<void> {
+  try {
+    const { TemplateModel } = await import("../models/Template")
+    const count = await TemplateModel.count()
+    if (count === 0) {
+      await TemplateModel.bulkCreate(SEED_TEMPLATES as any)
+      console.log("[Seed] " + SEED_TEMPLATES.length + " templates imported")
+    }
+  } catch (error: any) {
+    console.log("[Seed] skip:", error.message)
+  }
+}
+
 export const initDatabase = async (): Promise<void> => {
   try {
     await sequelize.authenticate()
@@ -182,6 +196,7 @@ export const initDatabase = async (): Promise<void> => {
     await migrateWorkflowColumns()
     await migrateAgentColumns()
     await migrateTriggerTable()
+    await seedTemplates()
     await migrateMcpServersTable()
   } catch (error) {
     console.error('数据库连接失败:', error)

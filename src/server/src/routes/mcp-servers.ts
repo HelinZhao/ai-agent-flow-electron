@@ -2,6 +2,7 @@ import { Router } from 'express'
 import { McpServerModel, McpServerAttributes } from '../models'
 import { mcpConnectionManager } from '../mcp'
 import { v4 as uuidv4 } from 'uuid'
+import { changeNotifier } from '../utils/dataChangeNotifier'
 
 const router = Router()
 
@@ -81,6 +82,7 @@ router.post('/', async (req, res) => {
     }
 
     const detail = await mcpConnectionManager.getServerDetail(server.id)
+    changeNotifier.emitChange("mcp-servers")
     return res.status(201).json(detail)
   } catch (error: any) {
     console.error('[MCP] 创建服务器失败:', error)
@@ -130,6 +132,7 @@ router.put('/:id', async (req, res) => {
     }
 
     const detail = await mcpConnectionManager.getServerDetail(id)
+    changeNotifier.emitChange("mcp-servers")
     return res.status(200).json(detail)
   } catch (error: any) {
     console.error('[MCP] 更新服务器失败:', error)
@@ -149,6 +152,7 @@ router.delete('/:id', async (req, res) => {
     // 断开连接
     await mcpConnectionManager.disconnectServer(id).catch(() => {})
     await server.destroy()
+    changeNotifier.emitChange("mcp-servers")
     return res.status(204).send()
   } catch (error) {
     console.error('[MCP] 删除服务器失败:', error)

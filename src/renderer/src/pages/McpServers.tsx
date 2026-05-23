@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react'
 import { mcpApi, McpServer } from '@renderer/lib/mcpApi'
+import { useWorkflowStore } from '@renderer/store/workflowStore'
 import CustomButton from '@renderer/components/ui/CustomButton'
 import CustomSwitch from '@renderer/components/ui/CustomSwitch'
 import McpServerFormModal, { McpServerFormData } from '@renderer/components/mcp/McpServerFormModal'
@@ -22,7 +23,8 @@ const STATUS_CONFIG: Record<string, { label: string; dot: string; bg: string }> 
 }
 
 export default function McpServers(): React.JSX.Element {
-  const [servers, setServers] = useState<McpServer[]>([])
+  const servers = useWorkflowStore(s => s.mcpServers)
+  const fetchMcpServers = useWorkflowStore(s => s.fetchMcpServers)
   const [loading, setLoading] = useState(true)
   const [showForm, setShowForm] = useState(false)
   const [editingServer, setEditingServer] = useState<McpServer | null>(null)
@@ -31,8 +33,7 @@ export default function McpServers(): React.JSX.Element {
 
   const refresh = async () => {
     try {
-      const list = await mcpApi.getAll()
-      setServers(list)
+      await fetchMcpServers()
     } catch (error) {
       console.error('[MCP] 获取列表失败:', error)
     } finally {
@@ -126,13 +127,11 @@ export default function McpServers(): React.JSX.Element {
   const handleDelete = async (s: McpServer) => {
     if (!confirm(`确定删除 MCP 服务器「${s.name}」吗？\n删除后该服务器的工具将从所有 Agent 中移除。`)) return
     await mcpApi.delete(s.id)
-    await refresh()
   }
 
   const handleRefreshAll = async () => {
     setLoading(true)
     try {
-      await mcpApi.refreshAll()
       await refresh()
     } finally {
       setLoading(false)
@@ -195,20 +194,18 @@ export default function McpServers(): React.JSX.Element {
                 >
                   <div className="flex items-start gap-4">
                     {/* icon */}
-                    <div className={`flex items-center justify-center w-10 h-10 rounded-lg flex-shrink-0 ${
-                      s.connectionStatus === 'connected'
+                    <div className={`flex items-center justify-center w-10 h-10 rounded-lg flex-shrink-0 ${s.connectionStatus === 'connected'
                         ? 'bg-green-50 dark:bg-green-900/20'
                         : s.connectionStatus === 'error'
                           ? 'bg-red-50 dark:bg-red-900/20'
                           : 'bg-gray-50 dark:bg-gray-800'
-                    }`}>
-                      <svg className={`w-5 h-5 ${
-                        s.connectionStatus === 'connected'
+                      }`}>
+                      <svg className={`w-5 h-5 ${s.connectionStatus === 'connected'
                           ? 'text-green-500'
                           : s.connectionStatus === 'error'
                             ? 'text-red-500'
                             : 'text-gray-400'
-                      }`} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                        }`} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
                         <path d="M22 12h-4l-3 9L9 3l-3 9H2" />
                       </svg>
                     </div>

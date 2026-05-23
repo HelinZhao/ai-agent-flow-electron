@@ -277,6 +277,21 @@ export interface KnowledgeChunk {
   updatedAt: Date
 }
 
+// 模板市场类型
+export interface Template {
+  id: string
+  name: string
+  description: string
+  type: 'api' | 'mcp' | 'code'
+  category: string
+  icon: string
+  content: string
+  author: string
+  version: string
+  createdAt: string
+  updatedAt: string
+}
+
 // 环境变量类型
 export interface EnvVar {
   id: string

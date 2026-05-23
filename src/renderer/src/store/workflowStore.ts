@@ -1,7 +1,9 @@
 import { create } from 'zustand'
 import { persist } from 'zustand/middleware'
-import { Workflow, Skill, Agent, LLMConfig, KnowledgeBase, Trigger, EnvVar } from '@renderer/types'
-import { workflowApi, skillApi, agentApi, llmConfigApi, knowledgeBaseApi, triggerApi, envVarApi, waitForServer } from '@renderer/lib/api'
+import { Workflow, Skill, Agent, LLMConfig, KnowledgeBase, Trigger, EnvVar, Template } from '@renderer/types'
+import type { McpServer } from '@renderer/lib/mcpApi'
+import { mcpApi } from '@renderer/lib/mcpApi'
+import { workflowApi, skillApi, agentApi, llmConfigApi, knowledgeBaseApi, triggerApi, envVarApi, templateApi, waitForServer } from '@renderer/lib/api'
 import { STORAGE_KEY, STORAGE_PERSIST_FIELDS, API_BASE_URL } from '@renderer/config'
 
 interface WorkflowState {
@@ -56,6 +58,16 @@ interface WorkflowState {
   setTriggers: (triggers: Trigger[]) => void
   fetchTriggers: () => Promise<void>
 
+  // Templates
+  templates: Template[]
+  setTemplates: (vars: Template[]) => void
+  fetchTemplates: () => Promise<void>
+
+  // MCP servers (shared between pages)
+  mcpServers: McpServer[]
+  setMcpServers: (servers: McpServer[]) => void
+  fetchMcpServers: () => Promise<void>
+
   // Environment variables
   envVars: EnvVar[]
   setEnvVars: (vars: EnvVar[]) => void
@@ -86,6 +98,8 @@ export const useWorkflowStore = create<WorkflowState>()(
       activeLLMConfig: null,
       knowledgeBases: [],
       triggers: [],
+      templates: [],
+      mcpServers: [],
       envVars: [],
       currentPage: '/',
       loading: false,
@@ -140,6 +154,32 @@ export const useWorkflowStore = create<WorkflowState>()(
 
       setTriggers: (triggers: Trigger[]) => set({ triggers }),
       setEnvVars: (vars: EnvVar[]) => set({ envVars: vars }),
+      setMcpServers: (servers: McpServer[]) => set({ mcpServers: servers }),
+      fetchMcpServers: async () => {
+        const state = get()
+        state.setLoading(true)
+        try {
+          const servers = await mcpApi.getAll()
+          set({ mcpServers: servers })
+        } catch {
+          set({ mcpServers: [] })
+        } finally {
+          state.setLoading(false)
+        }
+      },
+      setTemplates: (vars: Template[]) => set({ templates: vars }),
+      fetchTemplates: async () => {
+        const state = get()
+        state.setLoading(true)
+        try {
+          const vars = await templateApi.getAll()
+          set({ templates: vars })
+        } catch {
+          set({ templates: [] })
+        } finally {
+          state.setLoading(false)
+        }
+      },
 
       fetchTriggers: async () => {
         const triggers = await triggerApi.getAll().catch(() => [] as Trigger[])
@@ -583,9 +623,11 @@ export const useWorkflowStore = create<WorkflowState>()(
                 set({ triggers })
                 break
               }
-              case 'mcp-servers':
-                // MCP 服务器数据由 McpServers 页面自行管理
+              case 'mcp-servers': {
+                const servers = await mcpApi.getAll().catch(() => [] as McpServer[])
+                set({ mcpServers: servers })
                 break
+              }
               case 'environment-variables': {
                 const envVars = await envVarApi.getAll().catch(() => [] as EnvVar[])
                 set({ envVars })

@@ -256,6 +256,7 @@ export default function Workflow(): React.JSX.Element {
 
     const handleBack = useCallback(() => {
         setSelectedWorkflowId(null);
+        setShowProgressPanel(false)
     }, []);
 
     // ========== 二级页面：工作流设计画布 ==========

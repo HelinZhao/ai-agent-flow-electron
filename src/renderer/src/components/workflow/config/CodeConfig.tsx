@@ -1,5 +1,6 @@
-import React, { useCallback } from 'react';
+import React, { useState, useCallback } from 'react';
 import TemplateEditor from '../../ui/TemplateEditor';
+import TemplatePickerModal from '../TemplatePickerModal';
 
 interface CodeConfigProps {
   config: Record<string, any>;
@@ -13,6 +14,7 @@ const VARIABLE_HELPERS = [
 ]
 
 const CodeConfig: React.FC<CodeConfigProps> = ({ config, onConfigChange }) => {
+  const [showPicker, setShowPicker] = useState(false)
   const handleCodeChange = useCallback((code: string) => {
     onConfigChange({ ...config, code })
   }, [config, onConfigChange])
@@ -87,6 +89,29 @@ const CodeConfig: React.FC<CodeConfigProps> = ({ config, onConfigChange }) => {
           <li>支持 <code className="font-mono">async/await</code> 异步操作</li>
         </ul>
       </div>
+
+      <div className="pt-2">
+        <button
+          onClick={() => setShowPicker(true)}
+          className="text-xs text-blue-600 dark:text-blue-400 hover:text-blue-800 dark:hover:text-blue-300 transition-colors"
+        >
+          + 从模板导入
+        </button>
+      </div>
+
+      <TemplatePickerModal
+        isOpen={showPicker}
+        onClose={() => setShowPicker(false)}
+        type="code"
+        onSelect={(t) => {
+          const content = JSON.parse(t.content)
+          onConfigChange({
+            ...config,
+            code: content.code || '',
+            language: content.language || 'javascript',
+          })
+        }}
+      />
     </div>
   );
 };

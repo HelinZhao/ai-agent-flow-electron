@@ -16,6 +16,7 @@ import logsRouter from './routes/logs'
 import proxyRouter from './routes/proxy'
 import mcpServersRouter from './routes/mcp-servers'
 import envVarsRouter from './routes/environment-variables'
+import templatesRouter from './routes/templates'
 import { mcpConnectionManager } from './mcp'
 import { getUserDataDir, migrateOldDataDir } from './utils'
 import {
@@ -107,6 +108,7 @@ export class LocalServer {
     this.app.use('/api', proxyRouter)
     this.app.use('/api/mcp-servers', mcpServersRouter)
     this.app.use('/api/environment-variables', envVarsRouter)
+    this.app.use('/api/templates', templatesRouter)
 
     // Ollama 模型状态与拉取路由
     this.app.get('/api/ollama/status', async (_req, res) => {

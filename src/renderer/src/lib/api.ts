@@ -11,7 +11,8 @@ import {
   KnowledgeBase,
   KnowledgeChunk,
   Trigger,
-  EnvVar
+  EnvVar,
+  Template
 } from '@renderer/types'
 import { API_BASE_URL, POLL_MAX_ATTEMPTS, POLL_INTERVAL } from '@renderer/config'
 
@@ -518,6 +519,12 @@ export const dataApi = {
 }
 
 // 触发器 API
+export const templateApi = {
+  getAll: (type?: string): Promise<Template[]> =>
+    api.get('/templates' + (type ? '?type=' + type : '')),
+  getById: (id: string): Promise<Template> => api.get('/templates/' + id),
+}
+
 export const envVarApi = {
   getAll: (): Promise<EnvVar[]> => api.get('/environment-variables'),
 

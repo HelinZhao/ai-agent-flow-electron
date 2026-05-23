@@ -17,6 +17,7 @@ import ExecutionMonitor from "./ExecutionMonitor";
 import Triggers from "./Triggers";
 import Knowledge from "./Knowledge";
 import McpServers from "./McpServers";
+import Marketplace from "./Marketplace";
 
 
 const navItems = [
@@ -27,6 +28,7 @@ const navItems = [
     { path: '/knowledge', label: '知识库', icon: '📚', page: <Knowledge /> },
     { path: '/triggers', label: '触发器', icon: '⏰', page: <Triggers /> },
     { path: '/mcp', label: 'MCP服务', icon: '🔌', page: <McpServers /> },
+    { path: '/marketplace', label: '模板市场', icon: '🏪', page: <Marketplace /> },
     { path: '/monitor', label: '执行监控', icon: '📊', page: <ExecutionMonitor /> },
     { path: '/settings', label: '设置', icon: '⚙️', page: <Settings /> },
     { path: '/logs', label: '日志', icon: '📋', page: <Logs /> }
