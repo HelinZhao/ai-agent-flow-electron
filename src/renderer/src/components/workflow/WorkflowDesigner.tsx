@@ -20,6 +20,7 @@ import { getNodeDefaultLabel } from './nodes';
 import ContextMenu from './ContextMenu';
 import ControlPanel from './ControlPanel';
 import BranchSelectionModal from './BranchSelectionModal';
+import NodeTestDialog from './NodeTestDialog';
 import WorkflowEnvVarsModal from './WorkflowEnvVarsModal';
 import { autoLayout } from './layoutUtils';
 import { LayoutDirectionContext, LayoutDirection } from './LayoutDirectionContext';
@@ -65,6 +66,7 @@ function WorkflowDesigner(props: WorkflowDesignerProps): React.JSX.Element {
   const [nodeContextMenu, setNodeContextMenu] = useState<{ x: number; y: number } | null>(null);
   const [showEnvVars, setShowEnvVars] = useState(false)
   const [workflowEnvVars, setWorkflowEnvVars] = useState<Record<string, string>>(workflow.envVars || {})
+  const [testNodeId, setTestNodeId] = useState<string | null>(null)
   const [branchSelection, setBranchSelection] = useState<{
     isOpen: boolean;
     branches: WorkflowBranch[];
@@ -80,7 +82,7 @@ function WorkflowDesigner(props: WorkflowDesignerProps): React.JSX.Element {
     isEditing: false,
     editEdgeId: null,
   });
-  const { screenToFlowPosition, fitView, getNodes } = useReactFlow();
+  const { screenToFlowPosition, fitView, getNodes, getNode } = useReactFlow();
   const defaultDir = useSettingsStore.getState().layoutDirection
   const [layoutDirection, setLayoutDirection] = useState<LayoutDirection>(workflow?.layoutDirection || defaultDir || 'horizontal');
 
@@ -295,7 +297,7 @@ function WorkflowDesigner(props: WorkflowDesignerProps): React.JSX.Element {
         }
       }
 
-      const isErrorEdge = getNodes().find(n => n.id === params.target)?.type === 'catch'
+      const isErrorEdge = getNode(params.target)?.type === 'catch'
       const newEdge: WorkflowEdge = {
         ...params,
         id: `edge-${uuidv4()}`,
@@ -453,13 +455,13 @@ function WorkflowDesigner(props: WorkflowDesignerProps): React.JSX.Element {
     event.stopPropagation();
 
     const currentNodes = getNodes();
-    if (!currentNodes.find(n => n.id === node.id)?.selected) {
+    if (!getNode(node.id)?.selected) {
       setNodes(currentNodes.map(n => ({ ...n, selected: n.id === node.id })) as unknown as WorkflowNode[]);
     }
 
     setContextMenu(null);
     setNodeContextMenu({ x: event.pageX, y: event.pageY });
-  }, [getNodes, setNodes]);
+  }, [getNodes, setNodes, getNode]);
 
   // 节点右键菜单外部点击关闭
   useEffect(() => {
@@ -571,6 +573,20 @@ function WorkflowDesigner(props: WorkflowDesignerProps): React.JSX.Element {
               />
             )}
           </ReactFlow>
+          {testNodeId && (() => {
+            const n = getNode(testNodeId)
+            if (!n) return null
+            return (
+              <NodeTestDialog
+                isOpen={!!testNodeId}
+                onClose={() => setTestNodeId(null)}
+                nodeId={n.id}
+                nodeLabel={String(n.data?.label || '')}
+                nodeType={String(n.type || '')}
+                workflowJson={{ nodes: nodesRef.current, edges: edgesRef.current }}
+              />
+            )
+          })()}
         </LayoutDirectionContext.Provider>
 
         {/* 右键菜单 */}
@@ -598,26 +614,39 @@ function WorkflowDesigner(props: WorkflowDesignerProps): React.JSX.Element {
             onClick={(e) => e.stopPropagation()}
             onContextMenu={(e) => e.stopPropagation()}
           >
-              <button
-                onClick={() => { handleCopySelectedNodes(); setNodeContextMenu(null) }}
-                className="w-full px-3 py-2 text-left text-sm flex items-center gap-2 hover:bg-gray-50 dark:hover:bg-gray-700 text-gray-700 dark:text-gray-300"
-              >
-                <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                  <rect x="9" y="9" width="13" height="13" rx="2" ry="2" />
-                  <path d="M5 15H4a2 2 0 01-2-2V4a2 2 0 012-2h9a2 2 0 012 2v1" />
-                </svg>
-                复制
-              </button>
-              <button
-                onClick={() => { handleDeleteSelectedNodes(); setNodeContextMenu(null) }}
-                className="w-full px-3 py-2 text-left text-sm flex items-center gap-2 hover:bg-gray-50 dark:hover:bg-gray-700 text-red-600 dark:text-red-400"
-              >
-                <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                  <path d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
-                </svg>
-                删除
-              </button>
-            </div>,
+            <button
+              onClick={() => {
+                const sel = getNodes().find(n => n.selected)
+                if (sel) setTestNodeId(sel.id)
+                setNodeContextMenu(null)
+              }}
+              className="w-full px-3 py-2 text-left text-sm flex items-center gap-2 hover:bg-gray-50 dark:hover:bg-gray-700 text-purple-600 dark:text-purple-400"
+            >
+              <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                <polygon points="5,3 19,12 5,21" />
+              </svg>
+              执行
+            </button>
+            <button
+              onClick={() => { handleCopySelectedNodes(); setNodeContextMenu(null) }}
+              className="w-full px-3 py-2 text-left text-sm flex items-center gap-2 hover:bg-gray-50 dark:hover:bg-gray-700 text-gray-700 dark:text-gray-300"
+            >
+              <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                <rect x="9" y="9" width="13" height="13" rx="2" ry="2" />
+                <path d="M5 15H4a2 2 0 01-2-2V4a2 2 0 012-2h9a2 2 0 012 2v1" />
+              </svg>
+              复制
+            </button>
+            <button
+              onClick={() => { handleDeleteSelectedNodes(); setNodeContextMenu(null) }}
+              className="w-full px-3 py-2 text-left text-sm flex items-center gap-2 hover:bg-gray-50 dark:hover:bg-gray-700 text-red-600 dark:text-red-400"
+            >
+              <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                <path d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+              </svg>
+              删除
+            </button>
+          </div>,
           document.body
         )}
 

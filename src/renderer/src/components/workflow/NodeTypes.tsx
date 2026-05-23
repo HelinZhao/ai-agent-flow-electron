@@ -499,7 +499,9 @@ export function SleepNode({ data, selected }: { data: any; selected: boolean }):
         <div className="flex-1 text-left">
           <div className="font-bold text-gray-800">{def.shortLabel}</div>
           <div className="text-xs text-gray-700 font-medium mt-0.5">{data.label}</div>
-          <div className="text-xs text-gray-500 font-medium mt-1">{sleepMs >= 60000 ? Math.floor(sleepMs / 60000) + 'm ' + Math.floor((sleepMs % 60000) / 1000) + 's' : sleepMs >= 1000 ? (sleepMs / 1000).toFixed(sleepMs % 1000 === 0 ? 0 : 1) + 's' : sleepMs + 'ms'}</div>
+          <div className="text-xs text-gray-500 font-medium mt-1">
+            {sleepMs >= 60000 ? Math.floor(sleepMs / 60000) + 'm ' + Math.floor((sleepMs % 60000) / 1000) + 's' : sleepMs >= 1000 ? (sleepMs / 1000).toFixed(sleepMs % 1000 === 0 ? 0 : 1) + 's' : sleepMs + 'ms'}
+          </div>
         </div>
       </div>
     </div>

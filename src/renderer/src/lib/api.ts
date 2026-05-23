@@ -289,6 +289,11 @@ export const workflowExecutionApi = {
   ): Promise<{ success: boolean; message: string }> =>
     api.delete(`/execute-workflow/delete-thread/${threadId}`),
 
+  // 单节点独立测试
+  testNode: (workflow: any, nodeId: string, input: string): Promise<{
+    output: string; duration: number; status: string; error?: string; metadata?: any
+  }> => api.post('/execute-workflow/test-node', { workflow, nodeId, input }),
+
   // 等待AI Agent对话完成并获取结果（使用SSE）
   waitForAgentChatResultSSE: (
     executionId: string,

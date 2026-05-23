@@ -579,4 +579,34 @@ router.post('/agent-chat-monitor', async (req, res) => {
   }
 })
 
+
+// 单节点测试（不构建完整工作流图）
+router.post('/test-node', async (req, res) => {
+  try {
+    const { workflow, nodeId, input } = req.body
+    if (!workflow || !nodeId) {
+      return res.status(400).json({ error: '缺少必要参数' })
+    }
+
+    const activeLLMConfig = await LLMConfigModel.findOne({ where: { isActive: true } })
+    if (!activeLLMConfig) {
+      return res.status(400).json({ error: '未配置活跃 LLM' })
+    }
+
+    const llmConfig: LLMConfig = {
+      provider: activeLLMConfig.provider,
+      apiKey: activeLLMConfig.apiKey,
+      model: activeLLMConfig.model,
+      baseUrl: activeLLMConfig.baseUrl,
+      temperature: activeLLMConfig.temperature,
+      maxTokens: activeLLMConfig.maxTokens
+    }
+
+    const result = await monitoredExecutor.testNode(workflow, nodeId, input || '', llmConfig)
+    return res.status(200).json(result)
+  } catch (error) {
+    return res.status(500).json({ error: error instanceof Error ? error.message : '测试执行失败' })
+  }
+})
+
 export default router

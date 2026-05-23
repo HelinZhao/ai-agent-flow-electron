@@ -168,6 +168,40 @@ export class MonitoredLangGraphExecutor {
     return executionId
   }
 
+
+  async testNode(workflow: Workflow, nodeId: string, input: string, llmConfig: LLMConfig) {
+    const node = workflow.nodes.find(n => n.id === nodeId)
+    if (!node) return { output: '', duration: 0, status: 'failed', error: '节点不存在' }
+
+    const startTime = Date.now()
+    try {
+      const result = await this.executeMonitoredNode({
+        executionId: 'test-' + nodeId,
+        node,
+        input,
+        llmConfig,
+        nodeResults: new Map(),
+        node2Sources: new Map(),
+        node2Targets: new Map()
+      })
+      return {
+        output: result.output || '',
+        duration: result.duration || (Date.now() - startTime),
+        status: result.status || 'completed',
+        error: result.error,
+        metadata: result.metadata,
+      }
+    } catch (error) {
+      return {
+        output: '',
+        duration: Date.now() - startTime,
+        status: 'failed',
+        error: error instanceof Error ? error.message : '未知错误',
+      }
+    }
+  }
+
+
   // 异步执行工作流
   private async executeWorkflowAsync(
     executionId: string,
