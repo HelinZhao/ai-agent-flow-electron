@@ -582,7 +582,7 @@ function WorkflowDesigner(props: WorkflowDesignerProps): React.JSX.Element {
                 onClose={() => setTestNodeId(null)}
                 nodeId={n.id}
                 nodeLabel={String(n.data?.label || '')}
-                nodeType={String(n.type || '')}
+                nodeType={n.type || ''}
                 workflowJson={{ nodes: nodesRef.current, edges: edgesRef.current }}
               />
             )
