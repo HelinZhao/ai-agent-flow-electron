@@ -26,7 +26,7 @@ AI Agent Flow Electron 是一个基于 Electron + React + TypeScript 的**桌面
 - 无工作流时自动降级为 LLM 对话
 
 ### 🔄 可视化工作流
-- 基于 React Flow 的拖拽式编辑器，12 种节点类型组合编排
+- 基于 React Flow 的拖拽式编辑器，19 种节点类型组合编排
 - 一键 Dagre 自动布局
 - 实时执行进度、节点状态、耗时监控
 
@@ -50,6 +50,8 @@ AI Agent Flow Electron 是一个基于 Electron + React + TypeScript 的**桌面
 - 支持启用/禁用控制和手动执行
 
 ### 🎨 更多功能
+- **节点测试** — 右键任意节点 → 执行 → 输入测试数据 → 立即查看输出
+- **自动重试** — 每个节点可配置重试次数、间隔和退避策略，失败自动重试
 - **多 LLM 配置** — OpenAI / Anthropic / Azure / 百炼 / LongCat 等，一键切换活跃配置
 - **LLM 缓存** — 自研 TTL 缓存，相同 Prompt 10 分钟内命中缓存，节省 API 费用
 - **表达式系统** — {{$input}}、{{$params.xxx}}、{{$nodes["id"].output}}、{{$env.xxx}}、{{$global.xxx}}、{{$now}} 等内置变量，所有模板字段通用
@@ -382,16 +384,32 @@ this.app.use('/api/new-route', newRouter)
 
 ## 更新日志
 
-### v1.4.0
+### v1.6.0
 
-- **系统 AI 助手**：悬浮式 AI 助手（可拖拽），支持自由移动位置、智能避让窗口边缘
-- 系统助手集成全部工具能力，危险操作走 HITL 人工审批流程
-- 系统助手对话历史持久化，每次打开自动恢复上下文
-- Agent 列表置顶显示系统助手，支持限制编辑（仅技能/工具可调）
-- Chat 页 Agent 列表系统助手增加"系统"标签
-- 通用设置新增"悬浮系统助手"开关，可关闭
-- 备份导出：支持触发器和知识库数据
-- download-ollama.mjs 新增 --platform / --arch 参数，支持跨平台指定下载
+- **节点扩容**：从 9 种扩展到 19 种，新增 Loop、Transform、Split、Merge、Catch、Sleep、Note 节点
+- **Merge 并行聚合**：并行分支 fan-out + 条件边前驱等待机制
+- **Loop 循环节点**：条件循环 + 反馈回路，JS 终止条件表达式
+- **Error Catch 节点**：错误边路由 + 失败自动触发 + 红色虚线样式
+- **Transform 转换节点**：JSON Path 提取、JSON↔Text 互转
+- **Split 拆分节点**：数组/文本拆分逐项 + 子工作流处理
+- **自动重试机制**：每个节点可配重试次数/间隔/退避策略
+- **表达式系统**：{{}}、{{.xxx}}、{{[id].output}}、{{.xxx}}、{{.xxx}}、{{}}
+- **环境变量管理**：全局(设置页) + 工作流级(编辑器)双层隔离
+- **ExpressionInput 组件**：语法高亮 +  自动补全
+- **变量参考弹窗**：画布工具栏变量按钮查阅完整变量表
+- **节点测试**：右键菜单执行 → 测试对话框 → 独立执行查看输出
+- **Code 节点**：JS 执行引擎，注入 //
+- **代码质量控制**：.gitattributes eol=lf 统一换行符，多次重构优化
+
+### v1.5.0
+
+- **环境变量系统**：全局 {{$global.xxx}}(设置页) + 工作流级 {{$env.xxx}}(编辑器) 双层管理
+- **表达式系统**：{{$input}}、{{$params.xxx}}、{{$nodes["id"].output}}、{{$env.xxx}}、{{$global.xxx}}、{{$now}}
+- **ExpressionInput 组件**：语法高亮 + $nodes 自动补全
+- **Code 节点**：JavaScript 执行引擎，注入 $input/$params/$nodes
+- **变量参考弹窗**：画布工具栏"变量"按钮
+- **设置页环境变量管理**：可视化 CRUD
+- **全局 LF 换行符**：.gitattributes eol=lf
 
 ### v1.3.0
 

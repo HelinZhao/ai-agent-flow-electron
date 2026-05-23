@@ -1,6 +1,7 @@
 import { VISION_MODEL_PATTERNS } from '../config'
 import { Worker } from 'worker_threads'
 import { SkillModel } from '../models'
+import { HumanMessage } from 'langchain'
 
 export function isVisionModel(model: string): boolean {
   const lowerModel = model.toLowerCase()
@@ -41,6 +42,55 @@ export interface AttachmentPayload {
   dataUrl?: string // base64 data URI（仅临时传输，不持久化）
   textContent?: string // 文本内容（仅临时传输，不持久化）
   filePath?: string // 磁盘文件路径（持久化）
+}
+export async function buildHumanMessage(input: string, attachments?: AttachmentPayload[]): Promise<HumanMessage> {
+  if (!attachments || attachments.length === 0) {
+    return new HumanMessage(input)
+  }
+
+  // 构建纯文本内容（图片数据不在LangGraph层面传递，而是在callLLM时注入）
+  let textContent = input
+
+  for (const att of attachments) {
+    // 构造附件URL，供LLM工具（如知识库上传）引用
+    const attUrl = `/api/attachments/${att.id}/${encodeURIComponent(att.name)}`
+
+    switch (att.category) {
+      case 'image':
+        textContent += `\n[图片附件: ${att.name}]  URL: ${attUrl}`
+        break
+      case 'text':
+        if (att.textContent) {
+          textContent += `\n\n---\n文件: ${att.name}\n附件URL: ${attUrl}\n---\n${att.textContent}\n---`
+        } else if (att.filePath) {
+          try {
+            const { loadAttachmentAsText } = await import('./file')
+            const content = await loadAttachmentAsText(att.filePath)
+            textContent += `\n\n---\n文件: ${att.name}\n附件URL: ${attUrl}\n---\n${content}\n---`
+          } catch {
+            textContent += `\n[文本文件: ${att.name} (${att.size} bytes, 内容无法读取)]  URL: ${attUrl}`
+          }
+        } else {
+          textContent += `\n[文本文件: ${att.name} (${att.size} bytes, 内容无法读取)]  URL: ${attUrl}`
+        }
+        break
+      case 'pdf':
+        textContent += `\n[PDF文件: ${att.name} (${formatSize(att.size)})]  URL: ${attUrl}`
+        break
+      case 'binary':
+        textContent += `\n[文件: ${att.name} (${att.type}, ${formatSize(att.size)})]  URL: ${attUrl}`
+        break
+    }
+  }
+
+  return new HumanMessage(textContent)
+}
+
+
+export function formatSize(bytes: number): string {
+  if (bytes < 1024) return `${bytes} B`
+  if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`
+  return `${(bytes / (1024 * 1024)).toFixed(1)} MB`
 }
 
 // 安全JSON解析函数

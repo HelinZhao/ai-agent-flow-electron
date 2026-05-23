@@ -7,7 +7,7 @@ import { executeApiCall } from './api'
 import { executeCliCommand, executeCliTemplate } from './cli'
 import { HITLRequest, HITLResponse, HITLDecision, CallLLMOptions } from './hitl'
 import { getUserDataDir, saveAttachmentToDisk } from './file'
-import { AttachmentPayload, safeJsonParse, buildSkillsContext } from './shared'
+import { AttachmentPayload, safeJsonParse, buildSkillsContext, buildHumanMessage } from './shared'
 import { retrieveContext } from './knowledge'
 import { v4 as uuidv4 } from 'uuid'
 import { SqliteSaver } from "@langchain/langgraph-checkpoint-sqlite";
@@ -95,6 +95,7 @@ export class MonitoredLangGraphExecutor {
     params?: Record<string, any>
   ): Promise<string> {
     const executionId = uuidv4()
+    const effectiveThreadId = threadId || executionId
 
     // 初始化执行状态
     const executionState: ExecutionState = {
@@ -112,7 +113,7 @@ export class MonitoredLangGraphExecutor {
         }
       ],
       agentId,
-      threadId,
+      threadId: effectiveThreadId,
       autoApprovedToolTypes: new Set<string>(autoApprovedTools || []),
       pendingApproval: null,
       attachments: [], // 将在下方替换为filePath版本
@@ -163,7 +164,7 @@ export class MonitoredLangGraphExecutor {
     await this.ensureEnvVarsLoaded()
 
     // 在后台执行工作流
-    this.executeWorkflowAsync(executionId, workflow, input, llmConfig, agentId, threadId, attachments)
+    this.executeWorkflowAsync(executionId, workflow, input, llmConfig, effectiveThreadId, attachments)
 
     return executionId
   }
@@ -208,7 +209,6 @@ export class MonitoredLangGraphExecutor {
     workflow: Workflow,
     input: string,
     llmConfig: LLMConfig,
-    agentId?: string,
     threadId?: string,
     attachments?: AttachmentPayload[]
   ): Promise<void> {
@@ -219,7 +219,7 @@ export class MonitoredLangGraphExecutor {
       }
       const compiledGraph = await this.buildMonitoredLangGraph(executionId, workflow, llmConfig)
       state.compiledGraph = compiledGraph
-      await this.executeMonitoredLangGraph(compiledGraph, input, executionId, agentId, threadId, attachments)
+      await this.executeMonitoredLangGraph(compiledGraph, input, executionId, threadId, attachments)
       // 检查是否被暂停，如果是则不更新为完成状态
       if (state.status === 'running') {
         // 更新执行状态为完成
@@ -501,7 +501,6 @@ export class MonitoredLangGraphExecutor {
     compiledGraph: CompiledStateGraph<any, any>,
     input: string,
     executionId: string,
-    agentId?: string,
     threadId?: string,
     attachments?: AttachmentPayload[]
   ): Promise<string> {
@@ -518,7 +517,7 @@ export class MonitoredLangGraphExecutor {
 
     const config = {
       configurable: {
-        thread_id: threadId || agentId || 'default-thread'
+        thread_id: threadId
       },
       signal: abortController.signal
     }
@@ -1031,7 +1030,7 @@ export class MonitoredLangGraphExecutor {
       this.agentCallStack.add(targetAgentId)
       try {
         const subGraph = await this.buildMonitoredLangGraph(subExecutionId, workflowObj, llmConfig)
-        const result = await this.executeMonitoredLangGraph(subGraph, input, subExecutionId, agent.id, subExecutionId, attachments)
+        const result = await this.executeMonitoredLangGraph(subGraph, input, subExecutionId, subExecutionId, attachments)
 
         return {
           output: result,
@@ -1129,7 +1128,7 @@ export class MonitoredLangGraphExecutor {
       this.workflowCallStack.add(workflowId)
       try {
         const subGraph = await this.buildMonitoredLangGraph(subExecutionId, workflowObj, llmConfig)
-        const result = await this.executeMonitoredLangGraph(subGraph, input, subExecutionId, undefined, subExecutionId, attachments)
+        const result = await this.executeMonitoredLangGraph(subGraph, input, subExecutionId, subExecutionId, attachments)
 
         return {
           output: result,
@@ -1574,7 +1573,7 @@ export class MonitoredLangGraphExecutor {
 
         try {
           const subGraph = await this.buildMonitoredLangGraph(subExecutionId, workflowObj, llmConfig)
-          const subResult = await this.executeMonitoredLangGraph(subGraph, String(items[i]), subExecutionId, undefined, subExecutionId)
+          const subResult = await this.executeMonitoredLangGraph(subGraph, String(items[i]), subExecutionId, subExecutionId)
           results.push(subResult)
           this.executionStates.delete(subExecutionId)
         } catch (error) {
@@ -1746,7 +1745,7 @@ export class MonitoredLangGraphExecutor {
         let subOutput: string
         try {
           const subGraph = await this.buildMonitoredLangGraph(subExecutionId, workflowObj, llmConfig)
-          subOutput = await this.executeMonitoredLangGraph(subGraph, currentInput, subExecutionId, undefined, subExecutionId)
+          subOutput = await this.executeMonitoredLangGraph(subGraph, currentInput, subExecutionId, subExecutionId)
           this.executionStates.delete(subExecutionId)
         } catch (error) {
           this.executionStates.delete(subExecutionId)
@@ -2028,7 +2027,7 @@ ${conditionText}
         state.status = 'running'
         const config = {
           configurable: {
-            thread_id: state.threadId || state.agentId || 'default-thread'
+            thread_id: state.threadId
           }
         }
         state.logs.push({
@@ -2382,53 +2381,4 @@ ${conditionText}
       }
     }
   }
-}
-
-function formatSize(bytes: number): string {
-  if (bytes < 1024) return `${bytes} B`
-  if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`
-  return `${(bytes / (1024 * 1024)).toFixed(1)} MB`
-}
-
-async function buildHumanMessage(input: string, attachments?: AttachmentPayload[]): Promise<HumanMessage> {
-  if (!attachments || attachments.length === 0) {
-    return new HumanMessage(input)
-  }
-
-  // 构建纯文本内容（图片数据不在LangGraph层面传递，而是在callLLM时注入）
-  let textContent = input
-
-  for (const att of attachments) {
-    // 构造附件URL，供LLM工具（如知识库上传）引用
-    const attUrl = `/api/attachments/${att.id}/${encodeURIComponent(att.name)}`
-
-    switch (att.category) {
-      case 'image':
-        textContent += `\n[图片附件: ${att.name}]  URL: ${attUrl}`
-        break
-      case 'text':
-        if (att.textContent) {
-          textContent += `\n\n---\n文件: ${att.name}\n附件URL: ${attUrl}\n---\n${att.textContent}\n---`
-        } else if (att.filePath) {
-          try {
-            const { loadAttachmentAsText } = await import('./file')
-            const content = await loadAttachmentAsText(att.filePath)
-            textContent += `\n\n---\n文件: ${att.name}\n附件URL: ${attUrl}\n---\n${content}\n---`
-          } catch {
-            textContent += `\n[文本文件: ${att.name} (${att.size} bytes, 内容无法读取)]  URL: ${attUrl}`
-          }
-        } else {
-          textContent += `\n[文本文件: ${att.name} (${att.size} bytes, 内容无法读取)]  URL: ${attUrl}`
-        }
-        break
-      case 'pdf':
-        textContent += `\n[PDF文件: ${att.name} (${formatSize(att.size)})]  URL: ${attUrl}`
-        break
-      case 'binary':
-        textContent += `\n[文件: ${att.name} (${att.type}, ${formatSize(att.size)})]  URL: ${attUrl}`
-        break
-    }
-  }
-
-  return new HumanMessage(textContent)
 }
