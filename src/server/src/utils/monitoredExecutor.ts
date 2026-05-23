@@ -650,6 +650,9 @@ export class MonitoredLangGraphExecutor {
       case 'code':
         return await this.executeCode(ctx)
 
+      case 'sleep':
+        return await this.executeSleep(ctx)
+
       case 'loop':
         return await this.executeLoop(ctx)
 
@@ -1588,6 +1591,18 @@ export class MonitoredLangGraphExecutor {
         label: node.data?.label,
         type: 'text',
       }
+    }
+  }
+
+  private async executeSleep(ctx: ExecCtx) {
+    const { node, input } = ctx
+    const sleepMs = Math.max(0, node.data.config?.sleepMs ?? 1000)
+    if (sleepMs > 0) {
+      await new Promise(resolve => setTimeout(resolve, sleepMs))
+    }
+    return {
+      output: input,
+      metadata: { nodeId: node.id, label: node.data?.label, type: 'sleep', sleepMs }
     }
   }
 
