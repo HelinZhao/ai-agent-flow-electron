@@ -1,4 +1,5 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useState, useRef } from 'react'
+import { useForm, Controller } from 'react-hook-form'
 import { Trigger, VariableConfig } from '@renderer/types'
 import { triggerApi, workflowApi } from '@renderer/lib/api'
 import { useWorkflowStore } from '@renderer/store/workflowStore'
@@ -48,15 +49,18 @@ export default function Triggers(): React.JSX.Element {
   const [editingId, setEditingId] = useState<string | null>(null)
 
   // form state
-  const [formName, setFormName] = useState('')
-  const [formType, setFormType] = useState<'cron' | 'webhook'>('cron')
-  const [formCron, setFormCron] = useState('0 0 9 * * * ')
-  const [formTargetType, setFormTargetType] = useState<'workflow' | 'agent'>('workflow')
-  const [formTargetId, setFormTargetId] = useState('')
-  const [formInput, setFormInput] = useState('')
   const [targetParams, setTargetParams] = useState<VariableConfig[]>([])
-  const [formParams, setFormParams] = useState<Record<string, any>>({})
   const [saving, setSaving] = useState(false)
+  const savedParamValues = useRef<Record<string, any>>({})
+
+  const { handleSubmit, reset, control, getValues, setValue, watch } = useForm<Record<string, any>>({
+    defaultValues: { name: '', input: '', type: 'cron', cronExpression: '0 0 9 * * *', targetType: 'workflow', targetId: '' }
+  })
+
+  const formType = watch('type')
+  const formCron = watch('cronExpression')
+  const formTargetType = watch('targetType')
+  const formTargetId = watch('targetId')
 
   const triggers = useWorkflowStore(s => s.triggers)
   const setTriggers = useWorkflowStore(s => s.setTriggers)
@@ -81,47 +85,57 @@ export default function Triggers(): React.JSX.Element {
 
   const openCreate = () => {
     setEditingId(null)
-    setFormName('')
-    setFormType('cron')
-    setFormCron('0 0 9 * * *')
-    setFormTargetType('workflow')
-    setFormTargetId(targetOptions[0]?.value || '')
-    setFormInput('')
+    reset({ name: '', input: '', type: 'cron', cronExpression: '0 0 9 * * *', targetType: 'workflow', targetId: targetOptions[0]?.value || '' })
     setShowModal(true)
   }
 
   const openEdit = (t: Trigger) => {
     setEditingId(t.id)
-    setFormName(t.name)
-    setFormType(t.type)
-    setFormCron(t.cronExpression || '0 0 9 * * *')
-    setFormTargetType(t.targetType)
-    setFormTargetId(t.targetId)
-    setFormInput(t.input)
-    try { setFormParams(JSON.parse(t.params || t.input)) } catch { setFormParams({}) }
+    const parsed: Record<string, any> = {}
+    try { Object.assign(parsed, JSON.parse(t.params || '{}')) } catch { /* ignore */ }
+    savedParamValues.current = { ...parsed }
+    reset({
+      name: t.name,
+      input: t.input || parsed.input || '',
+      type: t.type,
+      cronExpression: t.cronExpression || '0 0 9 * * *',
+      targetType: t.targetType,
+      targetId: t.targetId
+    })
+    // 立即回显 params (不依赖 useEffect 的异步加载)
+    Object.entries(parsed).forEach(([key, val]) => {
+      if (key !== 'input') setValue(`params.${key}`, val)
+    })
     setShowModal(true)
   }
 
-  const handleSave = async () => {
-    if (!formName.trim() || !formTargetId) return
+  const onSave = async () => {
+    const all = getValues()
+    if (!all.name?.trim()) return
+    const targetId = all.targetId
+    const targetType = all.targetType
+    if (!targetId) return
+    const input = all.input || ''
+    let params: Record<string, any> | undefined
+    if (targetType === 'workflow' && targetParams.length > 0) {
+      params = getValues('params') || {}
+    }
     setSaving(true)
     try {
+      const isCron = all.type === 'cron'
       const info = {
-        name: formName,
-        type: formType,
-        cronExpression: formType === 'cron' ? formCron : undefined,
-        targetType: formTargetType,
-        targetId: formTargetId,
-        input: (formTargetType === 'workflow' && targetParams.length > 0) ? (formParams.input || '') : formInput,
-        params: (formTargetType === 'workflow' && targetParams.length > 0) ? JSON.stringify(formParams) : undefined
+        name: all.name.trim(),
+        type: all.type,
+        cronExpression: isCron ? all.cronExpression : undefined,
+        targetType,
+        targetId,
+        input,
+        params: params ? JSON.stringify(params) : undefined
       }
       if (editingId) {
         await triggerApi.update(editingId, info)
       } else {
-        await triggerApi.create({
-          ...info,
-          enabled: true
-        })
+        await triggerApi.create({ ...info, enabled: true })
       }
       setShowModal(false)
       await refresh()
@@ -129,6 +143,8 @@ export default function Triggers(): React.JSX.Element {
       setSaving(false)
     }
   }
+
+  const handleSave = handleSubmit(onSave)
 
   const handleToggle = async (t: Trigger) => {
     await triggerApi.update(t.id, { enabled: !t.enabled })
@@ -166,9 +182,9 @@ export default function Triggers(): React.JSX.Element {
   }, [formTargetId, formTargetType])
 
   const handleTargetTypeChange = (v: string) => {
-    setFormTargetType(v as 'workflow' | 'agent')
+    setValue('targetType', v)
     const targets = v === 'workflow' ? workflows : agents
-    setFormTargetId(targets[0]?.id || '')
+    setValue('targetId', targets[0]?.id || '')
   }
 
   return (
@@ -327,9 +343,9 @@ export default function Triggers(): React.JSX.Element {
               取消
             </CustomButton>
             <CustomButton
-              onClick={handleSave}
+              type="submit"
+              form="trigger-form"
               loading={saving}
-              disabled={!formName.trim() || !formTargetId}
               size='sm'
             >
               {editingId ? '保存' : '创建'}
@@ -337,115 +353,122 @@ export default function Triggers(): React.JSX.Element {
           </>
         }
       >
-        {/* name */}
-        <div>
-          <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5">名称</label>
-          <CustomInput size="sm" value={formName} onChange={e => setFormName(e.target.value)} placeholder="例如：每日报表" />
-        </div>
-
-        {/* type */}
-        <div>
-          <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5">触发方式</label>
-          <CustomSelect
-            size="sm"
-            value={formType}
-            onChange={v => setFormType(v as 'cron' | 'webhook')}
-            options={[
-              { value: 'cron', label: '⏰ 定时触发 (Cron)' },
-              { value: 'webhook', label: '🔗 Webhook' }
-            ]}
-          />
-        </div>
-
-        {/* cron */}
-        {formType === 'cron' && (
+        <form id="trigger-form" onSubmit={handleSave} key={editingId ?? 'create'}>
+          {/* name */}
           <div>
-            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5">
-              Cron 表达式
-            </label>
-            <div className="flex flex-wrap gap-1.5 mb-2">
-              {CRON_PRESETS.map(p => (
-                <button
-                  key={p.value}
-                  onClick={() => setFormCron(p.value)}
-                  className={`px-2.5 py-1 rounded-lg text-xs font-medium transition-colors ${formCron === p.value
-                    ? 'bg-blue-500 text-white'
-                    : 'bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600'
-                    }`}
-                >
-                  {p.label}
-                </button>
-              ))}
-            </div>
-            <div className="bg-white dark:bg-gray-900/50 rounded-lg border border-gray-200 dark:border-gray-700 p-4">
-              <CronBuilder
-                value={formCron}
-                onChange={setFormCron}
-                includeSeconds={true}
-              />
-            </div>
-            <p className="text-xs text-gray-400 mt-1">
-              {describeCronSimple(formCron)}
-            </p>
+            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5">名称</label>
+            <Controller
+              name="name"
+              control={control}
+              rules={{ required: true }}
+              render={({ field }) => (
+                <CustomInput size="sm" {...field} placeholder="例如：每日报表" />
+              )}
+            />
           </div>
-        )}
 
-        {/* webhook */}
-        {formType === 'webhook' && (
-          <div className="bg-gray-50 dark:bg-gray-900/50 rounded-xl p-3 text-sm text-gray-500 dark:text-gray-400">
-            创建后自动生成 Webhook URL，通过 POST 请求即可触发
+          {/* type */}
+          <div>
+            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5">触发方式</label>
+            <CustomSelect
+              size="sm"
+              value={formType}
+              onChange={v => setValue('type', v)}
+              options={[
+                { value: 'cron', label: '⏰ 定时触发 (Cron)' },
+                { value: 'webhook', label: '🔗 Webhook' }
+              ]}
+            />
           </div>
-        )}
 
-        {/* target */}
-        <div>
-          <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5">执行目标</label>
-          <div className="flex gap-2">
-            <div className="w-28">
-              <CustomSelect
-                size="sm"
-                value={formTargetType}
-                onChange={handleTargetTypeChange}
-                options={[
-                  { value: 'workflow', label: '工作流' },
-                  { value: 'agent', label: 'Agent' }
-                ]}
-              />
-            </div>
-            <div className="flex-1">
-              <CustomSelect
-                size="sm"
-                value={formTargetId}
-                onChange={setFormTargetId}
-                options={targetOptions}
-                placeholder={targetOptions.length === 0 ? `暂无${formTargetType === 'workflow' ? '工作流' : 'Agent'}` : '请选择...'}
-              />
-            </div>
-          </div>
-        </div>
-
-        {/* input */}
-        <div>
-          <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5">
-            {(formTargetType === "workflow" && targetParams.length > 0) ? "工作流参数" : "输入文本"}
-          </label>
-          {(formTargetType === "workflow" && targetParams.length > 0) ? (
-            <div className="space-y-3 p-3 bg-gray-50 dark:bg-gray-800/50 rounded-lg border border-gray-200 dark:border-gray-700">
-              <div>
-                <label className="block text-xs font-medium text-gray-500 mb-1">
-                  文本输入 <span className="text-gray-400 font-normal">({"{{$input}}"}，可选)</span>
-                </label>
-                <input
-                  type="text"
-                  value={(formParams as any).input || ""}
-                  onChange={e => setFormParams(v => ({ ...v, input: e.target.value }))}
-                  placeholder="文本内容"
-                  className="w-full px-3 py-1.5 text-sm rounded-lg border border-gray-200 dark:border-gray-600 bg-white dark:bg-gray-800 text-gray-800 dark:text-gray-200"
+          {/* cron */}
+          {formType === 'cron' && (
+            <div>
+              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5">
+                Cron 表达式
+              </label>
+              <div className="flex flex-wrap gap-1.5 mb-2">
+                {CRON_PRESETS.map(p => (
+                  <button
+                    key={p.value}
+                    type="button"
+                    onClick={() => setValue('cronExpression', p.value)}
+                    className={`px-2.5 py-1 rounded-lg text-xs font-medium transition-colors ${formCron === p.value
+                      ? 'bg-blue-500 text-white'
+                      : 'bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600'
+                      }`}
+                  >
+                    {p.label}
+                  </button>
+                ))}
+              </div>
+              <div className="bg-white dark:bg-gray-900/50 rounded-lg border border-gray-200 dark:border-gray-700 p-4">
+                <CronBuilder
+                  value={formCron}
+                  onChange={(v) => setValue('cronExpression', v)}
+                  includeSeconds={true}
                 />
               </div>
-              {targetParams.map(p => {
-                const val = (formParams as any)[p.name] ?? p.defaultValue ?? ""
-                return (
+              <p className="text-xs text-gray-400 mt-1">
+                {describeCronSimple(formCron)}
+              </p>
+            </div>
+          )}
+
+          {/* webhook */}
+          {formType === 'webhook' && (
+            <div className="bg-gray-50 dark:bg-gray-900/50 rounded-xl p-3 text-sm text-gray-500 dark:text-gray-400">
+              创建后自动生成 Webhook URL，通过 POST 请求即可触发
+            </div>
+          )}
+
+          {/* target */}
+          <div>
+            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5">执行目标</label>
+            <div className="flex gap-2">
+              <div className="w-28">
+                <CustomSelect
+                  size="sm"
+                  value={formTargetType}
+                  onChange={handleTargetTypeChange}
+                  options={[
+                    { value: 'workflow', label: '工作流' },
+                    { value: 'agent', label: 'Agent' }
+                  ]}
+                />
+              </div>
+              <div className="flex-1">
+                <CustomSelect
+                  size="sm"
+                  value={formTargetId}
+                  onChange={v => setValue('targetId', v)}
+                  options={targetOptions}
+                  placeholder={targetOptions.length === 0 ? `暂无${formTargetType === 'workflow' ? '工作流' : 'Agent'}` : '请选择...'}
+                />
+              </div>
+            </div>
+          </div>
+
+          {/* input */}
+          <div>
+            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5">
+              {(formTargetType === "workflow" && targetParams.length > 0) ? "工作流参数" : "输入文本"}
+            </label>
+            {(formTargetType === "workflow" && targetParams.length > 0) ? (
+              <div className="space-y-3 p-3 bg-gray-50 dark:bg-gray-800/50 rounded-lg border border-gray-200 dark:border-gray-700">
+                <div>
+                  <label className="block text-xs font-medium text-gray-500 mb-1">
+                    文本输入 <span className="text-gray-400 font-normal">({"{{$input}}"}，可选)</span>
+                  </label>
+                  <Controller
+                    name="input"
+                    control={control}
+                    render={({ field }) => (
+                      <CustomInput size="sm" {...field} placeholder="文本内容" />
+                    )}
+                  />
+                </div>
+                {targetParams.map(p => (
                   <div key={p.name}>
                     <label className="block text-xs font-medium text-gray-600 dark:text-gray-400 mb-1">
                       {p.displayName || p.name}
@@ -453,29 +476,50 @@ export default function Triggers(): React.JSX.Element {
                       <span className="text-gray-400 font-normal ml-1">({p.type})</span>
                     </label>
                     {p.type === "boolean" ? (
-                      <label className="flex items-center gap-2 cursor-pointer">
-                        <input type="checkbox" checked={!!val} onChange={e => setFormParams(v => ({ ...v, [p.name]: e.target.checked }))} className="w-4 h-4 text-blue-600 rounded border-gray-300" />
-                      </label>
+                      <Controller
+                        name={`params.${p.name}`}
+                        control={control}
+                        defaultValue={!!p.defaultValue}
+                        render={({ field }) => (
+                          <label className="flex items-center gap-2 cursor-pointer">
+                            <input type="checkbox" checked={!!field.value} onChange={e => field.onChange(e.target.checked)} className="w-4 h-4 text-blue-600 rounded border-gray-300" />
+                          </label>
+                        )}
+                      />
                     ) : p.type === "number" ? (
-                      <input type="number" value={String(val)} onChange={e => setFormParams(v => ({ ...v, [p.name]: parseFloat(e.target.value) || 0 }))} className="w-full px-3 py-1.5 text-sm rounded-lg border border-gray-200 dark:border-gray-600 bg-white dark:bg-gray-800 text-gray-800 dark:text-gray-200" />
+                      <Controller
+                        name={`params.${p.name}`}
+                        control={control}
+                        defaultValue={p.defaultValue ?? ''}
+                        render={({ field }) => (
+                          <input type="number" {...field} value={String(field.value ?? '')} onChange={e => field.onChange(parseFloat(e.target.value) || 0)} className="w-full px-3 py-1.5 text-sm rounded-lg border border-gray-200 dark:border-gray-600 bg-white dark:bg-gray-800 text-gray-800 dark:text-gray-200" />
+                        )}
+                      />
                     ) : (
-                      <input type="text" value={val} onChange={e => setFormParams(v => ({ ...v, [p.name]: e.target.value }))} placeholder={p.description || "输入" + (p.displayName || p.name)} className="w-full px-3 py-1.5 text-sm rounded-lg border border-gray-200 dark:border-gray-600 bg-white dark:bg-gray-800 text-gray-800 dark:text-gray-200" />
+                      <Controller
+                        name={`params.${p.name}`}
+                        control={control}
+                        defaultValue={p.defaultValue ?? ''}
+                        render={({ field }) => (
+                          <input type="text" {...field} placeholder={p.description || "输入" + (p.displayName || p.name)} className="w-full px-3 py-1.5 text-sm rounded-lg border border-gray-200 dark:border-gray-600 bg-white dark:bg-gray-800 text-gray-800 dark:text-gray-200" />
+                        )}
+                      />
                     )}
                   </div>
-                )
-              })}
-              <p className="text-xs text-gray-400 pt-1 border-t border-gray-200 dark:border-gray-700">触发时这些参数将传递给工作流的 Start 节点</p>
-            </div>
-          ) : (
-            <CustomTextarea
-              size="sm"
-              value={formInput}
-              onChange={e => setFormInput(e.target.value)}
-              placeholder="传给工作流 Start 节点的输入内容"
-              rows={3}
-            />
-          )}
-        </div>
+                ))}
+                <p className="text-xs text-gray-400 pt-1 border-t border-gray-200 dark:border-gray-700">触发时这些参数将传递给工作流的 Start 节点</p>
+              </div>
+            ) : (
+              <Controller
+                name="input"
+                control={control}
+                render={({ field }) => (
+                  <CustomTextarea size="sm" {...field} placeholder="传给工作流 Start 节点的输入内容" rows={3} />
+                )}
+              />
+            )}
+          </div>
+        </form>
       </Modal>
     </div>
   )

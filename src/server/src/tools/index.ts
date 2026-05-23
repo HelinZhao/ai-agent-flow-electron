@@ -7,6 +7,12 @@ import { DUCKDUCKGO_URL, TOOL_EXECUTION_TIMEOUT, TOOL_READ_FILE_MAX_CHARS, TOOL_
 import { changeNotifier } from '../utils/dataChangeNotifier'
 import { getUserDataDir } from '../utils/file'
 import { mcpConnectionManager } from '../mcp'
+import {
+  WORKFLOWS_API_DESCRIPTION,
+  AGENTS_SKILLS_API_DESCRIPTION,
+  KNOWLEDGE_API_DESCRIPTION,
+  CONFIG_API_DESCRIPTION,
+} from './api-descriptions'
 
 // 当前平台信息（用于工具描述，避免 LLM 用错路径格式和用户名）
 const CURRENT_USER = process.env.USERNAME || process.env.USER || '用户名'
@@ -202,33 +208,7 @@ export const workflowsApiTool = tool(
     callInternalApi(method, path, body),
   {
     name: 'workflowsApi',
-    description: `调用工作流和执行相关的内部 REST API。路径中的 {id} 需替换为实际 ID。
-节点类型及config结构:
-  节点通用结构: {"id":"唯一id","type":"类型","position":{"x":0,"y":0},"data":{"label":"显示名","config":{...}}}
-  start/end: 节点通用结构,但无需config
-  llm:   config={"enabledTools":[],"prompt":"提示词","variables":[]}
-  branch: config={"branches":[{"id":"b1","label":"分支A","condition":"条件"}]}
-  skill: config={"skillId":"技能id","skillName":"技能名"}
-  api:   config={"apiConfig":{"url":"https://...","method":"GET","headers":"","body":""}}
-  agent: config={"agentId":"agentId","agentName":"名称"}
-  cli:   config={"cliConfig":{"templateId":"custom","command":"命令","workingDirectory":"","timeout":60}}
-  text:  config={"text":"文本内容","variables":[]}
-  edge: {"id":"唯一id","source":"源id","target":"目标id"}
-  分支出边额外字段: "condition":"分支id", "label":"分支标签"
-
-GET  /api/workflows                              - 获取全部工作流列表（?name=&createdAfter=&updatedAfter=）
-POST /api/workflows                              - 创建工作流（节点类型及config见上方）
-GET  /api/workflows/{id}                         - 获取单个工作流详情
-PUT  /api/workflows/{id}                         - 更新工作流（节点类型及config见上方）
-DEL  /api/workflows/{id}                         - 删除工作流
-POST /api/execute-workflow/monitor               - 异步执行工作流 body: {"workflow":{},"input":""}
-GET  /api/execute-workflow/progress/{executionId} - 获取执行进度
-POST /api/execute-workflow/stop/{executionId}    - 停止执行
-POST /api/execute-workflow/pause/{executionId}   - 暂停执行
-POST /api/execute-workflow/resume/{executionId}  - 恢复执行
-GET  /api/execute-workflow/list                  - 执行记录列表（?status=&page=&pageSize=）
-POST /api/execute-workflow/agent-chat-monitor    - Agent 对话 body: {"agentId":"","input":"","threadId":"(可选)"}
-DEL  /api/execute-workflow/delete-thread/{id}    - 清除 AI 记忆`,
+    description: WORKFLOWS_API_DESCRIPTION,
     schema: z.object({
       method: z.enum(['GET', 'POST', 'PUT', 'DELETE']).describe('HTTP 方法'),
       path: z.string().describe('API 路径，如 /api/workflows 或 /api/workflows/some-id'),
@@ -242,18 +222,7 @@ export const agentsSkillsApiTool = tool(
     callInternalApi(method, path, body),
   {
     name: 'agentsSkillsApi',
-    description: `调用 Agent 和技能管理相关的内部 REST API。路径中的 {id} 需替换为实际 ID。
-
-GET  /api/agents                     - 获取全部 Agent 列表（?name=&createdAfter=&updatedAfter=）
-POST /api/agents                     - 创建 Agent body: {"name":"","description":"","instructions":"","workflowId":"(可选)"}
-GET  /api/agents/{id}                - 获取单个 Agent 详情
-PUT  /api/agents/{id}                - 更新 Agent body: {"name":"","description":"","instructions":"","workflowId":"(可选)"}
-DEL  /api/agents/{id}                - 删除 Agent
-GET  /api/skills                     - 获取全部技能列表（?name=&createdAfter=&updatedAfter=）
-POST /api/skills                     - 创建技能 body: {"name":"","description":"","content":""}
-GET  /api/skills/{id}                - 获取技能详情
-PUT  /api/skills/{id}                - 更新技能 body: {"name":"","description":"","content":""}
-DEL  /api/skills/{id}                - 删除技能`,
+    description: AGENTS_SKILLS_API_DESCRIPTION,
     schema: z.object({
       method: z.enum(['GET', 'POST', 'PUT', 'DELETE']).describe('HTTP 方法'),
       path: z.string().describe('API 路径，如 /api/agents 或 /api/agents/some-id'),
@@ -267,31 +236,7 @@ export const knowledgeApiTool = tool(
     callInternalApi(method, path, body),
   {
     name: 'knowledgeApi',
-    description: `调用知识库管理相关的内部 REST API。路径中的 {id} 需替换为实际 ID。
-
-知识库管理:
-GET  /api/knowledge-base                                    - 获取全部知识库列表（?name=&createdAfter=&updatedAfter=）
-POST /api/knowledge-base                                    - 创建知识库 body: {"name":"","type":"internal|external","description":"","chunkSize":1000,"chunkOverlap":200}
-PUT  /api/knowledge-base/{id}                               - 更新知识库 body: {"name":"","description":"","type":"","chunkSize":1000}
-DEL  /api/knowledge-base/{id}                               - 删除知识库（会同时删除所有分块和向量）
-
-文档管理:
-GET  /api/knowledge-base/{id}/stats                         - 知识库文档统计（返回文档列表和总分块数）
-POST /api/knowledge-base/{id}/documents                     - 上传文档（multipart/form-data 格式，LLM无法直接使用，请使用 attachment-upload代替）
-POST /api/knowledge-base/{id}/attachment-upload             - 通过附件URL上传文档 body: {"attachmentUrl":"/api/attachments/att-xxx/filename.md"}
-DEL  /api/knowledge-base/{id}/documents/{docName}           - 删除指定文档及其所有分块
-GET  /api/knowledge-base/{id}/documents/{docName}/download  - 从分块拼接重建并下载文档原文
-
-RAG 检索:
-POST /api/knowledge-base/{id}/retrieve                      - RAG 检索 body: {"query":"检索内容"}
-POST /api/knowledge-base/{id}/retrieve-debug                - 召回测试 body: {"query":"检索内容"}，返回结构化结果（含距离分数）
-
-分块管理:
-GET  /api/knowledge-base/{id}/chunks/{docName}              - 获取文档的分块列表
-POST /api/knowledge-base/{id}/chunks                        - 新增分块 body: {"content":"","source":"文档名"}
-PUT  /api/knowledge-base/{id}/chunks/{chunkId}              - 更新分块内容 body: {"content":""}
-DEL  /api/knowledge-base/{id}/chunks/{chunkId}              - 删除单个分块
-PATCH /api/knowledge-base/{id}/chunks/{chunkId}/toggle      - 切换分块启用/停用状态`,
+    description: KNOWLEDGE_API_DESCRIPTION,
     schema: z.object({
       method: z.enum(['GET', 'POST', 'PUT', 'DELETE', 'PATCH']).describe('HTTP 方法'),
       path: z.string().describe('API 路径，如 /api/knowledge-base 或 /api/knowledge-base/id/retrieve'),
@@ -305,21 +250,7 @@ export const configApiTool = tool(
     callInternalApi(method, path, body),
   {
     name: 'configApi',
-    description: `调用 LLM 配置、触发器、代理等系统设置相关的内部 REST API。路径中的 {id} 需替换为实际 ID。
-
-GET  /api/llm-config                      - 获取所有 LLM 配置
-POST /api/llm-config                      - 创建 LLM 配置 body: {"name":"","provider":"openai|anthropic|azure|bailian|deepseek|ollama","model":"","apiKey":"","baseUrl":"(可选)"}
-POST /api/llm-config/{id}/activate        - 激活指定 LLM 配置
-POST /api/llm-config/test-connection      - 测试连接 body: {"provider":"","apiKey":"","model":"","baseUrl":"(可选)"}
-DEL  /api/llm-config/{id}                 - 删除 LLM 配置
-GET  /api/proxy                           - 获取代理配置
-PUT  /api/proxy                           - 更新代理 body: {"enabled":true,"host":"","port":""}
-GET  /api/triggers                        - 获取触发器列表（?name=&createdAfter=&updatedAfter=）
-POST /api/triggers                        - 创建触发器 body: {"name":"","type":"cron|webhook","cronExpression":"","workflowId":"","enabled":true}
-POST /api/triggers/{id}/run               - 手动触发
-GET  /api/data/db-stats                   - 数据库存储统计
-POST /api/data/vacuum                     - 回收数据库空间
-GET  /api/health                          - 健康检查`,
+    description: CONFIG_API_DESCRIPTION,
     schema: z.object({
       method: z.enum(['GET', 'POST', 'PUT', 'DELETE']).describe('HTTP 方法'),
       path: z.string().describe('API 路径'),

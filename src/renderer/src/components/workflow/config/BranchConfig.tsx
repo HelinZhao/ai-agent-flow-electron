@@ -2,7 +2,7 @@ import React from 'react';
 import { v4 as uuidv4 } from 'uuid';
 import CustomButton from '../../ui/CustomButton';
 import CustomInput from '../../ui/CustomInput';
-import CustomTextarea from '../../ui/CustomTextarea';
+import ExpressionInput from '../ExpressionInput';
 
 interface BranchCondition {
   id: string;
@@ -91,14 +91,14 @@ const BranchConfig: React.FC<BranchConfigProps> = ({ config, onConfigChange }) =
 
           <div>
             <label className="block text-xs font-medium text-gray-600 dark:text-gray-400 mb-1">
-              条件描述
+              条件描述 <span className="text-gray-400 font-normal">(支持 {'{{$input}}'} {'{{$params.xxx}}'})</span>
             </label>
-            <CustomTextarea
+            <ExpressionInput
               value={branch.condition}
-              onChange={(e) => updateBranch(branch.id, 'condition', e.target.value)}
-              rows={2}
+              onChange={(v) => updateBranch(branch.id, 'condition', v)}
               placeholder="描述此分支的执行条件"
               size="sm"
+              minHeight="52px"
             />
           </div>
         </div>

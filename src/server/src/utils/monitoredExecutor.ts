@@ -772,7 +772,7 @@ export class MonitoredLangGraphExecutor {
   }
 
   private async executeBranch(ctx: ExecCtx) {
-    const { node, input, llmConfig } = ctx
+    const { node, input, llmConfig, params, nodeResults, workflowEnvVars } = ctx
     if (!node.data.config?.branches?.length) {
       return {
         output: input,
@@ -781,7 +781,12 @@ export class MonitoredLangGraphExecutor {
     }
 
     try {
-      const branchId = await this.evaluateBranches(node.data.config.branches, input, llmConfig)
+      // 解析 condition 中的模板变量
+      const resolvedBranches = node.data.config.branches.map((b: any) => ({
+        ...b,
+        condition: this.resolveParams(b.condition || '', input, params, nodeResults, workflowEnvVars)
+      }))
+      const branchId = await this.evaluateBranches(resolvedBranches, input, llmConfig)
 
       return {
         output: `条件评估成功，满足条件id: ${branchId}`,

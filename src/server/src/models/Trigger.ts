@@ -80,7 +80,7 @@ TriggerModel.init(
     },
     params: {
       type: DataTypes.TEXT,
-      allowNull: false
+      allowNull: true,
     },
     webhookToken: {
       type: DataTypes.STRING,
