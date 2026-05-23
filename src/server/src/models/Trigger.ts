@@ -22,12 +22,11 @@ export interface TriggerAttributes {
 export interface TriggerCreationAttributes extends Omit<
   TriggerAttributes,
   'id' | 'createdAt' | 'updatedAt'
-> {}
+> { }
 
 export class TriggerModel
   extends Model<TriggerAttributes, TriggerCreationAttributes>
-  implements TriggerAttributes
-{
+  implements TriggerAttributes {
   declare id: string
   declare name: string
   declare type: 'cron' | 'webhook'
@@ -78,6 +77,10 @@ TriggerModel.init(
       type: DataTypes.TEXT,
       allowNull: false,
       defaultValue: ''
+    },
+    params: {
+      type: DataTypes.TEXT,
+      allowNull: false
     },
     webhookToken: {
       type: DataTypes.STRING,

@@ -447,20 +447,27 @@ const DetailModal: React.FC<DetailModalProps> = ({ executionId, onClose, onStop,
 
   useEffect(() => {
     let cancelled = false
+    let timer: ReturnType<typeof setInterval> | null = null
 
     const fetchProgress = async () => {
       try {
         const data = await workflowExecutionApi.getProgress(executionId)
-        if (!cancelled) setProgress(data)
+        if (cancelled) return
+        setProgress(data)
+        // 执行完成或失败时停止轮询
+        if (data.metrics.status === 'completed' || data.metrics.status === 'failed') {
+          if (timer) clearInterval(timer)
+          timer = null
+        }
       } catch {
         if (!cancelled) setProgress(null)
       }
     }
 
     fetchProgress()
-    const timer = setInterval(fetchProgress, 2000)
+    timer = setInterval(fetchProgress, 2000)
 
-    return () => { cancelled = true; clearInterval(timer) }
+    return () => { cancelled = true; if (timer) clearInterval(timer) }
   }, [executionId])
 
   if (!progress) {

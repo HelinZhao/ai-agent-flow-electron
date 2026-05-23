@@ -65,7 +65,7 @@ async function fireTrigger(triggerId: string, payload?: { input?: string; params
     let executionId: string | null = null
     const input = payload?.input ?? trigger.input
 
-    let triggerParams = payload?.params ?? safeJsonParse(trigger.params, {})
+    const triggerParams = payload?.params ?? safeJsonParse(trigger.params, {})
     const triggerInput = String(input || '')
     if (trigger.targetType === 'workflow') {
       const workflow = await WorkflowModel.findByPk(trigger.targetId)
@@ -266,19 +266,27 @@ router.put('/:id', async (req, res) => {
     const trigger = await TriggerModel.findByPk(id)
     if (!trigger) return res.status(404).json({ error: '触发器不存在' })
 
-    const { name, cronExpression, targetType, targetId, input, params, enabled } = req.body
+    const { name, type, cronExpression, targetType, targetId, input, params, enabled } = req.body
 
     // 先取消时间轮中的旧任务
     timingWheel.cancel(id)
 
+    // 类型切换时的处理
+    let newWebhookToken = trigger.webhookToken
+    if (type === 'webhook' && !newWebhookToken) {
+      newWebhookToken = uuidv4().replace(/-/g, '')
+    }
+
     await trigger.update({
       name: name ?? trigger.name,
+      type: type ?? trigger.type,
       cronExpression: cronExpression !== undefined ? (cronExpression || undefined) : trigger.cronExpression,
       targetType: targetType ?? trigger.targetType,
       targetId: targetId ?? trigger.targetId,
       input: input !== undefined ? input : trigger.input,
       params: params !== undefined ? params : trigger.params,
       enabled: enabled !== undefined ? enabled : trigger.enabled,
+      webhookToken: newWebhookToken,
       nextRunAt: undefined
     })
 
@@ -353,6 +361,7 @@ webhookRouter.post('/:token', async (req, res) => {
     const input = req.body?.input || ''
     const params = req.body?.params || {}
     const payload = { input, params }
+    console.log(`[Webhook] 收到触发请求: ${trigger.name}, 输入: ${input}, 参数: ${JSON.stringify(params)}`)
     const executionId = await fireTrigger(trigger.id, payload)
     return res.status(200).json({
       message: 'Webhook 触发成功',

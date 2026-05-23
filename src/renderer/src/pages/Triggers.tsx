@@ -108,6 +108,7 @@ export default function Triggers(): React.JSX.Element {
     try {
       const info = {
         name: formName,
+        type: formType,
         cronExpression: formType === 'cron' ? formCron : undefined,
         targetType: formTargetType,
         targetId: formTargetId,
@@ -119,7 +120,6 @@ export default function Triggers(): React.JSX.Element {
       } else {
         await triggerApi.create({
           ...info,
-          type: formType,
           enabled: true
         })
       }
@@ -220,8 +220,8 @@ export default function Triggers(): React.JSX.Element {
               >
                 {/* type icon */}
                 <div className={`flex items-center justify-center w-10 h-10 rounded-lg flex-shrink-0 ${t.type === 'cron'
-                    ? 'bg-blue-50 dark:bg-blue-900/20'
-                    : 'bg-green-50 dark:bg-green-900/20'
+                  ? 'bg-blue-50 dark:bg-blue-900/20'
+                  : 'bg-green-50 dark:bg-green-900/20'
                   }`}>
                   {t.type === 'cron' ? (
                     <svg className="w-5 h-5 text-blue-500" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
@@ -239,8 +239,8 @@ export default function Triggers(): React.JSX.Element {
                 <div className="flex-1 min-w-0">
                   <div className="flex items-center gap-2">
                     <span className={`inline-flex items-center px-2 py-0.5 text-xs font-medium rounded-full border ${t.type === 'cron'
-                        ? 'bg-blue-50 dark:bg-blue-900/20 text-blue-600 dark:text-blue-400 border-blue-200 dark:border-blue-800'
-                        : 'bg-green-50 dark:bg-green-900/20 text-green-600 dark:text-green-400 border-green-200 dark:border-green-800'
+                      ? 'bg-blue-50 dark:bg-blue-900/20 text-blue-600 dark:text-blue-400 border-blue-200 dark:border-blue-800'
+                      : 'bg-green-50 dark:bg-green-900/20 text-green-600 dark:text-green-400 border-green-200 dark:border-green-800'
                       }`}>
                       {t.type === 'cron' ? '定时' : 'Webhook'}
                     </span>
