@@ -15,6 +15,7 @@ import LoopConfig from './config/LoopConfig';
 import CatchConfig from './config/CatchConfig';
 import TransformConfig from './config/TransformConfig';
 import SplitConfig from './config/SplitConfig';
+import MergeConfig from './config/MergeConfig';
 import McpConfig from './config/McpConfig';
 import StartConfig from './config/StartConfig';
 import CustomInput from '../ui/CustomInput';
@@ -45,6 +46,7 @@ const BG_COLORS: Record<string, string> = {
   catch: 'bg-red-500',
   transform: 'bg-emerald-500',
   split: 'bg-amber-500',
+  merge: 'bg-blue-500',
 }
 
 const NodeConfigPanel: React.FC<NodeConfigPanelProps> = ({ node, onClose, onSave, workflowId }: NodeConfigPanelProps) => {
@@ -102,6 +104,9 @@ const NodeConfigPanel: React.FC<NodeConfigPanelProps> = ({ node, onClose, onSave
 
       case 'mcp':
         return <McpConfig config={config} onConfigChange={setConfig} />;
+
+      case 'merge':
+        return <MergeConfig config={config} onConfigChange={setConfig} />;
 
       case 'transform':
         return <TransformConfig config={config} onConfigChange={setConfig} />;

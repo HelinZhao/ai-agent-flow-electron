@@ -53,6 +53,8 @@ interface ExecCtx {
   params?: Record<string, any>
   nodeResults?: Map<string, any>
   workflowEnvVars?: Record<string, string>
+  node2Sources: Map<string, string[]>
+  node2Targets: Map<string, string[]>
 }
 
 // 手动终止时使用的专用错误，各 catch 块据此透传而非吞掉
@@ -68,10 +70,10 @@ export class MonitoredLangGraphExecutor {
   private threadAttachments = new Map<string, AttachmentPayload[]>()
   // 线程级对话历史：用于直接对话（无工作流）模式下的上下文记忆
   private threadMessages = new Map<string, BaseMessage[]>()
-  // 当前正在执行的 agentId 栈，用于检测循环调用
   // DB 环境变量缓存（全局，不受执行生命周期影响）
   private envVarsCache: Record<string, string> | null = null
-
+  
+  // 当前正在执行的 agentId 栈，用于检测循环调用
   private agentCallStack = new Set<string>()
   // 当前正在执行的 workflowId 栈，用于检测工作流节点循环调用
   private workflowCallStack = new Set<string>()
@@ -239,21 +241,46 @@ export class MonitoredLangGraphExecutor {
   ) {
     const nodes = workflow.nodes
     const edges = workflow.edges
-    const branchMap: Record<string, any> = {}
-    const branch2NodeMap: Map<string, string[]> = new Map()
+    const branchMap: Record<string, WorkflowBranch> = {}
+    const branch2Targets: Map<string, string[]> = new Map()
     const nodeResults = new Map<string, any>()
     const graph = new StateGraph(this.WorkflowState)
-
     // 过滤游离节点：找出有连接的节点
     const connectedNodes = new Set<string>()
+    // 收集有连接的节点 + 构建前驱映射（合并一次遍历）
+    const node2Sources = new Map<string, string[]>()
+    // 收集有连接的节点 + 构建后驱映射（合并一次遍历）
+    const node2Targets = new Map<string, string[]>()
 
-    // 收集所有有输入边、输出边的节点
+    // 构建 Merge 前驱集：mergeNodeId → Set<前驱ID>
+    const mergePredsMap = new Map<string, Set<string>>()
+
+    const edgeGroups = new Map<string, { normal: string[]; error: string | null }>()
+
     for (const edge of edges) {
-      if (edge.target) {
-        connectedNodes.add(edge.target)
+      if (edge.target) connectedNodes.add(edge.target)
+      if (edge.source) connectedNodes.add(edge.source)
+
+      if (edge.target && edge.source && edge.sourceType !== 'error') {
+        if (!node2Sources.has(edge.target)) {
+          node2Sources.set(edge.target, [])
+        }
+        if (!node2Targets.has(edge.source)) {
+          node2Targets.set(edge.source, [])
+        }
+        node2Sources.get(edge.target)!.push(edge.source)
+        node2Targets.get(edge.source)!.push(edge.target)
       }
-      if (edge.source) {
-        connectedNodes.add(edge.source)
+
+
+      if (!edgeGroups.has(edge.source)) {
+        edgeGroups.set(edge.source, { normal: [], error: null })
+      }
+      const g = edgeGroups.get(edge.source)!
+      if (edge.sourceType === 'error') {
+        g.error = edge.target
+      } else {
+        g.normal.push(edge.target)
       }
     }
 
@@ -262,12 +289,12 @@ export class MonitoredLangGraphExecutor {
 
     // 为每个工作流节点添加LangGraph节点
     for (const node of validNodes) {
-      const ends = edges.filter((edge) => edge.source === node.id).map((edge) => edge.target)
+      const ends = node2Targets.get(node.id)
       graph.addNode(
         node.id,
         async (state: any) => {
-          const lastMessage = state.messages[state.messages.length - 1]
           let input: string
+          const lastMessage = state.messages[state.messages.length - 1]
           if (typeof lastMessage?.content === 'string') {
             input = lastMessage.content
           } else if (Array.isArray(lastMessage?.content)) {
@@ -306,6 +333,8 @@ export class MonitoredLangGraphExecutor {
             attachments: allAttachments,
             params: execState?.params,
             nodeResults,
+            node2Sources,
+            node2Targets,
             workflowEnvVars: execState?.workflow?.envVars,
           })
           nodeResults.set(node.id, nodeResult)
@@ -356,7 +385,7 @@ export class MonitoredLangGraphExecutor {
             return { messages: [] }
           }
 
-          const aiMessage = new AIMessage(nodeResult.output)
+          const aiMessage = new AIMessage({ content: nodeResult.output, name: node.id })
           return {
             messages: [aiMessage]
           }
@@ -365,39 +394,30 @@ export class MonitoredLangGraphExecutor {
       )
 
       if (node.type === 'branch') {
-        node.data.config?.branches?.forEach((branch: any) => {
+        node.data.config?.branches?.forEach((branch: WorkflowBranch) => {
           branchMap[branch.id] = branch
-          branch2NodeMap.set(branch.id, [])
+          branch2Targets.set(branch.id, [])
         })
 
         graph.addConditionalEdges(node.id as any, () => {
           const nodeResult = nodeResults.get(node.id)
-          const nodeIds = branch2NodeMap.get(nodeResult?.metadata?.branch) ?? []
+          const nodeIds = branch2Targets.get(nodeResult?.metadata?.branch) ?? []
           return nodeIds
         })
+      } else if (node.type === 'merge') {
+        mergePredsMap.set(node.id, new Set(node2Sources.get(node.id) || []))
       }
     }
 
-    // ---- 构建边（支持 error 类型边） ----
-    const edgeGroups = new Map<string, { normal: string[]; error: string | null }>()
-    for (const edge of edges) {
-      if (!edgeGroups.has(edge.source)) {
-        edgeGroups.set(edge.source, { normal: [], error: null })
-      }
-      const g = edgeGroups.get(edge.source)!
-      if (edge.sourceType === 'error') {
-        g.error = edge.target
-      } else {
-        g.normal.push(edge.target)
-      }
-    }
+
+    // ---- 第二次遍历 edgeGroups：向 LangGraph 注册边（含 Merge 前驱等待 + error 路由） ----
     for (const [source, group] of edgeGroups) {
       const srcNode = validNodes.find(n => n.id === source)
       if (srcNode?.type === 'branch') {
         for (const t of group.normal) {
           const e = edges.find(edge => edge.source === source && edge.target === t)
           if (e?.condition) {
-            const v = branch2NodeMap.get(e.condition)
+            const v = branch2Targets.get(e.condition)
             v?.push(t)
           } else {
             graph.addEdge(source as any, t as any)
@@ -405,7 +425,18 @@ export class MonitoredLangGraphExecutor {
         }
         continue
       }
-      if (group.error) {
+
+      // 检查是否有目标节点是 Merge
+      const mergeTarget = group.normal.find(t => mergePredsMap.has(t))
+      if (mergeTarget) {
+        graph.addConditionalEdges(source as any, () => {
+          const r = nodeResults.get(source)
+          if (group.error && r?.status === 'failed') return [group.error!]
+          const allReady = [...(mergePredsMap.get(mergeTarget) || new Set<string>())].every(pid => nodeResults.has(pid))
+          if (!allReady) return []
+          return group.normal
+        })
+      } else if (group.error) {
         graph.addConditionalEdges(source as any, () => {
           const r = nodeResults.get(source)
           if (r?.status === 'failed') return [group.error!]
@@ -627,6 +658,9 @@ export class MonitoredLangGraphExecutor {
 
       case 'split':
         return await this.executeSplit(ctx)
+
+      case 'merge':
+        return await this.executeMerge(ctx)
 
       case 'catch':
         return await this.executeCatch(ctx)
@@ -1364,6 +1398,22 @@ export class MonitoredLangGraphExecutor {
     }
   }
 
+
+  private async executeMerge(ctx: ExecCtx) {
+    const { node, nodeResults, node2Sources } = ctx
+    const preds = node2Sources.get(node.id) || []
+    const rawSep = node.data.config?.separator || '\\n---\\n'
+    const sep = rawSep.replace(/\\n/g, '\n').replace(/\\t/g, '\t')
+    const parts: string[] = []
+    for (const pid of preds) {
+      const r = nodeResults?.get(pid)
+      if (r?.output) parts.push(r.output)
+    }
+    return {
+      output: parts.join(sep),
+      metadata: { nodeId: node.id, label: node.data?.label, type: 'merge', mergedFrom: preds }
+    }
+  }
 
   private async executeTransform(ctx: ExecCtx) {
     const { node, input, nodeResults } = ctx
