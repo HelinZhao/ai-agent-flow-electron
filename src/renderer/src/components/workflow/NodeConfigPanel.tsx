@@ -19,6 +19,7 @@ import SleepConfig from './config/SleepConfig';
 import MergeConfig from './config/MergeConfig';
 import McpConfig from './config/McpConfig';
 import IfConfig from './config/IfConfig';
+import KnowledgeConfig from './config/KnowledgeConfig';
 import StartConfig from './config/StartConfig';
 import CustomInput from '../ui/CustomInput';
 import CustomButton from '../ui/CustomButton';
@@ -51,6 +52,7 @@ const BG_COLORS: Record<string, string> = {
   delay: 'bg-slate-500',
   merge: 'bg-blue-500',
   if: 'bg-sky-500',
+  knowledge: 'bg-emerald-500',
 }
 
 const NodeConfigPanel: React.FC<NodeConfigPanelProps> = ({ node, onClose, onSave, workflowId }: NodeConfigPanelProps) => {
@@ -111,6 +113,9 @@ const NodeConfigPanel: React.FC<NodeConfigPanelProps> = ({ node, onClose, onSave
 
       case 'if':
         return <IfConfig config={config} onConfigChange={setConfig} />;
+
+      case 'knowledge':
+        return <KnowledgeConfig config={config} onConfigChange={setConfig} />;
 
       case 'sleep':
         return <SleepConfig config={config} onConfigChange={setConfig} />;

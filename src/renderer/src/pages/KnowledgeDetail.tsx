@@ -23,6 +23,7 @@ export default function KnowledgeDetail({ kb, onBack }: KnowledgeDetailProps): R
   const [isUploading, setIsUploading] = useState(false)
   const [showRecallTest, setShowRecallTest] = useState(false)
   const [recallQuery, setRecallQuery] = useState('')
+  const [recallTopK, setRecallTopK] = useState(3)
   const [recallResults, setRecallResults] = useState<{ id: string; content: string; source: string; chunkIndex: number; distance: number }[] | null>(null)
   const [recallLoading, setRecallLoading] = useState(false)
 
@@ -31,7 +32,7 @@ export default function KnowledgeDetail({ kb, onBack }: KnowledgeDetailProps): R
     setRecallLoading(true)
     setRecallResults(null)
     try {
-      const res = await knowledgeBaseApi.retrieveDebug(kb.id, recallQuery)
+      const res = await knowledgeBaseApi.retrieveDebug(kb.id, recallQuery, recallTopK)
       setRecallResults(res.results)
     } catch (error) {
       setMessage({ type: 'error', text: `召回测试失败: ${error instanceof Error ? error.message : '未知错误'}` })
@@ -204,7 +205,7 @@ export default function KnowledgeDetail({ kb, onBack }: KnowledgeDetailProps): R
 
         {/* ── Recall Test Modal ── */}
         <Modal open={showRecallTest} onClose={() => setShowRecallTest(false)} title="召回测试">
-          <div className="flex gap-2">
+          <div className="flex gap-2 mb-3">
             <input
               value={recallQuery}
               onChange={(e) => setRecallQuery(e.target.value)}
@@ -215,6 +216,17 @@ export default function KnowledgeDetail({ kb, onBack }: KnowledgeDetailProps): R
             <CustomButton onClick={handleRecallTest} variant="primary" size="sm" disabled={recallLoading || !recallQuery.trim()}>
               {recallLoading ? '检索中...' : '检索'}
             </CustomButton>
+          </div>
+          <div className="flex items-center gap-2 mb-2">
+            <label className="text-xs text-gray-500">Top K</label>
+            <input
+              type="number"
+              value={recallTopK}
+              onChange={(e) => setRecallTopK(Math.max(1, parseInt(e.target.value) || 5))}
+              min={1}
+              max={50}
+              className="w-16 px-2 py-1 text-xs rounded border border-gray-200 dark:border-gray-600 bg-gray-50 dark:bg-gray-700 text-gray-900 dark:text-white"
+            />
           </div>
 
           {recallLoading && (

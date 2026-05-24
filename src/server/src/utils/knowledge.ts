@@ -101,7 +101,8 @@ export async function ingestDocument(
 // 检索：query → embedding → 向量搜索 → 返回 top-K 上下文
 export async function retrieveContext(
   knowledgeBaseId: string,
-  query: string
+  query: string,
+  topK?: number
 ): Promise<string> {
   const kb = await KnowledgeBaseModel.findByPk(knowledgeBaseId)
   if (!kb) throw new Error('知识库不存在')
@@ -124,8 +125,9 @@ export async function retrieveContext(
 
   const queryVector = await embeddings.embedQuery(query)
 
-  const rows = await store.search(new Float32Array(queryVector), kb.topK)
-  console.log(`[Knowledge] 向量搜索返回 ${rows.length} 条结果, topK=${kb.topK}`)
+  const effectiveTopK = topK ?? kb.topK
+  const rows = await store.search(new Float32Array(queryVector), effectiveTopK)
+  console.log(`[Knowledge] 向量搜索返回 ${rows.length} 条结果, topK=${effectiveTopK}`)
   if (rows.length === 0) return ''
 
   const chunkIds = rows.map(r => r.chunkId)
@@ -148,7 +150,8 @@ export async function retrieveContext(
 // 检索（调试模式）：返回结构化结果，含分块ID、内容、来源、距离
 export async function retrieveContextDebug(
   knowledgeBaseId: string,
-  query: string
+  query: string,
+  topK?: number
 ): Promise<{ id: string; content: string; source: string; chunkIndex: number; distance: number }[]> {
   const kb = await KnowledgeBaseModel.findByPk(knowledgeBaseId)
   if (!kb) throw new Error('知识库不存在')
@@ -166,7 +169,8 @@ export async function retrieveContextDebug(
   await store.ensureReady(dims)
 
   const queryVector = await embeddings.embedQuery(query)
-  const rows = await store.search(new Float32Array(queryVector), kb.topK)
+  const effectiveTopK = topK ?? kb.topK
+  const rows = await store.search(new Float32Array(queryVector), effectiveTopK)
   if (rows.length === 0) return []
 
   const chunkIds = rows.map(r => r.chunkId)

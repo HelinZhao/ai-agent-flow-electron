@@ -275,13 +275,13 @@ router.post('/:id/retrieve', async (req, res) => {
 router.post('/:id/retrieve-debug', async (req, res) => {
   try {
     const { id } = req.params
-    const { query } = req.body
+    const { query, topK } = req.body
 
     if (!query) {
       return res.status(400).json({ error: '查询内容不能为空' })
     }
 
-    const results = await retrieveContextDebug(id, query)
+    const results = await retrieveContextDebug(id, query, topK || undefined)
 
     return res.status(200).json({ results })
   } catch (error) {

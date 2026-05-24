@@ -6,7 +6,7 @@
 export const WORKFLOWS_API_DESCRIPTION = `调用工作流和执行相关的 REST API。路径 {id} 用实际值替换。
 
 ⚠️ 只允许以下19种节点type，禁止发明其他type:
-start, end, llm, branch, skill, api, agent, cli, text, subWorkflow, loop, split, merge, transform, mcp, code, sleep, catch, note, if
+start, end, llm, branch, skill, api, agent, cli, text, subWorkflow, loop, split, merge, transform, mcp, code, sleep, catch, note, if, knowledge
 
 节点通用结构: {"id":"唯一id","type":"上面之一","position":{"x":0,"y":0},"data":{"label":"显示名","config":{...}}}
 通用可选(retry): retryCount(重试次数), retryDelay(间隔ms), retryBackoff(fixed|exponential)
@@ -30,6 +30,7 @@ code → code(return ...), language(javascript)
 sleep → sleepMs(毫秒)
 catch → errorOnly(true) 需上游sourceType:"error"边
 note → content(注释) 纯可视化不执行
+knowledge → knowledgeBaseId(知识库id), query(检索查询,支持模板变量), topK(返回结果数)
 if → condition(JS布尔表达式, 如 $input.length > 10), 支持模板变量, 边上condition为"true"/"false"
 
 边(edge)结构: {"id":"唯一id","source":"源节点id","target":"目标节点id"}

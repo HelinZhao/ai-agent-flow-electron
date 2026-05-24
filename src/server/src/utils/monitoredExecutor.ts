@@ -58,6 +58,9 @@ interface ExecCtx {
 }
 
 // 手动终止时使用的专用错误，各 catch 块据此透传而非吞掉
+/** 这些节点透传 input，不产生 AI message */
+const PASSTHROUGH_NODES = new Set(['end', 'start', 'branch', 'if', 'merge'])
+
 class ExecutionTerminatedError extends Error {
   constructor() { super('执行已被手动终止') }
 }
@@ -414,8 +417,8 @@ export class MonitoredLangGraphExecutor {
               }
             })
           }
-
-          if (node.type === 'end' || node.type === 'start' || node.type === 'branch' || node.type === 'if') {
+          
+          if (PASSTHROUGH_NODES.has(node.type)) {
             return { messages: [] }
           }
 
@@ -689,6 +692,9 @@ export class MonitoredLangGraphExecutor {
 
       case 'mcp':
         return await this.executeMCP(ctx)
+
+      case 'knowledge':
+        return await this.executeKnowledge(ctx)
 
       case 'code':
         return await this.executeCode(ctx)
@@ -991,6 +997,31 @@ export class MonitoredLangGraphExecutor {
           error: errorMsg
         }
       }
+    }
+  }
+
+  private async executeKnowledge(ctx: ExecCtx) {
+    const { node, input, params, nodeResults, workflowEnvVars } = ctx
+    const kbId = node.data.config?.knowledgeBaseId
+    if (!kbId) {
+      return { output: '未配置知识库', metadata: { nodeId: node.id, type: 'knowledge', label: node.data?.label, error: '未配置知识库' } }
+    }
+    const rawQuery = node.data.config?.query || '{{$input}}'
+    const query = this.resolveParams(rawQuery, input, params, nodeResults, workflowEnvVars)
+    if (!query.trim()) {
+      return { output: '', metadata: { nodeId: node.id, type: 'knowledge', label: node.data?.label } }
+    }
+    try {
+      const { retrieveContext } = await import('../utils/knowledge')
+      const topK = node.data.config?.topK || undefined
+      const context = await retrieveContext(kbId, query, topK)
+      return {
+        output: context || '未检索到相关内容',
+        metadata: { nodeId: node.id, type: 'knowledge', label: node.data?.label, kbId, query, topK }
+      }
+    } catch (error) {
+      const msg = error instanceof Error ? error.message : String(error)
+      return { output: `检索失败: ${msg}`, metadata: { nodeId: node.id, type: 'knowledge', label: node.data?.label, error: msg } }
     }
   }
 
@@ -1526,7 +1557,7 @@ export class MonitoredLangGraphExecutor {
   }
 
   private async executeTransform(ctx: ExecCtx) {
-    const { node, input, nodeResults } = ctx
+    const { node, input } = ctx
     const operation = node.data.config?.operation || 'jsonpath'
     const expression = node.data.config?.expression || ''
 
@@ -1545,7 +1576,7 @@ export class MonitoredLangGraphExecutor {
           // 支持 data.name、data[0]、[0]、data[0].name、data[0][1] 等
           const tokens: string[] = []
           const tokenRegex = /\.(\w+)|\[(\d+)\]/g
-          let firstMatch = expression.match(/^(\w+)/)  // 开头可能有无点号前缀的属性名
+          const firstMatch = expression.match(/^(\w+)/)  // 开头可能有无点号前缀的属性名
           if (firstMatch) {
             tokens.push(firstMatch[1])
           }
@@ -1714,7 +1745,7 @@ export class MonitoredLangGraphExecutor {
   }
 
   private async executeCode(ctx: ExecCtx) {
-    const { node, input, params, nodeResults, workflowEnvVars } = ctx
+    const { node, input, params, nodeResults } = ctx
     const code = node.data.config?.code || ''
 
     if (!code.trim()) {

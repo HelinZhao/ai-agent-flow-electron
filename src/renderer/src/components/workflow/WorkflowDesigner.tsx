@@ -12,7 +12,7 @@ import {
 } from '@xyflow/react';
 import '@xyflow/react/dist/style.css';
 
-import { StartNode, SkillNode, BranchNode, ApiNode, AgentNode, EndNode, LLMNode, CliNode, TextNode, SubWorkflow, McpNode, CodeNode, NoteNode, LoopNode, CatchNode, TransformNode, SplitNode, MergeNode, SleepNode, IfNode } from './NodeTypes';
+import { StartNode, SkillNode, BranchNode, ApiNode, AgentNode, EndNode, LLMNode, CliNode, TextNode, SubWorkflow, McpNode, CodeNode, NoteNode, LoopNode, CatchNode, TransformNode, SplitNode, MergeNode, SleepNode, IfNode, KnowledgeNode } from './NodeTypes';
 import NodeConfigPanel from './NodeConfigPanel';
 import { Workflow, WorkflowBranch, WorkflowEdge, WorkflowNode } from '@renderer/types';
 import NodeListPanel from './NodeListPanel';
@@ -50,6 +50,7 @@ const nodeTypes = {
   merge: MergeNode,
   sleep: SleepNode,
   if: IfNode,
+  knowledge: KnowledgeNode,
 };
 
 interface WorkflowDesignerProps {
