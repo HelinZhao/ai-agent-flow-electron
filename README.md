@@ -26,7 +26,7 @@ AI Agent Flow Electron 是一个基于 Electron + React + TypeScript 的**桌面
 - 无工作流时自动降级为 LLM 对话
 
 ### 🔄 可视化工作流
-- 基于 React Flow 的拖拽式编辑器，19 种节点类型组合编排
+- 基于 React Flow 的拖拽式编辑器，23 种节点类型组合编排
 - 一键 Dagre 自动布局
 - 实时执行进度、节点状态、耗时监控
 
@@ -146,15 +146,26 @@ npm run download-model
 | Start | 入口 | 接收用户输入，可定义参数，启动工作流 |
 | LLM | 大语言模型 | 调用 LLM 生成回复，支持工具调用、TTL 缓存、知识库增强 |
 | Skill | 技能 | 调用预定义的技能模板处理输入 |
-| Text | 文本 | 模板渲染 + 变量替换（{{$input}}、{{$env.xxx}} 等），不调用 LLM |
-| Code | 代码 | 运行 JavaScript 代码，注入 $input/$params/$nodes 变量，支持 async |
+| Text | 文本 | 模板渲染 + 变量替换，不调用 LLM |
+| Code | 代码 | 运行 JavaScript 代码，注入 $input/$params/$nodes 变量 |
+| If | 条件分支 | JS 布尔表达式多条件判断，无需 LLM，走 true/false 边 |
 | Branch | 条件分支 | LLM 语义评估后选择不同路径 |
 | API | HTTP 调用 | 调用外部 API 获取或处理数据 |
+| Database | 数据库查询 | 执行 SQL/Redis/MongoDB 查询，返回 JSON 结果 |
+| Knowledge | 知识库检索 | 向量检索知识库，获取相关分块上下文 |
 | MCP | MCP 工具 | 调用 MCP 协议服务器的工具，支持动态参数表单 |
 | Agent | 智能体 | 调用已配置的 Agent 执行子任务 |
 | SubWorkflow | 子工作流 | 嵌套执行另一个工作流，支持参数透传 |
-| CLI | 命令行 | 执行 Shell 命令或预设模板（npm/pip/文件操作等） |
+| Variable | 变量 | 设置/获取工作流变量，跨节点共享数据 |
+| Loop | 循环 | 迭代执行子工作流，支持终止条件和参数映射 |
+| Split | 拆分 | 按 JSON 数组或换行拆分，每项独立执行子工作流 |
+| Merge | 聚合 | 合并多个上游节点的输出 |
+| Transform | 数据转换 | JSON Path 提取、JSON 解析/序列化 |
+| Sleep | 睡眠 | 延迟指定时间后透传输入 |
+| CLI | 命令行 | 执行 Shell 命令或预设模板 |
 | End | 出口 | 汇总并返回最终结果 |
+| Catch | 错误处理 | 捕获上游失败节点的错误信息 |
+| Note | 注释 | 纯可视化注释，不参与执行 |
 
 ---
 
@@ -384,9 +395,25 @@ this.app.use('/api/new-route', newRouter)
 
 ## 更新日志
 
+### v1.7.0
+
+- **数据库查询节点**：支持 SQLite/PostgreSQL/MySQL/SQL Server/MongoDB/Redis 六种数据库，SQL 和连接串支持模板变量
+- **知识库检索节点**：工作流中直接向量检索知识库，结果传递给 LLM 节点实现 RAG
+- **If 条件节点**：JS 布尔表达式多条件分支，无需 LLM 参与
+- **Variable 变量节点**：设置/获取工作流变量，{{$vars.xxx}} 跨节点引用
+- **模板市场全面升级**：新增工作流/Agent/技能 Tab，种子模板覆盖 API/MCP/Code/Skill/Workflow/Agent
+- **Web 搜索切为 Bing**：DuckDuckGo 替换为国内可用的 Bing 搜索
+- **模板变量支持表达式运算**：{{$params.a + $params.b}}、{{$input.toUpperCase()}} 等
+- **表单统一 react-hook-form**：Triggers/Workflow 表单改用 Controller 管理，解决输入吞字
+- **工作流输入对话框拆分**：独立 InputDialog 组件，代码更清晰
+- **节点配置面板优化**：分支条件、知识库等支持 ExpressionInput 语法高亮
+- **各管理页补充描述**：工作流/Agent/技能/知识库/执行监控页标题下方加说明
+- **页面风格统一**：执行监控页布局和 Tabs 与模板市场一致
+- **增量种子更新**：模板改为 updateOnDuplicate 幂等 upsert，不丢用户数据
+
 ### v1.6.0
 
-- **节点扩容**：从 9 种扩展到 19 种，新增 Loop、Transform、Split、Merge、Catch、Sleep、Note 节点
+- **节点扩容**：从 9 种扩展到 23 种，新增 If、Database、Knowledge、Variable、Loop、Transform、Split、Merge、Catch、Sleep、Note 等节点
 - **Merge 并行聚合**：并行分支 fan-out + 条件边前驱等待机制
 - **Loop 循环节点**：条件循环 + 反馈回路，JS 终止条件表达式
 - **Error Catch 节点**：错误边路由 + 失败自动触发 + 红色虚线样式
