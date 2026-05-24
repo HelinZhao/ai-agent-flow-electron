@@ -14,6 +14,7 @@ import { SqliteSaver } from "@langchain/langgraph-checkpoint-sqlite";
 import { DB_FILENAME, DANGEROUS_TOOLS } from '../config'
 import { LLMConfigModel, AgentModel, WorkflowModel, EnvVarModel } from '../models'
 import { mcpConnectionManager } from '../mcp'
+import type { DatabaseConfig } from '../utils/database'
 
 // 执行状态存储
 interface ExecutionState {
@@ -731,6 +732,9 @@ export class MonitoredLangGraphExecutor {
       case 'variable':
         return await this.executeVariable(ctx)
 
+      case 'database':
+        return await this.executeDatabase(ctx)
+
       case 'end':
         return {
           output: input,
@@ -1033,7 +1037,6 @@ export class MonitoredLangGraphExecutor {
       return { output: '', metadata: { nodeId: node.id, type: 'knowledge', label: node.data?.label } }
     }
     try {
-      const { retrieveContext } = await import('../utils/knowledge')
       const topK = node.data.config?.topK || undefined
       const context = await retrieveContext(kbId, query, topK)
       return {
@@ -1043,6 +1046,31 @@ export class MonitoredLangGraphExecutor {
     } catch (error) {
       const msg = error instanceof Error ? error.message : String(error)
       return { output: `检索失败: ${msg}`, metadata: { nodeId: node.id, type: 'knowledge', label: node.data?.label, error: msg } }
+    }
+  }
+
+  private async executeDatabase(ctx: ExecCtx) {
+    const { node, input, params, nodeResults, workflowEnvVars, variables } = ctx
+    const cfg: DatabaseConfig = {
+      dbType: (node.data.config?.dbType as DatabaseConfig['dbType']) || 'sqlite',
+      connectionConfig: this.resolveParams(node.data.config?.connectionConfig || '', input, params, nodeResults, workflowEnvVars, variables),
+      sql: this.resolveParams(node.data.config?.sql || '', input, params, nodeResults, workflowEnvVars, variables),
+      collection: node.data.config?.collection as string | undefined,
+      operation: node.data.config?.operation as string | undefined,
+      query: this.resolveParams(node.data.config?.query || '', input, params, nodeResults, workflowEnvVars, variables),
+      mode: (node.data.config?.mode as DatabaseConfig['mode']) || 'query',
+      timeout: (node.data.config?.timeout as number) || 30,
+    }
+    try {
+      const { executeDatabaseQuery } = await import('../utils/database')
+      const result = await executeDatabaseQuery(cfg)
+      return {
+        output: result,
+        metadata: { nodeId: node.id, type: 'database', label: node.data?.label, dbType: cfg.dbType, mode: cfg.mode }
+      }
+    } catch (error) {
+      const msg = error instanceof Error ? error.message : String(error)
+      return { output: `数据库查询失败: ${msg}`, metadata: { nodeId: node.id, type: 'database', label: node.data?.label, error: msg } }
     }
   }
 

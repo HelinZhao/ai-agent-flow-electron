@@ -5,8 +5,8 @@
 
 export const WORKFLOWS_API_DESCRIPTION = `调用工作流和执行相关的 REST API。路径 {id} 用实际值替换。
 
-⚠️ 只允许以下19种节点type，禁止发明其他type:
-start, end, llm, branch, skill, api, agent, cli, text, subWorkflow, loop, split, merge, transform, mcp, code, sleep, catch, note, if, knowledge, variable
+⚠️ 只允许以下23种节点type，禁止发明其他type:
+start, end, llm, branch, skill, api, agent, cli, text, subWorkflow, loop, split, merge, transform, mcp, code, sleep, catch, note, if, knowledge, variable, database
 
 节点通用结构: {"id":"唯一id","type":"上面之一","position":{"x":0,"y":0},"data":{"label":"显示名","config":{...}}}
 通用可选(retry): retryCount(重试次数), retryDelay(间隔ms), retryBackoff(fixed|exponential)
@@ -33,6 +33,7 @@ note → content(注释) 纯可视化不执行
 knowledge → knowledgeBaseId(知识库id), query(检索查询,支持模板变量), topK(返回结果数)
 if → condition(JS布尔表达式, 如 $input.length > 10), 支持模板变量, 边上condition为"true"/"false"
 variable → mode(set/get), items[{name,value}], value支持模板变量, set存入$vars.xxx可被下游引用, get取出输出
+database → dbType(sqlite|postgres|mysql|mssql|mongodb|redis), connectionConfig(JSON), sql(SQL语句或Redis命令), collection(集合名), operation(find|aggregate等), query(JSON查询), mode(query|execute)
 
 边(edge)结构: {"id":"唯一id","source":"源节点id","target":"目标节点id"}
 分支/条件节点的出边额外: "condition":"分支id或true/false", "label":"分支标签"

@@ -21,6 +21,7 @@ import McpConfig from './config/McpConfig';
 import IfConfig from './config/IfConfig';
 import KnowledgeConfig from './config/KnowledgeConfig';
 import VariableConfig from './config/VariableConfig';
+import DatabaseConfig from './config/DatabaseConfig';
 import StartConfig from './config/StartConfig';
 import CustomInput from '../ui/CustomInput';
 import CustomButton from '../ui/CustomButton';
@@ -55,6 +56,7 @@ const BG_COLORS: Record<string, string> = {
   if: 'bg-sky-500',
   knowledge: 'bg-emerald-500',
   variable: 'bg-slate-500',
+  database: 'bg-violet-500',
 }
 
 const NodeConfigPanel: React.FC<NodeConfigPanelProps> = ({ node, onClose, onSave, workflowId }: NodeConfigPanelProps) => {
@@ -121,6 +123,9 @@ const NodeConfigPanel: React.FC<NodeConfigPanelProps> = ({ node, onClose, onSave
 
       case 'variable':
         return <VariableConfig config={config} onConfigChange={setConfig} />;
+
+      case 'database':
+        return <DatabaseConfig config={config} onConfigChange={setConfig} />;
 
       case 'sleep':
         return <SleepConfig config={config} onConfigChange={setConfig} />;

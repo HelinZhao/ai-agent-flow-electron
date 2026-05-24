@@ -50,26 +50,26 @@ class LogStreamManager {
 
   /** 拦截 console.log/warn/error/debug */
   private interceptConsole(): void {
-    const self = this
+    const originals = this.originals
 
     console.log = (...args: any[]) => {
-      self.originals.log(...args)
-      self.addEntry('info', self.formatArgs(args))
+      originals.log(...args)
+      this.addEntry('info', this.formatArgs(args))
     }
 
     console.warn = (...args: any[]) => {
-      self.originals.warn(...args)
-      self.addEntry('warn', self.formatArgs(args))
+      originals.warn(...args)
+      this.addEntry('warn', this.formatArgs(args))
     }
 
     console.error = (...args: any[]) => {
-      self.originals.error(...args)
-      self.addEntry('error', self.formatArgs(args))
+      originals.error(...args)
+      this.addEntry('error', this.formatArgs(args))
     }
 
     console.debug = (...args: any[]) => {
-      self.originals.debug(...args)
-      self.addEntry('debug', self.formatArgs(args))
+      originals.debug(...args)
+      this.addEntry('debug', this.formatArgs(args))
     }
   }
 
