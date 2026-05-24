@@ -105,7 +105,7 @@ const ContextMenu: React.FC<ContextMenuProps> = ({ x, y, onAddNode, onClose, flo
           <div className="px-3 py-2 text-sm font-medium text-gray-700 dark:text-gray-300 border-b border-gray-200 dark:border-gray-600">
             {hoveredData.label}
           </div>
-          <div className="py-1">
+          <div className="py-1 max-h-[400px] overflow-auto">
             {hoveredData.nodes.map((nodeType) => {
               const gradient = nodeGradient(nodeType.color)
               return (

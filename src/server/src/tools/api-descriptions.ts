@@ -5,8 +5,8 @@
 
 export const WORKFLOWS_API_DESCRIPTION = `调用工作流和执行相关的 REST API。路径 {id} 用实际值替换。
 
-⚠️ 只允许以下18种节点type，禁止发明其他type:
-start, end, llm, branch, skill, api, agent, cli, text, subWorkflow, loop, split, merge, transform, mcp, code, sleep, catch, note
+⚠️ 只允许以下19种节点type，禁止发明其他type:
+start, end, llm, branch, skill, api, agent, cli, text, subWorkflow, loop, split, merge, transform, mcp, code, sleep, catch, note, if
 
 节点通用结构: {"id":"唯一id","type":"上面之一","position":{"x":0,"y":0},"data":{"label":"显示名","config":{...}}}
 通用可选(retry): retryCount(重试次数), retryDelay(间隔ms), retryBackoff(fixed|exponential)
@@ -30,9 +30,10 @@ code → code(return ...), language(javascript)
 sleep → sleepMs(毫秒)
 catch → errorOnly(true) 需上游sourceType:"error"边
 note → content(注释) 纯可视化不执行
+if → condition(JS布尔表达式, 如 $input.length > 10), 支持模板变量, 边上condition为"true"/"false"
 
 边(edge)结构: {"id":"唯一id","source":"源节点id","target":"目标节点id"}
-分支节点的出边额外: "condition":"分支id", "label":"分支标签"
+分支/条件节点的出边额外: "condition":"分支id或true/false", "label":"分支标签"
 错误处理边: "sourceType":"error" (源节点失败时走此边到catch节点)
 
 ===== 模板变量(所有支持文本模板的地方通用) =====
@@ -47,7 +48,7 @@ note → content(注释) 纯可视化不执行
 {{$now.timestamp}} — 毫秒时间戳
 {{$now.year}}/{{$now.month}}/{{$now.day}}/{{$now.hour}}/{{$now.minute}}/{{$now.second}} — 各时间分量
 {{$params._index}} — 循环节点中当前轮次索引(从0开始)
-可用范围: llm.prompt / text.text / api.apiConfig.url/headers/body / cli.cliConfig.command/workingDirectory / mcp.mcpConfig.params / subWorkflow.params / loop.params / split.params / code.code / branch.condition / sleep.sleepMs
+可用范围: llm.prompt / text.text / api.apiConfig.url/headers/body / cli.cliConfig.command/workingDirectory / mcp.mcpConfig.params / subWorkflow.params / loop.params / split.params / code.code / branch.condition / if.condition / sleep.sleepMs
 
 ===== 查询参数(所有列表) =====
 ?name=&createdAfter=&createdBefore=&updatedAfter=&updatedBefore=&page=1&pageSize=20

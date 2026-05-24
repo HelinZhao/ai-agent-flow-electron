@@ -12,7 +12,7 @@ import {
 } from '@xyflow/react';
 import '@xyflow/react/dist/style.css';
 
-import { StartNode, SkillNode, BranchNode, ApiNode, AgentNode, EndNode, LLMNode, CliNode, TextNode, SubWorkflow, McpNode, CodeNode, NoteNode, LoopNode, CatchNode, TransformNode, SplitNode, MergeNode, SleepNode } from './NodeTypes';
+import { StartNode, SkillNode, BranchNode, ApiNode, AgentNode, EndNode, LLMNode, CliNode, TextNode, SubWorkflow, McpNode, CodeNode, NoteNode, LoopNode, CatchNode, TransformNode, SplitNode, MergeNode, SleepNode, IfNode } from './NodeTypes';
 import NodeConfigPanel from './NodeConfigPanel';
 import { Workflow, WorkflowBranch, WorkflowEdge, WorkflowNode } from '@renderer/types';
 import NodeListPanel from './NodeListPanel';
@@ -49,6 +49,7 @@ const nodeTypes = {
   split: SplitNode,
   merge: MergeNode,
   sleep: SleepNode,
+  if: IfNode,
 };
 
 interface WorkflowDesignerProps {
@@ -270,8 +271,8 @@ function WorkflowDesigner(props: WorkflowDesignerProps): React.JSX.Element {
     (params: Connection) => {
       const sourceNode = nodes.find(n => n.id === params.source);
 
-      // 如果源节点是分支节点，显示分支选择模态框
-      if (sourceNode?.type === 'branch') {
+      // 如果源节点是分支/条件节点，显示分支选择模态框
+      if (sourceNode?.type === 'branch' || sourceNode?.type === 'if') {
         const branches: WorkflowBranch[] = sourceNode.data.config?.branches || [];
         if (branches.length > 1) {
           setBranchSelection({
@@ -502,7 +503,7 @@ function WorkflowDesigner(props: WorkflowDesignerProps): React.JSX.Element {
   // 双击分支边重新选择分支
   const onEdgeDoubleClick = useCallback((_event: React.MouseEvent, edge: any) => {
     const sourceNode = nodes.find(n => n.id === edge.source);
-    if (sourceNode?.type !== 'branch') return;
+    if (sourceNode?.type !== 'branch' && sourceNode?.type !== 'if') return;
     const branches: WorkflowBranch[] = sourceNode.data.config?.branches || [];
     if (branches.length < 1) return;
     setBranchSelection({

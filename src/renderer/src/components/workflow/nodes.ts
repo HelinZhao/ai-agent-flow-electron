@@ -29,6 +29,7 @@ export const NODE_DEFS: NodeDef[] = [
   { type: 'cli', shortLabel: 'CLI', defaultLabel: 'CLI节点', color: 'orange', category: 'integration', hasTargetHandle: true, hasSourceHandle: true, icon: '💻' },
   { type: 'text', shortLabel: '文本', defaultLabel: '文本节点', color: 'teal', category: 'logic', hasTargetHandle: true, hasSourceHandle: true, icon: '📝' },
   { type: 'end', shortLabel: '结束', defaultLabel: '结束节点', color: 'gray', category: 'basic', hasTargetHandle: true, hasSourceHandle: false, icon: '⏹️' },
+  { type: 'if', shortLabel: '条件', defaultLabel: '条件节点', color: 'sky', category: 'logic', hasTargetHandle: true, hasSourceHandle: true, icon: '🔀' },
 ]
 
 export const NODE_DEFS_MAP: Record<string, NodeDef> = Object.fromEntries(NODE_DEFS.map(n => [n.type, n]))

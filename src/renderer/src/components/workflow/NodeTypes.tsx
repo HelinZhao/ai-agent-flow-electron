@@ -532,6 +532,35 @@ export function EndNode({ data, selected }: { data: any; selected: boolean }): R
 }
 
 // ============================================================
+//  IfNode
+// ============================================================
+export function IfNode({ data, selected }: { data: any; selected: boolean }): React.JSX.Element {
+  const direction = useContext(LayoutDirectionContext)
+  const def = NODE_DEFS_MAP['if']
+  const targetPos = direction === 'vertical' ? Position.Top : Position.Left
+  const sourcePos = direction === 'vertical' ? Position.Bottom : Position.Right
+  const branches = data.config?.branches || []
+  return (
+    <div className={`node-if group relative px-4 py-3 min-w-[160px] bg-sky-100 rounded-lg transition-shadowduration-300 border border-sky-300 ${selected ? 'ring-2 ring-sky-400 shadow-glow-lg dark:shadow-glow-lg-w' : 'hover:shadow-glow-md dark:hover:shadow-glow-md-w'}`}>
+      <Handle type="target" position={targetPos} className={handleClass(def)} />
+      <Handle type="source" position={sourcePos} className={handleClass(def)} />
+      <div className="flex items-center space-x-3">
+        <div className="w-10 h-10 bg-gradient-to-br from-sky-400 to-sky-600 rounded-lg flex items-center justify-center shadow-lg border border-sky-300">
+          <span className="text-black text-base">{def.icon}</span>
+        </div>
+        <div className="flex-1 text-left">
+          <div className="font-bold text-gray-800">{def.shortLabel}</div>
+          <div className="text-xs text-gray-700 font-medium mt-0.5">{data.label}</div>
+          <div className="text-xs text-gray-600 font-medium mt-1">
+            {branches.length > 0 ? `${branches.length} 个条件` : '未配置条件'}
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ============================================================
 //  CatchNode
 // ============================================================
 export function CatchNode({ data, selected }: { data: any; selected: boolean }): React.JSX.Element {

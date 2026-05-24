@@ -415,7 +415,7 @@ export class MonitoredLangGraphExecutor {
             })
           }
 
-          if (node.type === 'end' || node.type === 'start' || node.type === 'branch') {
+          if (node.type === 'end' || node.type === 'start' || node.type === 'branch' || node.type === 'if') {
             return { messages: [] }
           }
 
@@ -438,6 +438,16 @@ export class MonitoredLangGraphExecutor {
           const nodeIds = branch2Targets.get(nodeResult?.metadata?.branch) ?? []
           return nodeIds
         })
+      } else if (node.type === 'if') {
+        node.data.config?.branches?.forEach((branch: WorkflowBranch) => {
+          branch2Targets.set(branch.id, [])
+        })
+
+        graph.addConditionalEdges(node.id as any, () => {
+          const nodeResult = nodeResults.get(node.id)
+          const nodeIds = branch2Targets.get(nodeResult?.metadata?.branch) ?? []
+          return nodeIds
+        })
       } else if (node.type === 'merge') {
         mergePredsMap.set(node.id, new Set(node2Sources.get(node.id) || []))
       }
@@ -447,7 +457,7 @@ export class MonitoredLangGraphExecutor {
     // ---- 第二次遍历 edgeGroups：向 LangGraph 注册边（含 Merge 前驱等待 + error 路由） ----
     for (const [source, group] of edgeGroups) {
       const srcNode = validNodes.find(n => n.id === source)
-      if (srcNode?.type === 'branch') {
+      if (srcNode?.type === 'branch' || srcNode?.type === 'if') {
         for (const t of group.normal) {
           const e = edges.find(edge => edge.source === source && edge.target === t)
           if (e?.condition) {
@@ -695,6 +705,9 @@ export class MonitoredLangGraphExecutor {
       case 'split':
         return await this.executeSplit(ctx)
 
+      case 'if':
+        return await this.executeIf(ctx)
+
       case 'merge':
         return await this.executeMerge(ctx)
 
@@ -806,6 +819,45 @@ export class MonitoredLangGraphExecutor {
           type: 'branch',
           branch: null,
           error: error instanceof Error ? error.message : '条件评估失败'
+        }
+      }
+    }
+  }
+
+  private async executeIf(ctx: ExecCtx) {
+    const { node, input, params, nodeResults, workflowEnvVars } = ctx
+    const branches: { id: string; condition: string }[] = node.data.config?.branches || []
+    if (branches.length === 0) {
+      return {
+        output: input,
+        metadata: { nodeId: node.id, type: 'if', label: node.data?.label, branch: null }
+      }
+    }
+    try {
+      for (const b of branches) {
+        if (!b.condition.trim()) continue
+        const resolved = this.resolveParams(b.condition, input, params, nodeResults, workflowEnvVars)
+        const fn = new Function('$input', '$params', `return Boolean(${resolved})`)
+        const result = fn(input, params || {})
+        if (result) {
+          return {
+            output: input,
+            metadata: { nodeId: node.id, label: node.data?.label, type: 'if', branch: b.id }
+          }
+        }
+      }
+      // 无条件满足
+      return {
+        output: input,
+        metadata: { nodeId: node.id, label: node.data?.label, type: 'if', branch: null }
+      }
+    } catch (error) {
+      return {
+        output: input,
+        metadata: {
+          nodeId: node.id, label: node.data?.label, type: 'if',
+          branch: null,
+          error: error instanceof Error ? error.message : '条件执行失败'
         }
       }
     }
