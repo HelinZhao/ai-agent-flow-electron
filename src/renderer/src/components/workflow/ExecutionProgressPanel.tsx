@@ -169,10 +169,10 @@ const ExecutionProgressPanel: React.FC<ExecutionProgressPanelProps> = ({
               <div>
                 <h4 className="text-xs font-medium text-gray-500 dark:text-gray-400 mb-2">执行路径</h4>
                 <div className="flex flex-wrap gap-1.5">
-                  {executionPath.map(nodeId => {
+                  {executionPath.map((nodeId, idx) => {
                     const nr = nodeResults.find(n => n.nodeId === nodeId)
                     return (
-                      <span key={nodeId}
+                      <span key={`${nodeId}-${idx}`}
                         className={`px-2 py-1 rounded text-xs font-medium ${
                           nodeId === currentNodeId
                             ? 'bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200'

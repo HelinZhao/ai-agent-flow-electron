@@ -6,7 +6,7 @@
 export const WORKFLOWS_API_DESCRIPTION = `调用工作流和执行相关的 REST API。路径 {id} 用实际值替换。
 
 ⚠️ 只允许以下19种节点type，禁止发明其他type:
-start, end, llm, branch, skill, api, agent, cli, text, subWorkflow, loop, split, merge, transform, mcp, code, sleep, catch, note, if, knowledge
+start, end, llm, branch, skill, api, agent, cli, text, subWorkflow, loop, split, merge, transform, mcp, code, sleep, catch, note, if, knowledge, variable
 
 节点通用结构: {"id":"唯一id","type":"上面之一","position":{"x":0,"y":0},"data":{"label":"显示名","config":{...}}}
 通用可选(retry): retryCount(重试次数), retryDelay(间隔ms), retryBackoff(fixed|exponential)
@@ -32,6 +32,7 @@ catch → errorOnly(true) 需上游sourceType:"error"边
 note → content(注释) 纯可视化不执行
 knowledge → knowledgeBaseId(知识库id), query(检索查询,支持模板变量), topK(返回结果数)
 if → condition(JS布尔表达式, 如 $input.length > 10), 支持模板变量, 边上condition为"true"/"false"
+variable → mode(set/get), items[{name,value}], value支持模板变量, set存入$vars.xxx可被下游引用, get取出输出
 
 边(edge)结构: {"id":"唯一id","source":"源节点id","target":"目标节点id"}
 分支/条件节点的出边额外: "condition":"分支id或true/false", "label":"分支标签"
@@ -43,6 +44,7 @@ if → condition(JS布尔表达式, 如 $input.length > 10), 支持模板变量,
 {{$nodes["节点id"].output}} — 引用任意已完成节点的输出
 {{$env.xxx}} — 工作流级环境变量(编辑器"环境变量"按钮配置)
 {{$global.xxx}} — 全局环境变量(设置→环境变量页面管理)
+{{$vars.xxx}} — 工作流变量(由 variable 节点设置)
 {{$now}} / {{$now.iso}} — 当前ISO时间
 {{$now.date}} — 日期 YYYY-MM-DD
 {{$now.time}} — 时间 HH:mm:ss
@@ -50,7 +52,7 @@ if → condition(JS布尔表达式, 如 $input.length > 10), 支持模板变量,
 {{$now.year}}/{{$now.month}}/{{$now.day}}/{{$now.hour}}/{{$now.minute}}/{{$now.second}} — 各时间分量
 {{$params.a + $params.b}} — 支持 JS 表达式运算，如加法、字符串拼接、toUpperCase() 等
 {{$params._index}} — 循环节点中当前轮次索引(从0开始)
-可用范围: llm.prompt / text.text / api.apiConfig.url/headers/body / cli.cliConfig.command/workingDirectory / mcp.mcpConfig.params / subWorkflow.params / loop.params / split.params / code.code / branch.condition / if.condition / sleep.sleepMs
+可用范围: llm.prompt / text.text / api.apiConfig.url/headers/body / cli.cliConfig.command/workingDirectory / mcp.mcpConfig.params / subWorkflow.params / loop.params / split.params / code.code / branch.condition / if.condition / variable.value / sleep.sleepMs
 
 ===== 查询参数(所有列表) =====
 ?name=&createdAfter=&createdBefore=&updatedAfter=&updatedBefore=&page=1&pageSize=20

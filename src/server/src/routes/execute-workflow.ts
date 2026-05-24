@@ -84,7 +84,7 @@ router.get('/progress/:executionId', async (req, res) => {
     const nodeResults = Array.from(executionState.nodeResults.values())
     const executionPath = nodeResults
       .filter((result) => result.status === 'completed')
-      .map((result) => result.metadata?.label || result.metadata?.nodeId)
+      .map((result) => result.metadata?.nodeId || result.metadata?.label)
 
     const response = {
       executionId: executionState.executionId,
@@ -175,7 +175,7 @@ router.get('/progress-sse/:executionId', (req, res) => {
   const nodeResults = Array.from(executionState.nodeResults.values())
   const executionPath = nodeResults
     .filter((result) => result.status === 'completed')
-    .map((result) => result.metadata?.label || result.metadata?.nodeId)
+    .map((result) => result.metadata?.nodeId || result.metadata?.label)
 
   const initialData = {
     type: 'initial_state',

@@ -28,6 +28,7 @@ export const NODE_DEFS: NodeDef[] = [
   { type: 'merge', shortLabel: '聚合', defaultLabel: '聚合节点', color: 'blue', category: 'logic', hasTargetHandle: true, hasSourceHandle: true, icon: '⊞' },
   { type: 'cli', shortLabel: 'CLI', defaultLabel: 'CLI节点', color: 'orange', category: 'integration', hasTargetHandle: true, hasSourceHandle: true, icon: '💻' },
   { type: 'knowledge', shortLabel: '知识库', defaultLabel: '知识库检索节点', color: 'emerald', category: 'integration', hasTargetHandle: true, hasSourceHandle: true, icon: '📚' },
+  { type: 'variable', shortLabel: '变量', defaultLabel: '变量节点', color: 'slate', category: 'logic', hasTargetHandle: true, hasSourceHandle: true, icon: '📌' },
   { type: 'text', shortLabel: '文本', defaultLabel: '文本节点', color: 'teal', category: 'logic', hasTargetHandle: true, hasSourceHandle: true, icon: '📝' },
   { type: 'end', shortLabel: '结束', defaultLabel: '结束节点', color: 'gray', category: 'basic', hasTargetHandle: true, hasSourceHandle: false, icon: '⏹️' },
   { type: 'if', shortLabel: '条件', defaultLabel: '条件节点', color: 'sky', category: 'logic', hasTargetHandle: true, hasSourceHandle: true, icon: '🔀' },

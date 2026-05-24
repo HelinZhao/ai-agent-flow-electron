@@ -562,6 +562,36 @@ export function KnowledgeNode({ data, selected }: { data: any; selected: boolean
 }
 
 // ============================================================
+//  VariableNode
+// ============================================================
+export function VariableNode({ data, selected }: { data: any; selected: boolean }): React.JSX.Element {
+  const direction = useContext(LayoutDirectionContext)
+  const def = NODE_DEFS_MAP['variable']
+  const targetPos = direction === 'vertical' ? Position.Top : Position.Left
+  const sourcePos = direction === 'vertical' ? Position.Bottom : Position.Right
+  const mode = data.config?.mode || 'set'
+  const items = data.config?.items || []
+  return (
+    <div className={`node-variable group relative px-4 py-3 min-w-[160px] ${nodeBg(def)} rounded-lg transition-shadowduration-300 ${nodeBorder(def)} ${selected ? nodeRing(def) : 'hover:shadow-glow-md dark:hover:shadow-glow-md-w'}`}>
+      <Handle type="target" position={targetPos} className={handleClass(def)} />
+      <Handle type="source" position={sourcePos} className={handleClass(def)} />
+      <div className="flex items-center space-x-3">
+        <div className="w-10 h-10 bg-gradient-to-br from-slate-400 to-slate-600 rounded-lg flex items-center justify-center shadow-lg border border-slate-300">
+          <span className="text-black text-base">{def.icon}</span>
+        </div>
+        <div className="flex-1 text-left">
+          <div className="font-bold text-gray-800">{def.shortLabel}</div>
+          <div className="text-xs text-gray-700 font-medium mt-0.5">{data.label}</div>
+          <div className="text-xs text-gray-500 font-medium mt-1">
+            {mode === 'set' ? `设置 ${items.length} 个变量` : `获取 ${items.length} 个变量`}
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ============================================================
 //  IfNode
 // ============================================================
 export function IfNode({ data, selected }: { data: any; selected: boolean }): React.JSX.Element {
