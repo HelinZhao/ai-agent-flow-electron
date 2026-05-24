@@ -928,6 +928,23 @@ export class MonitoredLangGraphExecutor {
     if (nodeResults && nodeResults.size > 0) {
       result = this.resolveNodeRefs(result, nodeResults)
     }
+
+    // {{表达式}} → 将已替换的模板变量作为 JS 表达式求值
+    // 支持如 {{$params.a + $params.b}}、{{$input.toUpperCase()}} 等
+    result = result.replace(/\{\{([^}]+)\}\}/g, (match, expr) => {
+      try {
+        const trimmed = expr.trim()
+        if (!trimmed) return match
+        // 只对包含运算符或函数调用的表达式求值，纯变量引用保留原样
+        if (/^[\w.$[\]"]+$/.test(trimmed)) return match
+        const fn = new Function('$input', '$params', `return (${trimmed})`)
+        const val = fn(input, params || {})
+        return val !== undefined && val !== null ? String(val) : match
+      } catch {
+        return match
+      }
+    })
+
     return result
   }
 

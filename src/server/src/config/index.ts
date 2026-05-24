@@ -370,8 +370,8 @@ export const TOOL_WEB_SEARCH_MAX_RESULTS = 5
 /** webSearch 每条结果的最大摘要长度 */
 export const TOOL_WEB_SEARCH_SNIPPET_LENGTH = 150
 
-/** DuckDuckGo 搜索引擎 URL */
-export const DUCKDUCKGO_URL = 'https://lite.duckduckgo.com/lite/'
+/** webSearch 搜索引擎 URL（国内可用） */
+export const WEB_SEARCH_URL = 'https://www.bing.com/search'
 
 /** webSearch 请求的 User-Agent */
 export const WEB_SEARCH_USER_AGENT = 'Mozilla/5.0'

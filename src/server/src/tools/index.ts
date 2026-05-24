@@ -3,7 +3,7 @@ import { z } from 'zod'
 import * as fs from 'fs/promises'
 import * as path from 'path'
 import { execa } from 'execa'
-import { DUCKDUCKGO_URL, TOOL_EXECUTION_TIMEOUT, TOOL_READ_FILE_MAX_CHARS, TOOL_HTTP_MAX_CHARS, TOOL_WEB_SEARCH_MAX_RESULTS, TOOL_WEB_SEARCH_SNIPPET_LENGTH, WEB_SEARCH_USER_AGENT, SERVER_PORT } from '../config'
+import { TOOL_EXECUTION_TIMEOUT, TOOL_READ_FILE_MAX_CHARS, TOOL_HTTP_MAX_CHARS, TOOL_WEB_SEARCH_MAX_RESULTS, TOOL_WEB_SEARCH_SNIPPET_LENGTH, WEB_SEARCH_USER_AGENT, SERVER_PORT } from '../config'
 import { changeNotifier } from '../utils/dataChangeNotifier'
 import { getUserDataDir } from '../utils/file'
 import { mcpConnectionManager } from '../mcp'
@@ -136,17 +136,18 @@ export const httpRequestTool = tool(
 
 export const webSearchTool = tool(
   async ({ query }: { query: string }) => {
-    const url = `${DUCKDUCKGO_URL}?q=${encodeURIComponent(query)}`
+    const url = `https://cn.bing.com/search?q=${encodeURIComponent(query)}&mkt=zh-CN`
     const resp = await fetch(url, { headers: { 'User-Agent': WEB_SEARCH_USER_AGENT } })
     const html = await resp.text()
     const results: string[] = []
-    const linkRegex = /<a[^>]*class="result__a"[^>]*>([^<]+)<\/a>/gi
+    // Bing 搜索结果解析：<li class="b_algo"> 内 <h2><a>标题</a></h2> + <p>摘要</p>
+    const blockRegex = /<li[^>]*class="b_algo"[^>]*>[\s\S]*?<h2[^>]*><a[^>]*href="([^"]*)"[^>]*>([\s\S]*?)<\/a><\/h2>[\s\S]*?<p[^>]*class="b_lineclamp2"[^>]*>([\s\S]*?)<\/p>/gi
     let match
-    while ((match = linkRegex.exec(html)) !== null && results.length < TOOL_WEB_SEARCH_MAX_RESULTS) {
-      const title = match[1].trim()
-      const afterIndex = match.index + match[0].length
-      const snippet = html.substring(afterIndex, afterIndex + 200)
-        .replace(/<[^>]+>/g, '').trim().substring(0, TOOL_WEB_SEARCH_SNIPPET_LENGTH)
+    while ((match = blockRegex.exec(html)) !== null && results.length < TOOL_WEB_SEARCH_MAX_RESULTS) {
+      const [, , rawTitle, rawSnippet] = match
+      const title = rawTitle.replace(/<[^>]+>/g, '').trim()
+      if (!title) continue
+      const snippet = rawSnippet.replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ').trim().substring(0, TOOL_WEB_SEARCH_SNIPPET_LENGTH)
       results.push(`${title}\n${snippet}`)
     }
     return results.length > 0
@@ -155,7 +156,7 @@ export const webSearchTool = tool(
   },
   {
     name: 'webSearch',
-    description: '搜索网页获取信息。通过 DuckDuckGo 搜索引擎返回相关结果摘要。',
+    description: '搜索网页获取信息。通过 Bing 搜索引擎返回相关结果摘要。',
     schema: z.object({ query: z.string().describe('搜索关键词') }),
   }
 )

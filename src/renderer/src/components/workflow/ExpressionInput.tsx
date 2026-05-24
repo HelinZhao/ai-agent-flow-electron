@@ -17,16 +17,27 @@ interface ExpressionInputProps {
   availableNodes?: NodeRef[]
 }
 
-/** 高亮 {{$xxx}} 内置变量和裸写 $nodes，不认识的 {{xxx}} 不做高亮 */
+/** 高亮 {{$xxx}} 内置变量和裸写 $nodes，以及 {{表达式}} */
 // 注意：只能用 text-* 和 bg-*，不能有 padding/border/margin/rounded 等影响尺寸的类
 function highlight(text: string): string {
-  const regex = /(\{\{\$nodes(?:\["[^"]+"\]|\.\w+)(?:\.[a-zA-Z_$][\w$]*)*\}\})|(\{\{\$(?:input|params\.\w+(?:\.\w+)*|env\.\w+|global\.\w+|now(?:\.\w+)?)\}\})|(\$nodes(?:\["[^"]+"\]|\.\w+)(?:\.[a-zA-Z_$][\w$]*)?)/g
-  return text.replace(regex, (match, nodesBuiltin, dollarBuiltin, bareNodes) => {
+  // 先标记已匹配的范围，避免二次处理
+  const markers = new Set<string>()
+  let result = text
+  // 1. 匹配已知变量和裸 nodes
+  const knownRegex = /(\{\{\$nodes(?:\["[^"]+"\]|\.\w+)(?:\.[a-zA-Z_$][\w$]*)*\}\})|(\{\{\$(?:input|params\.\w+(?:\.\w+)*|env\.\w+|global\.\w+|now(?:\.\w+)?)\}\})|(\$nodes(?:\["[^"]+"\]|\.\w+)(?:\.[a-zA-Z_$][\w$]*)?)/g
+  result = result.replace(knownRegex, (match, nodesBuiltin, dollarBuiltin, bareNodes) => {
+    markers.add(match)
     if (nodesBuiltin) return `<span class="text-purple-600 dark:text-purple-400 bg-purple-100/60 dark:bg-purple-900/30">${nodesBuiltin}</span>`
     if (dollarBuiltin) return `<span class="text-teal-600 dark:text-teal-400 bg-teal-100/60 dark:bg-teal-900/30">${dollarBuiltin}</span>`
     if (bareNodes) return `<span class="text-purple-600 dark:text-purple-400 bg-purple-100/60 dark:bg-purple-900/30">${bareNodes}</span>`
     return match
   })
+  // 2. 标记剩下的 {{...}} 包裹内容（表达式高亮）
+  result = result.replace(/\{\{[^}]+\}\}/g, (match) => {
+    if (markers.has(match)) return match
+    return `<span class="text-teal-600 dark:text-teal-400 bg-teal-100/60 dark:bg-teal-900/30">${match}</span>`
+  })
+  return result
 }
 
 const PADDING_CLASS = { xs: '!px-2 !py-1', sm: '!px-3 !py-1.5', md: '!px-4 !py-2.5' }

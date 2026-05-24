@@ -47,6 +47,7 @@ if → condition(JS布尔表达式, 如 $input.length > 10), 支持模板变量,
 {{$now.time}} — 时间 HH:mm:ss
 {{$now.timestamp}} — 毫秒时间戳
 {{$now.year}}/{{$now.month}}/{{$now.day}}/{{$now.hour}}/{{$now.minute}}/{{$now.second}} — 各时间分量
+{{$params.a + $params.b}} — 支持 JS 表达式运算，如加法、字符串拼接、toUpperCase() 等
 {{$params._index}} — 循环节点中当前轮次索引(从0开始)
 可用范围: llm.prompt / text.text / api.apiConfig.url/headers/body / cli.cliConfig.command/workingDirectory / mcp.mcpConfig.params / subWorkflow.params / loop.params / split.params / code.code / branch.condition / if.condition / sleep.sleepMs
 
