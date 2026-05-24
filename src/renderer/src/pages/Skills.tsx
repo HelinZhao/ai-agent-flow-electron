@@ -23,7 +23,7 @@ const SkillCard = React.memo(function SkillCard({
 }) {
   const summary = skill.content
     ? skill.content.replace(/[#*\n]/g, ' ').substring(0, 90) +
-      (skill.content.length > 90 ? '...' : '')
+    (skill.content.length > 90 ? '...' : '')
     : '暂无内容';
 
   return (
@@ -244,8 +244,8 @@ export default function Skills(): React.JSX.Element {
             从文件导入
           </CustomFileUpload>
           <CustomButton onClick={handleCreate} variant="primary" size="sm">
-            <span>+</span>
-            <span>新建技能</span>
+            <span>✨</span>
+            <span>创建</span>
           </CustomButton>
         </div>
       </div>

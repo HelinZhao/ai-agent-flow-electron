@@ -441,7 +441,7 @@ export default function Workflow(): React.JSX.Element {
                         size="sm"
                     >
                         <span>✨</span>
-                        <span>创建工作流</span>
+                        <span>创建</span>
                     </CustomButton>
                 </div>
             </div>

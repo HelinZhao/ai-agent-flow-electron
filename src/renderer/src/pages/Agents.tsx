@@ -63,8 +63,8 @@ const AgentCard = React.memo(function AgentCard({
         <div className="flex items-center gap-2 mb-2.5">
           <span
             className={`inline-flex items-center px-1.5 py-0.5 text-[10px] font-medium rounded-full border ${isStandard
-                ? 'bg-blue-50 dark:bg-blue-900/20 text-blue-600 dark:text-blue-400 border-blue-200 dark:border-blue-800'
-                : 'bg-purple-50 dark:bg-purple-900/20 text-purple-600 dark:text-purple-400 border-purple-200 dark:border-purple-800'
+              ? 'bg-blue-50 dark:bg-blue-900/20 text-blue-600 dark:text-blue-400 border-blue-200 dark:border-blue-800'
+              : 'bg-purple-50 dark:bg-purple-900/20 text-purple-600 dark:text-purple-400 border-purple-200 dark:border-purple-800'
               }`}
           >
             {typeLabel}
@@ -301,8 +301,8 @@ export default function Agents(): React.JSX.Element {
             />
           )}
           <CustomButton onClick={handleCreate} variant="primary" size="sm">
-            <span>+</span>
-            <span>新建 Agent</span>
+            <span>✨</span>
+            <span>创建</span>
           </CustomButton>
         </div>
       </div>

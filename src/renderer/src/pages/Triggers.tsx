@@ -200,7 +200,8 @@ export default function Triggers(): React.JSX.Element {
           </p>
         </div>
         <CustomButton onClick={openCreate} size="sm">
-          + 新建触发器
+          <span>✨</span>
+          <span>创建</span>
         </CustomButton>
       </div>
 

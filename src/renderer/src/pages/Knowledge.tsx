@@ -182,13 +182,13 @@ export default function Knowledge(): React.JSX.Element {
 
   const kbType = watch('type')
 
-const handleOllamaDismissOnce = () => setShowOllamaDialog(false)
-const handleOllamaDismissPermanently = () => {
-  setShowOllamaDialog(false)
-  localStorage.setItem('ollama-dismissed', 'true')
-}
+  const handleOllamaDismissOnce = () => setShowOllamaDialog(false)
+  const handleOllamaDismissPermanently = () => {
+    setShowOllamaDialog(false)
+    localStorage.setItem('ollama-dismissed', 'true')
+  }
 
-const handleModelPull = async (): Promise<void> => {
+  const handleModelPull = async (): Promise<void> => {
     setModelPulling(true)
     setModelPullProgress(null)
     try {
@@ -307,7 +307,8 @@ const handleModelPull = async (): Promise<void> => {
             size="sm" hidden={knowledgeBases.length === 0} className='rounded-xl'
             leftIcon={<svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><circle cx="11" cy="11" r="8" /><path d="m21 21-4.35-4.35" /></svg>} />
           <CustomButton onClick={startNew} variant="primary" size="sm">
-            <span>✨</span><span>创建知识库</span>
+            <span>✨</span>
+            <span>创建</span>
           </CustomButton>
         </div>
       </div>
