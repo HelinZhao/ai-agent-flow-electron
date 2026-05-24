@@ -25,7 +25,7 @@ const AgentCard = React.memo(function AgentCard({
   const isStandard = agent.type !== 'workflow';
   const summary = agent.instructions
     ? agent.instructions.replace(/[#*\n]/g, ' ').substring(0, 90) +
-      (agent.instructions.length > 90 ? '...' : '')
+    (agent.instructions.length > 90 ? '...' : '')
     : '暂无指令';
 
   const typeLabel = isStandard ? '标准' : '工作流';
@@ -52,11 +52,6 @@ const AgentCard = React.memo(function AgentCard({
               <h4 className="text-sm font-semibold text-gray-900 dark:text-white truncate">
                 {agent.name}
               </h4>
-                    {isSystem && (
-                      <span className="inline-flex items-center px-1.5 py-0.5 text-[10px] font-medium rounded-full bg-amber-100 dark:bg-amber-900/30 text-amber-700 dark:text-amber-300 border border-amber-200 dark:border-amber-700">
-                        系统
-                      </span>
-                    )}
               <p className="text-xs text-gray-400 dark:text-gray-500 mt-0.5 truncate">
                 {agent.description || '暂无描述'}
               </p>
@@ -67,14 +62,18 @@ const AgentCard = React.memo(function AgentCard({
         {/* Type badge + workflow */}
         <div className="flex items-center gap-2 mb-2.5">
           <span
-            className={`inline-flex items-center px-1.5 py-0.5 text-[10px] font-medium rounded-full border ${
-              isStandard
+            className={`inline-flex items-center px-1.5 py-0.5 text-[10px] font-medium rounded-full border ${isStandard
                 ? 'bg-blue-50 dark:bg-blue-900/20 text-blue-600 dark:text-blue-400 border-blue-200 dark:border-blue-800'
                 : 'bg-purple-50 dark:bg-purple-900/20 text-purple-600 dark:text-purple-400 border-purple-200 dark:border-purple-800'
-            }`}
+              }`}
           >
             {typeLabel}
           </span>
+          {isSystem && (
+            <span className="inline-flex items-center px-1.5 py-0.5 text-[10px] font-medium rounded-full bg-amber-100 dark:bg-amber-900/30 text-amber-700 dark:text-amber-300 border border-amber-200 dark:border-amber-700">
+              系统
+            </span>
+          )}
           {workflowName && (
             <span className="text-[10px] text-gray-400 dark:text-gray-500 truncate">
               {workflowName}
@@ -99,15 +98,15 @@ const AgentCard = React.memo(function AgentCard({
           </svg>
         </button>
         {!isSystem && <><div className="w-px h-4 bg-gray-200 dark:bg-gray-600" />
-        <button
-          onClick={(e) => { e.stopPropagation(); onDelete(agent) }}
-          className="flex items-center justify-center w-6 h-6 rounded-lg text-gray-400 hover:text-red-600 dark:hover:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors"
-          title="删除"
-        >
-          <svg className="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-            <path d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
-          </svg>
-        </button>
+          <button
+            onClick={(e) => { e.stopPropagation(); onDelete(agent) }}
+            className="flex items-center justify-center w-6 h-6 rounded-lg text-gray-400 hover:text-red-600 dark:hover:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors"
+            title="删除"
+          >
+            <svg className="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+              <path d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+            </svg>
+          </button>
         </>}
       </div>
 
@@ -278,10 +277,13 @@ export default function Agents(): React.JSX.Element {
   return (
     <div className="mx-auto py-6 px-4 sm:px-6 lg:px-8">
       {/* Header */}
-      <div className="flex justify-between items-center mb-6">
-        <h1 className="text-xl font-bold bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent">
-          Agent管理
-        </h1>
+      <div className="flex justify-between items-start mb-6">
+        <div>
+          <h1 className="text-xl font-bold bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent">
+            Agent管理
+          </h1>
+          <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">创建和管理 AI Agent，配置指令、技能和工具，实现智能对话与自动化任务</p>
+        </div>
         <div className="flex items-center gap-2">
           {agents.length > 0 && (
             <CustomInput

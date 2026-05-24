@@ -213,10 +213,13 @@ export default function Skills(): React.JSX.Element {
   return (
     <div className="mx-auto py-6 px-4 sm:px-6 lg:px-8">
       {/* Header */}
-      <div className="flex justify-between items-center mb-6">
-        <h1 className="text-xl font-bold bg-gradient-to-r from-amber-600 to-orange-600 bg-clip-text text-transparent">
-          技能管理
-        </h1>
+      <div className="flex justify-between items-start mb-6">
+        <div>
+          <h1 className="text-xl font-bold bg-gradient-to-r from-amber-600 to-orange-600 bg-clip-text text-transparent">
+            技能管理
+          </h1>
+          <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">创建和管理 AI 技能，为工作流和 Agent 提供可复用的专业知识与处理能力</p>
+        </div>
         <div className="flex items-center gap-2">
           {skills.length > 0 && (
             <CustomInput

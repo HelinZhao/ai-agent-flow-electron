@@ -1,6 +1,5 @@
 import { defineConfig } from 'eslint/config'
 import tseslint from '@electron-toolkit/eslint-config-ts'
-import eslintConfigPrettier from '@electron-toolkit/eslint-config-prettier'
 import eslintPluginReact from 'eslint-plugin-react'
 import eslintPluginReactHooks from 'eslint-plugin-react-hooks'
 import eslintPluginReactRefresh from 'eslint-plugin-react-refresh'
@@ -29,11 +28,5 @@ export default defineConfig(
       '@typescript-eslint/no-explicit-any': 'off',
       '@typescript-eslint/explicit-function-return-type': 'off'
     }
-  },
-  {
-    rules: {
-      'prettier/prettier': ['error', { endOfLine: 'crlf' }]
-    }
-  },
-  eslintConfigPrettier
+  }
 )

@@ -295,10 +295,13 @@ const handleModelPull = async (): Promise<void> => {
         onPull={handleModelPull}
       />
 
-      <div className="flex justify-between items-center mb-5">
-        <h1 className="text-xl font-bold bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent">
-          知识库
-        </h1>
+      <div className="flex justify-between items-start mb-5">
+        <div>
+          <h1 className="text-xl font-bold bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent">
+            知识库
+          </h1>
+          <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">管理知识库，为 AI Agent 提供领域知识和文档检索能力，支持 RAG 增强生成</p>
+        </div>
         <div className="flex space-x-2 items-center">
           <CustomInput value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} placeholder="搜索知识库..."
             size="sm" hidden={knowledgeBases.length === 0} className='rounded-xl'

@@ -117,28 +117,31 @@ const ExecutionMonitor = () => {
   }
 
   return (
-    <div className="h-full flex flex-col">
-      {/* 头部 */}
-      <div className="flex-shrink-0 px-6 py-5 border-b border-gray-200 dark:border-gray-700">
-        <h1 className="text-xl font-bold bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent flex items-center gap-2">
+    <div className="py-4 px-6">
+      {/* 标题 */}
+      <div className="mb-4">
+        <div className="flex items-center gap-2 mb-1">
           <svg className="w-6 h-6 text-blue-500" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
             <path d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4" />
           </svg>
-          执行监控
-        </h1>
+          <h1 className="text-xl font-bold bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent">
+            执行监控
+          </h1>
+        </div>
+        <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">实时查看工作流执行状态，管理运行中的任务，追踪执行历史和节点输出</p>
       </div>
 
       {/* 过滤标签 */}
-      <div className="flex-shrink-0 px-6 py-3 border-b border-gray-200 dark:border-gray-700 flex items-center gap-1">
+      <div className="flex items-center gap-1 mb-6 border-b border-gray-200 dark:border-gray-700">
         {FILTER_TABS.map(tab => (
           <button
             key={tab.key}
             onClick={() => handleFilterChange(tab.key)}
-            className={`px-3 py-1.5 text-sm rounded-lg font-medium transition-colors ${
+            className={'px-4 py-2.5 text-sm font-medium border-b-2 transition-colors ' + (
               filter === tab.key
-                ? 'bg-blue-500 text-white shadow-sm'
-                : 'text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700'
-            }`}
+                ? 'border-blue-500 text-blue-600 dark:text-blue-400'
+                : 'border-transparent text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300'
+            )}
           >
             {tab.label}
           </button>
@@ -149,7 +152,7 @@ const ExecutionMonitor = () => {
       </div>
 
       {/* 列表 */}
-      <div className="flex-1 overflow-auto px-6 py-4 space-y-3">
+      <div className="space-y-3">
         {isLoading && executions.length === 0 && (
           <div className="flex flex-col items-center justify-center h-48 text-gray-400 dark:text-gray-500">
             <div className="flex items-center justify-center w-16 h-16 rounded-2xl bg-gradient-to-br from-blue-100 to-purple-100 dark:from-blue-900/30 dark:to-purple-900/30 mb-4">
@@ -349,7 +352,7 @@ const ExecutionMonitor = () => {
 
       {/* 分页 */}
       {totalPages > 1 && (
-        <div className="flex-shrink-0 px-6 py-3 border-t border-gray-200 dark:border-gray-700">
+        <div className="pt-4 border-t border-gray-200 dark:border-gray-700">
           <Pagination page={page} totalPages={totalPages} onChange={setPage} />
         </div>
       )}

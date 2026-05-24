@@ -177,18 +177,18 @@ async function migrateParamsColumn(): Promise<void> {
       await sequelize.query('ALTER TABLE triggers ADD COLUMN params TEXT;')
       console.log('[Migration] triggers.params column added')
     }
-  } catch {}
+  } catch { /* empty */ }
 }
 
 // 测试数据库连接
 async function seedTemplates(): Promise<void> {
   try {
     const { TemplateModel } = await import("../models/Template")
-    const count = await TemplateModel.count()
-    if (count === 0) {
-      await TemplateModel.bulkCreate(SEED_TEMPLATES as any)
-      console.log("[Seed] " + SEED_TEMPLATES.length + " templates imported")
-    }
+    const allFields = ['name', 'description', 'type', 'category', 'icon', 'content', 'author', 'version']
+    await TemplateModel.bulkCreate(SEED_TEMPLATES as any, {
+      updateOnDuplicate: allFields as any,
+    })
+    console.log(`[Seed] ${SEED_TEMPLATES.length} templates synced`)
   } catch (error: any) {
     console.log("[Seed] skip:", error.message)
   }

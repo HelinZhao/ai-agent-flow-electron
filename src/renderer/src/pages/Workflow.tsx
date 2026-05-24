@@ -399,10 +399,15 @@ export default function Workflow(): React.JSX.Element {
     return (
         <div className="mx-auto py-6 px-4 sm:px-6 lg:px-8">
             {/* 标题栏 */}
-            <div className="flex justify-between items-center mb-6">
-                <h1 className="text-xl font-bold bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent">
-                    工作流管理
-                </h1>
+            <div className="flex justify-between items-start mb-6">
+                <div>
+                    <h1 className="text-xl font-bold bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent">
+                        工作流管理
+                    </h1>
+                    <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">
+                        设计和管理 AI 工作流，通过可视化编排实现复杂的自动化任务
+                    </p>
+                </div>
                 <div className="flex space-x-2 items-center">
                     {/* 搜索栏 */}
                     <CustomInput

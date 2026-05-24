@@ -6,7 +6,7 @@ export interface TemplateAttributes {
   id: string
   name: string
   description: string
-  type: 'api' | 'mcp' | 'code'
+  type: 'api' | 'mcp' | 'code' | 'workflow' | 'agent' | 'skill'
   category: string
   icon: string
   content: string
@@ -16,13 +16,13 @@ export interface TemplateAttributes {
   updatedAt: Date
 }
 
-export interface TemplateCreationAttributes extends Omit<TemplateAttributes, 'id' | 'createdAt' | 'updatedAt'> {}
+export interface TemplateCreationAttributes extends Omit<TemplateAttributes, 'id' | 'createdAt' | 'updatedAt'> { }
 
 export class TemplateModel extends Model<TemplateAttributes, TemplateCreationAttributes> implements TemplateAttributes {
   declare id: string
   declare name: string
   declare description: string
-  declare type: 'api' | 'mcp' | 'code'
+  declare type: 'api' | 'mcp' | 'code' | 'workflow' | 'agent' | 'skill'
   declare category: string
   declare icon: string
   declare content: string
@@ -47,4 +47,5 @@ TemplateModel.init({
 }, {
   sequelize,
   tableName: 'templates',
+  indexes: [{ unique: true, fields: ['name', 'type'] }],
 })
