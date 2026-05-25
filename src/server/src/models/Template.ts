@@ -6,7 +6,7 @@ export interface TemplateAttributes {
   id: string
   name: string
   description: string
-  type: 'api' | 'mcp' | 'code' | 'workflow' | 'agent' | 'skill'
+  type: 'api' | 'mcp' | 'code' | 'workflow' | 'agent' | 'skill' | 'cli'
   category: string
   icon: string
   content: string
@@ -22,7 +22,7 @@ export class TemplateModel extends Model<TemplateAttributes, TemplateCreationAtt
   declare id: string
   declare name: string
   declare description: string
-  declare type: 'api' | 'mcp' | 'code' | 'workflow' | 'agent' | 'skill'
+  declare type: 'api' | 'mcp' | 'code' | 'workflow' | 'agent' | 'skill' | 'cli'
   declare category: string
   declare icon: string
   declare content: string

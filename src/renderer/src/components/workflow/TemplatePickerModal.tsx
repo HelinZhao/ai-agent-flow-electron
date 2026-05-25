@@ -7,34 +7,127 @@ import CustomButton from '../ui/CustomButton'
 interface TemplatePickerModalProps {
   isOpen: boolean
   onClose: () => void
-  type: 'api' | 'code'
+  type: 'api' | 'code' | 'cli'
   onSelect: (template: Template) => void
 }
 
 const TemplatePickerModal: React.FC<TemplatePickerModalProps> = ({ isOpen, onClose, type, onSelect }) => {
   const [list, setList] = useState<Template[]>([])
   const [selected, setSelected] = useState<Template | null>(null)
+  const [cliDetail, setCliDetail] = useState<Template | null>(null)
 
   useEffect(() => {
     if (!isOpen) return
     setSelected(null)
+    setCliDetail(null)
     templateApi.getAll(type).then(setList).catch(() => setList([]))
   }, [isOpen, type])
+
+  const pickCliCommand = (t: Template, command: string) => {
+    // wrap the chosen command back into a template for the parent to parse
+    const modified = { ...t, content: JSON.stringify({ command }) }
+    onSelect(modified)
+    onClose()
+  }
+
+  const renderCliContent = (t: Template) => {
+    let content: Record<string, any> = {}
+    try { content = JSON.parse(t.content) } catch { return null }
+
+    const items: { label: string; cmd: string }[] = []
+
+    if (content.usage) {
+      items.push({ label: '基本用法', cmd: content.usage })
+    }
+
+    if (content.examples?.length) {
+      content.examples.forEach((ex: any) => {
+        if (ex.command) items.push({ label: `示例: ${ex.description}`, cmd: ex.command })
+      })
+    }
+
+    if (content.options?.length) {
+      content.options.forEach((opt: any) => {
+        const shortFlag = opt.flag.split(',')[0].trim()
+        const cmd = `${content.command} ${shortFlag}`
+        items.push({ label: `选项: ${opt.flag}  — ${opt.description}`, cmd })
+      })
+    }
+
+    return (
+      <div className="space-y-1">
+        {items.map((item, i) => (
+          <div
+            key={i}
+            onClick={() => pickCliCommand(t, item.cmd)}
+            className="flex flex-col gap-0.5 p-3 rounded-lg cursor-pointer border border-transparent hover:border-blue-300 dark:hover:border-blue-700 hover:bg-blue-50/50 dark:hover:bg-blue-900/20 transition-colors"
+          >
+            <span className="text-xs text-gray-500 dark:text-gray-400">{item.label}</span>
+            <code className="text-sm font-mono text-gray-800 dark:text-gray-200 break-all">{item.cmd}</code>
+          </div>
+        ))}
+      </div>
+    )
+  }
 
   return (
     <Modal
       open={isOpen}
       onClose={onClose}
-      title={'从模板导入 — ' + (type === 'api' ? 'API 配置' : '代码片段')}
+      title={
+        cliDetail
+          ? (
+            <div className="flex items-center gap-2">
+              <button
+                onClick={() => setCliDetail(null)}
+                className="p-1 -ml-1 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors"
+              >
+                <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M15 19l-7-7 7-7" />
+                </svg>
+              </button>
+              <span>选择命令 — {cliDetail.name}</span>
+            </div>
+          )
+          : '从模板导入 — ' + (type === 'api' ? 'API 配置' : type === 'cli' ? 'CLI 命令' : '代码片段')
+      }
+      footer={
+        cliDetail ? (
+          <>
+            <CustomButton onClick={onClose} variant="ghost" size="sm">取消</CustomButton>
+            <CustomButton onClick={() => setCliDetail(null)} variant="ghost" size="sm">返回</CustomButton>
+          </>
+        ) : (
+          <>
+            <CustomButton onClick={onClose} variant="ghost" size="sm">取消</CustomButton>
+            <CustomButton
+              variant="primary"
+              size="sm"
+              disabled={!selected}
+              onClick={() => { if (selected) { onSelect(selected); onClose() } }}
+            >
+              应用
+            </CustomButton>
+          </>
+        )
+      }
     >
-      {list.length === 0 ? (
+      {cliDetail ? (
+        renderCliContent(cliDetail)
+      ) : list.length === 0 ? (
         <div className="py-8 text-center text-sm text-gray-400">暂无可用模板</div>
       ) : (
         <div className="space-y-1">
           {list.map(t => (
             <div
               key={t.id}
-              onClick={() => setSelected(t)}
+              onClick={() => {
+                if (type === 'cli') {
+                  setCliDetail(t)
+                } else {
+                  setSelected(t)
+                }
+              }}
               className={'flex items-start gap-3 p-3 rounded-lg cursor-pointer border transition-colors ' + (
                 selected?.id === t.id
                   ? 'border-blue-400 bg-blue-50/50 dark:bg-blue-900/20'
@@ -50,18 +143,6 @@ const TemplatePickerModal: React.FC<TemplatePickerModalProps> = ({ isOpen, onClo
           ))}
         </div>
       )}
-
-      <div className="flex justify-end gap-2 pt-3 border-t border-gray-200 dark:border-gray-700 mt-4">
-        <CustomButton onClick={onClose} variant="ghost" size="sm">取消</CustomButton>
-        <CustomButton
-          variant="primary"
-          size="sm"
-          disabled={!selected}
-          onClick={() => { if (selected) { onSelect(selected); onClose() } }}
-        >
-          应用
-        </CustomButton>
-      </div>
     </Modal>
   )
 }

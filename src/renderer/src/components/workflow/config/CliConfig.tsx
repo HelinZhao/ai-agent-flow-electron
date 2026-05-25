@@ -1,7 +1,8 @@
-import React from 'react';
+import React, { useState } from 'react';
 import CustomSelect from '../../ui/CustomSelect';
 import CustomInput from '../../ui/CustomInput';
 import TemplateEditor from '../../ui/TemplateEditor';
+import TemplatePickerModal from '../TemplatePickerModal';
 import { CLI_DEFAULTS } from '@renderer/config';
 
 interface TemplateVariable {
@@ -33,6 +34,7 @@ interface CliConfigProps {
 }
 
 const CliConfig: React.FC<CliConfigProps> = ({ config, onConfigChange }) => {
+  const [showPicker, setShowPicker] = useState(false)
   const cliConfig = config.cliConfig || {
     command: '',
     templateId: 'custom',
@@ -189,6 +191,38 @@ const CliConfig: React.FC<CliConfigProps> = ({ config, onConfigChange }) => {
           </p>
         </div>
       )}
+
+      <div className="pt-2">
+        <button
+          onClick={() => setShowPicker(true)}
+          className="text-xs text-blue-600 dark:text-blue-400 hover:text-blue-800 dark:hover:text-blue-300 transition-colors"
+        >
+          + 从模板导入
+        </button>
+      </div>
+
+      <TemplatePickerModal
+        isOpen={showPicker}
+        onClose={() => setShowPicker(false)}
+        type="cli"
+        onSelect={(t) => {
+          try {
+            const content = JSON.parse(t.content)
+            onConfigChange({
+              ...config,
+              cliConfig: {
+                command: content.command || '',
+                templateId: 'custom',
+                templateVariables: {},
+                workingDirectory: cliConfig.workingDirectory || '',
+                timeout: cliConfig.timeout || CLI_DEFAULTS.timeout,
+                outputMode: cliConfig.outputMode || CLI_DEFAULTS.outputMode,
+                llmProcessPrompt: cliConfig.llmProcessPrompt || '',
+              }
+            })
+          } catch {}
+        }}
+      />
     </div>
   )
 }

@@ -282,7 +282,7 @@ export interface Template {
   id: string
   name: string
   description: string
-  type: 'api' | 'mcp' | 'code' | 'workflow' | 'agent' | 'skill'
+  type: 'api' | 'mcp' | 'code' | 'workflow' | 'agent' | 'skill' | 'cli'
   category: string
   icon: string
   content: string

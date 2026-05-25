@@ -14,9 +14,10 @@ const TABS = [
   { key: 'api', label: 'API 模板' },
   { key: 'mcp', label: 'MCP 配置' },
   { key: 'code', label: '代码片段' },
+  { key: 'cli', label: 'CLI 模板' },
 ]
 
-const TYPE_LABELS: Record<string, string> = { workflow: '工作流', agent: 'Agent', skill: '技能', api: 'API 模板', mcp: 'MCP 配置', code: '代码片段' }
+const TYPE_LABELS: Record<string, string> = { workflow: '工作流', agent: 'Agent', skill: '技能', api: 'API 模板', mcp: 'MCP 配置', code: '代码片段', cli: 'CLI 模板' }
 
 export default function Marketplace(): React.JSX.Element {
   const templates = useWorkflowStore(s => s.templates)
@@ -234,6 +235,11 @@ export default function Marketplace(): React.JSX.Element {
             {selected.type === 'code' && (
               <div className="p-3 bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800/50 rounded-lg text-xs text-blue-700 dark:text-blue-300">
                 在 Code 节点的配置面板中点击「从模板导入」使用此模板
+              </div>
+            )}
+            {selected.type === 'cli' && (
+              <div className="p-3 bg-teal-50 dark:bg-teal-900/20 border border-teal-200 dark:border-teal-800/50 rounded-lg text-xs text-teal-700 dark:text-teal-300">
+                在 CLI 节点的配置面板中点击「从模板导入」使用此模板
               </div>
             )}
             {selected.type === 'workflow' && (
