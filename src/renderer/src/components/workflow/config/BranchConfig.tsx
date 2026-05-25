@@ -54,7 +54,7 @@ const BranchConfig: React.FC<BranchConfigProps> = ({ config, onConfigChange }) =
         <CustomButton
           onClick={addBranch}
           variant="primary"
-          size="sm"
+          size="xs"
         >
           + 添加分支
         </CustomButton>

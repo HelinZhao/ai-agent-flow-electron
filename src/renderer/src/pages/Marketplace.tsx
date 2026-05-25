@@ -15,9 +15,10 @@ const TABS = [
   { key: 'mcp', label: 'MCP 配置' },
   { key: 'code', label: '代码片段' },
   { key: 'cli', label: 'CLI 模板' },
+  { key: 'sql', label: 'SQL 模板' },
 ]
 
-const TYPE_LABELS: Record<string, string> = { workflow: '工作流', agent: 'Agent', skill: '技能', api: 'API 模板', mcp: 'MCP 配置', code: '代码片段', cli: 'CLI 模板' }
+const TYPE_LABELS: Record<string, string> = { workflow: '工作流', agent: 'Agent', skill: '技能', api: 'API 模板', mcp: 'MCP 配置', code: '代码片段', cli: 'CLI 模板', sql: 'SQL 模板' }
 
 export default function Marketplace(): React.JSX.Element {
   const templates = useWorkflowStore(s => s.templates)
@@ -240,6 +241,11 @@ export default function Marketplace(): React.JSX.Element {
             {selected.type === 'cli' && (
               <div className="p-3 bg-teal-50 dark:bg-teal-900/20 border border-teal-200 dark:border-teal-800/50 rounded-lg text-xs text-teal-700 dark:text-teal-300">
                 在 CLI 节点的配置面板中点击「从模板导入」使用此模板
+              </div>
+            )}
+            {selected.type === 'sql' && (
+              <div className="p-3 bg-violet-50 dark:bg-violet-900/20 border border-violet-200 dark:border-violet-800/50 rounded-lg text-xs text-violet-700 dark:text-violet-300">
+                在数据库节点的配置面板中点击「从模板导入」使用此模板
               </div>
             )}
             {selected.type === 'workflow' && (

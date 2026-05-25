@@ -628,11 +628,11 @@ export function IfNode({ data, selected }: { data: any; selected: boolean }): Re
   const sourcePos = direction === 'vertical' ? Position.Bottom : Position.Right
   const branches = data.config?.branches || []
   return (
-    <div className={`node-if group relative px-4 py-3 min-w-[160px] bg-sky-100 rounded-lg transition-shadowduration-300 border border-sky-300 ${selected ? 'ring-2 ring-sky-400 shadow-glow-lg dark:shadow-glow-lg-w' : 'hover:shadow-glow-md dark:hover:shadow-glow-md-w'}`}>
+    <div className={`node-database group relative px-4 py-3 min-w-[160px] ${nodeBg(def)} rounded-lg transition-shadowduration-300 ${nodeBorder(def)} ${selected ? nodeRing(def) : 'hover:shadow-glow-md dark:hover:shadow-glow-md-w'}`}>
       <Handle type="target" position={targetPos} className={handleClass(def)} />
       <Handle type="source" position={sourcePos} className={handleClass(def)} />
       <div className="flex items-center space-x-3">
-        <div className="w-10 h-10 bg-gradient-to-br from-sky-400 to-sky-600 rounded-lg flex items-center justify-center shadow-lg border border-sky-300">
+        <div className={iconBox(def)}>
           <span className="text-black text-base">{def.icon}</span>
         </div>
         <div className="flex-1 text-left">

@@ -40,7 +40,7 @@ const IfConfig: React.FC<IfConfigProps> = ({ config, onConfigChange }) => {
     <div className="space-y-4">
       <div className="flex justify-between items-center">
         <label className="text-sm font-medium text-gray-700 dark:text-gray-300">条件配置</label>
-        <CustomButton onClick={addBranch} variant="primary" size="sm">+ 添加条件</CustomButton>
+        <CustomButton onClick={addBranch} variant="primary" size="xs">+ 添加条件</CustomButton>
       </div>
 
       {branches.length === 0 && (

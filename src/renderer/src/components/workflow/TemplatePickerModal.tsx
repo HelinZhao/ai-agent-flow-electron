@@ -7,32 +7,38 @@ import CustomButton from '../ui/CustomButton'
 interface TemplatePickerModalProps {
   isOpen: boolean
   onClose: () => void
-  type: 'api' | 'code' | 'cli'
+  type: 'api' | 'code' | 'cli' | 'sql'
   onSelect: (template: Template) => void
 }
 
 const TemplatePickerModal: React.FC<TemplatePickerModalProps> = ({ isOpen, onClose, type, onSelect }) => {
   const [list, setList] = useState<Template[]>([])
   const [selected, setSelected] = useState<Template | null>(null)
-  const [cliDetail, setCliDetail] = useState<Template | null>(null)
+  const [detailView, setDetailView] = useState<Template | null>(null)
 
   useEffect(() => {
     if (!isOpen) return
     setSelected(null)
-    setCliDetail(null)
+    setDetailView(null)
     templateApi.getAll(type).then(setList).catch(() => setList([]))
   }, [isOpen, type])
 
-  const pickCliCommand = (t: Template, command: string) => {
-    // wrap the chosen command back into a template for the parent to parse
-    const modified = { ...t, content: JSON.stringify({ command }) }
+  const hasDetailView = type === 'cli' || type === 'sql'
+  const TYPE_TITLE: Record<string, string> = { api: 'API 配置', cli: 'CLI 命令', sql: 'SQL 语句', code: '代码片段' }
+
+  const pickCliCommand = (t: Template, command: string, extra: Record<string, any> = {}) => {
+    const modified = { ...t, content: JSON.stringify({ command, ...extra }) }
     onSelect(modified)
     onClose()
   }
 
-  const renderCliContent = (t: Template) => {
+  const renderDetailContent = (t: Template) => {
     let content: Record<string, any> = {}
     try { content = JSON.parse(t.content) } catch { return null }
+
+    const extraFields: Record<string, any> = {}
+    if (content.dbType) extraFields.dbType = content.dbType
+    if (content.connectionConfig) extraFields.connectionConfig = content.connectionConfig
 
     const items: { label: string; cmd: string }[] = []
 
@@ -59,7 +65,7 @@ const TemplatePickerModal: React.FC<TemplatePickerModalProps> = ({ isOpen, onClo
         {items.map((item, i) => (
           <div
             key={i}
-            onClick={() => pickCliCommand(t, item.cmd)}
+            onClick={() => pickCliCommand(t, item.cmd, extraFields)}
             className="flex flex-col gap-0.5 p-3 rounded-lg cursor-pointer border border-transparent hover:border-blue-300 dark:hover:border-blue-700 hover:bg-blue-50/50 dark:hover:bg-blue-900/20 transition-colors"
           >
             <span className="text-xs text-gray-500 dark:text-gray-400">{item.label}</span>
@@ -69,33 +75,32 @@ const TemplatePickerModal: React.FC<TemplatePickerModalProps> = ({ isOpen, onClo
       </div>
     )
   }
-
   return (
     <Modal
       open={isOpen}
       onClose={onClose}
       title={
-        cliDetail
+        detailView
           ? (
             <div className="flex items-center gap-2">
               <button
-                onClick={() => setCliDetail(null)}
+                onClick={() => setDetailView(null)}
                 className="p-1 -ml-1 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors"
               >
                 <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
                   <path strokeLinecap="round" strokeLinejoin="round" d="M15 19l-7-7 7-7" />
                 </svg>
               </button>
-              <span>选择命令 — {cliDetail.name}</span>
+              <span>{type === 'sql' ? '选择 SQL' : '选择命令'} — {detailView.name}</span>
             </div>
           )
-          : '从模板导入 — ' + (type === 'api' ? 'API 配置' : type === 'cli' ? 'CLI 命令' : '代码片段')
+          : '从模板导入 — ' + (TYPE_TITLE[type] || '代码片段')
       }
       footer={
-        cliDetail ? (
+        detailView ? (
           <>
             <CustomButton onClick={onClose} variant="ghost" size="sm">取消</CustomButton>
-            <CustomButton onClick={() => setCliDetail(null)} variant="ghost" size="sm">返回</CustomButton>
+            <CustomButton onClick={() => setDetailView(null)} variant="ghost" size="sm">返回</CustomButton>
           </>
         ) : (
           <>
@@ -112,8 +117,8 @@ const TemplatePickerModal: React.FC<TemplatePickerModalProps> = ({ isOpen, onClo
         )
       }
     >
-      {cliDetail ? (
-        renderCliContent(cliDetail)
+      {detailView ? (
+        renderDetailContent(detailView)
       ) : list.length === 0 ? (
         <div className="py-8 text-center text-sm text-gray-400">暂无可用模板</div>
       ) : (
@@ -122,8 +127,8 @@ const TemplatePickerModal: React.FC<TemplatePickerModalProps> = ({ isOpen, onClo
             <div
               key={t.id}
               onClick={() => {
-                if (type === 'cli') {
-                  setCliDetail(t)
+                if (hasDetailView) {
+                  setDetailView(t)
                 } else {
                   setSelected(t)
                 }

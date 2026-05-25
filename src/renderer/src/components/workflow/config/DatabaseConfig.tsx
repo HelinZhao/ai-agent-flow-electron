@@ -1,7 +1,8 @@
-import React from 'react'
+import React, { useCallback, useState } from 'react'
 import CustomSelect from '../../ui/CustomSelect'
 import CustomInput from '../../ui/CustomInput'
 import ExpressionInput from '../ExpressionInput'
+import TemplatePickerModal from '../TemplatePickerModal'
 
 interface DatabaseConfigProps {
   config: Record<string, any>
@@ -36,10 +37,32 @@ const CONFIG_META: Record<string, { placeholder: string; hint: string; label: st
   redis: { placeholder: '{"url":"redis://:password@localhost:6379"} 或 redis://localhost:6379', hint: 'Redis 连接串，支持 {{$env.REDIS_URL}}', label: '连接配置' },
 }
 
+function detectDbTypeFromConfig(config: string): string | null {
+  if (!config) return null
+  const lower = config.toLowerCase()
+  if (lower.includes('postgresql://') || lower.includes('postgres://')) return 'postgres'
+  if (lower.includes('mysql://')) return 'mysql'
+  if (lower.includes('mssql://') || lower.includes('sqlserver://')) return 'mssql'
+  if (lower.includes('mongodb://') || lower.includes('mongodb+srv://')) return 'mongodb'
+  if (lower.includes('redis://') || lower.includes('rediss://')) return 'redis'
+  if (lower.includes('.db') || lower.includes('"path"') || lower.includes('sqlite')) return 'sqlite'
+  return null
+}
+
 const DatabaseConfig: React.FC<DatabaseConfigProps> = ({ config, onConfigChange }) => {
+  const [showPicker, setShowPicker] = useState(false)
   const dbType = config.dbType || 'sqlite'
   const mode = config.mode || 'query'
   const meta = CONFIG_META[dbType] || CONFIG_META.sqlite
+
+  const CommandLabel = useCallback(({ label }: { label: string }) => (
+    <div className="flex justify-between items-center mb-2">
+      <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">{label}</label>
+      <button onClick={() => setShowPicker(true)} className="text-xs text-blue-600 dark:text-blue-400 hover:text-blue-800 dark:hover:text-blue-300 transition-colors">
+        + 从模板导入
+      </button>
+    </div>
+  ), [])
 
   return (
     <div className="space-y-4">
@@ -80,7 +103,7 @@ const DatabaseConfig: React.FC<DatabaseConfigProps> = ({ config, onConfigChange 
             <CustomInput size="sm" value={config.collection || ''} onChange={e => onConfigChange({ ...config, collection: e.target.value })} placeholder="users" />
           </div>
           <div>
-            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">查询条件</label>
+            <CommandLabel label='查询条件' />
             <ExpressionInput
               value={config.query || ''}
               onChange={(v) => onConfigChange({ ...config, query: v })}
@@ -99,7 +122,7 @@ const DatabaseConfig: React.FC<DatabaseConfigProps> = ({ config, onConfigChange 
             <p className="text-xs text-gray-400 mt-1">{meta.hint}</p>
           </div>
           <div>
-            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Redis 命令</label>
+            <CommandLabel label='Redis 命令' />
             <ExpressionInput value={config.sql || ''} onChange={(v) => onConfigChange({ ...config, sql: v })} placeholder="GET key 或 SET key value" size="sm" minHeight="60px" />
           </div>
         </>
@@ -117,7 +140,7 @@ const DatabaseConfig: React.FC<DatabaseConfigProps> = ({ config, onConfigChange 
             <p className="text-xs text-gray-400 mt-1">{meta.hint}</p>
           </div>
           <div>
-            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">SQL 语句</label>
+            <CommandLabel label='SQL 语句' />
             <ExpressionInput
               value={config.sql || ''}
               onChange={(v) => onConfigChange({ ...config, sql: v })}
@@ -146,6 +169,27 @@ const DatabaseConfig: React.FC<DatabaseConfigProps> = ({ config, onConfigChange 
       <div className="bg-violet-50 dark:bg-violet-900/20 rounded-lg p-2.5 text-xs text-violet-700 dark:text-violet-300 border border-violet-200 dark:border-violet-800/50">
         查询结果将以 JSON 格式传递给下游节点。SQLite 默认使用内存数据库，需指定文件路径。
       </div>
+
+      <TemplatePickerModal
+        isOpen={showPicker}
+        onClose={() => setShowPicker(false)}
+        type="sql"
+        onSelect={(t) => {
+          try {
+            const content = JSON.parse(t.content)
+            const command = content.command || ''
+            const updates: Record<string, any> = {}
+            if (t.type === 'sql' && content.dbType === 'mongodb') {
+              updates.query = command
+            } else {
+              updates.sql = command
+            }
+            if (content.dbType) updates.dbType = content.dbType
+            if (content.connectionConfig && detectDbTypeFromConfig(config.connectionConfig) !== content.dbType) updates.connectionConfig = content.connectionConfig
+            onConfigChange({ ...config, ...updates })
+          } catch { }
+        }}
+      />
     </div>
   )
 }

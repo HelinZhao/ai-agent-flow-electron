@@ -62,9 +62,17 @@ const CodeConfig: React.FC<CodeConfigProps> = ({ config, onConfigChange }) => {
 
       {/* 代码编辑器 */}
       <div>
-        <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5">
-          代码 *
-        </label>
+        <div className="flex justify-between items-center mb-1.5">
+          <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
+            代码 *
+          </label>
+          <button
+            onClick={() => setShowPicker(true)}
+            className="text-xs text-blue-600 dark:text-blue-400 hover:text-blue-800 dark:hover:text-blue-300 transition-colors"
+          >
+            + 从模板导入
+          </button>
+        </div>
         <div className="text-xs text-gray-500 dark:text-gray-400 mb-2 bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800/50 rounded-lg px-3 py-2">
           ⚠️ 代码运行在 Node.js 环境。需使用 <code className="font-mono text-amber-700 dark:text-amber-300">return</code> 返回输出值。
           支持 <code className="font-mono text-amber-700 dark:text-amber-300">async/await</code>。可访问 JS 标准内置对象（Array、Object、Math 等）。
@@ -88,15 +96,6 @@ const CodeConfig: React.FC<CodeConfigProps> = ({ config, onConfigChange }) => {
           <li>代码必须用 <code className="font-mono">return</code> 返回输出值</li>
           <li>支持 <code className="font-mono">async/await</code> 异步操作</li>
         </ul>
-      </div>
-
-      <div className="pt-2">
-        <button
-          onClick={() => setShowPicker(true)}
-          className="text-xs text-blue-600 dark:text-blue-400 hover:text-blue-800 dark:hover:text-blue-300 transition-colors"
-        >
-          + 从模板导入
-        </button>
       </div>
 
       <TemplatePickerModal

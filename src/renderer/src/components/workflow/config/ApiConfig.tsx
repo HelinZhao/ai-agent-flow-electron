@@ -20,9 +20,17 @@ const ApiConfig: React.FC<ApiConfigProps> = ({ config, onConfigChange }) => {
   return (
     <div className="space-y-4">
       <div>
-        <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-          API URL *
-        </label>
+        <div className="flex justify-between items-center mb-2">
+          <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
+            API URL *
+          </label>
+          <button
+            onClick={() => setShowPicker(true)}
+            className="text-xs text-blue-600 dark:text-blue-400 hover:text-blue-800 dark:hover:text-blue-300 transition-colors"
+          >
+            + 从模板导入
+          </button>
+        </div>
         <TemplateEditor
           value={config.apiConfig?.url || ''}
           onChange={(v) => updateApiConfig('url', v)}
@@ -77,16 +85,6 @@ const ApiConfig: React.FC<ApiConfigProps> = ({ config, onConfigChange }) => {
           />
         </div>
       )}
-
-      <div className="pt-2">
-        <button
-          onClick={() => setShowPicker(true)}
-          className="text-xs text-blue-600 dark:text-blue-400 hover:text-blue-800 dark:hover:text-blue-300 transition-colors"
-        >
-          + 从模板导入
-        </button>
-      </div>
-
       <TemplatePickerModal
         isOpen={showPicker}
         onClose={() => setShowPicker(false)}
@@ -103,7 +101,7 @@ const ApiConfig: React.FC<ApiConfigProps> = ({ config, onConfigChange }) => {
                 body: content.body || '',
               }
             })
-          } catch {}
+          } catch { }
         }}
       />
     </div>

@@ -78,9 +78,18 @@ const CliConfig: React.FC<CliConfigProps> = ({ config, onConfigChange }) => {
   return (
     <div className="space-y-4">
       <div>
-        <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-          命令模板
-        </label>
+
+        <div className="flex justify-between items-center mb-2">
+          <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
+            命令模板
+          </label>
+          <button
+            onClick={() => setShowPicker(true)}
+            className="text-xs text-blue-600 dark:text-blue-400 hover:text-blue-800 dark:hover:text-blue-300 transition-colors"
+          >
+            + 从模板导入
+          </button>
+        </div>
         <CustomSelect
           value={cliConfig.templateId || 'custom'}
           onChange={handleTemplateChange}
@@ -192,15 +201,6 @@ const CliConfig: React.FC<CliConfigProps> = ({ config, onConfigChange }) => {
         </div>
       )}
 
-      <div className="pt-2">
-        <button
-          onClick={() => setShowPicker(true)}
-          className="text-xs text-blue-600 dark:text-blue-400 hover:text-blue-800 dark:hover:text-blue-300 transition-colors"
-        >
-          + 从模板导入
-        </button>
-      </div>
-
       <TemplatePickerModal
         isOpen={showPicker}
         onClose={() => setShowPicker(false)}
@@ -220,7 +220,7 @@ const CliConfig: React.FC<CliConfigProps> = ({ config, onConfigChange }) => {
                 llmProcessPrompt: cliConfig.llmProcessPrompt || '',
               }
             })
-          } catch {}
+          } catch { }
         }}
       />
     </div>
