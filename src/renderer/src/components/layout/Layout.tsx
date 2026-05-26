@@ -63,7 +63,7 @@ const Layout: React.FC<LayoutProps> = ({ navItems, currentPage, onNavigate, load
       />
 
       {/* 下方内容区域：侧边栏 + 主内容 */}
-      <div className="flex flex-1">
+      <div className="flex flex-1 overflow-hidden">
         {/* 左侧边栏导航 */}
         <Sidebar currentPage={currentPage} onNavigate={onNavigate} navItems={navItems} />
 
