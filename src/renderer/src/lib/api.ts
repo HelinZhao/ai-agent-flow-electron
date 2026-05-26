@@ -81,6 +81,12 @@ export const workflowApi = {
   // 删除工作流
   delete: (id: string): Promise<void> => api.delete(`/workflows/${id}`),
 
+  // 导出工作流（返回 bundle JSON，浏览器触发下载）
+  exportBundle: (id: string): Promise<any> => api.get(`/workflows/${id}/export`),
+
+  // 导入工作流 bundle
+  importBundle: (bundle: any): Promise<Workflow> => api.post('/workflows/import', bundle),
+
   // 执行工作流
   execute: (
     workflow: Workflow,

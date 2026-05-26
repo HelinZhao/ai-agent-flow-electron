@@ -14,9 +14,10 @@ import ResponsiveGrid from '@renderer/components/ui/ResponsiveGrid';
 import MessageBanner from '@renderer/components/ui/MessageBanner';
 import { NODE_DEFS_MAP } from '@renderer/components/workflow/nodes';
 import InputDialog from '@renderer/components/workflow/InputDialog';
+import { workflowApi } from '@renderer/lib/api';
 
 export default function Workflow(): React.JSX.Element {
-    const { workflows, addWorkflow, updateWorkflow, deleteWorkflow, activeLLMConfig } = useWorkflowStore();
+    const { workflows, addWorkflow, updateWorkflow, deleteWorkflow, initialize, activeLLMConfig } = useWorkflowStore();
     const [selectedWorkflowId, setSelectedWorkflowId] = useState<string | null>(null);
     const [saveMessage, setSaveMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
 
@@ -168,9 +169,22 @@ export default function Workflow(): React.JSX.Element {
         }
     }, [selectedWorkflow, executeWorkflow]);
 
-    const handleImport = useCallback(() => {
+    const handleImport = useCallback(async () => {
         try {
-            const importedWorkflow = JSON.parse(importJsonText) as Workflow;
+            const parsed = JSON.parse(importJsonText);
+
+            // bundle 格式：含依赖，通过后端 API 导入
+            if (parsed.type === 'workflow-bundle') {
+                await workflowApi.importBundle(parsed)
+                await initialize()
+                setShowImportModal(false)
+                setImportJsonText('')
+                setImportError(null)
+                return
+            }
+
+            // 旧格式：纯工作流 JSON
+            const importedWorkflow = parsed as Workflow;
             if (!importedWorkflow.name || !Array.isArray(importedWorkflow.nodes)) {
                 throw new Error('无效的工作流格式');
             }
@@ -180,8 +194,7 @@ export default function Workflow(): React.JSX.Element {
                 throw new Error(startNodeError);
             }
 
-            const newWorkflow: Workflow = {
-                ...importedWorkflow,
+            const newWorkflow: Workflow = {                ...importedWorkflow,
                 id: `workflow-${Date.now()}`,
                 createdAt: new Date(),
                 updatedAt: new Date()
@@ -429,7 +442,7 @@ export default function Workflow(): React.JSX.Element {
                         <span>导入</span>
                     </CustomButton>
                     <CustomFileUpload
-                        accept=".json"
+                        accept=".json,.afbundle"
                         onChange={handleImportFromFile}
                         size="sm"
                     >
@@ -569,6 +582,25 @@ export default function Workflow(): React.JSX.Element {
                                             title="编辑"
                                         >
                                             <svg className="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" /></svg>
+                                        </button>
+                                        <div className="w-px h-4 bg-gray-200 dark:bg-gray-600" />
+                                        <button
+                                            onClick={(e) => {
+                                                e.stopPropagation();
+                                                workflowApi.exportBundle(workflow.id).then(bundle => {
+                                                    const blob = new Blob([JSON.stringify(bundle, null, 2)], { type: 'application/json' })
+                                                    const url = URL.createObjectURL(blob)
+                                                    const a = document.createElement('a')
+                                                    a.href = url
+                                                    a.download = `${workflow.name}.afbundle`
+                                                    a.click()
+                                                    URL.revokeObjectURL(url)
+                                                })
+                                            }}
+                                            className="flex items-center justify-center w-6 h-6 rounded-lg text-gray-400 hover:text-green-600 dark:hover:text-green-400 hover:bg-green-50 dark:hover:bg-green-900/20 transition-colors"
+                                            title="导出"
+                                        >
+                                            <svg className="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4m4-5l5 5 5-5m-5-5v12" /></svg>
                                         </button>
                                         <div className="w-px h-4 bg-gray-200 dark:bg-gray-600" />
                                         <button
