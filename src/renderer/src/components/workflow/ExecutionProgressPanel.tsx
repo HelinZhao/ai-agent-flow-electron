@@ -1,6 +1,6 @@
-import { useState } from 'react'
-import { WorkflowExecutionProgress, NodeExecutionResult } from '@renderer/types'
 import { memo } from 'react'
+import ExecutionResultTabs from './ExecutionResultTabs'
+import { WorkflowExecutionProgress } from '@renderer/types'
 
 interface ExecutionProgressPanelProps {
   progress: WorkflowExecutionProgress | null
@@ -30,8 +30,6 @@ const ExecutionProgressPanel: React.FC<ExecutionProgressPanelProps> = ({
   onResume,
   className = ''
 }) => {
-  const [activeTab, setActiveTab] = useState<'overview' | 'nodes' | 'logs'>('overview')
-
   if (!progress) {
     return (
       <div className={`bg-white dark:bg-gray-800 rounded-xl border border-gray-200/50 dark:border-gray-700/50 shadow-sm p-6 ${className}`}>
@@ -111,206 +109,15 @@ const ExecutionProgressPanel: React.FC<ExecutionProgressPanelProps> = ({
         )}
       </div>
 
-      {/* 标签页 */}
-      <div className="shrink-0 border-b border-gray-200/50 dark:border-gray-700/50">
-        <nav className="flex px-4">
-          {(['overview', 'nodes', 'logs'] as const).map(t => (
-            <button key={t} onClick={() => setActiveTab(t)}
-              className={`py-2 px-3 border-b-2 text-xs font-medium transition-colors ${
-                activeTab === t
-                  ? 'border-blue-500 text-blue-600 dark:text-blue-400'
-                  : 'border-transparent text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300'
-              }`}>
-              {t === 'overview' ? '概览' : t === 'nodes' ? '节点' : '日志'}
-            </button>
-          ))}
-        </nav>
-      </div>
-
-      {/* 内容区域 */}
-      <div className="flex-1 overflow-y-auto p-4">
-        {activeTab === 'overview' && (
-          <div className="space-y-4">
-            {/* 指标卡片 */}
-            <div className="grid grid-cols-2 gap-3">
-              {[
-                { label: '总节点', value: metrics?.totalNodes || 0, bg: 'bg-gray-50 dark:bg-gray-800/50', icon: null },
-                { label: '已完成', value: metrics?.completedNodes || 0, bg: 'bg-green-50 dark:bg-green-900/20', dot: 'bg-green-500' },
-                { label: '失败', value: metrics?.failedNodes || 0, bg: 'bg-red-50 dark:bg-red-900/20', dot: 'bg-red-500' },
-                { label: '耗时', value: metrics?.duration ? `${Math.round(metrics.duration / 1000)}s` : '-', bg: 'bg-blue-50 dark:bg-blue-900/20', icon: <><circle cx="12" cy="12" r="10" /><path d="M12 6v6l4 2" /></>, color: 'text-blue-500' }
-              ].map(item => (
-                <div key={item.label} className={`${item.bg} rounded-xl border border-gray-200/50 dark:border-gray-700/50 p-3`}>
-                  <div className="flex items-center gap-1.5 mb-0.5">
-                    {item.icon ? (
-                      <svg className={`w-3.5 h-3.5 ${item.color}`} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">{item.icon}</svg>
-                    ) : item.dot ? (
-                      <span className={`w-2 h-2 rounded-full ${item.dot}`} />
-                    ) : null}
-                    <span className="text-xs text-gray-500 dark:text-gray-400">{item.label}</span>
-                  </div>
-                  <div className="text-lg font-bold text-gray-900 dark:text-white">{item.value}</div>
-                </div>
-              ))}
-            </div>
-
-            {/* 当前执行节点 */}
-            {currentNodeId && (
-              <div className="bg-blue-50 dark:bg-blue-900/20 rounded-xl border border-blue-200/50 dark:border-blue-800/50 p-3">
-                <div className="flex items-center gap-2 mb-1">
-                  <span className="w-2 h-2 rounded-full bg-blue-500 animate-pulse" />
-                  <span className="text-xs font-medium text-blue-800 dark:text-blue-300">当前执行节点</span>
-                </div>
-                <p className="text-sm text-blue-700 dark:text-blue-200 ml-4">{currentNodeLabel || currentNodeId}</p>
-              </div>
-            )}
-
-            {/* 执行路径 */}
-            {executionPath.length > 0 && (
-              <div>
-                <h4 className="text-xs font-medium text-gray-500 dark:text-gray-400 mb-2">执行路径</h4>
-                <div className="flex flex-wrap gap-1.5">
-                  {executionPath.map((nodeId, idx) => {
-                    const nr = nodeResults.find(n => n.nodeId === nodeId)
-                    return (
-                      <span key={`${nodeId}-${idx}`}
-                        className={`px-2 py-1 rounded text-xs font-medium ${
-                          nodeId === currentNodeId
-                            ? 'bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200'
-                            : nr?.status === 'completed'
-                              ? 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200'
-                              : nr?.status === 'failed'
-                                ? 'bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200'
-                                : 'bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-gray-200'
-                        }`}>
-                        {nr?.metadata?.label || nodeId}
-                      </span>
-                    )
-                  })}
-                </div>
-              </div>
-            )}
-          </div>
-        )}
-
-        {activeTab === 'nodes' && (
-          <div className="space-y-2">
-            {nodeResults.length === 0 && (
-              <p className="text-xs text-gray-400 dark:text-gray-500 text-center py-8">暂无节点数据</p>
-            )}
-            {nodeResults.map(node => <NodeResultItem key={node.nodeId} node={node} />)}
-          </div>
-        )}
-
-        {activeTab === 'logs' && (
-          <div className="space-y-0.5">
-            {logs.length === 0 && (
-              <p className="text-xs text-gray-400 dark:text-gray-500 text-center py-8">暂无日志</p>
-            )}
-            {logs.map((log, i) => <LogItem key={i} log={log} />)}
-          </div>
-        )}
-      </div>
-    </div>
-  )
-}
-
-// 节点结果项（可展开）
-const NodeResultItem: React.FC<{ node: NodeExecutionResult }> = ({ node }) => {
-  const [expanded, setExpanded] = useState(false)
-  const statusStyle: Record<string, { color: string; text: string }> = {
-    completed: { color: 'text-green-600 bg-green-50 dark:bg-green-900/20', text: '已完成' },
-    failed: { color: 'text-red-600 bg-red-50 dark:bg-red-900/20', text: '失败' },
-    running: { color: 'text-blue-600 bg-blue-50 dark:bg-blue-900/20', text: '运行中' },
-    pending: { color: 'text-gray-600 bg-gray-50 dark:bg-gray-900/20', text: '等待中' }
-  }
-  const s = statusStyle[node.status] || statusStyle.pending
-  const hasVariables = !!node.variables && Object.keys(node.variables).length > 0
-
-  return (
-    <div className={`rounded-xl border transition-colors ${
-      node.status === 'running'
-        ? 'border-blue-300 dark:border-blue-600/50 bg-blue-50/30 dark:bg-blue-900/10'
-        : node.status === 'failed'
-          ? 'border-red-200 dark:border-red-800/50 bg-red-50/30 dark:bg-red-900/10'
-          : 'bg-white dark:bg-gray-800 border-gray-200/50 dark:border-gray-700/50'
-    }`}>
-      <button onClick={() => setExpanded(!expanded)} className="w-full flex items-center justify-between p-3 hover:bg-gray-50/50 dark:hover:bg-gray-700/20 transition-colors">
-        <div className="flex items-center gap-2 min-w-0">
-          <span className={`w-2 h-2 rounded-full shrink-0 ${
-            node.status === 'completed' ? 'bg-green-500' :
-            node.status === 'failed' ? 'bg-red-500' :
-            node.status === 'running' ? 'bg-blue-500 animate-pulse' : 'bg-gray-300 dark:bg-gray-600'
-          }`} />
-          <span className="font-medium text-sm text-gray-900 dark:text-white truncate">{node.metadata?.label || '--'}</span>
-          <span className="text-[10px] text-gray-400 font-mono hidden sm:inline">{node.nodeId?.substring(0, 8)}</span>
-        </div>
-        <div className="flex items-center gap-2 shrink-0">
-          {node.duration ? <span className="text-[10px] text-gray-400">{Math.round(node.duration / 1000)}s</span> : null}
-          <span className={`shrink-0 px-2 py-0.5 rounded-full text-[10px] font-medium ${s.color}`}>{s.text}</span>
-          <svg className={`w-3.5 h-3.5 text-gray-400 transition-transform ${expanded ? 'rotate-180' : ''}`} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-            <path d="M6 9l6 6 6-6" />
-          </svg>
-        </div>
-      </button>
-
-      {node.error && !expanded && (
-        <div className="mx-3 pb-2 text-xs text-red-600 dark:text-red-400 truncate">✗ {node.error}</div>
-      )}
-
-      {expanded && (
-        <div className="px-3 pb-3 space-y-2 border-t border-gray-100 dark:border-gray-700/30 pt-2">
-          {node.error && (
-            <div className="p-2 bg-red-50 dark:bg-red-900/20 rounded-lg border border-red-200 dark:border-red-800/50 text-xs text-red-700 dark:text-red-300">
-              <span className="font-medium">错误: </span>{node.error}
-            </div>
-          )}
-          <div className="text-xs text-gray-500 dark:text-gray-400">ID: {node.nodeId}</div>
-          {node.input && <DataSection title="输入" content={node.input} />}
-          {hasVariables && <DataSection title="变量" content={JSON.stringify(node.variables, null, 2)} />}
-          {node.output && <DataSection title="输出" content={node.output} />}
-        </div>
-      )}
-    </div>
-  )
-}
-
-function DataSection({ title, content }: { title: string; content: string }) {
-  const [collapsed, setCollapsed] = useState(true)
-  const truncated = content.length > 500
-  const display = truncated && collapsed ? content.substring(0, 500) + '\n...' : content
-
-  return (
-    <div>
-      <div className="flex items-center justify-between mb-1">
-        <span className="text-xs font-medium text-gray-600 dark:text-gray-400">{title}</span>
-        {truncated && (
-          <button onClick={() => setCollapsed(!collapsed)} className="text-[10px] text-blue-500 hover:text-blue-700">
-            {collapsed ? '展开' : '收起'}
-          </button>
-        )}
-      </div>
-      <pre className="p-2 bg-gray-50 dark:bg-gray-900/30 rounded-lg border border-gray-100 dark:border-gray-700/30 text-xs font-mono text-gray-700 dark:text-gray-300 whitespace-pre-wrap break-words max-h-60 overflow-auto">
-        {display}
-      </pre>
-    </div>
-  )
-}
-
-// 日志项
-const LogItem: React.FC<{ log: any }> = ({ log }) => {
-  const levelColor: Record<string, string> = { error: 'text-red-600', warn: 'text-amber-600', info: 'text-gray-600 dark:text-gray-400' }
-  return (
-    <div className="text-xs py-1.5 px-2 -mx-2 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700/30 transition-colors">
-      <div className="flex items-start gap-2">
-        <span className={`font-medium shrink-0 ${levelColor[log.level] || ''}`}>{log.level.toUpperCase()}</span>
-        <span className="text-gray-900 dark:text-white flex-1">{log.message}</span>
-        {log.nodeId && <span className="text-gray-500 dark:text-gray-400 shrink-0 font-mono">[{log.nodeId}]</span>}
-      </div>
-      <div className="flex justify-end mt-0.5">
-        <span className="text-gray-400 dark:text-gray-500 font-mono">
-          {new Date(log.timestamp).toLocaleTimeString()}
-        </span>
-      </div>
+      <ExecutionResultTabs
+        metrics={metrics}
+        nodeResults={nodeResults}
+        logs={logs}
+        currentNodeId={currentNodeId}
+        currentNodeLabel={currentNodeLabel}
+        executionPath={executionPath}
+        compact
+      />
     </div>
   )
 }
