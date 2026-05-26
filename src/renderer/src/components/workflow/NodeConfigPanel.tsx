@@ -1,6 +1,7 @@
 import { useState, useEffect, ReactNode, memo } from 'react';
 import { WorkflowNode } from '@renderer/types';
 import { Panel, useReactFlow } from '@xyflow/react';
+import { NODE_CONFIG_SCHEMAS } from '@renderer/lib/nodeConfigSchemas';
 import SkillConfig from './config/SkillConfig';
 import BranchConfig from './config/BranchConfig';
 import LLMConfig from './config/LLMConfig';
@@ -26,6 +27,8 @@ import StartConfig from './config/StartConfig';
 import CustomInput from '../ui/CustomInput';
 import CustomButton from '../ui/CustomButton';
 import { getNodeDefaultLabel, NODE_DEFS_MAP } from './nodes';
+import AiAssistButton from '../AiAssistButton';
+import { FrontendAction } from '@renderer/lib/frontendActionBus';
 
 interface NodeConfigPanelProps {
   node: WorkflowNode | null;
@@ -179,6 +182,20 @@ const NodeConfigPanel: React.FC<NodeConfigPanelProps> = ({ node, onClose, onSave
   const nodeDef = NODE_DEFS_MAP[node.type]
   const bgColor = BG_COLORS[node.type] || 'bg-gray-500'
 
+  const onAiAction = (action: FrontendAction) => {
+    if (action.contextId !== node.id) return
+    if (action.action === 'setConfig' && action.payload) {
+      setConfig(prev => {
+        const nestKey: Record<string, string> = { cli: 'cliConfig', api: 'apiConfig' }
+        const key = nestKey[node.type || '']
+        if (!key) return { ...prev, ...action.payload }
+        // AI 可能返回扁平 { command } 或嵌套 { cliConfig: { command } }，兼容两种
+        const data = action.payload[key] || action.payload
+        return { ...prev, [key]: { ...prev[key], ...data } }
+      })
+    }
+  }
+
   return (
     <Panel>
       <div className="w-96 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700/80 rounded-xl shadow-lg overflow-hidden">
@@ -196,7 +213,7 @@ const NodeConfigPanel: React.FC<NodeConfigPanelProps> = ({ node, onClose, onSave
                   className="inline-flex items-center justify-center w-4 h-4 rounded text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors ml-0.5 align-text-bottom"
                   title="复制节点ID"
                 >
-                  <svg className="w-3 h-3" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"/><path d="M5 15H4a2 2 0 01-2-2V4a2 2 0 012-2h9a2 2 0 012 2v1"/></svg>
+                  <svg className="w-3 h-3" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><rect x="9" y="9" width="13" height="13" rx="2" ry="2" /><path d="M5 15H4a2 2 0 01-2-2V4a2 2 0 012-2h9a2 2 0 012 2v1" /></svg>
                 </button>
               </p>
             </div>
@@ -293,26 +310,32 @@ const NodeConfigPanel: React.FC<NodeConfigPanelProps> = ({ node, onClose, onSave
         </div>
 
         {/* Footer */}
-        <div className="flex items-center justify-end gap-2 px-5 py-4 border-t border-gray-100 dark:border-gray-700/50 bg-gray-50/50 dark:bg-gray-900/30">
-          <CustomButton
-            onClick={onClose}
-            variant="ghost"
-            size="sm"
-          >
-            取消
-          </CustomButton>
-          <CustomButton
-            onClick={handleSave}
-            variant="primary"
-            size="sm"
-          >
-            <svg className="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-              <path d="M19 21H5a2 2 0 01-2-2V5a2 2 0 012-2h11l5 5v11a2 2 0 01-2 2z" />
-              <polyline points="17,21 17,13 7,13 7,21" />
-              <polyline points="7,3 7,8 15,8" />
-            </svg>
-            <span className='ml-1'>保存</span>
-          </CustomButton>
+        <div className="flex items-center justify-between gap-2 px-5 py-4 border-t border-gray-100 dark:border-gray-700/50 bg-gray-50/50 dark:bg-gray-900/30">
+          <AiAssistButton context={{
+            contextType: 'node-config',
+            contextId: node.id,
+            label: label || node.type || '',
+            data: config,
+            schema: NODE_CONFIG_SCHEMAS[node.type || ''],
+          }}
+            onAction={onAiAction}
+          />
+          <div className="flex items-center gap-2">
+            <CustomButton
+              onClick={onClose}
+              variant="ghost"
+              size="sm"
+            >
+              取消
+            </CustomButton>
+            <CustomButton
+              onClick={handleSave}
+              variant="primary"
+              size="sm"
+            >
+              保存
+            </CustomButton>
+          </div>
         </div>
       </div>
     </Panel>

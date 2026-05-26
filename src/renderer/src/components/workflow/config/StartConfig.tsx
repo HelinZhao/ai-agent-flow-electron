@@ -83,7 +83,7 @@ const StartConfig: React.FC<StartConfigProps> = ({ config, onConfigChange }) => 
                         </div>
                       </div>
 
-                      {(param.required || param.defaultValue) && (
+                      {(param.required || param.defaultValue !== void 0) && (
                         <div className="flex items-center gap-x-3 mt-1">
                           {param.required && (
                             <span className="text-xs bg-red-50 dark:bg-red-900/30 text-red-700 dark:text-red-300 px-2 py-0.5 rounded border border-red-200 dark:border-red-800">

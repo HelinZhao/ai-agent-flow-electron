@@ -1,4 +1,4 @@
-import { useEffect, useState, useRef } from 'react'
+import { useEffect, useState, useRef, useCallback } from 'react'
 import { useForm, Controller } from 'react-hook-form'
 import { Trigger, VariableConfig } from '@renderer/types'
 import { triggerApi, workflowApi } from '@renderer/lib/api'
@@ -13,6 +13,8 @@ import CustomTextarea from '@renderer/components/ui/CustomTextarea'
 import CronBuilder from '@renderer/components/CronBuilder'
 import cronstrue from 'cronstrue'
 import 'cronstrue/locales/zh_CN'
+import AiAssistButton from '@renderer/components/AiAssistButton'
+import type { FrontendAction } from '@renderer/lib/frontendActionBus'
 
 function formatTime(iso?: string): string {
   if (!iso) return '-'
@@ -61,6 +63,24 @@ export default function Triggers(): React.JSX.Element {
   const formCron = watch('cronExpression')
   const formTargetType = watch('targetType')
   const formTargetId = watch('targetId')
+
+  const TRIGGER_SCHEMA: Record<string, string> = {
+    name: '触发器名称',
+    type: '触发方式，cron 为定时触发，webhook 为 Webhook 触发',
+    cronExpression: 'Cron 表达式，仅在 type 为 cron 时有效',
+    targetType: '执行目标类型，workflow 或 agent',
+    targetId: '执行目标 ID',
+    input: '传递给目标工作流/Agent 的输入内容',
+  }
+
+  const onAiAction = useCallback((action: FrontendAction) => {
+    if (action.contextId !== (editingId ?? 'new')) return
+    if (action.action === 'setConfig' && action.payload) {
+      for (const [key, value] of Object.entries(action.payload)) {
+        setValue(key, value)
+      }
+    }
+  }, [editingId, setValue])
 
   const triggers = useWorkflowStore(s => s.triggers)
   const setTriggers = useWorkflowStore(s => s.setTriggers)
@@ -339,19 +359,30 @@ export default function Triggers(): React.JSX.Element {
         onClose={() => setShowModal(false)}
         title={editingId ? '编辑触发器' : '新建触发器'}
         footer={
-          <>
-            <CustomButton variant="secondary" onClick={() => setShowModal(false)} size='sm'>
-              取消
-            </CustomButton>
-            <CustomButton
-              type="submit"
-              form="trigger-form"
-              loading={saving}
-              size='sm'
-            >
-              {editingId ? '保存' : '创建'}
-            </CustomButton>
-          </>
+          <div className="flex items-center justify-between w-full">
+            <AiAssistButton context={{
+              contextType: 'trigger-editor',
+              contextId: editingId ?? 'new',
+              label: getValues('name') || '触发器',
+              data: getValues(),
+              schema: TRIGGER_SCHEMA,
+            }}
+              onAction={onAiAction}
+            />
+            <div className="flex items-center gap-2">
+              <CustomButton variant="secondary" onClick={() => setShowModal(false)} size='sm'>
+                取消
+              </CustomButton>
+              <CustomButton
+                type="submit"
+                form="trigger-form"
+                loading={saving}
+                size='sm'
+              >
+                {editingId ? '保存' : '创建'}
+              </CustomButton>
+            </div>
+          </div>
         }
       >
         <form id="trigger-form" onSubmit={handleSave} key={editingId ?? 'create'}>

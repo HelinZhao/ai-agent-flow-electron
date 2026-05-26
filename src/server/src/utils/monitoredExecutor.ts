@@ -14,6 +14,7 @@ import { SqliteSaver } from "@langchain/langgraph-checkpoint-sqlite";
 import { DB_FILENAME, DANGEROUS_TOOLS } from '../config'
 import { LLMConfigModel, AgentModel, WorkflowModel, EnvVarModel } from '../models'
 import { mcpConnectionManager } from '../mcp'
+import { createFrontendActionTool, createGetContextTool } from '../tools/frontendTools'
 import type { DatabaseConfig } from '../utils/database'
 
 // 执行状态存储
@@ -2539,7 +2540,12 @@ ${conditionText}
         : {}
 
       // 调用 LLM
-      const result = await callLLM(prompt, llmConfig, updatedHistory, enabledTools || [], llmOptions)
+      const extraTools: any[] = []
+      if (agent.id === '00000000-0000-0000-0000-000000000001') {
+        extraTools.push(createFrontendActionTool(executionId, (id, data) => this.broadcastToSSEClients(id, data)))
+        extraTools.push(createGetContextTool())
+      }
+      const result = await callLLM(prompt, llmConfig, updatedHistory, enabledTools || [], llmOptions, undefined, extraTools)
 
       // 保存对话历史
       const aiMessage = new AIMessage(result)

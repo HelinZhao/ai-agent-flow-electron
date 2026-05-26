@@ -1,7 +1,9 @@
 import { useState, useRef, useEffect, useCallback } from 'react'
 import { useWorkflowStore } from '@renderer/store/workflowStore'
+import { useBudingStore } from '@renderer/store/budingStore'
 import { useSettingsStore } from '@renderer/store/settingsStore'
 import { workflowExecutionApi } from '@renderer/lib/api'
+import { frontendActionBus } from '@renderer/lib/frontendActionBus'
 import { chatRecordApi } from '@renderer/lib/chatRecord'
 import type { ChatMessage as ChatMessageType, ToolApprovalRequest } from '@renderer/types'
 import { TOOL_LABEL_MAP } from '@renderer/config'
@@ -15,7 +17,9 @@ const GAP = 24
 
 export default function SystemAssistantChat() {
   const { agents, activeLLMConfig, addAgent } = useWorkflowStore()
-  const [open, setOpen] = useState(false)
+  const open = useBudingStore(s => s.open)
+  const setOpen = useBudingStore(s => s.setOpen)
+  const assistContext = useBudingStore(s => s.assistContext)
   const [messages, setMessages] = useState<ChatMessageType[]>([])
   const [input, setInput] = useState('')
   const [loading, setLoading] = useState(false)
@@ -108,7 +112,10 @@ export default function SystemAssistantChat() {
 - 使用中文，简洁明了
 - 如果问题超出你的知识范围，诚实地告诉用户你不确定
 - 对于操作类问题，给出清晰的步骤指引
-- 保持友好和耐心的语气`,
+- 保持友好和耐心的语气
+
+特殊能力 - 实时填写表单：
+当用户正在编辑节点配置时，你可以直接修改表单字段。用户会说「帮我把 URL 改成 xxx」等，此时直接使用 suggestFrontendAction 工具即可，先用 workflowsApi 获取当前配置再做精确修改。`,
             type: 'standard',
             enabledTools: [
               'readFile', 'writeFile', 'listDirectory', 'executeCommand',
@@ -173,6 +180,7 @@ export default function SystemAssistantChat() {
     const text = input.trim()
     const agent = systemAgent || agents.find(a => a.id === SYSTEM_AGENT_ID)
     if (!text || loading) return
+
     if (!agent || !activeLLMConfig) {
       const hint = !agent ? '布丁暂未就绪，请刷新后重试' : '请先在设置中配置 LLM 模型'
       setMessages([...messages, {
@@ -213,6 +221,8 @@ export default function SystemAssistantChat() {
             }
           } else if (progress.type === 'node_update') {
             setPendingApproval(null)
+          } else if (progress.type === 'frontend_action') {
+            frontendActionBus.dispatch(progress)
           }
         },
       )
@@ -293,7 +303,7 @@ export default function SystemAssistantChat() {
       <button
         ref={btnRef}
         onMouseDown={handleMouseDown}
-        className="fixed z-[100] w-12 h-12 rounded-full bg-gradient-to-r from-amber-400 to-orange-500 text-white shadow-lg hover:shadow-xl hover:scale-105 transition-all duration-200 flex items-center justify-center cursor-grab active:cursor-grabbing select-none"
+        className="fixed z-[999] w-12 h-12 rounded-full bg-gradient-to-r from-amber-400 to-orange-500 text-white shadow-lg hover:shadow-xl hover:scale-105 transition-all duration-200 flex items-center justify-center cursor-grab active:cursor-grabbing select-none"
         style={{ left: pos.x, top: pos.y }}
         title="布丁"
       >
@@ -309,7 +319,7 @@ export default function SystemAssistantChat() {
       </button>
 
       {/* Chat popover */}
-      {open && <div className="fixed z-50 w-80 sm:w-96 h-96 rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 shadow-2xl flex flex-col overflow-hidden" style={popoverStyle}>
+      {open && <div className="fixed z-[999] w-80 sm:w-96 h-96 rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 shadow-2xl flex flex-col overflow-hidden" style={popoverStyle}>
           {/* Header */}
           <div className="flex items-center gap-2 px-4 py-3 bg-gradient-to-r from-amber-50 to-orange-50 dark:from-amber-900/20 dark:to-orange-900/20 border-b border-gray-200 dark:border-gray-700">
             <span>✨</span>
@@ -320,7 +330,11 @@ export default function SystemAssistantChat() {
                 <path d="M9 13h6m-3-3v6" />
               </svg>
             </button>
-            <span className="text-[10px] text-amber-600 dark:text-amber-400 bg-amber-100 dark:bg-amber-900/30 px-1.5 py-0.5 rounded-full">随时提问</span>
+            {assistContext ? (
+              <span className="text-[10px] text-blue-600 dark:text-blue-400 bg-blue-100 dark:bg-blue-900/30 px-1.5 py-0.5 rounded-full">协助填写</span>
+            ) : (
+              <span className="text-[10px] text-amber-600 dark:text-amber-400 bg-amber-100 dark:bg-amber-900/30 px-1.5 py-0.5 rounded-full">随时提问</span>
+            )}
           </div>
 
           {/* Messages */}

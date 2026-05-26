@@ -34,14 +34,15 @@ export const callLLM = async (
   conversationHistory: BaseMessage[] = [],
   enabledTools: string[] = [],
   options?: CallLLMOptions,
-  attachments?: AttachmentPayload[]
+  attachments?: AttachmentPayload[],
+  extraTools?: any[]
 ): Promise<string> => {
   const maxAttempts = LLM_MAX_RETRIES
   let lastError: Error | null = null
 
   for (let attempt = 1; attempt <= maxAttempts; attempt++) {
     try {
-      return await callLLMOnce(prompt, llmConfig, conversationHistory, enabledTools, attempt, options, attachments)
+      return await callLLMOnce(prompt, llmConfig, conversationHistory, enabledTools, attempt, options, attachments, extraTools)
     } catch (error) {
       lastError = error instanceof Error ? error : new Error(String(error))
       if (!isRetryableError(lastError) || attempt >= maxAttempts) {
@@ -63,9 +64,10 @@ const callLLMOnce = async (
   enabledTools: string[],
   attempt: number,
   options?: CallLLMOptions,
-  attachments?: AttachmentPayload[]
+  attachments?: AttachmentPayload[],
+  extraTools?: any[]
 ): Promise<string> => {
-  const hasTools = enabledTools.length > 0
+  const hasTools = enabledTools.length > 0 || (extraTools?.length ?? 0) > 0
   const effectiveMaxTokens = hasTools
     ? Math.max(llmConfig.maxTokens || DEFAULT_MAX_TOKENS, MIN_MAX_TOKENS_WITH_TOOLS)
     : (llmConfig.maxTokens || DEFAULT_MAX_TOKENS)
@@ -87,7 +89,10 @@ const callLLMOnce = async (
   }
   const llm = new ChatOpenAI(llmOptions)
 
-  const tools = getToolsByIds(enabledTools)
+  let tools = getToolsByIds(enabledTools)
+  if (extraTools?.length) {
+    tools = [...tools, ...extraTools]
+  }
 
   // 构建 HITL 中间件：危险工具需要审批，安全工具自动放行
   const needsApproval = enabledTools.some(t => DANGEROUS_TOOLS.includes(t))

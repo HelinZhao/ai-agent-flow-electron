@@ -17,6 +17,7 @@ import proxyRouter from './routes/proxy'
 import mcpServersRouter from './routes/mcp-servers'
 import envVarsRouter from './routes/environment-variables'
 import templatesRouter from './routes/templates'
+import assistContextRouter from './routes/assist-context'
 import { mcpConnectionManager } from './mcp'
 import { getUserDataDir, migrateOldDataDir } from './utils'
 import {
@@ -109,6 +110,7 @@ export class LocalServer {
     this.app.use('/api/mcp-servers', mcpServersRouter)
     this.app.use('/api/environment-variables', envVarsRouter)
     this.app.use('/api/templates', templatesRouter)
+    this.app.use('/api/assist-context', assistContextRouter)
 
     // Ollama 模型状态与拉取路由
     this.app.get('/api/ollama/status', async (_req, res) => {
@@ -323,7 +325,10 @@ export class LocalServer {
 - 使用中文，简洁明了
 - 如果问题超出你的知识范围，诚实地告诉用户你不确定
 - 对于操作类问题，给出清晰的步骤指引
-- 保持友好和耐心的语气`,
+- 保持友好和耐心的语气
+
+特殊能力 - 实时填写表单：
+当用户正在编辑节点配置时，你可以直接修改表单字段。用户会说「帮我把 URL 改成 xxx」等，此时直接使用 suggestFrontendAction 工具即可\。`,
         type: 'standard',
         isSystem: true,
         enabledTools: JSON.stringify([

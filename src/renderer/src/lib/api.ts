@@ -525,6 +525,12 @@ export const templateApi = {
   getById: (id: string): Promise<Template> => api.get('/templates/' + id),
 }
 
+export const assistContextApi = {
+  set: (ctx: Record<string, any>): Promise<any> => api.post('/assist-context', ctx),
+  get: (): Promise<any> => api.get('/assist-context'),
+  clear: (): Promise<any> => api.delete('/assist-context'),
+}
+
 export const envVarApi = {
   getAll: (): Promise<EnvVar[]> => api.get('/environment-variables'),
 

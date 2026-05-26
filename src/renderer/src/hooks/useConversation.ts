@@ -4,6 +4,7 @@ import type { ChatMessage as ChatMessageType } from '@renderer/types'
 import { chatRecordApi } from '@renderer/lib/chatRecord'
 import { workflowExecutionApi } from '@renderer/lib/api'
 import { AttachmentData, stripAttachmentForHistory } from '@renderer/lib/attachmentUtils'
+import { frontendActionBus } from '@renderer/lib/frontendActionBus'
 
 function syncPending(executions: Record<string, string>, setState: (s: Set<string>) => void) {
   setState(new Set(Object.keys(executions)))
@@ -231,6 +232,8 @@ export function useConversation() {
             }
           } else if (progress.type === 'node_update') {
             setPendingApproval(null)
+          } else if (progress.type === 'frontend_action') {
+            frontendActionBus.dispatch(progress)
           }
         },
       )

@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { Agent, Skill, Workflow } from '@renderer/types';
 import { TOOL_DEFINITIONS } from '@renderer/config';
 import { mcpApi } from '@renderer/lib/mcpApi';
@@ -10,6 +10,8 @@ import CustomInput from '@renderer/components/ui/CustomInput';
 import CustomSelect from '@renderer/components/ui/CustomSelect';
 import CustomButton from '@renderer/components/ui/CustomButton';
 import ItemPickerModal from '@renderer/components/ui/ItemPickerModal';
+import AiAssistButton from '@renderer/components/AiAssistButton';
+import type { FrontendAction } from '@renderer/lib/frontendActionBus';
 
 const mdParser = new MarkdownIt();
 const AVAILABLE_TOOLS = TOOL_DEFINITIONS;
@@ -43,6 +45,7 @@ function Tags({ items, onRemove, emptyText, isMcpMap }: {
   if (items.length === 0) {
     return <span className="text-sm text-gray-400 dark:text-gray-500 italic">{emptyText}</span>;
   }
+  
   return (
     <div className="flex flex-wrap gap-1.5">
       {items.map((item) => {
@@ -127,6 +130,21 @@ export default function AgentForm({ agent, skills, workflows, onSave, onCancel, 
   const hasSkills = skills.length > 0;
   const llmConfigs = useWorkflowStore((s) => s.llmConfigs);
   const activeLLMConfig = useWorkflowStore((s) => s.activeLLMConfig);
+  const AGENT_SCHEMA: Record<string, string> = {
+    name: 'Agent 名称',
+    description: 'Agent 描述',
+    instructions: '系统提示词，定义 Agent 的行为和角色',
+    type: '类型，standard 为标准 Agent，workflow 为工作流 Agent',
+    skillIds: '绑定的技能 ID 数组',
+    enabledTools: '启用的工具名称数组',
+    workflowId: '绑定的工作流 ID',
+    llmConfigId: 'LLM 配置 ID',
+  }
+  const onAiAction = useCallback((action: FrontendAction) => {
+    if (action.action !== 'setConfig' || !action.payload) return
+    setFormData(prev => ({ ...prev, ...action.payload }))
+  }, [])
+
 
   return (
     <>
@@ -320,12 +338,23 @@ export default function AgentForm({ agent, skills, workflows, onSave, onCancel, 
         )}
       </div>
 
-      {/* ── Form Actions ── */}
-      <div className="flex items-center justify-end gap-3 pt-6 mt-8 border-t border-gray-200 dark:border-gray-700">
-        <CustomButton onClick={onCancel} variant="secondary">取消</CustomButton>
-        <CustomButton onClick={handleSave} disabled={isLoading || (!isSystem && (!formData.name.trim() || !formData.instructions.trim()))}>
-          {isLoading ? '保存中...' : isCreate ? '创建 Agent' : '保存修改'}
-        </CustomButton>
+{/* ── Form Actions ── */}
+      <div className="flex items-center justify-between gap-3 pt-6 mt-8 border-t border-gray-200 dark:border-gray-700">
+        <AiAssistButton context={{
+          contextType: 'agent-editor',
+          contextId: agent?.id ?? '__create__',
+          label: formData.name || 'Agent',
+          data: formData,
+          schema: AGENT_SCHEMA,
+        }}
+          onAction={onAiAction}
+        />
+        <div className="flex items-center gap-3">
+          <CustomButton onClick={onCancel} variant="secondary">取消</CustomButton>
+          <CustomButton onClick={handleSave} disabled={isLoading || (!isSystem && (!formData.name.trim() || !formData.instructions.trim()))}>
+            {isLoading ? '保存中...' : isCreate ? '创建 Agent' : '保存修改'}
+          </CustomButton>
+        </div>
       </div>
 
       {pickerTarget === 'skills' && (
