@@ -159,6 +159,7 @@ export interface NodeExecutionResult {
   input?: string
   output?: string
   error?: string
+  variables?: Record<string, any>
   metadata?: {
     nodeId: string
     type: string

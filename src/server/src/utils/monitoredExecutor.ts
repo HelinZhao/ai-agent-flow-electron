@@ -381,7 +381,11 @@ export class MonitoredLangGraphExecutor {
             workflowEnvVars: execState?.workflow?.envVars,
             variables: execState?.variables || {},
           })
-          nodeResults.set(node.id, nodeResult)
+          nodeResults.set(node.id, {
+            ...nodeResult,
+            input: typeof input === 'object' ? JSON.stringify(input) : String(input || ''),
+            variables: execState?.variables ? { ...execState.variables } : undefined,
+          })
 
           if (execState) {
             execState.nodeResults = nodeResults
@@ -406,6 +410,8 @@ export class MonitoredLangGraphExecutor {
               executionId,
               nodeId: node.id,
               nodeLabel: node.data?.label || node.id,
+              input: typeof input === 'object' ? JSON.stringify(input) : String(input || ''),
+              output: nodeResult.output || '',
               status: nodeResult.error ? 'failed' : 'completed',
               progress: execState.progress,
               metrics: {

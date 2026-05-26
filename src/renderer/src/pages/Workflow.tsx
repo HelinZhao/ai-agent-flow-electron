@@ -194,7 +194,8 @@ export default function Workflow(): React.JSX.Element {
                 throw new Error(startNodeError);
             }
 
-            const newWorkflow: Workflow = {                ...importedWorkflow,
+            const newWorkflow: Workflow = {
+                ...importedWorkflow,
                 id: `workflow-${Date.now()}`,
                 createdAt: new Date(),
                 updatedAt: new Date()
@@ -301,7 +302,7 @@ export default function Workflow(): React.JSX.Element {
                 </div>
 
                 {/* 设计画布 */}
-                <div className="flex-1 min-h-0 bg-white/80 dark:bg-gray-800/80 backdrop-blur-md shadow-lg rounded-lg border border-gray-200/50 dark:border-gray-700/50 overflow-auto">
+                <div className="relative flex-1 min-h-0 bg-white/80 dark:bg-gray-800/80 backdrop-blur-md shadow-lg rounded-lg border border-gray-200/50 dark:border-gray-700/50 overflow-auto">
                     <ReactFlowProvider>
                         <WorkflowDesigner
                             key={selectedWorkflow.id}
@@ -314,96 +315,95 @@ export default function Workflow(): React.JSX.Element {
                             }}
                         />
                     </ReactFlowProvider>
-                </div>
 
-                {/* 执行进度面板（在画布页显示） */}
-                {showProgressPanel && progress && (
-                    <div className="fixed bottom-4 right-4 w-[500px] z-50">
-                        <ExecutionProgressPanel
-                            progress={progress}
-                            isRunning={isRunning}
-                            onStop={() => {
-                                stopExecution();
-                                setShowProgressPanel(false);
-                            }}
-                            onPause={pauseExecution}
-                            onResume={resumeExecution}
-                        />
-                        <button
-                            onClick={() => {
-                                stopExecution();
-                                setShowProgressPanel(false);
-                            }}
-                            className="absolute top-3 right-3 text-gray-400 hover:text-gray-600"
-                        >
-                            ✕
-                        </button>
-                    </div>
-                )}
-
-                {/* 执行错误提示 */}
-                {executionError && (
-                    <div className="fixed top-4 right-4 bg-red-50/90 dark:bg-red-900/20 backdrop-blur-md border border-red-200/50 dark:border-red-800/50 text-red-700 dark:text-red-300 px-6 py-4 rounded-2xl z-50 shadow-xl max-w-md">
-                        <div className="flex items-start space-x-3">
-                            <span className="text-xl text-red-500 flex-shrink-0 mt-0.5">⚠️</span>
-                            <div className="flex-1 min-w-0">
-                                <p className="font-medium text-red-800 dark:text-red-200 mb-1">执行错误</p>
-                                <p className="text-sm text-red-600 dark:text-red-400 break-words">{executionError}</p>
-                            </div>
+                    {showProgressPanel && progress && (
+                        <div className="fixed bottom-4 right-4 w-[500px] z-50">
+                            <ExecutionProgressPanel
+                                progress={progress}
+                                isRunning={isRunning}
+                                onStop={() => {
+                                    stopExecution();
+                                    setShowProgressPanel(false);
+                                }}
+                                onPause={pauseExecution}
+                                onResume={resumeExecution}
+                            />
                             <button
-                                onClick={() => { /* 清除错误状态 */ }}
-                                className="text-red-500 hover:text-red-700 ml-2 flex-shrink-0 p-1 hover:bg-red-100/50 dark:hover:bg-red-800/30 rounded transition-colors"
+                                onClick={() => {
+                                    stopExecution();
+                                    setShowProgressPanel(false);
+                                }}
+                                className="absolute top-3 right-3 text-gray-400 hover:text-gray-600"
                             >
-                                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-                                </svg>
+                                ✕
                             </button>
                         </div>
-                    </div>
-                )}
+                    )}
 
-                <InputDialog
-                    open={showInputDialog}
-                    onExecute={handleExecute}
-                    onClose={() => setShowInputDialog(false)}
-                    selectedWorkflow={selectedWorkflow}
-                    canvasNodes={canvasDataRef.current.nodes}
-                />
-                {workflowToDelete && (
-                    <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50 p-4">
-                        <div className="bg-white/95 dark:bg-gray-800/95 backdrop-blur-md rounded-2xl p-8 max-w-md w-full shadow-2xl border border-gray-200/50 dark:border-gray-700/50">
-                            <div className="text-center mb-6">
-                                <div className="w-16 h-16 bg-red-100 dark:bg-red-900/30 rounded-full flex items-center justify-center mx-auto mb-4">
-                                    <span className="text-2xl text-red-600">⚠️</span>
+                    {/* 执行错误提示 */}
+                    {executionError && (
+                        <div className="fixed top-4 right-4 bg-red-50/90 dark:bg-red-900/20 backdrop-blur-md border border-red-200/50 dark:border-red-800/50 text-red-700 dark:text-red-300 px-6 py-4 rounded-2xl z-50 shadow-xl max-w-md">
+                            <div className="flex items-start space-x-3">
+                                <span className="text-xl text-red-500 flex-shrink-0 mt-0.5">⚠️</span>
+                                <div className="flex-1 min-w-0">
+                                    <p className="font-medium text-red-800 dark:text-red-200 mb-1">执行错误</p>
+                                    <p className="text-sm text-red-600 dark:text-red-400 break-words">{executionError}</p>
                                 </div>
-                                <h3 className="text-xl font-semibold text-gray-900 dark:text-white mb-2">确认删除</h3>
-                                <p className="text-gray-600 dark:text-gray-400">此操作无法撤销，请确认是否删除该工作流？</p>
-                            </div>
-                            <div className="flex space-x-3">
-                                <CustomButton
-                                    onClick={() => {
-                                        deleteWorkflow(workflowToDelete);
-                                        if (selectedWorkflowId === workflowToDelete) {
-                                            setSelectedWorkflowId(null);
-                                        }
-                                        setWorkflowToDelete(null);
-                                    }}
-                                    variant="danger"
-                                    className="flex-1"
+                                <button
+                                    onClick={() => { /* 清除错误状态 */ }}
+                                    className="text-red-500 hover:text-red-700 ml-2 flex-shrink-0 p-1 hover:bg-red-100/50 dark:hover:bg-red-800/30 rounded transition-colors"
                                 >
-                                    删除
-                                </CustomButton>
-                                <CustomButton
-                                    onClick={() => setWorkflowToDelete(null)}
-                                    variant="secondary"
-                                    className="flex-1"
-                                >
-                                    取消
-                                </CustomButton>
+                                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                                    </svg>
+                                </button>
                             </div>
                         </div>
-                    </div>
-                )}
+                    )}
+
+                    <InputDialog
+                        open={showInputDialog}
+                        onExecute={handleExecute}
+                        onClose={() => setShowInputDialog(false)}
+                        selectedWorkflow={selectedWorkflow}
+                        canvasNodes={canvasDataRef.current.nodes}
+                    />
+                    {workflowToDelete && (
+                        <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+                            <div className="bg-white/95 dark:bg-gray-800/95 backdrop-blur-md rounded-2xl p-8 max-w-md w-full shadow-2xl border border-gray-200/50 dark:border-gray-700/50">
+                                <div className="text-center mb-6">
+                                    <div className="w-16 h-16 bg-red-100 dark:bg-red-900/30 rounded-full flex items-center justify-center mx-auto mb-4">
+                                        <span className="text-2xl text-red-600">⚠️</span>
+                                    </div>
+                                    <h3 className="text-xl font-semibold text-gray-900 dark:text-white mb-2">确认删除</h3>
+                                    <p className="text-gray-600 dark:text-gray-400">此操作无法撤销，请确认是否删除该工作流？</p>
+                                </div>
+                                <div className="flex space-x-3">
+                                    <CustomButton
+                                        onClick={() => {
+                                            deleteWorkflow(workflowToDelete);
+                                            if (selectedWorkflowId === workflowToDelete) {
+                                                setSelectedWorkflowId(null);
+                                            }
+                                            setWorkflowToDelete(null);
+                                        }}
+                                        variant="danger"
+                                        className="flex-1"
+                                    >
+                                        删除
+                                    </CustomButton>
+                                    <CustomButton
+                                        onClick={() => setWorkflowToDelete(null)}
+                                        variant="secondary"
+                                        className="flex-1"
+                                    >
+                                        取消
+                                    </CustomButton>
+                                </div>
+                            </div>
+                        </div>
+                    )}
+                </div>
             </div>
         );
     }

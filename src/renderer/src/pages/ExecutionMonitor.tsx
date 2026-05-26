@@ -371,45 +371,83 @@ const ExecutionMonitor = () => {
   )
 }
 
-// 节点结果项
+// 节点结果项（可展开）
 const NodeResultItem: React.FC<{ node: NodeExecutionResult }> = ({ node }) => {
-  const statusColor = (() => {
-    switch (node.status) {
-      case 'completed': return 'text-green-600 bg-green-50 dark:bg-green-900/20'
-      case 'failed': return 'text-red-600 bg-red-50 dark:bg-red-900/20'
-      case 'running': return 'text-blue-600 bg-blue-50 dark:bg-blue-900/20'
-      default: return 'text-gray-600 bg-gray-50 dark:bg-gray-900/20'
-    }
-  })()
-  const statusText: Record<string, string> = { completed: '已完成', failed: '失败', running: '运行中', pending: '等待中' }
+  const [expanded, setExpanded] = useState(false)
+  const statusStyle: Record<string, { color: string; text: string }> = {
+    completed: { color: 'text-green-600 bg-green-50 dark:bg-green-900/20', text: '已完成' },
+    failed: { color: 'text-red-600 bg-red-50 dark:bg-red-900/20', text: '失败' },
+    running: { color: 'text-blue-600 bg-blue-50 dark:bg-blue-900/20', text: '运行中' },
+    pending: { color: 'text-gray-600 bg-gray-50 dark:bg-gray-900/20', text: '等待中' }
+  }
+  const s = statusStyle[node.status] || statusStyle.pending
+  const hasVariables = !!node.variables && Object.keys(node.variables).length > 0
+
   return (
-    <div className="bg-white/80 dark:bg-gray-800/80 backdrop-blur-sm rounded-xl border border-gray-200/50 dark:border-gray-700/50 p-4">
-      <div className="flex items-center justify-between mb-2">
-        <div className="flex items-center gap-2">
-          <div className={`w-2 h-2 rounded-full ${
+    <div className={`rounded-xl border transition-colors ${
+      node.status === 'running'
+        ? 'border-blue-300 dark:border-blue-600/50 bg-blue-50/30 dark:bg-blue-900/10'
+        : node.status === 'failed'
+          ? 'border-red-200 dark:border-red-800/50 bg-red-50/30 dark:bg-red-900/10'
+          : 'bg-white/80 dark:bg-gray-800/80 border-gray-200/50 dark:border-gray-700/50'
+    }`}>
+      <button onClick={() => setExpanded(!expanded)} className="w-full flex items-center justify-between p-3 hover:bg-gray-50/50 dark:hover:bg-gray-700/20 transition-colors">
+        <div className="flex items-center gap-2 min-w-0">
+          <span className={`w-2 h-2 rounded-full shrink-0 ${
             node.status === 'completed' ? 'bg-green-500' :
             node.status === 'failed' ? 'bg-red-500' :
-            node.status === 'running' ? 'bg-blue-500' : 'bg-gray-300 dark:bg-gray-600'
+            node.status === 'running' ? 'bg-blue-500 animate-pulse' : 'bg-gray-300 dark:bg-gray-600'
           }`} />
-          <span className="font-medium text-sm text-gray-900 dark:text-white">{node.metadata?.label || '--'}</span>
+          <span className="font-medium text-sm text-gray-900 dark:text-white truncate">{node.metadata?.label || '--'}</span>
         </div>
-        <span className={`px-2 py-0.5 rounded-full text-xs font-medium ${statusColor}`}>
-          {statusText[node.status] || node.status}
-        </span>
-      </div>
-      <div className="text-xs text-gray-500 dark:text-gray-400 space-y-0.5 ml-4">
-        <div>节点ID: {node.nodeId || '--'}</div>
-        {node.duration ? <div>耗时: {Math.round(node.duration / 1000)}秒</div> : null}
-        {node.error && <div className="text-red-600 dark:text-red-400 mt-1">错误: {node.error}</div>}
-      </div>
-      {node.output && (
-        <div className="mt-2 p-2.5 bg-gray-50 dark:bg-gray-900/30 rounded-lg border border-gray-100 dark:border-gray-700/30 text-xs">
-          <div className="font-medium mb-1 text-gray-600 dark:text-gray-400">输出:</div>
-          <pre className="whitespace-pre-wrap break-words text-gray-600 dark:text-gray-400">
-            {typeof node.output === 'string' ? node.output : JSON.stringify(node.output, null, 2)}
-          </pre>
+        <div className="flex items-center gap-2 shrink-0">
+          {node.duration ? <span className="text-xs text-gray-400">{Math.round(node.duration / 1000)}s</span> : null}
+          <span className={`px-2 py-0.5 rounded-full text-xs font-medium ${s.color}`}>{s.text}</span>
+          <svg className={`w-3.5 h-3.5 text-gray-400 transition-transform ${expanded ? 'rotate-180' : ''}`} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+            <path d="M6 9l6 6 6-6" />
+          </svg>
+        </div>
+      </button>
+
+      {node.error && !expanded && (
+        <div className="mx-3 pb-2 text-xs text-red-600 dark:text-red-400 truncate">✗ {node.error}</div>
+      )}
+
+      {expanded && (
+        <div className="px-3 pb-3 space-y-2 border-t border-gray-100 dark:border-gray-700/30 pt-2">
+          {node.error && (
+            <div className="p-2 bg-red-50 dark:bg-red-900/20 rounded-lg border border-red-200 dark:border-red-800/50 text-xs text-red-700 dark:text-red-300">
+              <span className="font-medium">错误: </span>{node.error}
+            </div>
+          )}
+          <div className="text-xs text-gray-500">ID: {node.nodeId}</div>
+          {node.input && <DataSection title="输入" content={node.input} />}
+          {hasVariables && <DataSection title="变量" content={JSON.stringify(node.variables, null, 2)} />}
+          {node.output && <DataSection title="输出" content={node.output} />}
         </div>
       )}
+    </div>
+  )
+}
+
+function DataSection({ title, content }: { title: string; content: string }) {
+  const [collapsed, setCollapsed] = useState(true)
+  const truncated = content.length > 500
+  const display = truncated && collapsed ? content.substring(0, 500) + '\n...' : content
+
+  return (
+    <div>
+      <div className="flex items-center justify-between mb-1">
+        <span className="text-xs font-medium text-gray-600 dark:text-gray-400">{title}</span>
+        {truncated && (
+          <button onClick={() => setCollapsed(!collapsed)} className="text-[10px] text-blue-500 hover:text-blue-700">
+            {collapsed ? '展开' : '收起'}
+          </button>
+        )}
+      </div>
+      <pre className="p-2 bg-gray-50 dark:bg-gray-900/30 rounded-lg border border-gray-100 dark:border-gray-700/30 text-xs font-mono text-gray-700 dark:text-gray-300 whitespace-pre-wrap break-words max-h-60 overflow-auto">
+        {display}
+      </pre>
     </div>
   )
 }
