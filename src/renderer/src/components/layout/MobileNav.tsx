@@ -5,7 +5,7 @@ import ThemeToggle from './ThemeToggle'
 interface NavItem {
   path: string
   label: string
-  icon: string
+  icon: React.ReactNode
 }
 
 interface MobileNavProps {
@@ -35,7 +35,7 @@ const MobileNav: React.FC<MobileNavProps> = ({ currentPage, onNavigate, navItems
           <ThemeToggle />
           <button
             onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
-            className="w-9 h-9 flex items-center justify-center rounded-xl bg-white/50 dark:bg-gray-700/50 backdrop-blur-sm border border-gray-200/50 dark:border-gray-600/50 hover:bg-white/70 dark:hover:bg-gray-600/50 group overflow-hidden shrink-0"
+            className="w-8 h-8 flex items-center justify-center rounded-xl bg-white/50 dark:bg-gray-700/50 backdrop-blur-sm border border-gray-200/50 dark:border-gray-600/50 hover:bg-white/70 dark:hover:bg-gray-600/50 group overflow-hidden shrink-0"
           >
             <div className="w-5 h-5 flex flex-col justify-center space-y-1">
               <div className={`w-full h-0.5 bg-gray-600 dark:bg-gray-300 transition-all ${isMobileMenuOpen ? 'rotate-45 translate-y-1.5' : ''}`}></div>

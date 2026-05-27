@@ -220,7 +220,7 @@ export default function Skills(): React.JSX.Element {
           </h1>
           <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">创建和管理 AI 技能，为工作流和 Agent 提供可复用的专业知识与处理能力</p>
         </div>
-        <div className="flex items-center gap-2">
+        <div className="flex items-center flex-wrap gap-2 justify-end">
           {skills.length > 0 && (
             <CustomInput
               value={searchTerm}

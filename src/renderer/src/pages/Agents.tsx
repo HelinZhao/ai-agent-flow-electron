@@ -284,7 +284,7 @@ export default function Agents(): React.JSX.Element {
           </h1>
           <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">创建和管理 AI Agent，配置指令、技能和工具，实现智能对话与自动化任务</p>
         </div>
-        <div className="flex items-center gap-2">
+        <div className="flex items-center flex-wrap gap-2 justify-end">
           {agents.length > 0 && (
             <CustomInput
               value={searchTerm}

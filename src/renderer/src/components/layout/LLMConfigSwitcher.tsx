@@ -41,7 +41,7 @@ export default function LLMConfigSwitcher() {
       size="sm"
       dropdownWidth={"auto"}
       variant="borderless"
-      className="w-auto min-h-[36px]"
+      className="w-auto"
     />
   );
 }

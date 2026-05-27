@@ -150,7 +150,7 @@ export default function McpServers(): React.JSX.Element {
             管理第三方 MCP（Model Context Protocol）服务器连接
           </p>
         </div>
-        <div className="flex items-center gap-2">
+        <div className="flex items-center flex-wrap gap-2 justify-end">
           <CustomButton variant="secondary" onClick={handleRefreshAll} loading={loading} size="sm">
             刷新全部
           </CustomButton>

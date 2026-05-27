@@ -13,7 +13,7 @@ const ThemeToggle: React.FC = () => {
   return (
     <button
       onClick={handleToggle}
-      className="relative w-9 h-9 flex items-center justify-center rounded-xl bg-white/50 dark:bg-gray-700/50 backdrop-blur-sm border border-gray-200/50 dark:border-gray-600/50 hover:bg-white/70 dark:hover:bg-gray-600/50 group overflow-hidden shrink-0"
+      className="relative w-8 h-8 flex items-center justify-center rounded-xl bg-white/50 dark:bg-gray-700/50 backdrop-blur-sm border border-gray-200/50 dark:border-gray-600/50 hover:bg-white/70 dark:hover:bg-gray-600/50 group overflow-hidden shrink-0"
       title={resolvedIsDark ? '切换到浅色模式' : '切换到深色模式'}
     >
       <div className="relative w-5 h-5 flex items-center justify-center">

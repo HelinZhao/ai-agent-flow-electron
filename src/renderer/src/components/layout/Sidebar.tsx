@@ -3,7 +3,7 @@ import { useState, useRef } from 'react'
 interface NavItem {
   path: string
   label: string
-  icon: string
+  icon: React.ReactNode
 }
 
 interface SidebarProps {
@@ -36,7 +36,7 @@ const Sidebar: React.FC<SidebarProps> = ({ currentPage, onNavigate, navItems }: 
 
   return (
     <>
-      <nav className={`hidden md:block bg-white/80 dark:bg-gray-800/80 backdrop-blur-md shadow-sm border-r border-gray-200/50 dark:border-gray-700/50 flex-shrink-0 overflow-visible z-30 transition-all duration-300 w-16 ${!sidebarCollapsed ? 'xl:w-52' : ''}`}>
+      <nav className={`hidden md:block bg-white/80 dark:bg-gray-800/80 backdrop-blur-md shadow-sm border-r border-gray-200/50 dark:border-gray-700/50 flex-shrink-0 overflow-visible z-30 transition-all duration-300 w-15 ${!sidebarCollapsed ? 'xl:w-52' : ''}`}>
         <div className="flex flex-col h-full">
           <div className="flex-1 flex flex-col items-center xl:items-stretch pt-4 pb-2 space-y-2 overflow-y-auto">
             {navItems.map((item) => (
@@ -45,7 +45,7 @@ const Sidebar: React.FC<SidebarProps> = ({ currentPage, onNavigate, navItems }: 
                 onClick={() => onNavigate(item.path)}
                 onMouseEnter={(e) => showTooltip(item.label, e.currentTarget)}
                 onMouseLeave={hideTooltip}
-                className={`group relative p-3 ${sidebarCollapsed ? 'mx-1.5' : 'xl:mx-3'} rounded-xl transition-all duration-200 focus:outline-none flex items-center space-x-3 ${currentPage === item.path
+                className={`group relative p-3 mx-2 ${sidebarCollapsed ? 'w-11' : ''} h-11 rounded-xl transition-all duration-200 focus:outline-none flex items-center space-x-3 ${currentPage === item.path
                   ? 'bg-gradient-to-r from-blue-500 to-purple-600 text-white shadow-lg'
                   : 'text-gray-600 dark:text-gray-300 hover:text-blue-600 dark:hover:text-blue-400 hover:bg-gray-100/80 dark:hover:bg-gray-700/50'
                   }`}
