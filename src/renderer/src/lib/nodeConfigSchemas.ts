@@ -54,9 +54,8 @@ export const NODE_CONFIG_SCHEMAS: Record<string, Record<string, string>> = {
     topK: '返回结果数量',
   },
   variable: {
-    variableName: '变量名',
-    variableValue: '变量值或表达式',
-    setOrGet: 'set 为设置变量，get 为获取变量',
+    mode: '操作模式，set 为设置变量，get 为获取变量',
+    items: '变量列表，每个包含 name（变量名）、value（变量值表达式）',
   },
   mcp: {
     serverId: 'MCP 服务器 ID',

@@ -385,7 +385,7 @@ export default function Triggers(): React.JSX.Element {
           </div>
         }
       >
-        <form id="trigger-form" onSubmit={handleSave} key={editingId ?? 'create'}>
+        <form id="trigger-form" onSubmit={handleSave} key={editingId ?? 'create'} className="space-y-3">
           {/* name */}
           <div>
             <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5">名称</label>

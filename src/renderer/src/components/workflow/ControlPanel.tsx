@@ -24,7 +24,7 @@ const ControlPanel: React.FC<ControlPanelProps> = (props: ControlPanelProps) => 
                     <CustomButton
                         onClick={() => setShowVars(true)}
                         variant="ghost"
-                        size="sm"
+                        size="xs"
                     >
                         <svg className="w-3.5 h-3.5 mr-1" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
                             <path d="M4 6h16M4 12h16M4 18h16" />
@@ -34,7 +34,7 @@ const ControlPanel: React.FC<ControlPanelProps> = (props: ControlPanelProps) => 
                     <CustomButton
                         onClick={props.onOpenEnvVars}
                         variant="ghost"
-                        size="sm"
+                        size="xs"
                     >
                         <svg className="w-3.5 h-3.5 mr-1" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
                             <path d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4" />
@@ -44,28 +44,28 @@ const ControlPanel: React.FC<ControlPanelProps> = (props: ControlPanelProps) => 
                     <CustomButton
                         onClick={props.onToggleDirection}
                         variant="secondary"
-                        size="sm"
+                        size="xs"
                     >
                         {props.layoutDirection === 'horizontal' ? '⇆ 水平' : '⇅ 垂直'}
                     </CustomButton>
                     <CustomButton
                         onClick={props.onAutoLayout}
                         variant="secondary"
-                        size="sm"
+                        size="xs"
                     >
                         布局
                     </CustomButton>
                     <CustomButton
                         onClick={props.onSave}
                         variant="primary"
-                        size="sm"
+                        size="xs"
                     >
                         保存
                     </CustomButton>
                     <CustomButton
                         onClick={props.onRun}
                         variant="success"
-                        size="sm"
+                        size="xs"
                         disabled={props.isRunning}
                     >
                         {props.isRunning ? '运行中...' : '运行'}
