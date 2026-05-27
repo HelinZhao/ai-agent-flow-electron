@@ -7,6 +7,18 @@ import { LocalServer } from '../server/src'
 import { setupChatRecordIPC } from './ipc/chatRecord'
 import dotenv from 'dotenv'
 import os from 'os'
+import {
+  loadConfig as loadGitConfig,
+  saveConfig as saveGitConfig,
+  initRepo,
+  writeEntityJson,
+  deleteEntityJson,
+  autoCommit,
+  getHistory,
+  getDiff,
+  restoreFile,
+  getStatus,
+} from './git/versionControl'
 dotenv.config()
 
 // 禁止应用多开 — 第二次启动时聚焦已有窗口并退出
@@ -235,6 +247,50 @@ app.whenReady().then(() => {
       systemMemoryTotal: Math.round(os.totalmem() / 1024 / 1024),
       systemMemoryFree: Math.round(os.freemem() / 1024 / 1024),
     }
+  })
+
+  // Git 版本控制
+  ipcMain.handle('git:loadConfig', () => loadGitConfig())
+
+  ipcMain.handle('git:saveConfig', (_, config) => {
+    saveGitConfig(config)
+    return true
+  })
+
+  ipcMain.handle('git:initRepo', async (_, repoPath: string) => {
+    await initRepo(repoPath)
+    return true
+  })
+
+  ipcMain.handle('git:commit', async (_, opts: { repoPath: string; type: string; entity: any; message: string }) => {
+    const { repoPath, type, entity, message } = opts
+    const filePath = await writeEntityJson(repoPath, type, entity)
+    await autoCommit(repoPath, [`${type}/${entity.id}.json`], message)
+    return filePath
+  })
+
+  ipcMain.handle('git:delete', async (_, opts: { repoPath: string; type: string; id: string; message: string }) => {
+    const { repoPath, type, id, message } = opts
+    await deleteEntityJson(repoPath, type, id)
+    await autoCommit(repoPath, [`${type}/${id}.json`], message)
+    return true
+  })
+
+  ipcMain.handle('git:history', async (_, opts: { repoPath: string; filePath?: string }) => {
+    return getHistory(opts.repoPath, opts.filePath)
+  })
+
+  ipcMain.handle('git:diff', async (_, opts: { repoPath: string; hash1: string; hash2: string; filePath?: string }) => {
+    return getDiff(opts.repoPath, opts.hash1, opts.hash2, opts.filePath)
+  })
+
+  ipcMain.handle('git:restore', async (_, opts: { repoPath: string; hash: string; filePath: string }) => {
+    await restoreFile(opts.repoPath, opts.hash, opts.filePath)
+    return true
+  })
+
+  ipcMain.handle('git:status', async (_, repoPath: string) => {
+    return getStatus(repoPath)
   })
 
   // 自动启动服务器

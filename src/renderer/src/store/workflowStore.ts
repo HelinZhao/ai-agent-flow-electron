@@ -5,6 +5,7 @@ import type { McpServer } from '@renderer/lib/mcpApi'
 import { mcpApi } from '@renderer/lib/mcpApi'
 import { workflowApi, skillApi, agentApi, llmConfigApi, knowledgeBaseApi, triggerApi, envVarApi, templateApi, waitForServer } from '@renderer/lib/api'
 import { STORAGE_KEY, STORAGE_PERSIST_FIELDS, API_BASE_URL } from '@renderer/config'
+import { gitAutoCommit } from '@renderer/lib/gitAutoCommit'
 
 interface WorkflowState {
   workflows: Workflow[]
@@ -198,6 +199,8 @@ export const useWorkflowStore = create<WorkflowState>()(
           const newWorkflow = await workflowApi.create(workflow)
           set({ workflows: [newWorkflow, ...state.workflows] })
 
+          gitAutoCommit('workflows', newWorkflow, 'create')
+
           return newWorkflow
         } catch (error) {
           console.error('创建工作流失败:', error)
@@ -218,6 +221,7 @@ export const useWorkflowStore = create<WorkflowState>()(
 
           set({ workflows: state.workflows.map((w) => (w.id === id ? updatedWorkflow : w)) })
 
+          gitAutoCommit('workflows', updatedWorkflow, 'update')
         } catch (error) {
           console.error('更新工作流失败:', error)
           state.setError('更新工作流失败')
@@ -233,9 +237,12 @@ export const useWorkflowStore = create<WorkflowState>()(
           state.setLoading(true)
           state.setError(null)
 
+          const deleted = state.workflows.find(w => w.id === id)
           await workflowApi.delete(id)
 
           set({ workflows: state.workflows.filter((w) => w.id !== id) })
+
+          if (deleted) gitAutoCommit('workflows', deleted, 'delete')
         } catch (error) {
           console.error('删除工作流失败:', error)
           state.setError('删除工作流失败')
@@ -257,6 +264,8 @@ export const useWorkflowStore = create<WorkflowState>()(
 
           const newSkill = await skillApi.create(skill)
           set({ skills: [newSkill, ...state.skills] })
+
+          gitAutoCommit('skills', newSkill, 'create')
         } catch (error) {
           console.error('创建技能失败:', error)
           state.setError('创建技能失败')
@@ -274,6 +283,8 @@ export const useWorkflowStore = create<WorkflowState>()(
 
           const updatedSkill = await skillApi.update(id, updates)
           set({ skills: state.skills.map((s) => (s.id === id ? updatedSkill : s)) })
+
+          gitAutoCommit('skills', updatedSkill, 'update')
         } catch (error) {
           console.error('更新技能失败:', error)
           state.setError('更新技能失败')
@@ -289,8 +300,11 @@ export const useWorkflowStore = create<WorkflowState>()(
           state.setLoading(true)
           state.setError(null)
 
+          const deleted = state.skills.find(s => s.id === id)
           await skillApi.delete(id)
           set({ skills: state.skills.filter((s) => s.id !== id) })
+
+          if (deleted) gitAutoCommit('skills', deleted, 'delete')
         } catch (error) {
           console.error('删除技能失败:', error)
           state.setError('删除技能失败')
@@ -308,6 +322,8 @@ export const useWorkflowStore = create<WorkflowState>()(
 
           const newAgent = await agentApi.create(agent)
           set({ agents: [newAgent, ...state.agents] })
+
+          gitAutoCommit('agents', newAgent, 'create')
         } catch (error) {
           console.error('创建智能体失败:', error)
           state.setError('创建智能体失败')
@@ -325,6 +341,8 @@ export const useWorkflowStore = create<WorkflowState>()(
 
           const updatedAgent = await agentApi.update(id, updates)
           set({ agents: state.agents.map((a) => (a.id === id ? updatedAgent : a)) })
+
+          gitAutoCommit('agents', updatedAgent, 'update')
         } catch (error) {
           console.error('更新智能体失败:', error)
           state.setError('更新智能体失败')
@@ -340,8 +358,11 @@ export const useWorkflowStore = create<WorkflowState>()(
           state.setLoading(true)
           state.setError(null)
 
+          const deleted = state.agents.find(a => a.id === id)
           await agentApi.delete(id)
           set({ agents: state.agents.filter((a) => a.id !== id) })
+
+          if (deleted) gitAutoCommit('agents', deleted, 'delete')
         } catch (error) {
           console.error('删除智能体失败:', error)
           state.setError('删除智能体失败')

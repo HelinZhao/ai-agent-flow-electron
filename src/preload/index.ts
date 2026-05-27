@@ -48,6 +48,18 @@ const api = {
   // 系统资源API
   system: {
     getResources: () => ipcRenderer.invoke('system:getResources')
+  },
+  // Git 版本控制API
+  git: {
+    loadConfig: () => ipcRenderer.invoke('git:loadConfig'),
+    saveConfig: (config: { enabled: boolean; repoPath: string }) => ipcRenderer.invoke('git:saveConfig', config),
+    initRepo: (repoPath: string) => ipcRenderer.invoke('git:initRepo', repoPath),
+    commit: (opts: { repoPath: string; type: string; entity: any; message: string }) => ipcRenderer.invoke('git:commit', opts),
+    delete: (opts: { repoPath: string; type: string; id: string; message: string }) => ipcRenderer.invoke('git:delete', opts),
+    history: (opts: { repoPath: string; filePath?: string }) => ipcRenderer.invoke('git:history', opts),
+    diff: (opts: { repoPath: string; hash1: string; hash2: string; filePath?: string }) => ipcRenderer.invoke('git:diff', opts),
+    restore: (opts: { repoPath: string; hash: string; filePath: string }) => ipcRenderer.invoke('git:restore', opts),
+    status: (repoPath: string) => ipcRenderer.invoke('git:status', repoPath),
   }
 }
 

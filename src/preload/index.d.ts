@@ -38,6 +38,26 @@ interface SystemAPI {
   getResources: () => Promise<{ cpu: number; memory: number; systemMemoryTotal: number; systemMemoryFree: number }>
 }
 
+interface GitCommitOpts { repoPath: string; type: string; entity: any; message: string }
+interface GitDeleteOpts { repoPath: string; type: string; id: string; message: string }
+interface GitHistoryOpts { repoPath: string; filePath?: string }
+interface GitDiffOpts { repoPath: string; hash1: string; hash2: string; filePath?: string }
+interface GitRestoreOpts { repoPath: string; hash: string; filePath: string }
+interface GitStatusResult { total: number; unstaged: number; lastCommit: string | null }
+interface GitConfig { enabled: boolean; repoPath: string }
+
+interface GitAPI {
+  loadConfig: () => Promise<GitConfig>
+  saveConfig: (config: GitConfig) => Promise<boolean>
+  initRepo: (repoPath: string) => Promise<boolean>
+  commit: (opts: GitCommitOpts) => Promise<string>
+  delete: (opts: GitDeleteOpts) => Promise<boolean>
+  history: (opts: GitHistoryOpts) => Promise<{ hash: string; date: string; message: string }[]>
+  diff: (opts: GitDiffOpts) => Promise<string>
+  restore: (opts: GitRestoreOpts) => Promise<boolean>
+  status: (repoPath: string) => Promise<GitStatusResult>
+}
+
 interface FileAPI {
   write: (filePath: string, data: string) => Promise<{ success: boolean; error?: string }>
 }
@@ -55,6 +75,7 @@ interface CustomAPI {
   file: FileAPI
   dialog: DialogAPI
   system: SystemAPI
+  git: GitAPI
 }
 
 declare global {

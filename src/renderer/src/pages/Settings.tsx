@@ -9,6 +9,7 @@ import SettingsProxy from './settings/SettingsProxy';
 import SettingsAbout from './settings/SettingsAbout';
 import SettingsSponsor from './settings/SettingsSponsor';
 import SettingsEnvVars from './settings/SettingsEnvVars';
+import SettingsGit from './settings/SettingsGit';
 
 const TAB_ICONS: Record<string, React.ReactNode> = {
   llm: (
@@ -61,6 +62,11 @@ const TAB_ICONS: Record<string, React.ReactNode> = {
       <circle cx="12" cy="12" r="10" /><path d="M12 16v-4m0-4h.01" />
     </svg>
   ),
+  git: (
+    <svg className="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+      <circle cx="18" cy="18" r="3" /><circle cx="6" cy="6" r="3" /><path d="M13 6h3a2 2 0 0 1 2 2v7" /><line x1="6" y1="9" x2="6" y2="15" /><path d="M9 18h4" />
+    </svg>
+  ),
 }
 
 const SETTINGS_TABS = [
@@ -74,6 +80,7 @@ const SETTINGS_TABS = [
   { id: 'data', label: '数据管理', desc: '数据库与存储空间' },
   { id: 'sponsor', label: '赞助支持', desc: '赞助项目发展' },
   { id: 'about', label: '关于', desc: '版本信息与技术栈' },
+  { id: 'git', label: 'Git', desc: '版本控制与历史管理' },
 ]
 
 export default function Settings(): React.JSX.Element {
@@ -101,6 +108,8 @@ export default function Settings(): React.JSX.Element {
         return <SettingsSponsor />;
       case 'about':
         return <SettingsAbout />;
+      case 'git':
+        return <SettingsGit />;
       default:
         return <SettingsLLM />;
     }
