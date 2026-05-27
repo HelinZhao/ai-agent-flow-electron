@@ -1,4 +1,4 @@
-import React, { useState } from 'react'
+import React from 'react'
 import { ChatMessage as ChatMessageType, AttachmentMetadata } from '@renderer/types'
 import MarkdownPreview from '@renderer/components/MarkdownPreview'
 import AttachmentDisplay from '@renderer/components/chat/AttachmentDisplay'
@@ -16,45 +16,7 @@ interface ChatMessageProps {
   onRegenerate?: () => void
 }
 
-function CopyButton({ text }: { text: string }) {
-  const [copied, setCopied] = useState(false)
-
-  const handleCopy = async () => {
-    try {
-      await navigator.clipboard.writeText(text)
-      setCopied(true)
-      setTimeout(() => setCopied(false), 1500)
-    } catch {
-      const ta = document.createElement('textarea')
-      ta.value = text
-      document.body.appendChild(ta)
-      ta.select()
-      document.execCommand('copy')
-      document.body.removeChild(ta)
-      setCopied(true)
-      setTimeout(() => setCopied(false), 1500)
-    }
-  }
-
-  return (
-    <button
-      onClick={handleCopy}
-      className="p-1 rounded-md hover:bg-gray-200 dark:hover:bg-gray-600 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 transition-colors"
-      title="复制"
-    >
-      {copied ? (
-        <svg className="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-          <path d="M20 6L9 17l-5-5" />
-        </svg>
-      ) : (
-        <svg className="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-          <rect x="9" y="9" width="13" height="13" rx="2" ry="2" />
-          <path d="M5 15H4a2 2 0 01-2-2V4a2 2 0 012-2h9a2 2 0 012 2v1" />
-        </svg>
-      )}
-    </button>
-  )
-}
+import CopyButton from '../ui/CopyButton'
 
 const ChatMessage = React.memo(function ChatMessage({
   message,
@@ -117,7 +79,7 @@ const ChatMessage = React.memo(function ChatMessage({
 
           {/* 底部操作按钮（hover 显示） */}
           <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity ml-1">
-            <CopyButton text={message.content} />
+            <CopyButton text={message.content} iconSize="w-3.5 h-3.5" />
             {isLastAgent && onRegenerate && (
               <button
                 onClick={onRegenerate}

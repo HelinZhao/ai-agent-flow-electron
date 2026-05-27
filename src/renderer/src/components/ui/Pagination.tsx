@@ -15,7 +15,7 @@ export default function Pagination({ page, totalPages, onChange, variant = 'defa
     const arr: number[] = []
     const maxVisible = 5
     let start = Math.max(1, page - Math.floor(maxVisible / 2))
-    let end = Math.min(totalPages, start + maxVisible - 1)
+    const end = Math.min(totalPages, start + maxVisible - 1)
     if (end - start + 1 < maxVisible) start = Math.max(1, end - maxVisible + 1)
     for (let i = start; i <= end; i++) arr.push(i)
     return arr

@@ -14,6 +14,7 @@ import ResponsiveGrid from '@renderer/components/ui/ResponsiveGrid';
 import MessageBanner from '@renderer/components/ui/MessageBanner';
 import { NODE_DEFS_MAP } from '@renderer/components/workflow/nodes';
 import InputDialog from '@renderer/components/workflow/InputDialog';
+import { showToast } from '@renderer/components/ui/toast/MessageToast';
 import { workflowApi } from '@renderer/lib/api';
 
 export default function Workflow(): React.JSX.Element {
@@ -54,7 +55,6 @@ export default function Workflow(): React.JSX.Element {
     const {
         progress,
         isRunning,
-        error: executionError,
         executeWorkflow,
         stopExecution,
         pauseExecution,
@@ -70,6 +70,7 @@ export default function Workflow(): React.JSX.Element {
         },
         onError: (errorMsg) => {
             console.error('工作流执行错误:', errorMsg);
+            showToast({ type: 'error', text: errorMsg });
         }
     });
 
@@ -340,26 +341,7 @@ export default function Workflow(): React.JSX.Element {
                         </div>
                     )}
 
-                    {/* 执行错误提示 */}
-                    {executionError && (
-                        <div className="fixed top-4 right-4 bg-red-50/90 dark:bg-red-900/20 backdrop-blur-md border border-red-200/50 dark:border-red-800/50 text-red-700 dark:text-red-300 px-6 py-4 rounded-2xl z-50 shadow-xl max-w-md">
-                            <div className="flex items-start space-x-3">
-                                <span className="text-xl text-red-500 flex-shrink-0 mt-0.5">⚠️</span>
-                                <div className="flex-1 min-w-0">
-                                    <p className="font-medium text-red-800 dark:text-red-200 mb-1">执行错误</p>
-                                    <p className="text-sm text-red-600 dark:text-red-400 break-words">{executionError}</p>
-                                </div>
-                                <button
-                                    onClick={() => { /* 清除错误状态 */ }}
-                                    className="text-red-500 hover:text-red-700 ml-2 flex-shrink-0 p-1 hover:bg-red-100/50 dark:hover:bg-red-800/30 rounded transition-colors"
-                                >
-                                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-                                    </svg>
-                                </button>
-                            </div>
-                        </div>
-                    )}
+                    {/* 执行错误提示 - 通过 showToast 展示 */}
 
                     <InputDialog
                         open={showInputDialog}

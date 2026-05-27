@@ -18,7 +18,7 @@ import Triggers from "./Triggers";
 import Knowledge from "./Knowledge";
 import McpServers from "./McpServers";
 import Marketplace from "./Marketplace";
-
+import ToastContainer from '@renderer/components/ui/toast/ToastContainer';
 
 const navItems = [
     { path: '/chat', label: 'AI对话', icon: '💬', page: <Chat /> },
@@ -167,6 +167,7 @@ export default function App(): React.JSX.Element {
 
             <Layout currentPage={currentPage} onNavigate={setCurrentPage} navItems={navItems} loading={loading} onRefresh={handleRefresh}>
                 <ClickSpark />
+                <ToastContainer />
             </Layout>
         </>
     );

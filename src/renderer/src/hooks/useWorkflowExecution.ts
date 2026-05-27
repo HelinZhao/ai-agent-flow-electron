@@ -25,7 +25,6 @@ export function useWorkflowExecution({
   const [executionId, setExecutionId] = useState<string | null>(null)
   const [progress, setProgress] = useState<WorkflowExecutionProgress | null>(null)
   const [isRunning, setIsRunning] = useState(false)
-  const [error, setError] = useState<string | null>(null)
   const [metrics, setMetrics] = useState<WorkflowExecutionMetrics | null>(null)
   const [nodeResults, setNodeResults] = useState<NodeExecutionResult[]>([])
 
@@ -76,12 +75,10 @@ export function useWorkflowExecution({
       } else if (progressData.metrics.status === 'paused') {
         cleanup()
       }
-      setError(null)
-    } catch (err) {
+          } catch (err) {
       if (!abortControllerRef.current?.signal.aborted) {
         const errorMessage = err instanceof Error ? err.message : '获取执行进度失败'
-        setError(errorMessage)
-        onError?.(errorMessage)
+                onError?.(errorMessage)
         setIsRunning(false)
         cleanup()
         setExecutionId(null)
@@ -111,8 +108,7 @@ export function useWorkflowExecution({
     async (workflow: Workflow, input: string, agentId?: string, threadId?: string, params?: Record<string, any>) => {
       try {
         setIsRunning(true)
-        setError(null)
-        setProgress(null)
+                setProgress(null)
         setNodeResults([])
 
         const response = await workflowExecutionApi.execute(workflow, input, agentId, threadId, params)
@@ -124,8 +120,7 @@ export function useWorkflowExecution({
         return response.executionId
       } catch (err) {
         const errorMessage = err instanceof Error ? err.message : '工作流执行失败'
-        setError(errorMessage)
-        setIsRunning(false)
+                setIsRunning(false)
         onError?.(errorMessage)
         throw err
       }
@@ -136,8 +131,7 @@ export function useWorkflowExecution({
   const executeAgentChat = async (agentId: string, input: string, threadId?: string) => {
     try {
       setIsRunning(true)
-      setError(null)
-      setProgress(null)
+            setProgress(null)
       setNodeResults([])
 
       const response = await workflowExecutionApi.agentChatMonitor(agentId, input, threadId)
@@ -149,8 +143,7 @@ export function useWorkflowExecution({
       return response.executionId
     } catch (err) {
       const errorMessage = err instanceof Error ? err.message : 'Agent对话执行失败'
-      setError(errorMessage)
-      setIsRunning(false)
+            setIsRunning(false)
       onError?.(errorMessage)
       throw err
     }
@@ -167,8 +160,7 @@ export function useWorkflowExecution({
       setExecutionId(null)
     } catch (err) {
       const errorMessage = err instanceof Error ? err.message : '停止执行失败'
-      setError(errorMessage)
-      onError?.(errorMessage)
+            onError?.(errorMessage)
     }
   }
 
@@ -180,8 +172,7 @@ export function useWorkflowExecution({
       await workflowExecutionApi.pauseExecution(executionId)
     } catch (err) {
       const errorMessage = err instanceof Error ? err.message : '暂停执行失败'
-      setError(errorMessage)
-      onError?.(errorMessage)
+            onError?.(errorMessage)
     }
   }
 
@@ -194,8 +185,7 @@ export function useWorkflowExecution({
       startPolling(executionId)
     } catch (err) {
       const errorMessage = err instanceof Error ? err.message : '恢复执行失败'
-      setError(errorMessage)
-      onError?.(errorMessage)
+            onError?.(errorMessage)
     }
   }
 
@@ -218,7 +208,6 @@ export function useWorkflowExecution({
     executionId,
     progress,
     isRunning,
-    error,
     metrics,
     nodeResults,
 
@@ -250,13 +239,11 @@ export function useExecutionHistory(workflowId?: string) {
   const fetchHistory = async (limit = HISTORY_DEFAULT_LIMIT) => {
     try {
       setIsLoading(true)
-      setError(null)
-      const historyData = await workflowExecutionApi.getExecutionHistory(workflowId, limit)
+            const historyData = await workflowExecutionApi.getExecutionHistory(workflowId, limit)
       setHistory(historyData)
     } catch (err) {
       const errorMessage = err instanceof Error ? err.message : '获取执行历史失败'
-      setError(errorMessage)
-    } finally {
+          } finally {
       setIsLoading(false)
     }
   }
