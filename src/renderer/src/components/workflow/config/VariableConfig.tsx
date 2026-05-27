@@ -52,7 +52,7 @@ const VariableConfig: React.FC<VariableConfigProps> = ({ config, onConfigChange 
         <label className="text-sm font-medium text-gray-700 dark:text-gray-300">
           {mode === 'set' ? '变量定义' : '变量名称'}
         </label>
-        <CustomButton onClick={addItem} variant="primary" size="sm">+ 添加</CustomButton>
+        <CustomButton onClick={addItem} variant="primary" size="xs">+ 添加</CustomButton>
       </div>
 
       {items.length === 0 && (
@@ -75,7 +75,9 @@ const VariableConfig: React.FC<VariableConfigProps> = ({ config, onConfigChange 
           </div>
           {mode === 'set' ? (
             <div>
-              <label className="block text-xs font-medium text-gray-600 dark:text-gray-400 mb-1">值</label>
+              <label className="block text-xs font-medium text-gray-600 dark:text-gray-400 mb-1">
+                值 (变量表达式)
+              </label>
               <ExpressionInput value={item.value} onChange={v => updateItem(item.id, 'value', v)} size="sm" minHeight="36px" placeholder="{{$input}} 或 {{$nodes['id'].output}}" />
             </div>
           ) : (
