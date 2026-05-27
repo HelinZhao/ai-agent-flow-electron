@@ -34,6 +34,10 @@ interface AppAPI {
   restart: () => Promise<boolean>
 }
 
+interface SystemAPI {
+  getResources: () => Promise<{ cpu: number; memory: number; systemMemoryTotal: number; systemMemoryFree: number }>
+}
+
 interface FileAPI {
   write: (filePath: string, data: string) => Promise<{ success: boolean; error?: string }>
 }
@@ -50,6 +54,7 @@ interface CustomAPI {
   app: AppAPI
   file: FileAPI
   dialog: DialogAPI
+  system: SystemAPI
 }
 
 declare global {

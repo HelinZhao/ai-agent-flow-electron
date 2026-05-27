@@ -44,6 +44,10 @@ const api = {
     getAutoStart: () => ipcRenderer.invoke('app:getAutoStart'),
     setAutoStart: (openAtLogin: boolean) => ipcRenderer.invoke('app:setAutoStart', openAtLogin),
     restart: () => ipcRenderer.invoke('app:restart')
+  },
+  // 系统资源API
+  system: {
+    getResources: () => ipcRenderer.invoke('system:getResources')
   }
 }
 

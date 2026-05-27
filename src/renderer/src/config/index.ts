@@ -14,6 +14,14 @@ export const SERVER_BASE_URL = 'http://localhost:3100'
 /** 默认请求 Content-Type */
 export const API_CONTENT_TYPE = 'application/json'
 
+// ========== 应用信息 ==========
+
+/** 应用版本号 */
+export const APP_VERSION = '1.7.0'
+
+/** 应用名称 */
+export const APP_NAME = 'Agent Flow'
+
 // ========== 工作流执行轮询 ==========
 
 /** 轮询进度最大次数（约 100 秒） */

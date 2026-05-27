@@ -107,6 +107,7 @@ export const LogsIcon: React.FC<IconProps> = ({ className }) => (
   </IconWrapper>
 )
 
+// eslint-disable-next-line react-refresh/only-export-components
 export const navIconMap = {
   chat: ChatIcon,
   workflow: WorkflowIcon,

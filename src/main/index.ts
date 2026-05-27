@@ -6,6 +6,7 @@ import icon from '../../resources/icon.png?asset'
 import { LocalServer } from '../server/src'
 import { setupChatRecordIPC } from './ipc/chatRecord'
 import dotenv from 'dotenv'
+import os from 'os'
 dotenv.config()
 
 // 禁止应用多开 — 第二次启动时聚焦已有窗口并退出
@@ -222,6 +223,18 @@ app.whenReady().then(() => {
         else resolve({ success: true })
       })
     })
+  })
+
+  // 系统资源占用
+  ipcMain.handle('system:getResources', async () => {
+    const cpuUsage = process.getCPUUsage()
+    const mem = process.memoryUsage()
+    return {
+      cpu: Math.round(cpuUsage.percentCPUUsage),
+      memory: Math.round(mem.rss / 1024 / 1024),
+      systemMemoryTotal: Math.round(os.totalmem() / 1024 / 1024),
+      systemMemoryFree: Math.round(os.freemem() / 1024 / 1024),
+    }
   })
 
   // 自动启动服务器

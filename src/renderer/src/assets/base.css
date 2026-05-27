@@ -68,6 +68,15 @@ body {
   outline: none;
 }
 
+/* 隐藏滚动条但保持可滚动 */
+.scrollbar-hide {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
+.scrollbar-hide::-webkit-scrollbar {
+  display: none;
+}
+
 /* 加载动画 */
 @keyframes fadeIn {
   from {
