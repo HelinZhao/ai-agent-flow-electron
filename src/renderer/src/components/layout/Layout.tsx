@@ -11,9 +11,7 @@ interface LayoutProps {
   children: React.ReactNode
   currentPage: string
   onNavigate: (page: string) => void
-  loading: boolean
   navItems: { path: string; label: string; icon: React.ReactNode, page: React.ReactNode }[]
-  onRefresh?: () => void
 }
 const isElectron = Boolean(window.electron || window.api)
 
@@ -33,7 +31,7 @@ const MainArea = memo(({ currentPage, children, navItems }: {
   </main>
 ))
 
-const Layout: React.FC<LayoutProps> = ({ navItems, currentPage, onNavigate, loading, children, onRefresh }: LayoutProps) => {
+const Layout: React.FC<LayoutProps> = ({ navItems, currentPage, onNavigate, children }) => {
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false)
   const toggleSidebar = () => setSidebarCollapsed(v => !v)
 
@@ -76,7 +74,7 @@ const Layout: React.FC<LayoutProps> = ({ navItems, currentPage, onNavigate, load
         </MainArea>
       </div>
       {currentPage !== '/chat' && <SystemAssistantChat />}
-      <Footer loading={loading} onRefresh={onRefresh} collapsed={sidebarCollapsed} onToggleCollapse={toggleSidebar} />
+      <Footer collapsed={sidebarCollapsed} onToggleCollapse={toggleSidebar} />
     </div>
   )
 }

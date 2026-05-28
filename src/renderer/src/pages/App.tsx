@@ -41,15 +41,13 @@ const navItems = [
 let init = false
 
 export default function App(): React.JSX.Element {
-  const { initialize, currentPage, setCurrentPage, error, loading } = useWorkflowStore();
+  const initialize = useWorkflowStore(state => state.initialize);
+  const currentPage = useWorkflowStore(state => state.currentPage);
+  const setCurrentPage = useWorkflowStore(state => state.setCurrentPage);
+  const error = useWorkflowStore(state => state.error);
   const [initializing, setInitializing] = useState(true);
   const [showModelDialog, setShowModelDialog] = useState(false);
   const [showOllamaDialog, setShowOllamaDialog] = useState(false);
-
-  const handleRefresh = () => {
-    init = false
-    initialize().finally(() => setInitializing(false))
-  }
 
   useEffect(() => {
     if (init) return
@@ -169,7 +167,7 @@ export default function App(): React.JSX.Element {
         />
       )}
 
-      <Layout currentPage={currentPage} onNavigate={setCurrentPage} navItems={navItems} loading={loading} onRefresh={handleRefresh}>
+      <Layout currentPage={currentPage} onNavigate={setCurrentPage} navItems={navItems}>
         <ClickSpark />
         <ToastContainer />
       </Layout>

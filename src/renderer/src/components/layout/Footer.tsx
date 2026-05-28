@@ -1,16 +1,17 @@
 import { useState, useEffect } from 'react'
 import { checkHealth } from '@renderer/lib/api'
+import { useWorkflowStore } from '@renderer/store/workflowStore'
 
 interface FooterProps {
-  loading: boolean
-  onRefresh?: () => void
   collapsed?: boolean
   onToggleCollapse?: () => void
 }
 
 const isElectron = Boolean(window.electron || window.api)
 
-const Footer: React.FC<FooterProps> = ({ loading, onRefresh, collapsed, onToggleCollapse }) => {
+const Footer: React.FC<FooterProps> = ({ collapsed, onToggleCollapse }) => {
+  const loading = useWorkflowStore(state=>state.loading);
+  const initialize = useWorkflowStore(state=>state.initialize);
   const [connected, setConnected] = useState(true)
   const [cpu, setCpu] = useState(0)
   const [memory, setMemory] = useState(0)
@@ -82,9 +83,9 @@ const Footer: React.FC<FooterProps> = ({ loading, onRefresh, collapsed, onToggle
             <circle cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="3" className="opacity-20" />
             <path d="M12 2a10 10 0 0 1 10 10" stroke="currentColor" strokeWidth="3" strokeLinecap="round" />
           </svg>
-        ) : onRefresh && (
+        ) : (
           <button
-            onClick={onRefresh}
+            onClick={initialize}
             title="刷新数据"
             className="rounded-lg text-gray-400 hover:text-blue-600 hover:bg-blue-50 dark:text-gray-500 dark:hover:text-blue-400 dark:hover:bg-blue-900/20 transition-colors p-1"
           >
