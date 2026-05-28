@@ -3,6 +3,7 @@ import { Agent, Skill } from '@renderer/types';
 import { TOOL_LABEL_MAP } from '@renderer/config';
 import MarkdownPreview from '@renderer/components/MarkdownPreview';
 import { mcpApi } from '@renderer/lib/mcpApi';
+import GitHistoryForEntity from '@renderer/components/git/GitHistoryForEntity';
 
 interface AgentDetailProps {
   agent: Agent
@@ -115,6 +116,7 @@ export default function AgentDetail({ agent, skills, workflowName, llmConfigName
                 </svg>
                 <span>删除</span>
               </button>
+              <GitHistoryForEntity type="agents" entityId={agent.id} entityName={agent.name} />
             </div>
           )}
         </div>

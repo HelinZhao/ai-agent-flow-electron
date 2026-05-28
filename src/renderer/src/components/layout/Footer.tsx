@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react'
 import { checkHealth } from '@renderer/lib/api'
 import { useWorkflowStore } from '@renderer/store/workflowStore'
+import GitPanel from '@renderer/components/git/GitPanel'
 
 interface FooterProps {
   collapsed?: boolean
@@ -67,6 +68,7 @@ const Footer: React.FC<FooterProps> = ({ collapsed, onToggleCollapse }) => {
         )}
       </div>
       <div className="flex items-center gap-2">
+        <GitPanel />
         {onToggleCollapse && (
           <button
             onClick={onToggleCollapse}

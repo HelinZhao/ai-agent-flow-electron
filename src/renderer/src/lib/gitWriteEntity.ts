@@ -1,6 +1,6 @@
 const isElectron = Boolean(window.electron || window.api)
 
-export async function gitAutoCommit(
+export async function gitWriteEntity(
   type: string,
   entity: { id: string; [key: string]: any },
   action: 'create' | 'update' | 'delete',
@@ -11,22 +11,19 @@ export async function gitAutoCommit(
     if (!config.enabled || !config.repoPath) return
 
     if (action === 'delete') {
-      await window.api!.git.delete({
+      await window.api!.git.deleteEntity({
         repoPath: config.repoPath,
         type,
         id: entity.id,
-        message: `${action} ${type}: ${entity.name || entity.id}`,
       })
     } else {
-      await window.api!.git.commit({
+      await window.api!.git.writeEntity({
         repoPath: config.repoPath,
         type,
         entity,
-        message: `${action} ${type}: ${entity.name || entity.id}`,
       })
     }
   } catch (e) {
-    // silent - git is optional, don't interrupt user
-    console.warn('[gitAutoCommit]', e)
+    console.warn('[gitWriteEntity]', e)
   }
 }

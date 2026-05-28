@@ -1,6 +1,7 @@
 import React from 'react';
 import { Skill } from '@renderer/types';
 import MarkdownPreview from '@renderer/components/MarkdownPreview';
+import GitHistoryForEntity from '@renderer/components/git/GitHistoryForEntity';
 
 interface SkillDetailProps {
   skill: Skill
@@ -54,6 +55,7 @@ export default function SkillDetail({ skill, onEdit, onDelete }: SkillDetailProp
               </svg>
               <span>删除</span>
             </button>
+            <GitHistoryForEntity type="skills" entityId={skill.id} entityName={skill.name} />
           </div>
         </div>
       </div>

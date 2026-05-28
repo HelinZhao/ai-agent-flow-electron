@@ -92,6 +92,15 @@ export async function autoCommit(
   }
 }
 
+export async function getCommitFiles(repoPath: string, hash: string): Promise<{ status: string; file: string }[]> {
+  const raw = await execGit(`git diff-tree --no-commit-id --name-status -r ${hash}`, repoPath)
+  if (!raw) return []
+  return raw.split('\n').filter(Boolean).map(line => ({
+    status: line[0],
+    file: line.substring(2),
+  }))
+}
+
 export async function getHistory(repoPath: string, filePath?: string): Promise<{ hash: string; date: string; message: string }[]> {
   const fileArg = filePath ? ` -- "${DATA_DIR}/${filePath}"` : ''
   const log = await execGit(`git log --oneline --pretty=format:"%h|%ai|%s"${fileArg}`, repoPath)
@@ -125,4 +134,56 @@ export async function getStatus(repoPath: string): Promise<{ total: number; unst
   const unstaged = unstagedRaw ? unstagedRaw.split('\n').length : 0
   const lastCommit = await execGit('git log -1 --pretty=format:"%h %s"', repoPath).catch(() => '')
   return { total, unstaged, lastCommit: lastCommit || null }
+}
+
+export interface GitFileStatus {
+  staged: string    // first column: 'M' | 'A' | 'D' | ' ' | '?'
+  unstaged: string  // second column: 'M' | 'D' | ' ' | '?'
+  file: string
+}
+
+export async function getDetailedStatus(repoPath: string): Promise<GitFileStatus[]> {
+  const raw = await execGit('git status --porcelain', repoPath)
+  if (!raw) return []
+  return raw.split('\n').filter(Boolean).map(line => ({
+    staged: line[0],
+    unstaged: line[1],
+    file: line.substring(3),
+  })).filter(f => f.file.startsWith(DATA_DIR + '/'))
+}
+
+export async function stageFile(repoPath: string, filePath: string): Promise<void> {
+  await execGit(`git add -- "${filePath}"`, repoPath)
+}
+
+export async function unstageFile(repoPath: string, filePath: string): Promise<void> {
+  await execGit(`git restore --staged -- "${filePath}"`, repoPath)
+}
+
+export async function stageAllFiles(repoPath: string): Promise<void> {
+  await execGit(`git add -A`, repoPath)
+}
+
+export async function commitWithMessage(repoPath: string, message: string): Promise<void> {
+  // commit only what's already staged
+  const status = await execGit('git status --porcelain', repoPath)
+  if (status) {
+    await execGit(`git commit -m "${message.replace(/"/g, '\\"')}"`, repoPath)
+  }
+}
+
+export async function showFileAtCommit(repoPath: string, hash: string, filePath: string): Promise<string> {
+  return execGit(`git show ${hash}:"${filePath}"`, repoPath)
+}
+
+export async function getCommitFileDiff(repoPath: string, hash: string, filePath: string): Promise<string> {
+  return execGit(`git show ${hash} -- "${filePath}"`, repoPath)
+}
+
+export async function getWorkingTreeDiff(repoPath: string, filePath: string): Promise<string> {
+  return execGit(`git diff -- "${filePath}"`, repoPath)
+}
+
+export async function getStagedDiff(repoPath: string, filePath: string): Promise<string> {
+  return execGit(`git diff --cached -- "${filePath}"`, repoPath)
 }

@@ -38,21 +38,31 @@ interface SystemAPI {
   getResources: () => Promise<{ cpu: number; memory: number; systemMemoryTotal: number; systemMemoryFree: number }>
 }
 
-interface GitCommitOpts { repoPath: string; type: string; entity: any; message: string }
-interface GitDeleteOpts { repoPath: string; type: string; id: string; message: string }
+interface GitWriteEntityOpts { repoPath: string; type: string; entity: any }
+interface GitDeleteEntityOpts { repoPath: string; type: string; id: string }
+interface GitCommitOpts { repoPath: string; message: string }
 interface GitHistoryOpts { repoPath: string; filePath?: string }
 interface GitDiffOpts { repoPath: string; hash1: string; hash2: string; filePath?: string }
 interface GitRestoreOpts { repoPath: string; hash: string; filePath: string }
 interface GitStatusResult { total: number; unstaged: number; lastCommit: string | null }
+interface GitFileStatus { staged: string; unstaged: string; file: string }
 interface GitConfig { enabled: boolean; repoPath: string }
 
 interface GitAPI {
   loadConfig: () => Promise<GitConfig>
   saveConfig: (config: GitConfig) => Promise<boolean>
   initRepo: (repoPath: string) => Promise<boolean>
-  commit: (opts: GitCommitOpts) => Promise<string>
-  delete: (opts: GitDeleteOpts) => Promise<boolean>
+  writeEntity: (opts: GitWriteEntityOpts) => Promise<string>
+  deleteEntity: (opts: GitDeleteEntityOpts) => Promise<string>
+  commit: (opts: GitCommitOpts) => Promise<boolean>
+  stage: (opts: { repoPath: string; file: string }) => Promise<boolean>
+  unstage: (opts: { repoPath: string; file: string }) => Promise<boolean>
+  stageAll: (repoPath: string) => Promise<boolean>
+  detailedStatus: (repoPath: string) => Promise<GitFileStatus[]>
+  workingTreeDiff: (opts: { repoPath: string; filePath: string }) => Promise<string>
   history: (opts: GitHistoryOpts) => Promise<{ hash: string; date: string; message: string }[]>
+  commitFiles: (opts: { repoPath: string; hash: string }) => Promise<{ status: string; file: string }[]>
+  commitFileDiff: (opts: { repoPath: string; hash: string; filePath: string }) => Promise<string>
   diff: (opts: GitDiffOpts) => Promise<string>
   restore: (opts: GitRestoreOpts) => Promise<boolean>
   status: (repoPath: string) => Promise<GitStatusResult>

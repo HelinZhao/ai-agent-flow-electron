@@ -13,6 +13,7 @@ import CustomFileUpload from '@renderer/components/ui/CustomFileUpload';
 import ResponsiveGrid from '@renderer/components/ui/ResponsiveGrid';
 import MessageBanner from '@renderer/components/ui/MessageBanner';
 import { NODE_DEFS_MAP } from '@renderer/components/workflow/nodes';
+import GitHistoryForEntity from '@renderer/components/git/GitHistoryForEntity';
 import InputDialog from '@renderer/components/workflow/InputDialog';
 import { showToast } from '@renderer/components/ui/toast/MessageToast';
 import { workflowApi } from '@renderer/lib/api';
@@ -289,6 +290,9 @@ export default function Workflow(): React.JSX.Element {
                 <p className="text-xs text-gray-500 dark:text-gray-400">{selectedWorkflow.description}</p>
               )}
             </div>
+          </div>
+          <div className="ml-auto">
+            <GitHistoryForEntity type="workflows" entityId={selectedWorkflow.id} entityName={selectedWorkflow.name} />
           </div>
           {saveMessage && (
             <div className="absolute top-0 right-0 z-50">

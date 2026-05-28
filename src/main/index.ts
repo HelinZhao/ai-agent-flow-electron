@@ -13,11 +13,18 @@ import {
   initRepo,
   writeEntityJson,
   deleteEntityJson,
-  autoCommit,
   getHistory,
+  getCommitFiles,
   getDiff,
+  getCommitFileDiff,
   restoreFile,
   getStatus,
+  getDetailedStatus,
+  commitWithMessage,
+  getWorkingTreeDiff,
+  stageFile,
+  unstageFile,
+  stageAllFiles,
 } from './git/versionControl'
 dotenv.config()
 
@@ -251,44 +258,71 @@ app.whenReady().then(() => {
 
   // Git 版本控制
   ipcMain.handle('git:loadConfig', () => loadGitConfig())
-
   ipcMain.handle('git:saveConfig', (_, config) => {
     saveGitConfig(config)
     return true
   })
-
   ipcMain.handle('git:initRepo', async (_, repoPath: string) => {
     await initRepo(repoPath)
     return true
   })
 
-  ipcMain.handle('git:commit', async (_, opts: { repoPath: string; type: string; entity: any; message: string }) => {
-    const { repoPath, type, entity, message } = opts
-    const filePath = await writeEntityJson(repoPath, type, entity)
-    await autoCommit(repoPath, [`${type}/${entity.id}.json`], message)
-    return filePath
+  // 写入单个实体 JSON（不提交）
+  ipcMain.handle('git:writeEntity', async (_, opts: { repoPath: string; type: string; entity: any }) => {
+    return writeEntityJson(opts.repoPath, opts.type, opts.entity)
   })
-
-  ipcMain.handle('git:delete', async (_, opts: { repoPath: string; type: string; id: string; message: string }) => {
-    const { repoPath, type, id, message } = opts
-    await deleteEntityJson(repoPath, type, id)
-    await autoCommit(repoPath, [`${type}/${id}.json`], message)
+  // 删除单个实体 JSON
+  ipcMain.handle('git:deleteEntity', async (_, opts: { repoPath: string; type: string; id: string }) => {
+    return deleteEntityJson(opts.repoPath, opts.type, opts.id)
+  })
+  // 提交所有变更
+  ipcMain.handle('git:commit', async (_, opts: { repoPath: string; message: string }) => {
+    await commitWithMessage(opts.repoPath, opts.message)
     return true
   })
-
+  // 详细状态（文件列表）
+  ipcMain.handle('git:detailedStatus', async (_, repoPath: string) => {
+    return getDetailedStatus(repoPath)
+  })
+  // 暂存/取消暂存文件
+  ipcMain.handle('git:stage', async (_, opts: { repoPath: string; file: string }) => {
+    await stageFile(opts.repoPath, opts.file)
+    return true
+  })
+  ipcMain.handle('git:unstage', async (_, opts: { repoPath: string; file: string }) => {
+    await unstageFile(opts.repoPath, opts.file)
+    return true
+  })
+  ipcMain.handle('git:stageAll', async (_, repoPath: string) => {
+    await stageAllFiles(repoPath)
+    return true
+  })
+  // 查看某次提交中文件的变更（diff优先，首次commit fallback到show）
+  ipcMain.handle('git:commitFileDiff', async (_, opts: { repoPath: string; hash: string; filePath: string }) => {
+    return getCommitFileDiff(opts.repoPath, opts.hash, `data/export/${opts.filePath}`)
+  })
+  // 工作目录 diff（未暂存变更 / 已暂存变更）
+  ipcMain.handle('git:workingTreeDiff', async (_, opts: { repoPath: string; filePath: string }) => {
+    return getWorkingTreeDiff(opts.repoPath, opts.filePath)
+  })
+  // 提交历史
   ipcMain.handle('git:history', async (_, opts: { repoPath: string; filePath?: string }) => {
     return getHistory(opts.repoPath, opts.filePath)
   })
-
+  // 提交包含的文件
+  ipcMain.handle('git:commitFiles', async (_, opts: { repoPath: string; hash: string }) => {
+    return getCommitFiles(opts.repoPath, opts.hash)
+  })
+  // 历史 diff
   ipcMain.handle('git:diff', async (_, opts: { repoPath: string; hash1: string; hash2: string; filePath?: string }) => {
     return getDiff(opts.repoPath, opts.hash1, opts.hash2, opts.filePath)
   })
-
+  // 恢复文件
   ipcMain.handle('git:restore', async (_, opts: { repoPath: string; hash: string; filePath: string }) => {
     await restoreFile(opts.repoPath, opts.hash, opts.filePath)
     return true
   })
-
+  // 概要状态
   ipcMain.handle('git:status', async (_, repoPath: string) => {
     return getStatus(repoPath)
   })
