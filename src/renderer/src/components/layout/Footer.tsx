@@ -10,8 +10,8 @@ interface FooterProps {
 const isElectron = Boolean(window.electron || window.api)
 
 const Footer: React.FC<FooterProps> = ({ collapsed, onToggleCollapse }) => {
-  const loading = useWorkflowStore(state=>state.loading);
-  const initialize = useWorkflowStore(state=>state.initialize);
+  const loading = useWorkflowStore(state => state.loading);
+  const initialize = useWorkflowStore(state => state.initialize);
   const [connected, setConnected] = useState(true)
   const [cpu, setCpu] = useState(0)
   const [memory, setMemory] = useState(0)
@@ -79,10 +79,12 @@ const Footer: React.FC<FooterProps> = ({ collapsed, onToggleCollapse }) => {
           </button>
         )}
         {loading ? (
-          <svg className="w-3.5 h-3.5 text-blue-500 animate-spin" viewBox="0 0 24 24" fill="none">
-            <circle cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="3" className="opacity-20" />
-            <path d="M12 2a10 10 0 0 1 10 10" stroke="currentColor" strokeWidth="3" strokeLinecap="round" />
-          </svg>
+          <div className='p-1'>
+            <svg className="w-3.5 h-3.5 text-blue-500 animate-spin" viewBox="0 0 24 24" fill="none">
+              <circle cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="3" className="opacity-20" />
+              <path d="M12 2a10 10 0 0 1 10 10" stroke="currentColor" strokeWidth="3" strokeLinecap="round" />
+            </svg>
+          </div>
         ) : (
           <button
             onClick={initialize}
