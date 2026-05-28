@@ -40,6 +40,9 @@ export function useConversation() {
   latestPendingApprovalRef.current = pendingApproval
   // 主动终止标记，避免 sendMessage 的 catch 产生错误回复
   const terminatingRef = useRef(false)
+  // 分页：对话窗口中起始消息在完整数组中的索引
+  const displayStartRef = useRef(0)
+  const PAGE_SIZE = 50
 
   const scrollToBottom = useCallback(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' })
@@ -51,13 +54,14 @@ export function useConversation() {
   const finalizeResponse = useCallback(async (
     agentId: string,
     agentName: string,
-    newMessages: ChatMessageType[],
+    newFull: ChatMessageType[],
     agentMessage: ChatMessageType,
   ) => {
-    const finalMessages = [...newMessages, agentMessage]
+    const finalMessages = [...newFull, agentMessage]
     delete pendingExecutionsRef.current[agentId]
     syncPending(pendingExecutionsRef.current, setPendingAgentIds)
     conversationsRef.current[agentId] = finalMessages
+    displayStartRef.current = 0
 
     if (activeAgentRef.current === agentId) {
       setMessages(finalMessages)
@@ -124,7 +128,10 @@ export function useConversation() {
     }
 
     if (agent.id in conversationsRef.current) {
-      setMessages(conversationsRef.current[agent.id])
+      const allMessages = conversationsRef.current[agent.id]
+      const start = Math.max(0, allMessages.length - PAGE_SIZE)
+      displayStartRef.current = start
+      setMessages(allMessages.slice(start))
     } else {
       loadchatRecord(agent.id)
     }
@@ -148,18 +155,31 @@ export function useConversation() {
       const result = await chatRecordApi.loadRecord(agentId)
       if (result.success && result.history) {
         const history: ChatRecord = result.history
-        conversationsRef.current[agentId] = history.messages
-        setMessages(history.messages)
+        const allMessages = history.messages
+        conversationsRef.current[agentId] = allMessages
+        const start = Math.max(0, allMessages.length - PAGE_SIZE)
+        displayStartRef.current = start
+        setMessages(allMessages.slice(start))
       } else {
         conversationsRef.current[agentId] = []
+        displayStartRef.current = 0
         setMessages([])
       }
     } catch {
       conversationsRef.current[agentId] = []
+      displayStartRef.current = 0
       setMessages([])
     } finally {
       setIsLoadingHistory(false)
     }
+  }, [])
+
+  const loadMoreMessages = useCallback((agentId: string) => {
+    const allMessages = conversationsRef.current[agentId]
+    if (!allMessages || displayStartRef.current <= 0) return
+    const newStart = Math.max(0, displayStartRef.current - PAGE_SIZE)
+    displayStartRef.current = newStart
+    setMessages(allMessages.slice(newStart))
   }, [])
 
   const sendMessage = useCallback(async (
@@ -185,14 +205,16 @@ export function useConversation() {
       attachments: attachmentsMetadata,
     }
 
-    const newMessages = [...messages, userMessage]
-    setMessages(newMessages)
-    conversationsRef.current[currentAgentId] = newMessages
+    const currentFull = conversationsRef.current[currentAgentId] || []
+    const newFull = [...currentFull, userMessage]
+    conversationsRef.current[currentAgentId] = newFull
+    displayStartRef.current = 0
+    setMessages(newFull)
     setInputMessage('')
     setPendingAttachments([])
     delete draftsRef.current[currentAgentId]
     // 立即存盘用户消息，防止 agent 回复前关应用导致丢失
-    chatRecordApi.saveRecord(currentAgentId, currentAgentName, newMessages).catch(() => {})
+    chatRecordApi.saveRecord(currentAgentId, currentAgentName, newFull).catch(() => {})
     // 记录发送历史（按方向键回溯用）
     const history = sentHistoryRef.current[currentAgentId] || []
     if (text.trim() && (history.length === 0 || history[history.length - 1] !== text.trim())) {
@@ -240,7 +262,7 @@ export function useConversation() {
 
       if (!finalSuccess) throw new Error(`AI Agent 对话执行失败: ${message}`)
 
-      await finalizeResponse(currentAgentId, currentAgentName, newMessages, {
+      await finalizeResponse(currentAgentId, currentAgentName, newFull, {
         id: `msg-${Date.now() + 1}`,
         content: message, sender: 'agent',
         timestamp: new Date().toISOString(), agentId: currentAgentId,
@@ -249,9 +271,9 @@ export function useConversation() {
       if (terminatingRef.current) {
         terminatingRef.current = false
         // 被主动终止，不追加错误回复，只保留已有对话
-        conversationsRef.current[currentAgentId] = newMessages
+        conversationsRef.current[currentAgentId] = newFull
       } else {
-        await finalizeResponse(currentAgentId, currentAgentName, newMessages, {
+        await finalizeResponse(currentAgentId, currentAgentName, newFull, {
           id: `msg-${Date.now() + 1}`,
           content: `抱歉，处理您的消息时出现了错误: ${error instanceof Error ? error.message : '未知错误'}`,
           sender: 'agent',
@@ -313,7 +335,7 @@ export function useConversation() {
   const startNewChat = useCallback(async () => {
     const agent = selectedAgent
     if (!agent) return
-    if (messages.length === 0) { conversationsRef.current[agent.id] = []; setMessages([]); return }
+    if (messages.length === 0) { conversationsRef.current[agent.id] = []; displayStartRef.current = 0; setMessages([]); return }
 
     if (!window.confirm(
       `确定要开始新对话吗？\n\n这将清除与 ${agent.name} 的所有对话记录，同时清除AI的记忆（包括之前的对话上下文）。此操作不可恢复。`,
@@ -326,6 +348,7 @@ export function useConversation() {
     } catch { /* ignore */ }
 
     conversationsRef.current[agent.id] = []
+    displayStartRef.current = 0
     setMessages([])
   }, [selectedAgent, messages])
 
@@ -336,7 +359,7 @@ export function useConversation() {
 
     try {
       const result = await chatRecordApi.deleteRecord(agent.id)
-      if (result.success) { conversationsRef.current[agent.id] = []; setMessages([]) }
+      if (result.success) { conversationsRef.current[agent.id] = []; displayStartRef.current = 0; setMessages([]) }
       else { alert('清空对话记录失败，请检查控制台了解详情') }
     } catch { alert('清空对话记录时发生错误') }
   }, [selectedAgent])
@@ -348,17 +371,21 @@ export function useConversation() {
     activeLLMConfig: unknown,
   ) => {
     const agent = agents.find(a => a.id === selectedAgent?.id) || selectedAgent
-    if (!agent || messages.length === 0) return
+    if (!agent) return
+
+    const allMessages = conversationsRef.current[agent.id]
+    if (!allMessages || allMessages.length === 0) return
 
     let lastUserIdx = -1
-    for (let i = messages.length - 1; i >= 0; i--) {
-      if (messages[i].sender === 'user') { lastUserIdx = i; break }
+    for (let i = allMessages.length - 1; i >= 0; i--) {
+      if (allMessages[i].sender === 'user') { lastUserIdx = i; break }
     }
     if (lastUserIdx === -1) return
 
-    const userMsg = messages[lastUserIdx]
-    const truncated = messages.slice(0, lastUserIdx + 1)
+    const userMsg = allMessages[lastUserIdx]
+    const truncated = allMessages.slice(0, lastUserIdx + 1)
     conversationsRef.current[agent.id] = truncated
+    displayStartRef.current = 0
     setMessages(truncated)
 
     // 截断后重新发送用户消息
@@ -374,6 +401,10 @@ export function useConversation() {
     [inputMessage, pendingAttachments, selectedAgent],
   )
 
+  const hasMoreMessages = selectedAgent
+    ? (conversationsRef.current[selectedAgent.id]?.length ?? 0) > messages.length
+    : false
+
   return {
     selectedAgent, setSelectedAgent: switchAgent,
     messages, inputMessage, setInputMessage, pendingAttachments, setPendingAttachments,
@@ -383,6 +414,7 @@ export function useConversation() {
     sentHistory,
     sendMessage, handleApprove, handleAutoApprove, handleTerminate,
     startNewChat, clearCurrentchatRecord, regenerate,
+    loadMoreMessages, hasMoreMessages,
     scrollToBottom, messagesEndRef,
   }
 }

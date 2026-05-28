@@ -2,6 +2,11 @@ import { app } from 'electron'
 import { join } from 'path'
 import { promises as fs } from 'fs'
 import { existsSync } from 'fs'
+import { gzip, gunzip } from 'zlib'
+import { promisify } from 'util'
+
+const gzipAsync = promisify(gzip)
+const gunzipAsync = promisify(gunzip)
 
 // 附件元数据（轻量，用于历史持久化）
 export interface AttachmentMetadata {
@@ -61,9 +66,16 @@ export class ChatRecordManager {
     }
   }
 
+  private sanitizeAgentId(agentId: string): string {
+    return agentId.replace(/[^a-zA-Z0-9_-]/g, '_')
+  }
+
   private getRecordFilePath(agentId: string): string {
-    const safeAgentId = agentId.replace(/[^a-zA-Z0-9_-]/g, '_')
-    return join(this.recordDir, `chat_${safeAgentId}.json`)
+    return join(this.recordDir, `chat_${this.sanitizeAgentId(agentId)}.json.gz`)
+  }
+
+  private getOldRecordFilePath(agentId: string): string {
+    return join(this.recordDir, `chat_${this.sanitizeAgentId(agentId)}.json`)
   }
 
   // 生成对话标题
@@ -88,18 +100,27 @@ export class ChatRecordManager {
       let existingRecord: ChatRecord
 
       try {
-        const existingData = await fs.readFile(filePath, 'utf-8')
-        existingRecord = JSON.parse(existingData)
+        // 读取现有压缩文件
+        const compressed = await fs.readFile(filePath)
+        const data = await gunzipAsync(compressed)
+        existingRecord = JSON.parse(data.toString('utf-8'))
       } catch {
-        // 文件不存在或解析失败，创建新的历史记录
-        existingRecord = {
-          id: `chat_${agentId}_${Date.now()}`,
-          agentId,
-          agentName,
-          title: '',
-          messages: [],
-          createdAt: new Date().toISOString(),
-          updatedAt: new Date().toISOString()
+        // 尝试读取旧格式（未压缩）文件
+        const oldFilePath = this.getOldRecordFilePath(agentId)
+        try {
+          const existingData = await fs.readFile(oldFilePath, 'utf-8')
+          existingRecord = JSON.parse(existingData)
+        } catch {
+          // 文件不存在或解析失败，创建新的历史记录
+          existingRecord = {
+            id: `chat_${agentId}_${Date.now()}`,
+            agentId,
+            agentName,
+            title: '',
+            messages: [],
+            createdAt: new Date().toISOString(),
+            updatedAt: new Date().toISOString()
+          }
         }
       }
 
@@ -126,9 +147,18 @@ export class ChatRecordManager {
         }
       }
 
-      // 保存到文件
-      await fs.writeFile(filePath, JSON.stringify(existingRecord, null, 2), 'utf-8')
-      console.log(`对话记录已保存到: ${filePath}`)
+      // 保存为 Gzip 压缩格式
+      const jsonStr = JSON.stringify(existingRecord)
+      const compressed = await gzipAsync(jsonStr)
+      await fs.writeFile(filePath, compressed)
+
+      // 保存成功后，清理旧格式文件
+      const oldFilePath = this.getOldRecordFilePath(agentId)
+      if (existsSync(oldFilePath)) {
+        await fs.unlink(oldFilePath).catch(() => {})
+      }
+
+      console.log(`对话记录已保存(Gzip压缩): ${filePath}`)
     } catch (error) {
       console.error('保存对话记录失败:', error)
     }
@@ -139,15 +169,22 @@ export class ChatRecordManager {
     try {
       const filePath = this.getRecordFilePath(agentId)
 
-      if (!existsSync(filePath)) {
-        return null
+      if (existsSync(filePath)) {
+        const compressed = await fs.readFile(filePath)
+        const data = await gunzipAsync(compressed)
+        console.log(`从 ${filePath} 加载对话记录(Gzip解压)`)
+        return JSON.parse(data.toString('utf-8'))
       }
 
-      const data = await fs.readFile(filePath, 'utf-8')
-      const history: ChatRecord = JSON.parse(data)
+      // 兼容旧格式：尝试加载未压缩的 .json 文件
+      const oldFilePath = this.getOldRecordFilePath(agentId)
+      if (existsSync(oldFilePath)) {
+        const data = await fs.readFile(oldFilePath, 'utf-8')
+        console.log(`从 ${oldFilePath} 加载对话记录(旧格式)`)
+        return JSON.parse(data)
+      }
 
-      console.log(`从 ${filePath} 加载对话记录`)
-      return history
+      return null
     } catch (error) {
       console.error('读取对话记录失败:', error)
       return null
@@ -165,15 +202,27 @@ export class ChatRecordManager {
       const histories: ChatRecord[] = []
 
       for (const file of files) {
-        if (file.startsWith('chat_') && file.endsWith('.json')) {
-          try {
-            const filePath = join(this.recordDir, file)
+        const isGz = file.startsWith('chat_') && file.endsWith('.json.gz')
+        const isJson = file.startsWith('chat_') && file.endsWith('.json') && !file.endsWith('.json.gz')
+
+        if (!isGz && !isJson) continue
+
+        try {
+          const filePath = join(this.recordDir, file)
+          let history: ChatRecord
+
+          if (isGz) {
+            const compressed = await fs.readFile(filePath)
+            const data = await gunzipAsync(compressed)
+            history = JSON.parse(data.toString('utf-8'))
+          } else {
             const data = await fs.readFile(filePath, 'utf-8')
-            const history: ChatRecord = JSON.parse(data)
-            histories.push(history)
-          } catch (error) {
-            console.error(`解析对话记录文件失败 ${file}:`, error)
+            history = JSON.parse(data)
           }
+
+          histories.push(history)
+        } catch (error) {
+          console.error(`解析对话记录文件失败 ${file}:`, error)
         }
       }
 
@@ -195,6 +244,14 @@ export class ChatRecordManager {
       if (existsSync(filePath)) {
         await fs.unlink(filePath)
         console.log(`对话记录已删除: ${filePath}`)
+        return true
+      }
+
+      // 尝试删除旧格式文件
+      const oldFilePath = this.getOldRecordFilePath(agentId)
+      if (existsSync(oldFilePath)) {
+        await fs.unlink(oldFilePath)
+        console.log(`对话记录已删除: ${oldFilePath}`)
         return true
       }
 

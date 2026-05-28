@@ -1,4 +1,4 @@
-import React, { useState, useRef } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import { useWorkflowStore } from '@renderer/store/workflowStore';
 import { AttachmentMetadata } from '@renderer/types';
 import { AttachmentData, processFileAttachment, formatFileSize } from '@renderer/lib/attachmentUtils';
@@ -18,6 +18,8 @@ export default function Chat(): React.JSX.Element {
   const [previewImage, setPreviewImage] = useState<AttachmentMetadata | null>(null);
   const chatAreaRef = useRef<HTMLDivElement>(null);
   const inputWrapperRef = useRef<HTMLDivElement>(null);
+  const messageListRef = useRef<HTMLDivElement>(null);
+  const pendingScrollRef = useRef<{ scrollTop: number; scrollHeight: number } | null>(null);
   const [inputHeight, setInputHeight] = useState(160);
   const MIN_INPUT = 100;
   const MAX_INPUT_RATIO = 0.6;
@@ -32,6 +34,7 @@ export default function Chat(): React.JSX.Element {
     sentHistory,
     sendMessage, handleApprove, handleAutoApprove, handleTerminate,
     startNewChat, clearCurrentchatRecord, regenerate,
+    loadMoreMessages, hasMoreMessages,
     messagesEndRef: convMessagesEndRef,
   } = conv
 
@@ -64,6 +67,30 @@ export default function Chat(): React.JSX.Element {
     document.body.style.cursor = 'ns-resize';
     document.body.style.userSelect = 'none';
   };
+
+  // 加载更早消息时保持滚动位置
+  useEffect(() => {
+    if (pendingScrollRef.current) {
+      const container = messageListRef.current
+      if (container) {
+        const { scrollTop, scrollHeight: oldHeight } = pendingScrollRef.current
+        container.scrollTop = scrollTop + (container.scrollHeight - oldHeight)
+      }
+      pendingScrollRef.current = null
+    }
+  }, [messages])
+
+  const handleLoadMore = (): void => {
+    if (!selectedAgent) return
+    const container = messageListRef.current
+    if (container) {
+      pendingScrollRef.current = {
+        scrollTop: container.scrollTop,
+        scrollHeight: container.scrollHeight,
+      }
+    }
+    loadMoreMessages(selectedAgent.id)
+  }
 
   const handleFileSelect = async (e: React.ChangeEvent<HTMLInputElement>): Promise<void> => {
     const files = e.target.files;
@@ -209,132 +236,148 @@ export default function Chat(): React.JSX.Element {
             }
             return (
               <>
-                <div className="overflow-y-auto overflow-x-hidden px-5 py-4 space-y-4 bg-gray-50/40 dark:bg-gray-900/30" style={{ flex: 1, minHeight: 0 }}>
+                <div ref={messageListRef} className="overflow-y-auto overflow-x-hidden px-5 py-4 space-y-4 bg-gray-50/40 dark:bg-gray-900/30" style={{ flex: 1, minHeight: 0 }}>
                   {(() => {
                     const searchTerm = messageSearch.trim().toLowerCase()
-                  const hasSearch = searchTerm.length > 0
-                  const filtered = hasSearch
-                    ? messages.filter(m => m.content.toLowerCase().includes(searchTerm))
-                    : messages
+                    const hasSearch = searchTerm.length > 0
+                    const filtered = hasSearch
+                      ? messages.filter(m => m.content.toLowerCase().includes(searchTerm))
+                      : messages
 
-                  // 定位最后一条 agent 消息的索引（在过滤后的数组中的位置）
-                  let lastAgentIdx = -1
-                  if (!hasSearch) {
-                    for (let i = filtered.length - 1; i >= 0; i--) {
-                      if (filtered[i].sender === 'agent' && !isLoading) {
-                        lastAgentIdx = i; break
+                    // 定位最后一条 agent 消息的索引（在过滤后的数组中的位置）
+                    let lastAgentIdx = -1
+                    if (!hasSearch) {
+                      for (let i = filtered.length - 1; i >= 0; i--) {
+                        if (filtered[i].sender === 'agent' && !isLoading) {
+                          lastAgentIdx = i; break
+                        }
                       }
                     }
-                  }
 
-                  return filtered.length === 0 && messages.length > 0 ? (
-                    <div className="flex flex-col items-center justify-center py-16 text-gray-400 dark:text-gray-500">
-                      <svg className="w-10 h-10 mb-3 opacity-50" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5">
-                        <circle cx="11" cy="11" r="8" /><path d="m21 21-4.35-4.35" />
-                      </svg>
-                      <p className="text-sm">未找到匹配的消息</p>
-                    </div>
-                  ) : filtered.length === 0 ? (
-                    <div className="flex flex-col items-center justify-center h-full py-20">
-                      <div className="w-14 h-14 rounded-2xl bg-gradient-to-br from-blue-50 to-indigo-50 dark:from-blue-500/10 dark:to-indigo-500/10 flex items-center justify-center mb-5 shadow-sm">
-                        <span className="text-2xl">💬</span>
+                    return filtered.length === 0 && messages.length > 0 ? (
+                      <div className="flex flex-col items-center justify-center py-16 text-gray-400 dark:text-gray-500">
+                        <svg className="w-10 h-10 mb-3 opacity-50" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5">
+                          <circle cx="11" cy="11" r="8" /><path d="m21 21-4.35-4.35" />
+                        </svg>
+                        <p className="text-sm">未找到匹配的消息</p>
                       </div>
-                      <h3 className="text-base font-semibold text-gray-700 dark:text-gray-300 mb-1.5">
-                        开始与 {selectedAgent.name} 对话
-                      </h3>
-                      <p className="text-gray-400 dark:text-gray-500 text-xs">发送消息开始对话，或询问 Agent 相关信息</p>
-                    </div>
-                  ) : filtered.map((message, idx) => (
-                    <ChatMessage
-                      key={message.id}
-                      message={message}
-                      agentName={selectedAgent!.name}
-                      onAttachmentClick={handleAttachmentClick}
-                      isLastAgent={idx === lastAgentIdx}
-                      onRegenerate={idx === lastAgentIdx ? () => regenerate(agents, workflows, activeLLMConfig) : undefined}
-                    />
-                  ))
-                })()}
-
-                {isLoading && !pendingApproval && (
-                  <div className="flex justify-start">
-                    <div className="flex items-start gap-2.5 max-w-3xl">
-                      <div className="w-7 h-7 bg-gradient-to-br from-blue-500 to-purple-500 rounded-xl flex items-center justify-center text-sm flex-shrink-0 mt-0.5 shadow-sm">🤖</div>
-                      <div className="bg-white dark:bg-gray-700/80 border border-gray-200/50 dark:border-gray-600/40 px-4 py-3 rounded-2xl rounded-bl-md shadow-sm">
-                        <div className="flex items-center gap-3">
-                          <div className="flex gap-1">
-                            <div className="w-1.5 h-1.5 bg-blue-400 dark:bg-blue-500 rounded-full animate-bounce" />
-                            <div className="w-1.5 h-1.5 bg-blue-400 dark:bg-blue-500 rounded-full animate-bounce" style={{ animationDelay: '0.12s' }} />
-                            <div className="w-1.5 h-1.5 bg-blue-400 dark:bg-blue-500 rounded-full animate-bounce" style={{ animationDelay: '0.24s' }} />
+                    ) : filtered.length === 0 ? (
+                      <div className="flex flex-col items-center justify-center h-full py-20">
+                        <div className="w-14 h-14 rounded-2xl bg-gradient-to-br from-blue-50 to-indigo-50 dark:from-blue-500/10 dark:to-indigo-500/10 flex items-center justify-center mb-5 shadow-sm">
+                          <span className="text-2xl">💬</span>
+                        </div>
+                        <h3 className="text-base font-semibold text-gray-700 dark:text-gray-300 mb-1.5">
+                          开始与 {selectedAgent.name} 对话
+                        </h3>
+                        <p className="text-gray-400 dark:text-gray-500 text-xs">发送消息开始对话，或询问 Agent 相关信息</p>
+                      </div>
+                    ) : (
+                      <>
+                        {hasMoreMessages && !hasSearch && (
+                          <div className="flex justify-center pt-1 pb-2">
+                            <button onClick={handleLoadMore}
+                              className="flex items-center gap-1.5 px-4 py-1.5 text-xs font-medium text-gray-500 dark:text-gray-400 bg-white/70 dark:bg-gray-700/50 border border-gray-200/60 dark:border-gray-600/40 rounded-full hover:bg-gray-100 dark:hover:bg-gray-600/60 hover:text-gray-700 dark:hover:text-gray-200 transition-colors shadow-sm"
+                            >
+                              <svg className="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                                <path d="M12 5v14M5 12l7 7 7-7" />
+                              </svg>
+                              加载更早消息
+                            </button>
                           </div>
-                          <span className="text-xs text-gray-400 dark:text-gray-500 font-medium">{selectedAgent.name} 正在思考...</span>
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-                )}
+                        )}
+                        {filtered.map((message, idx) => (
+                          <ChatMessage
+                            key={message.id}
+                            message={message}
+                            agentName={selectedAgent!.name}
+                            onAttachmentClick={handleAttachmentClick}
+                            isLastAgent={idx === lastAgentIdx}
+                            onRegenerate={idx === lastAgentIdx ? () => regenerate(agents, workflows, activeLLMConfig) : undefined}
+                          />
+                        ))}
+                      </>
+                    )
+                  })()}
 
-                {pendingApproval && (
-                  <div className="flex justify-start">
-                    <div className="flex items-start gap-2.5 max-w-[80%]">
-                      <div className="w-7 h-7 bg-gradient-to-br from-orange-500 to-red-500 rounded-xl flex items-center justify-center text-sm flex-shrink-0 mt-0.5 shadow-sm">⚠️</div>
-                      <div className="bg-white dark:bg-gray-700/80 border border-orange-200/60 dark:border-orange-600/40 px-4 py-3 rounded-2xl rounded-bl-md shadow-sm">
-                        <div className="text-xs font-semibold text-gray-800 dark:text-gray-200 mb-2.5 flex items-center gap-1.5">
-                          <span className="w-1.5 h-1.5 bg-orange-400 rounded-full animate-pulse" />
-                          工具调用需要审批
-                        </div>
-                        <div className="space-y-1.5 mb-3">
-                          {pendingApproval!.actionRequests.map((action, i) => (
-                            <div key={i} className="bg-gray-50/80 dark:bg-gray-600/40 rounded-lg p-2.5 text-xs border border-gray-100 dark:border-gray-600/30">
-                              <div className="font-medium text-gray-800 dark:text-gray-200">{TOOL_LABEL_MAP[action.name] || action.name}</div>
-                              <div className="text-gray-500 dark:text-gray-400 mt-1 max-h-[80px] overflow-auto font-mono text-[10px]">
-                                {JSON.stringify(action.args, null, 2)}
-                              </div>
+                  {isLoading && !pendingApproval && (
+                    <div className="flex justify-start">
+                      <div className="flex items-start gap-2.5 max-w-3xl">
+                        <div className="w-7 h-7 bg-gradient-to-br from-blue-500 to-purple-500 rounded-xl flex items-center justify-center text-sm flex-shrink-0 mt-0.5 shadow-sm">🤖</div>
+                        <div className="bg-white dark:bg-gray-700/80 border border-gray-200/50 dark:border-gray-600/40 px-4 py-3 rounded-2xl rounded-bl-md shadow-sm">
+                          <div className="flex items-center gap-3">
+                            <div className="flex gap-1">
+                              <div className="w-1.5 h-1.5 bg-blue-400 dark:bg-blue-500 rounded-full animate-bounce" />
+                              <div className="w-1.5 h-1.5 bg-blue-400 dark:bg-blue-500 rounded-full animate-bounce" style={{ animationDelay: '0.12s' }} />
+                              <div className="w-1.5 h-1.5 bg-blue-400 dark:bg-blue-500 rounded-full animate-bounce" style={{ animationDelay: '0.24s' }} />
                             </div>
-                          ))}
-                        </div>
-                        <div className="flex flex-wrap items-center gap-1.5">
-                          <CustomButton onClick={() => handleApprove(true)} variant="primary" size="xs">允许</CustomButton>
-                          <CustomButton onClick={() => handleApprove(false)} variant="danger" size="xs">拒绝</CustomButton>
-                          <CustomButton onClick={() => {
-                            const uniqueTools = new Set(pendingApproval!.actionRequests.map(a => a.name))
-                            uniqueTools.forEach(name => handleAutoApprove(name))
-                          }} variant="secondary" size="xs">本会话允许</CustomButton>
+                            <span className="text-xs text-gray-400 dark:text-gray-500 font-medium">{selectedAgent.name} 正在思考...</span>
+                          </div>
                         </div>
                       </div>
                     </div>
-                  </div>
-                )}
+                  )}
 
-                <div ref={convMessagesEndRef} />
-              </div>
+                  {pendingApproval && (
+                    <div className="flex justify-start">
+                      <div className="flex items-start gap-2.5 max-w-[80%]">
+                        <div className="w-7 h-7 bg-gradient-to-br from-orange-500 to-red-500 rounded-xl flex items-center justify-center text-sm flex-shrink-0 mt-0.5 shadow-sm">⚠️</div>
+                        <div className="bg-white dark:bg-gray-700/80 border border-orange-200/60 dark:border-orange-600/40 px-4 py-3 rounded-2xl rounded-bl-md shadow-sm">
+                          <div className="text-xs font-semibold text-gray-800 dark:text-gray-200 mb-2.5 flex items-center gap-1.5">
+                            <span className="w-1.5 h-1.5 bg-orange-400 rounded-full animate-pulse" />
+                            工具调用需要审批
+                          </div>
+                          <div className="space-y-1.5 mb-3">
+                            {pendingApproval!.actionRequests.map((action, i) => (
+                              <div key={i} className="bg-gray-50/80 dark:bg-gray-600/40 rounded-lg p-2.5 text-xs border border-gray-100 dark:border-gray-600/30">
+                                <div className="font-medium text-gray-800 dark:text-gray-200">{TOOL_LABEL_MAP[action.name] || action.name}</div>
+                                <div className="text-gray-500 dark:text-gray-400 mt-1 max-h-[80px] overflow-auto font-mono text-[10px]">
+                                  {JSON.stringify(action.args, null, 2)}
+                                </div>
+                              </div>
+                            ))}
+                          </div>
+                          <div className="flex flex-wrap items-center gap-1.5">
+                            <CustomButton onClick={() => handleApprove(true)} variant="primary" size="xs">允许</CustomButton>
+                            <CustomButton onClick={() => handleApprove(false)} variant="danger" size="xs">拒绝</CustomButton>
+                            <CustomButton onClick={() => {
+                              const uniqueTools = new Set(pendingApproval!.actionRequests.map(a => a.name))
+                              uniqueTools.forEach(name => handleAutoApprove(name))
+                            }} variant="secondary" size="xs">本会话允许</CustomButton>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  )}
 
-              <ChatInput
-                key={selectedAgent.id}
-                inputMessage={inputMessage}
-                onInputChange={setInputMessage}
-                onSend={() => sendMessage(
-                  inputMessage,
-                  pendingAttachments,
-                  agents,
-                  activeLLMConfig,
-                )}
-                disabled={isLoading}
-                placeholder={`向 ${selectedAgent.name} 发送消息...`}
-                attachments={pendingAttachments}
-                onAttachmentsChange={setPendingAttachments}
-                onFileSelect={handleFileSelect}
-                isLoading={isLoading}
-                onTerminate={handleTerminate}
-                inputHeight={inputHeight}
-                onResizeStart={handleResizeStart}
-                inputWrapperRef={inputWrapperRef}
-                sentHistory={sentHistory}
-              />
-            </>
-          )
-        })()}
-	      </div>
+                  <div ref={convMessagesEndRef} />
+                </div>
+
+                <ChatInput
+                  key={selectedAgent.id}
+                  inputMessage={inputMessage}
+                  onInputChange={setInputMessage}
+                  onSend={() => sendMessage(
+                    inputMessage,
+                    pendingAttachments,
+                    agents,
+                    activeLLMConfig,
+                  )}
+                  disabled={isLoading}
+                  placeholder={`向 ${selectedAgent.name} 发送消息...`}
+                  attachments={pendingAttachments}
+                  onAttachmentsChange={setPendingAttachments}
+                  onFileSelect={handleFileSelect}
+                  isLoading={isLoading}
+                  onTerminate={handleTerminate}
+                  inputHeight={inputHeight}
+                  onResizeStart={handleResizeStart}
+                  inputWrapperRef={inputWrapperRef}
+                  sentHistory={sentHistory}
+                />
+              </>
+            )
+          })()}
+        </div>
       </div>
 
       {/* 图片预览模态框 */}
