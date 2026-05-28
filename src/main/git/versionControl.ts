@@ -176,6 +176,10 @@ export async function showFileAtCommit(repoPath: string, hash: string, filePath:
   return execGit(`git show ${hash}:"${filePath}"`, repoPath)
 }
 
+export async function readFileAtCommit(repoPath: string, hash: string, filePath: string): Promise<string> {
+  return execGit(`git show ${hash}:"${filePath}"`, repoPath)
+}
+
 export async function getCommitFileDiff(repoPath: string, hash: string, filePath: string): Promise<string> {
   return execGit(`git show ${hash} -- "${filePath}"`, repoPath)
 }

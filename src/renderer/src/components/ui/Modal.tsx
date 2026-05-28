@@ -8,11 +8,12 @@ interface ModalProps {
   children: React.ReactNode
   footer?: React.ReactNode
   wide?: boolean
+  width?: string   // Tailwind max-w class, e.g. 'max-w-4xl', 'max-w-5xl'
 }
 
 const INITIAL_POS = { x: 0, y: 0 }
 
-export default function Modal({ open, onClose, title, children, footer, wide }: ModalProps): React.ReactElement | null {
+export default function Modal({ open, onClose, title, children, footer, wide, width }: ModalProps): React.ReactElement | null {
   const mouseDownRef = useRef(false)
   const [offset, setOffset] = useState(INITIAL_POS)
   const dragRef = useRef<{ startX: number; startY: number; origX: number; origY: number } | null>(null)
@@ -50,7 +51,7 @@ export default function Modal({ open, onClose, title, children, footer, wide }: 
     >
       <div
         style={{ transform: `translate(${offset.x}px, ${offset.y}px)` }}
-        className={`bg-white dark:bg-gray-800 rounded-2xl shadow-2xl w-full mx-4 max-h-[calc(100vh-4rem)] flex flex-col ${wide ? 'max-w-3xl' : 'max-w-lg'}`}
+        className={`bg-white dark:bg-gray-800 rounded-2xl shadow-2xl w-full mx-4 max-h-[calc(100vh-4rem)] flex flex-col ${width || (wide ? 'max-w-3xl' : 'max-w-lg')}`}
         onClick={e => e.stopPropagation()}
       >
 

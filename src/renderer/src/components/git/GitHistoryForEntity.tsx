@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react'
 import CustomButton from '@renderer/components/ui/CustomButton'
 import Modal from '@renderer/components/ui/Modal'
+import WorkflowPreview from './WorkflowPreview'
 
 const isElectron = Boolean(window.electron || window.api)
 
@@ -16,6 +17,8 @@ export default function GitHistoryForEntity({ type, entityId, entityName }: Prop
   const [history, setHistory] = useState<{ hash: string; date: string; message: string }[]>([])
   const [expanded, setExpanded] = useState<string | null>(null)
   const [diff, setDiff] = useState('')
+  const [previewData, setPreviewData] = useState<any>(null)
+  const [previewLoading, setPreviewLoading] = useState(false)
 
   const filePath = `${type}/${entityId}.json`
 
@@ -52,6 +55,18 @@ export default function GitHistoryForEntity({ type, entityId, entityName }: Prop
     }
   }
 
+  const handlePreview = async (hash: string) => {
+    setPreviewLoading(true)
+    try {
+      const raw = await window.api!.git.showFile({ repoPath, hash, filePath: `data/export/${filePath}` })
+      setPreviewData(JSON.parse(raw))
+    } catch (e: any) {
+      alert('预览失败: ' + (e.message || e))
+    } finally {
+      setPreviewLoading(false)
+    }
+  }
+
   if (!isElectron) return null
 
   return (
@@ -81,15 +96,26 @@ export default function GitHistoryForEntity({ type, entityId, entityName }: Prop
                   {diff && (
                     <pre className="p-2 bg-gray-50 dark:bg-gray-900/30 border border-gray-200 dark:border-gray-700 rounded-lg text-[10px] font-mono text-gray-600 dark:text-gray-400 max-h-[150px] overflow-auto whitespace-pre-wrap">{diff}</pre>
                   )}
-                  <CustomButton variant="secondary" size="xs" onClick={() => handleRestore(h.hash)}>
-                    恢复到此版本
-                  </CustomButton>
+                  <div className="flex gap-2">
+                    {type === 'workflows' && (
+                      <CustomButton variant="secondary" size="xs" onClick={() => handlePreview(h.hash)} loading={previewLoading}>
+                        预览
+                      </CustomButton>
+                    )}
+                    <CustomButton variant="secondary" size="xs" onClick={() => handleRestore(h.hash)}>
+                      恢复到此版本
+                    </CustomButton>
+                  </div>
                 </div>
               )}
             </div>
           ))}
         </div>
       </Modal>
+
+      {previewData && type === 'workflows' && (
+        <WorkflowPreview data={previewData} onClose={() => setPreviewData(null)} />
+      )}
     </>
   )
 }

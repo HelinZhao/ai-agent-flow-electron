@@ -36,6 +36,7 @@ interface NodeConfigPanelProps {
   onClose: () => void;
   onSave?: (nodeId: string, label: string, config: Record<string, any>) => void;
   workflowId?: string;
+  readOnly?: boolean;
 }
 
 const BG_COLORS: Record<string, string> = {
@@ -63,7 +64,7 @@ const BG_COLORS: Record<string, string> = {
   database: 'bg-violet-500',
 }
 
-const NodeConfigPanel: React.FC<NodeConfigPanelProps> = ({ node, onClose, onSave, workflowId }: NodeConfigPanelProps) => {
+const NodeConfigPanel: React.FC<NodeConfigPanelProps> = ({ node, onClose, onSave, workflowId, readOnly }: NodeConfigPanelProps) => {
   const { updateNode } = useReactFlow()
   const panelRef = useRef<HTMLDivElement>(null)
   const draggingRef = useRef(false)
@@ -274,108 +275,127 @@ const NodeConfigPanel: React.FC<NodeConfigPanelProps> = ({ node, onClose, onSave
           <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5">
             节点标签
           </label>
-          <CustomInput
-            type="text"
-            value={label}
-            onChange={(e) => setLabel(e.target.value)}
-            placeholder="输入节点标签"
-            size="sm"
-          />
+          {readOnly ? (
+            <span className="block px-3 py-2 text-sm text-gray-800 dark:text-gray-200 bg-gray-50 dark:bg-gray-900/30 rounded-lg border border-gray-200 dark:border-gray-700">{label}</span>
+          ) : (
+            <CustomInput
+              type="text"
+              value={label}
+              onChange={(e) => setLabel(e.target.value)}
+              placeholder="输入节点标签"
+              size="sm"
+            />
+          )}
         </div>
 
-        {/* 错误处理与重试配置（start/end/note/catch 等跳过） */}
-        {node.type !== 'start' && node.type !== 'end' && node.type !== 'note' && node.type !== 'catch' && (
-          <details className="group">
-            <summary className="text-xs font-medium text-gray-500 dark:text-gray-400 cursor-pointer hover:text-gray-700 dark:hover:text-gray-300 transition-colors select-none">
-              错误处理与重试
-            </summary>
-            <div className="mt-3 space-y-3 pl-2 border-l-2 border-red-200 dark:border-red-800/50">
-              <div>
-                <label className="block text-xs font-medium text-gray-600 dark:text-gray-400 mb-1">
-                  重试次数
-                </label>
-                <div className="flex items-center gap-2">
-                  <CustomInput
-                    type="number"
-                    value={String(config.retryCount ?? 0)}
-                    onChange={(e) => setConfig({ ...config, retryCount: Math.max(0, parseInt(e.target.value) || 0) })}
-                    min={0}
-                    max={10}
-                    size="xs"
-                    className="w-20"
-                  />
-                  <span className="text-xs text-gray-400">次</span>
-                </div>
-              </div>
-              {config.retryCount > 0 && (
-                <>
+        {readOnly ? (
+          <div>
+            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5">配置</label>
+            <pre className="p-3 bg-gray-50 dark:bg-gray-900/30 border border-gray-200 dark:border-gray-700 rounded-lg text-xs font-mono text-gray-600 dark:text-gray-400 max-h-[300px] overflow-auto whitespace-pre-wrap">
+              {JSON.stringify(config, null, 2) || '(空)'}
+            </pre>
+          </div>
+        ) : (
+          <>
+            {/* 错误处理与重试配置（start/end/note/catch 等跳过） */}
+            {node.type !== 'start' && node.type !== 'end' && node.type !== 'note' && node.type !== 'catch' && (
+              <details className="group">
+                <summary className="text-xs font-medium text-gray-500 dark:text-gray-400 cursor-pointer hover:text-gray-700 dark:hover:text-gray-300 transition-colors select-none">
+                  错误处理与重试
+                </summary>
+                <div className="mt-3 space-y-3 pl-2 border-l-2 border-red-200 dark:border-red-800/50">
                   <div>
                     <label className="block text-xs font-medium text-gray-600 dark:text-gray-400 mb-1">
-                      重试间隔
+                      重试次数
                     </label>
                     <div className="flex items-center gap-2">
                       <CustomInput
                         type="number"
-                        value={String(config.retryDelay ?? 1000)}
-                        onChange={(e) => setConfig({ ...config, retryDelay: Math.max(100, parseInt(e.target.value) || 1000) })}
-                        min={100}
-                        max={60000}
+                        value={String(config.retryCount ?? 0)}
+                        onChange={(e) => setConfig({ ...config, retryCount: Math.max(0, parseInt(e.target.value) || 0) })}
+                        min={0}
+                        max={10}
                         size="xs"
                         className="w-20"
                       />
-                      <span className="text-xs text-gray-400">ms</span>
+                      <span className="text-xs text-gray-400">次</span>
                     </div>
                   </div>
-                  <div>
-                    <label className="block text-xs font-medium text-gray-600 dark:text-gray-400 mb-1">
-                      退避策略
-                    </label>
-                    <select
-                      value={config.retryBackoff || 'fixed'}
-                      onChange={(e) => setConfig({ ...config, retryBackoff: e.target.value })}
-                      className="text-xs px-2 py-1.5 rounded-lg border border-gray-200 dark:border-gray-600 bg-white dark:bg-gray-800 text-gray-800 dark:text-gray-200"
-                    >
-                      <option value="fixed">固定间隔</option>
-                      <option value="exponential">指数退避</option>
-                    </select>
-                  </div>
-                </>
-              )}
-            </div>
-          </details>
+                  {config.retryCount > 0 && (
+                    <>
+                      <div>
+                        <label className="block text-xs font-medium text-gray-600 dark:text-gray-400 mb-1">
+                          重试间隔
+                        </label>
+                        <div className="flex items-center gap-2">
+                          <CustomInput
+                            type="number"
+                            value={String(config.retryDelay ?? 1000)}
+                            onChange={(e) => setConfig({ ...config, retryDelay: Math.max(100, parseInt(e.target.value) || 1000) })}
+                            min={100}
+                            max={60000}
+                            size="xs"
+                            className="w-20"
+                          />
+                          <span className="text-xs text-gray-400">ms</span>
+                        </div>
+                      </div>
+                      <div>
+                        <label className="block text-xs font-medium text-gray-600 dark:text-gray-400 mb-1">
+                          退避策略
+                        </label>
+                        <select
+                          value={config.retryBackoff || 'fixed'}
+                          onChange={(e) => setConfig({ ...config, retryBackoff: e.target.value })}
+                          className="text-xs px-2 py-1.5 rounded-lg border border-gray-200 dark:border-gray-600 bg-white dark:bg-gray-800 text-gray-800 dark:text-gray-200"
+                        >
+                          <option value="fixed">固定间隔</option>
+                          <option value="exponential">指数退避</option>
+                        </select>
+                      </div>
+                    </>
+                  )}
+                </div>
+              </details>
+            )}
+
+            {renderConfigFields()}
+          </>
         )}
-
-        {renderConfigFields()}
       </div>
-
-      {/* Footer */}
-      <div className="flex items-center justify-between gap-2 px-5 py-4 border-t border-gray-100 dark:border-gray-700/50 bg-gray-50/50 dark:bg-gray-900/30">
-        <AiAssistButton context={{
-          contextType: 'node-config',
-          contextId: node.id,
-          label: label || node.type || '',
-          data: config,
-          schema: NODE_CONFIG_SCHEMAS[node.type || ''],
-        }}
-          onAction={onAiAction}
-        />
-        <div className="flex items-center gap-2">
-          <CustomButton
-            onClick={onClose}
-            variant="ghost"
-            size="sm"
-          >
-            取消
-          </CustomButton>
-          <CustomButton
-            onClick={handleSave}
-            variant="primary"
-            size="sm"
-          >
-            保存
-          </CustomButton>
+      {readOnly ? (
+        <div className="flex items-center justify-end px-5 py-4 border-t border-gray-100 dark:border-gray-700/50">
+          <CustomButton onClick={onClose} variant="ghost" size="sm">关闭</CustomButton>
         </div>
-      </div>
+      ) : (
+        <div className="flex items-center justify-between gap-2 px-5 py-4 border-t border-gray-100 dark:border-gray-700/50 bg-gray-50/50 dark:bg-gray-900/30">
+          <AiAssistButton context={{
+            contextType: 'node-config',
+            contextId: node.id,
+            label: label || node.type || '',
+            data: config,
+            schema: NODE_CONFIG_SCHEMAS[node.type || ''],
+          }}
+            onAction={onAiAction}
+          />
+          <div className="flex items-center gap-2">
+            <CustomButton
+              onClick={onClose}
+              variant="ghost"
+              size="sm"
+            >
+              取消
+            </CustomButton>
+            <CustomButton
+              onClick={handleSave}
+              variant="primary"
+              size="sm"
+            >
+              保存
+            </CustomButton>
+          </div>
+        </div>
+      )}
       {/* 拖拽调整宽度手柄 */}
       <div
         onMouseDown={startResize}

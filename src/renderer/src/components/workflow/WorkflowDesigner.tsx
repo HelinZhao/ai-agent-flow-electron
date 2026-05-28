@@ -29,7 +29,8 @@ import { useSettingsStore } from '@renderer/store/settingsStore';
 import { v4 as uuidv4 } from 'uuid';
 import { useUpdateEffect } from 'ahooks';
 
-const nodeTypes = {
+// eslint-disable-next-line react-refresh/only-export-components
+export const nodeTypes = {
   start: StartNode,
   skill: SkillNode,
   branch: BranchNode,

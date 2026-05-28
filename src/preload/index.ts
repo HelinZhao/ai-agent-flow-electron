@@ -64,6 +64,7 @@ const api = {
     workingTreeDiff: (opts: { repoPath: string; filePath: string }) => ipcRenderer.invoke('git:workingTreeDiff', opts),
     history: (opts: { repoPath: string; filePath?: string }) => ipcRenderer.invoke('git:history', opts),
     commitFiles: (opts: { repoPath: string; hash: string }) => ipcRenderer.invoke('git:commitFiles', opts),
+    showFile: (opts: { repoPath: string; hash: string; filePath: string }) => ipcRenderer.invoke('git:showFile', opts),
     commitFileDiff: (opts: { repoPath: string; hash: string; filePath: string }) => ipcRenderer.invoke('git:commitFileDiff', opts),
     diff: (opts: { repoPath: string; hash1: string; hash2: string; filePath?: string }) => ipcRenderer.invoke('git:diff', opts),
     restore: (opts: { repoPath: string; hash: string; filePath: string }) => ipcRenderer.invoke('git:restore', opts),

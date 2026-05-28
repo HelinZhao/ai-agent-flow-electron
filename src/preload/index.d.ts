@@ -62,6 +62,7 @@ interface GitAPI {
   workingTreeDiff: (opts: { repoPath: string; filePath: string }) => Promise<string>
   history: (opts: GitHistoryOpts) => Promise<{ hash: string; date: string; message: string }[]>
   commitFiles: (opts: { repoPath: string; hash: string }) => Promise<{ status: string; file: string }[]>
+  showFile: (opts: { repoPath: string; hash: string; filePath: string }) => Promise<string>
   commitFileDiff: (opts: { repoPath: string; hash: string; filePath: string }) => Promise<string>
   diff: (opts: GitDiffOpts) => Promise<string>
   restore: (opts: GitRestoreOpts) => Promise<boolean>

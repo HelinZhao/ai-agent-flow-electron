@@ -17,6 +17,7 @@ import {
   getCommitFiles,
   getDiff,
   getCommitFileDiff,
+  readFileAtCommit,
   restoreFile,
   getStatus,
   getDetailedStatus,
@@ -297,7 +298,11 @@ app.whenReady().then(() => {
     await stageAllFiles(repoPath)
     return true
   })
-  // 查看某次提交中文件的变更（diff优先，首次commit fallback到show）
+  // 读取某次提交中的文件内容
+  ipcMain.handle('git:showFile', async (_, opts: { repoPath: string; hash: string; filePath: string }) => {
+    return readFileAtCommit(opts.repoPath, opts.hash, opts.filePath)
+  })
+  // 查看某次提交中文件的变更
   ipcMain.handle('git:commitFileDiff', async (_, opts: { repoPath: string; hash: string; filePath: string }) => {
     return getCommitFileDiff(opts.repoPath, opts.hash, `data/export/${opts.filePath}`)
   })
