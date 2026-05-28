@@ -34,30 +34,28 @@ function Viewer({ nodes, edges }: WorkflowViewerData) {
   })), [edges])
 
   return (
-    <>
-      <ReactFlow
-        nodes={rfNodes}
-        edges={rfEdges}
-        nodeTypes={nodeTypes}
-        nodesDraggable={false}
-        nodesConnectable={false}
-        panOnDrag
-        zoomOnScroll
-        fitView
-        proOptions={{ hideAttribution: true }}
-        onNodeClick={(_, node) => {
-          const wfNode: WorkflowNode = {
-            id: node.id,
-            type: node.type as WorkflowNode['type'],
-            position: node.position,
-            data: node.data as WorkflowNode['data'],
-          }
-          setSelectedNode(wfNode)
-        }}
-        onPaneClick={() => setSelectedNode(null)}
-      >
-        <Background variant={BackgroundVariant.Dots} gap={16} size={1} color="#e5e7eb" />
-      </ReactFlow>
+    <ReactFlow
+      nodes={rfNodes}
+      edges={rfEdges}
+      nodeTypes={nodeTypes}
+      nodesDraggable={false}
+      nodesConnectable={false}
+      panOnDrag
+      zoomOnScroll
+      fitView
+      proOptions={{ hideAttribution: true }}
+      onNodeClick={(_, node) => {
+        const wfNode: WorkflowNode = {
+          id: node.id,
+          type: node.type as WorkflowNode['type'],
+          position: node.position,
+          data: node.data as WorkflowNode['data'],
+        }
+        setSelectedNode(wfNode)
+      }}
+      onPaneClick={() => setSelectedNode(null)}
+    >
+      <Background variant={BackgroundVariant.Dots} gap={16} size={1} color="#e5e7eb" />
       {selectedNode && (
         <NodeConfigPanel
           node={selectedNode}
@@ -65,7 +63,7 @@ function Viewer({ nodes, edges }: WorkflowViewerData) {
           readOnly
         />
       )}
-    </>
+    </ReactFlow>
   )
 }
 
