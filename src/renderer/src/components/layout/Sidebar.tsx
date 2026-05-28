@@ -1,4 +1,4 @@
-import { useState, useRef } from 'react'
+import { useRef } from 'react'
 
 interface NavItem {
   path: string
@@ -10,10 +10,10 @@ interface SidebarProps {
   currentPage: string
   onNavigate: (page: string) => void
   navItems: NavItem[]
+  collapsed: boolean
 }
 
-const Sidebar: React.FC<SidebarProps> = ({ currentPage, onNavigate, navItems }: SidebarProps) => {
-  const [sidebarCollapsed, setSidebarCollapsed] = useState(false)
+const Sidebar: React.FC<SidebarProps> = ({ currentPage, onNavigate, navItems, collapsed: sidebarCollapsed }) => {
   const tooltipRef = useRef<HTMLDivElement>(null)
   const tooltipTextRef = useRef<HTMLSpanElement>(null)
 
@@ -36,36 +36,27 @@ const Sidebar: React.FC<SidebarProps> = ({ currentPage, onNavigate, navItems }: 
 
   return (
     <>
-      <nav className={`hidden md:block bg-white/80 dark:bg-gray-800/80 backdrop-blur-md shadow-sm border-r border-gray-200/50 dark:border-gray-700/50 flex-shrink-0 overflow-visible z-30 transition-all duration-300 w-15 ${!sidebarCollapsed ? 'xl:w-52' : ''}`}>
+      <nav className={`hidden md:block bg-white/80 dark:bg-gray-800/80 backdrop-blur-md shadow-sm border-r border-gray-200/50 dark:border-gray-700/50 flex-shrink-0 z-30 transition-all duration-300 ${sidebarCollapsed ? 'w-16' : 'w-52'}`}>
         <div className="flex flex-col h-full">
-          <div className="flex-1 flex flex-col items-center xl:items-stretch pt-4 pb-2 space-y-2 overflow-y-auto">
+          <div className="flex-1 flex flex-col pt-4 pb-2 space-y-2 overflow-y-auto [scrollbar-gutter:stable]">
             {navItems.map((item) => (
               <button
                 key={item.path}
                 onClick={() => onNavigate(item.path)}
                 onMouseEnter={(e) => showTooltip(item.label, e.currentTarget)}
                 onMouseLeave={hideTooltip}
-                className={`group relative p-3 mx-2 ${sidebarCollapsed ? 'w-11' : ''} h-11 rounded-xl transition-all duration-200 focus:outline-none flex items-center space-x-3 ${currentPage === item.path
-                  ? 'bg-gradient-to-r from-blue-500 to-purple-600 text-white shadow-lg'
-                  : 'text-gray-600 dark:text-gray-300 hover:text-blue-600 dark:hover:text-blue-400 hover:bg-gray-100/80 dark:hover:bg-gray-700/50'
+                className={`flex items-center h-10 rounded-xl transition-all duration-200 focus:outline-none ml-2 px-1.5 space-x-3 flex-shrink-0
+                  ${currentPage === item.path
+                    ? 'bg-gradient-to-r from-blue-500 to-purple-600 text-white shadow-lg'
+                    : 'text-gray-600 dark:text-gray-300 hover:text-blue-600 dark:hover:text-blue-400 hover:bg-gray-100/80 dark:hover:bg-gray-700/50'
                   }`}
               >
-                <span className="text-xl flex-shrink-0">{item.icon}</span>
-                <span className={`text-sm font-medium truncate transition-opacity duration-200 hidden xl:block ${sidebarCollapsed ? 'xl:opacity-0' : 'xl:opacity-100'}`}>{item.label}</span>
+                <span className="w-8 h-8 flex items-center justify-center flex-shrink-0 text-xl">
+                  {item.icon}
+                </span>
+                <span className={`text-sm font-medium truncate transition-all duration-200 ${sidebarCollapsed ? 'invisible w-0' : 'visible opacity-100'}`}>{item.label}</span>
               </button>
             ))}
-          </div>
-          {/* 侧边栏收起/展开按钮 - 仅在大屏显示 */}
-          <div className="hidden xl:flex items-center justify-center p-3 border-t border-gray-200/50 dark:border-gray-700/50">
-            <button
-              onClick={() => setSidebarCollapsed(!sidebarCollapsed)}
-              className="p-2 rounded-lg hover:bg-gray-100/80 dark:hover:bg-gray-700/50 dark:text-white transition-colors duration-200"
-              title={sidebarCollapsed ? '展开侧边栏' : '收起侧边栏'}
-            >
-              <svg className={`w-4 h-4 transition-transform duration-200 ${sidebarCollapsed ? 'rotate-180' : ''}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
-              </svg>
-            </button>
           </div>
         </div>
       </nav>

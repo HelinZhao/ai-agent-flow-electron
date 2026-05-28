@@ -1,3 +1,4 @@
+import { useState, memo } from 'react'
 import ThemeToggle from './ThemeToggle'
 import LLMConfigSwitcher from './LLMConfigSwitcher'
 import Sidebar from './Sidebar'
@@ -15,7 +16,26 @@ interface LayoutProps {
   onRefresh?: () => void
 }
 const isElectron = Boolean(window.electron || window.api)
+
+const MainArea = memo(({ currentPage, children, navItems }: {
+  currentPage: string
+  children: React.ReactNode
+  navItems: { path: string; label: string; icon: React.ReactNode, page: React.ReactNode }[]
+}) => (
+  <main className="flex-1 overflow-auto relative">
+    <div className="absolute inset-0 bg-grid-pattern opacity-5 dark:opacity-10"></div>
+    {children}
+    {navItems.map((item) => (
+      <div key={item.path} className={`relative z-10 h-full ${currentPage === item.path ? '' : 'hidden'}`}>
+        {item.page}
+      </div>
+    ))}
+  </main>
+))
+
 const Layout: React.FC<LayoutProps> = ({ navItems, currentPage, onNavigate, loading, children, onRefresh }: LayoutProps) => {
+  const [sidebarCollapsed, setSidebarCollapsed] = useState(false)
+  const toggleSidebar = () => setSidebarCollapsed(v => !v)
 
   return (
     <div className="flex flex-col h-screen bg-gradient-to-br from-slate-50 to-blue-50 dark:from-gray-900 dark:to-slate-800">
@@ -48,21 +68,15 @@ const Layout: React.FC<LayoutProps> = ({ navItems, currentPage, onNavigate, load
       {/* 下方内容区域：侧边栏 + 主内容 */}
       <div className="flex flex-1 overflow-hidden">
         {/* 左侧边栏导航 */}
-        <Sidebar currentPage={currentPage} onNavigate={onNavigate} navItems={navItems} />
+        <Sidebar currentPage={currentPage} onNavigate={onNavigate} navItems={navItems} collapsed={sidebarCollapsed} />
 
         {/* 主内容区域 */}
-        <main className="flex-1 overflow-auto relative">
-          <div className="absolute inset-0 bg-grid-pattern opacity-5 dark:opacity-10"></div>
+        <MainArea currentPage={currentPage} navItems={navItems}>
           {children}
-          {navItems.map((item) => (
-            <div key={item.path} className={`relative z-10 h-full ${currentPage === item.path ? '' : 'hidden'}`}>
-              {item.page}
-            </div>
-          ))}
-        </main>
+        </MainArea>
       </div>
       {currentPage !== '/chat' && <SystemAssistantChat />}
-      <Footer loading={loading} onRefresh={onRefresh} />
+      <Footer loading={loading} onRefresh={onRefresh} collapsed={sidebarCollapsed} onToggleCollapse={toggleSidebar} />
     </div>
   )
 }

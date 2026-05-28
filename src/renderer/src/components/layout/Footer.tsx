@@ -4,11 +4,13 @@ import { checkHealth } from '@renderer/lib/api'
 interface FooterProps {
   loading: boolean
   onRefresh?: () => void
+  collapsed?: boolean
+  onToggleCollapse?: () => void
 }
 
 const isElectron = Boolean(window.electron || window.api)
 
-const Footer: React.FC<FooterProps> = ({ loading, onRefresh }) => {
+const Footer: React.FC<FooterProps> = ({ loading, onRefresh, collapsed, onToggleCollapse }) => {
   const [connected, setConnected] = useState(true)
   const [cpu, setCpu] = useState(0)
   const [memory, setMemory] = useState(0)
@@ -63,7 +65,18 @@ const Footer: React.FC<FooterProps> = ({ loading, onRefresh }) => {
           </span>
         )}
       </div>
-      <div className="flex items-center">
+      <div className="flex items-center gap-2">
+        {onToggleCollapse && (
+          <button
+            onClick={onToggleCollapse}
+            title={collapsed ? '展开侧边栏' : '收起侧边栏'}
+            className="rounded-lg text-gray-400 hover:text-blue-600 hover:bg-blue-50 dark:text-gray-500 dark:hover:text-blue-400 dark:hover:bg-blue-900/20 transition-colors p-1"
+          >
+            <svg className={`w-3.5 h-3.5 transition-transform duration-200 ${collapsed ? 'rotate-180' : ''}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
+            </svg>
+          </button>
+        )}
         {loading ? (
           <svg className="w-3.5 h-3.5 text-blue-500 animate-spin" viewBox="0 0 24 24" fill="none">
             <circle cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="3" className="opacity-20" />

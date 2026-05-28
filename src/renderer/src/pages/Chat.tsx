@@ -236,7 +236,7 @@ export default function Chat(): React.JSX.Element {
             }
             return (
               <>
-                <div ref={messageListRef} className="overflow-y-auto overflow-x-hidden px-5 py-4 space-y-4 bg-gray-50/40 dark:bg-gray-900/30" style={{ flex: 1, minHeight: 0 }}>
+                <div ref={messageListRef} className={`${messages.length === 0 ? 'overflow-y-hidden' : 'overflow-y-auto'} overflow-x-hidden px-5 py-4 space-y-4 bg-gray-50/40 dark:bg-gray-900/30`} style={{ flex: 1, minHeight: 0 }}>
                   {(() => {
                     const searchTerm = messageSearch.trim().toLowerCase()
                     const hasSearch = searchTerm.length > 0
@@ -262,7 +262,7 @@ export default function Chat(): React.JSX.Element {
                         <p className="text-sm">未找到匹配的消息</p>
                       </div>
                     ) : filtered.length === 0 ? (
-                      <div className="flex flex-col items-center justify-center h-full py-20">
+                      <div className="flex flex-col items-center justify-center h-full">
                         <div className="w-14 h-14 rounded-2xl bg-gradient-to-br from-blue-50 to-indigo-50 dark:from-blue-500/10 dark:to-indigo-500/10 flex items-center justify-center mb-5 shadow-sm">
                           <span className="text-2xl">💬</span>
                         </div>
