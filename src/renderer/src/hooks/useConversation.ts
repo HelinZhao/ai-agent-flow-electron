@@ -367,7 +367,6 @@ export function useConversation() {
   // 从末尾向前找到最后一条用户消息，删除其后所有消息并重新发送
   const regenerate = useCallback(async (
     agents: Agent[],
-    workflows: { id: string; workflowId?: string }[],
     activeLLMConfig: unknown,
   ) => {
     const agent = agents.find(a => a.id === selectedAgent?.id) || selectedAgent

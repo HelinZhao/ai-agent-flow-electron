@@ -11,7 +11,7 @@ import CustomButton from '@renderer/components/ui/CustomButton';
 import CustomInput from '@renderer/components/ui/CustomInput';
 
 export default function Chat(): React.JSX.Element {
-  const { agents, workflows, activeLLMConfig } = useWorkflowStore();
+  const { agents, activeLLMConfig } = useWorkflowStore();
   const [searchTerm, setSearchTerm] = useState('');
   const [showSearch, setShowSearch] = useState(false);
   const [messageSearch, setMessageSearch] = useState('');
@@ -292,7 +292,7 @@ export default function Chat(): React.JSX.Element {
                             agentName={selectedAgent!.name}
                             onAttachmentClick={handleAttachmentClick}
                             isLastAgent={idx === lastAgentIdx}
-                            onRegenerate={idx === lastAgentIdx ? () => regenerate(agents, workflows, activeLLMConfig) : undefined}
+                            onRegenerate={idx === lastAgentIdx ? () => regenerate(agents, activeLLMConfig) : undefined}
                           />
                         ))}
                       </>

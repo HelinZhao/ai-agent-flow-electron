@@ -57,12 +57,12 @@ async function fireTrigger(triggerId: string, payload?: { input?: string; params
     return null
   }
 
+  let executionId: string | null = null
+
   try {
     // 标记为运行中
     await trigger.update({ lastRunStatus: 'running', lastRunAt: new Date() })
-
     const llmConfig = await getActiveLLMConfig()
-    let executionId: string | null = null
     const input = payload?.input ?? trigger.input
 
     const triggerParams = payload?.params ?? safeJsonParse(trigger.params, {})
@@ -141,18 +141,7 @@ async function fireTrigger(triggerId: string, payload?: { input?: string; params
     await trigger.update({ lastRunStatus: 'success' })
     console.log(`[Trigger] ${trigger.name}: 执行成功`)
 
-    // 成功时也重新调度
-    const successUpdated = await TriggerModel.findByPk(triggerId)
-    if (successUpdated && successUpdated.type === 'cron' && successUpdated.enabled && successUpdated.cronExpression) {
-      const st = cronToNextTime(successUpdated.cronExpression)
-      if (st > 0) {
-        timingWheel.schedule(successUpdated.id, st)
-        await successUpdated.update({ nextRunAt: new Date(st) })
-        console.log(`[Trigger] ${successUpdated.name}: 下次执行时间 ${new Date(st).toLocaleString()}`)
-      }
-    }
-
-    return executionId
+    // 不再 return，统一由 try-catch 后面的逻辑重新调度
   } catch (error) {
     const msg = error instanceof Error ? error.message : '未知错误'
     console.error(`[Trigger] ${trigger.name}: 执行失败 -`, msg)
@@ -169,6 +158,8 @@ async function fireTrigger(triggerId: string, payload?: { input?: string; params
       console.log(`[Trigger] ${updated.name}: 下次执行时间 ${new Date(nextTime).toLocaleString()}`)
     }
   }
+
+  return executionId
 }
 
 // 注册时间轮回调

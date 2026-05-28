@@ -5,7 +5,7 @@ import { changeNotifier } from '../utils/dataChangeNotifier'
 const router = Router()
 
 // 获取所有环境变量
-router.get('/', async (req, res) => {
+router.get('/', async (_, res) => {
   try {
     const vars = await EnvVarModel.findAll({
       order: [['name', 'ASC']]

@@ -932,7 +932,7 @@ export class MonitoredLangGraphExecutor {
     }
 
     // {{$now}} / {{$now.format}} → 当前时间
-    result = result.replace(/\{\{\$now(?:\.(\w+))?\}\}/g, (match, format) => {
+    result = result.replace(/\{\{\$now(?:\.(\w+))?\}\}/g, (_, format) => {
       const now = new Date()
       switch (format) {
         case 'timestamp': return String(now.getTime())
@@ -1716,7 +1716,7 @@ export class MonitoredLangGraphExecutor {
   }
 
   private async executeSplit(ctx: ExecCtx) {
-    const { executionId, node, input, llmConfig } = ctx
+    const { executionId, node, input, llmConfig, params: parentParams, nodeResults, workflowEnvVars, variables } = ctx
     const workflowId = node.data.config?.workflowId as string | undefined
     if (!workflowId) {
       return { output: input, metadata: { nodeId: node.id, type: 'split', error: '未配置工作流ID', label: node.data?.label } }
@@ -1765,7 +1765,13 @@ export class MonitoredLangGraphExecutor {
           autoApprovedToolTypes: inheritedAutoApprove,
           pendingApproval: null,
           attachments: undefined,
-          params: { _index: i },
+          params: (() => {
+            const resolved: Record<string, any> = { _index: i }
+            for (const [k, v] of Object.entries(node.data.config?.params || {})) {
+              resolved[k] = typeof v === 'string' ? this.resolveParams(v, input, parentParams, nodeResults, workflowEnvVars, variables) : v
+            }
+            return resolved
+          })(),
         })
 
         try {
@@ -2551,7 +2557,7 @@ ${conditionText}
         extraTools.push(createFrontendActionTool(executionId, (id, data) => this.broadcastToSSEClients(id, data)))
         extraTools.push(createGetContextTool())
       }
-      const result = await callLLM(prompt, llmConfig, updatedHistory, enabledTools || [], llmOptions, undefined, extraTools)
+      const result = await callLLM(prompt, llmConfig, updatedHistory, enabledTools || [], llmOptions, attachments, extraTools)
 
       // 保存对话历史
       const aiMessage = new AIMessage(result)

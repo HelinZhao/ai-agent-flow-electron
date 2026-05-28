@@ -2,7 +2,6 @@ import { Router } from 'express'
 import { Op } from 'sequelize'
 import { WorkflowModel, AgentModel, SkillModel, McpServerModel, KnowledgeBaseModel, KnowledgeChunkModel, TriggerModel } from '../models'
 import { safeJsonParse } from '../utils/shared'
-import { v4 as uuidv4 } from 'uuid'
 
 const router = Router()
 
@@ -185,8 +184,8 @@ router.get('/:id/export', async (req, res) => {
       description: string
       nodes: any[]
       edges: any[]
-      layoutDirection: string | null
-      envVars: string | null
+      layoutDirection?: string | null 
+      envVars?: string | null
       triggers: any[]
     }> = []
 
@@ -274,8 +273,8 @@ router.get('/:id/export', async (req, res) => {
         const chunks = await KnowledgeChunkModel.findAll({ where: { knowledgeBaseId: kbId } })
         const docs = new Map<string, string[]>()
         for (const c of chunks) {
-          if (!docs.has(c.documentName)) docs.set(c.documentName, [])
-          docs.get(c.documentName)!.push(c.content)
+          if (!docs.has(c.source)) docs.set(c.source, [])
+          docs.get(c.source)!.push(c.content)
         }
         knowledgeBases.push({
           name: kb.name,
@@ -402,6 +401,7 @@ router.post('/import', async (req, res) => {
           command: mcp.command,
           args: mcp.args ? JSON.stringify(mcp.args) : undefined,
           url: mcp.url,
+          enabled: true,
         })
         if (mcp.oldId) idMap.set(mcp.oldId, created.id)
       }
@@ -412,12 +412,25 @@ router.post('/import', async (req, res) => {
       for (const kb of bundle.knowledgeBases) {
         const existing = await KnowledgeBaseModel.findOne({ where: { name: kb.name } })
         if (existing) continue
-        const created = await KnowledgeBaseModel.create({ name: kb.name, description: kb.description || '', type: 'internal', config: '{}' })
+        const created = await KnowledgeBaseModel.create({
+          name: kb.name,
+          description: kb.description || '',
+          type: 'internal',
+          chunkSize: 500,
+          chunkOverlap: 50,
+          topK: 3,
+          vectorStore: 'sqlite-vec',
+          vectorConfig: '{}',
+          provider: 'generic',
+          apiUrl: '',
+          apiKey: '',
+          providerConfig: '',
+        })
         if (kb.documents) {
           for (const doc of kb.documents) {
             const chunks = doc.content.split(/\n{2,}/).filter(Boolean)
             for (let i = 0; i < chunks.length; i++) {
-              await KnowledgeChunkModel.create({ knowledgeBaseId: created.id, documentName: doc.name, content: chunks[i], chunkIndex: i, enabled: true })
+              await KnowledgeChunkModel.create({ knowledgeBaseId: created.id, source: doc.name, content: chunks[i], chunkIndex: i, enabled: true })
             }
           }
         }
@@ -466,8 +479,6 @@ router.post('/import', async (req, res) => {
     }
 
     // ---- 第 3 轮：导入 Agent（此时可以重映射 workflowId） ----
-
-    const agentsToUpdate: Array<{ agentId: string; workflowId: string }> = []
     if (bundle.agents) {
       for (const agent of bundle.agents) {
         const existing = await AgentModel.findOne({ where: { name: agent.name } })
