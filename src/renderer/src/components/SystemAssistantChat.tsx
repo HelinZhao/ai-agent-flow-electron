@@ -16,7 +16,7 @@ const BTN_SIZE = 48
 const GAP = 24
 
 export default function SystemAssistantChat() {
-  const { agents, activeLLMConfig, addAgent } = useWorkflowStore()
+  const { agents, activeLLMConfig } = useWorkflowStore()
   const open = useBudingStore(s => s.open)
   const setOpen = useBudingStore(s => s.setOpen)
   const assistContext = useBudingStore(s => s.assistContext)
@@ -80,57 +80,6 @@ export default function SystemAssistantChat() {
 
   const { showSystemAssistant } = useSettingsStore()
   const systemAgent = agents.find(a => a.id === SYSTEM_AGENT_ID || a.name === SYSTEM_AGENT_NAME)
-  const creatingRef = useRef(false)
-
-  // 确保系统助手存在
-  useEffect(() => {
-    if (systemAgent || creatingRef.current) return
-    creatingRef.current = true
-    // 延迟尝试，等 store 数据加载完成
-    const timer = setTimeout(async () => {
-      const exists = agents.find(a => a.id === SYSTEM_AGENT_ID || a.name === SYSTEM_AGENT_NAME)
-      if (!exists) {
-        try {
-          await addAgent({
-            name: SYSTEM_AGENT_NAME,
-            description: 'Agent Flow 内置 AI 助手，帮助你了解和使用本应用',
-            instructions: `你是布丁（Buding），Agent Flow 的内置 AI 助手。
-
-你的职责是帮助用户了解和使用 Agent Flow 这个 AI 工作流编排平台。
-
-你可以回答以下方面的问题：
-1. 工作流创建和编辑（节点类型、连线、布局）
-2. Agent 配置（标准 Agent 和工作流 Agent 的区别）
-3. 技能管理（创建和绑定技能）
-4. 知识库使用（内部/外部知识库、RAG 检索）
-5. 触发器设置（Cron 定时触发和 Webhook）
-6. LLM 配置（支持哪些提供商、如何切换）
-7. 工具调用和人工审批（HITL）
-8. 应用常见问题排查
-
-回答要求：
-- 使用中文，简洁明了
-- 如果问题超出你的知识范围，诚实地告诉用户你不确定
-- 对于操作类问题，给出清晰的步骤指引
-- 保持友好和耐心的语气
-
-特殊能力 - 实时填写表单：
-当用户正在编辑节点配置时，你可以直接修改表单字段。用户会说「帮我把 URL 改成 xxx」等，此时直接使用 suggestFrontendAction 工具即可，先用 workflowsApi 获取当前配置再做精确修改。`,
-            type: 'standard',
-            enabledTools: [
-              'readFile', 'writeFile', 'listDirectory', 'executeCommand',
-              'httpRequest', 'webSearch',
-              'workflowsApi', 'agentsSkillsApi', 'knowledgeApi', 'configApi',
-              'readSkill',
-            ],
-          })
-        } catch (e) {
-          console.error('[布丁] 自动创建失败:', e)
-        }
-      }
-    }, 2000)
-    return () => clearTimeout(timer)
-  }, [systemAgent, agents, addAgent])
 
   useEffect(() => {
     if (open) {
