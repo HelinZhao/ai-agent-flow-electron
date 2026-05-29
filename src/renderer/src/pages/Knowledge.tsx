@@ -283,7 +283,7 @@ export default function Knowledge(): React.JSX.Element {
   }
 
   return (
-    <div className='py-6 px-4 sm:px-6 lg:px-8'>
+    <div className='px-6 py-4'>
       {message && (
         <MessageBanner type={message.type} text={message.text} onClose={() => setMessage(null)} />
       )}

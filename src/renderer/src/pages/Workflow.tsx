@@ -271,7 +271,7 @@ export default function Workflow(): React.JSX.Element {
   // ========== 二级页面：工作流设计画布 ==========
   if (selectedWorkflowId && selectedWorkflow) {
     return (
-      <div className="mx-auto py-6 px-4 sm:px-6 lg:px-8 h-full flex flex-col">
+      <div className="px-6 py-4 h-full flex flex-col">
         {/* 顶部导航 */}
         <div className="flex items-center space-x-3 mb-4 flex-shrink-0 relative">
           <button
@@ -396,7 +396,7 @@ export default function Workflow(): React.JSX.Element {
 
   // ========== 一级页面：工作流列表（卡片式） ==========
   return (
-    <div className="mx-auto py-6 px-4 sm:px-6 lg:px-8">
+    <div className="px-6 py-4">
       {/* 标题栏 */}
       <div className="flex justify-between items-start mb-6">
         <div>

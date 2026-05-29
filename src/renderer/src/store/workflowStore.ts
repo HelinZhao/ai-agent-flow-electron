@@ -1,9 +1,9 @@
 import { create } from 'zustand'
 import { persist } from 'zustand/middleware'
-import { Workflow, Skill, Agent, LLMConfig, KnowledgeBase, Trigger, EnvVar, Template } from '@renderer/types'
+import { Workflow, Skill, Agent, Team, LLMConfig, KnowledgeBase, Trigger, EnvVar, Template } from '@renderer/types'
 import type { McpServer } from '@renderer/lib/mcpApi'
 import { mcpApi } from '@renderer/lib/mcpApi'
-import { workflowApi, skillApi, agentApi, llmConfigApi, knowledgeBaseApi, triggerApi, envVarApi, templateApi, waitForServer } from '@renderer/lib/api'
+import { workflowApi, skillApi, agentApi, teamApi, llmConfigApi, knowledgeBaseApi, triggerApi, envVarApi, templateApi, waitForServer } from '@renderer/lib/api'
 import { STORAGE_KEY, STORAGE_PERSIST_FIELDS, API_BASE_URL } from '@renderer/config'
 import { gitWriteEntity } from '@renderer/lib/gitWriteEntity'
 
@@ -11,6 +11,7 @@ interface WorkflowState {
   workflows: Workflow[]
   skills: Skill[]
   agents: Agent[]
+  teams: Team[]
   llmConfigs: LLMConfig[]
   activeLLMConfig: LLMConfig | null
   currentPage: string
@@ -35,6 +36,13 @@ interface WorkflowState {
   addAgent: (agent: Omit<Agent, 'id' | 'createdAt' | 'updatedAt'>) => Promise<void>
   updateAgent: (id: string, updates: Partial<Agent>) => Promise<void>
   deleteAgent: (id: string) => Promise<void>
+
+  // Team actions
+  fetchTeams: () => Promise<void>
+  setTeams: (teams: Team[]) => void
+  addTeam: (team: Omit<Team, 'id' | 'createdAt' | 'updatedAt'>) => Promise<void>
+  updateTeam: (id: string, updates: Partial<Team>) => Promise<void>
+  deleteTeam: (id: string) => Promise<void>
 
   // LLM config actions
   addLLMConfig: (config: Omit<LLMConfig, 'id' | 'createdAt' | 'updatedAt'>) => Promise<void>
@@ -79,6 +87,8 @@ interface WorkflowState {
   connectEventStream: () => void
   disconnectEventStream: () => void
 
+  // Team actions
+
   // Internal helper methods
   setLoading: (loading: boolean) => void
   setError: (error: string | null) => void
@@ -95,6 +105,7 @@ export const useWorkflowStore = create<WorkflowState>()(
       workflows: [],
       skills: [],
       agents: [],
+      teams: [],
       llmConfigs: [],
       activeLLMConfig: null,
       knowledgeBases: [],
@@ -116,17 +127,19 @@ export const useWorkflowStore = create<WorkflowState>()(
           await waitForServer()
 
           // 并行加载所有数据
-          const [workflowsRes, skillsRes, agentsRes, triggersRes] = await Promise.all([
+          const [workflowsRes, skillsRes, agentsRes, triggersRes, teamsRes] = await Promise.all([
             workflowApi.getAll().catch(() => [] as Workflow[]),
             skillApi.getAll().catch(() => [] as Skill[]),
             agentApi.getAll().catch(() => [] as Agent[]),
-            triggerApi.getAll().catch(() => [] as Trigger[])
+            triggerApi.getAll().catch(() => [] as Trigger[]),
+            teamApi.getAll().catch(() => [] as Team[]),
           ])
 
           set({ workflows: workflowsRes || [] })
           set({ skills: skillsRes || [] })
           set({ agents: agentsRes || [] })
           set({ triggers: triggersRes || [] })
+          set({ teams: teamsRes || [] })
 
           // 加载知识库和LLM配置
           await Promise.all([
@@ -149,6 +162,7 @@ export const useWorkflowStore = create<WorkflowState>()(
       setWorkflows: (workflows: Workflow[]) => set({ workflows }),
       setSkills: (skills: Skill[]) => set({ skills }),
       setAgents: (agents: Agent[]) => set({ agents }),
+      setTeams: (teams: Team[]) => set({ teams }),
       setLLMConfigs: (configs: LLMConfig[]) => set({ llmConfigs: configs }),
       setActiveLLMConfig: (config: LLMConfig | null) => set({ activeLLMConfig: config }),
       setKnowledgeBases: (kbs: KnowledgeBase[]) => set({ knowledgeBases: kbs }),
@@ -369,6 +383,48 @@ export const useWorkflowStore = create<WorkflowState>()(
           throw error
         } finally {
           state.setLoading(false)
+        }
+      },
+
+      fetchTeams: async () => {
+        try {
+          const teams = await teamApi.getAll()
+          set({ teams })
+        } catch (error) {
+          console.error('获取团队列表失败:', error)
+        }
+      },
+
+      addTeam: async (team) => {
+        const state = get()
+        try {
+          const newTeam = await teamApi.create(team)
+          set({ teams: [newTeam, ...state.teams] })
+        } catch (error) {
+          console.error('创建团队失败:', error)
+          throw error
+        }
+      },
+
+      updateTeam: async (id, updates) => {
+        const state = get()
+        try {
+          const updatedTeam = await teamApi.update(id, updates)
+          set({ teams: state.teams.map((t) => (t.id === id ? updatedTeam : t)) })
+        } catch (error) {
+          console.error('更新团队失败:', error)
+          throw error
+        }
+      },
+
+      deleteTeam: async (id) => {
+        const state = get()
+        try {
+          await teamApi.delete(id)
+          set({ teams: state.teams.filter((t) => t.id !== id) })
+        } catch (error) {
+          console.error('删除团队失败:', error)
+          throw error
         }
       },
 
@@ -653,6 +709,11 @@ export const useWorkflowStore = create<WorkflowState>()(
               case 'environment-variables': {
                 const envVars = await envVarApi.getAll().catch(() => [] as EnvVar[])
                 set({ envVars })
+                break
+              }
+              case 'teams': {
+                const teams = await teamApi.getAll().catch(() => [] as Team[])
+                set({ teams })
                 break
               }
             }

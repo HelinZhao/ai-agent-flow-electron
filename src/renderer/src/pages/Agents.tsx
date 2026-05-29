@@ -211,7 +211,7 @@ export default function Agents(): React.JSX.Element {
   // ─── Detail / Edit View ───
   if (selectedAgentId) {
     return (
-      <div className="mx-auto py-6 px-4 sm:px-6 lg:px-8">
+      <div className="px-6 py-4">
         {/* Back button */}
         <div className="flex items-center gap-3 mb-6">
           <button
@@ -275,7 +275,7 @@ export default function Agents(): React.JSX.Element {
 
   // ─── List View ───
   return (
-    <div className="mx-auto py-6 px-4 sm:px-6 lg:px-8">
+    <div className="px-6 py-4">
       {/* Header */}
       <div className="flex justify-between items-start mb-6">
         <div>

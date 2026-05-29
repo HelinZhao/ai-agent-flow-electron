@@ -97,7 +97,7 @@ export default function KnowledgeDetail({ kb, onBack }: KnowledgeDetailProps): R
     : { border: 'border-orange-200/50 dark:border-orange-800/50', bg: 'bg-orange-50 dark:bg-orange-900/20', text: 'text-orange-600 dark:text-orange-400', bar: 'bg-orange-500', hero: 'from-orange-500/10 via-transparent to-orange-500/10 dark:from-orange-500/5 dark:to-orange-500/5', icon: 'from-orange-500 to-orange-600', tag: 'bg-orange-100 text-orange-700 dark:bg-orange-900/30 dark:text-orange-300 border-orange-200 dark:border-orange-800' }
 
   return (
-    <div className="mx-auto py-6 px-4 sm:px-6 lg:px-8">
+    <div className="px-6 py-4">
       {message && (
         <MessageBanner
           type={message.type}

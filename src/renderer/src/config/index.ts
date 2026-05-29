@@ -250,7 +250,7 @@ export const CODE_FILE_EXTENSIONS = [
 export const STORAGE_KEY = 'workflow-storage'
 
 /** Zustand persist 白名单字段 */
-export const STORAGE_PERSIST_FIELDS = ['workflows', 'skills', 'agents', 'llmConfigs', 'activeLLMConfig', 'currentPage']
+export const STORAGE_PERSIST_FIELDS = ['workflows', 'skills', 'agents', 'teams', 'llmConfigs', 'activeLLMConfig', 'currentPage']
 
 // ========== 触发器 ==========
 

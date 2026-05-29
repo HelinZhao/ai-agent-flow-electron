@@ -3,6 +3,7 @@ import {
   Workflow,
   Skill,
   Agent,
+  Team,
   LLMConfig,
   WorkflowExecutionProgress,
   WorkflowExecutionMetrics,
@@ -633,6 +634,15 @@ export const ollamaApi = {
       eventSource.close()
     }
   }
+}
+
+export const teamApi = {
+  getAll: (): Promise<Team[]> => api.get('/teams'),
+  getById: (id: string): Promise<Team> => api.get(`/teams/${id}`),
+  create: (data: Omit<Team, 'id' | 'createdAt' | 'updatedAt'>): Promise<Team> =>
+    api.post('/teams', data),
+  update: (id: string, data: Partial<Team>): Promise<Team> => api.put(`/teams/${id}`, data),
+  delete: (id: string): Promise<void> => api.delete(`/teams/${id}`)
 }
 
 export const tokenUsageApi = {

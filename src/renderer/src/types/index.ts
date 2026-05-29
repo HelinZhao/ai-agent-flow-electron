@@ -12,7 +12,7 @@ export interface BranchNodeConfig {
 
 export interface WorkflowNode {
   id: string
-  type: 'start' | 'skill' | 'branch' | 'api' | 'llm' | 'agent' | 'cli' | 'text' | 'end' | 'subWorkflow' | 'mcp' | 'code' | 'note' | 'loop' | 'catch' | 'transform' | 'split' | 'merge' | 'sleep' | 'if' | 'knowledge' | 'variable' | 'database'
+  type: 'start' | 'skill' | 'branch' | 'api' | 'llm' | 'agent' | 'cli' | 'text' | 'end' | 'subWorkflow' | 'mcp' | 'code' | 'note' | 'loop' | 'catch' | 'transform' | 'split' | 'merge' | 'sleep' | 'if' | 'knowledge' | 'variable' | 'database' | 'team'
   position: { x: number; y: number }
   data: {
     label: string
@@ -50,6 +50,17 @@ export interface Skill {
   name: string
   description: string
   content: string
+  createdAt: Date
+  updatedAt: Date
+}
+
+export interface Team {
+  id: string
+  name: string
+  description: string
+  captainId?: string
+  memberIds: string[]
+  mode: string
   createdAt: Date
   updatedAt: Date
 }

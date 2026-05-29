@@ -17,10 +17,11 @@ import ExecutionMonitor from "./ExecutionMonitor";
 import Triggers from "./Triggers";
 import Knowledge from "./Knowledge";
 import McpServers from "./McpServers";
+import Teams from "./Teams";
 import Marketplace from "./Marketplace";
 import ToastContainer from '@renderer/components/ui/toast/ToastContainer';
 import {
-  ChatIcon, WorkflowIcon, AgentIcon, SkillsIcon, KnowledgeIcon,
+  ChatIcon, WorkflowIcon, AgentIcon, TeamIcon, SkillsIcon, KnowledgeIcon,
   TriggersIcon, McpIcon, MarketplaceIcon, MonitorIcon, SettingsIcon, LogsIcon
 } from '@renderer/components/icons/NavIcons';
 
@@ -28,6 +29,7 @@ const navItems = [
   { path: '/chat', label: 'AI对话', icon: <ChatIcon />, page: <Chat />, group: '核心' },
   { path: '/', label: '工作流', icon: <WorkflowIcon />, page: <Workflow />, group: '核心' },
   { path: '/agents', label: 'Agent', icon: <AgentIcon />, page: <Agents />, group: '核心' },
+  { path: '/teams', label: '团队', icon: <TeamIcon />, page: <Teams />, group: '核心' },
   { path: '/skills', label: '技能', icon: <SkillsIcon />, page: <Skills />, group: '能力' },
   { path: '/knowledge', label: '知识库', icon: <KnowledgeIcon />, page: <Knowledge />, group: '能力' },
   { path: '/triggers', label: '触发器', icon: <TriggersIcon />, page: <Triggers />, group: '能力' },

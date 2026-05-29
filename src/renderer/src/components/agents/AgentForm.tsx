@@ -7,6 +7,7 @@ import MarkdownIt from 'markdown-it';
 import MdEditor from 'react-markdown-editor-lite';
 import 'react-markdown-editor-lite/lib/index.css';
 import CustomInput from '@renderer/components/ui/CustomInput';
+import CustomTextarea from '@renderer/components/ui/CustomTextarea';
 import CustomSelect from '@renderer/components/ui/CustomSelect';
 import CustomButton from '@renderer/components/ui/CustomButton';
 import ItemPickerModal from '@renderer/components/ui/ItemPickerModal';
@@ -163,14 +164,19 @@ export default function AgentForm({ agent, skills, workflows, onSave, onCancel, 
                 <div className="w-1 h-5 bg-blue-500 rounded-full" />
                 <h3 className="text-base font-semibold text-gray-800 dark:text-gray-200">基本信息</h3>
               </div>
-              <div className="grid grid-cols-1 lg:grid-cols-2 gap-5">
+              <div className="space-y-4">
                 <div>
                   <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5">名称 <span className="text-red-500">*</span></label>
                   <CustomInput type="text" value={formData.name} onChange={(e) => updateField({ name: e.target.value })} placeholder="给 Agent 起个名字" />
                 </div>
                 <div>
                   <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5">描述</label>
-                  <CustomInput type="text" value={formData.description} onChange={(e) => updateField({ description: e.target.value })} placeholder="简要描述这个 Agent 的用途" />
+                  <CustomTextarea
+                    value={formData.description}
+                    onChange={(e) => updateField({ description: e.target.value })}
+                    placeholder="简要描述这个 Agent 的用途"
+                    rows={2}
+                  />
                 </div>
               </div>
             </section>

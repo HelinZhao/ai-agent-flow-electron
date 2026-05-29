@@ -39,6 +39,10 @@ export const NODE_CONFIG_SCHEMAS: Record<string, Record<string, string>> = {
   skill: {
     skillId: '绑定的技能 ID',
   },
+  team: {
+    teamId: '绑定的团队 ID',
+    taskDescription: '分配给团队的任务描述，支持 {{input}} 模板变量',
+  },
   database: {
     dbType: '数据库类型：sqlite / postgres / mysql / mssql / mongodb / redis',
     connectionConfig: '连接配置 JSON',
