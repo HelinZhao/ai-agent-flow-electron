@@ -16,8 +16,8 @@ router.post('/monitor', async (req, res) => {
     const { workflow, input, agentId, threadId, params } = req.body
 
     // 验证必要参数
-    if (!workflow || !input) {
-      return res.status(400).json({ error: 'Missing required parameters (workflow and input)' })
+    if (!workflow) {
+      return res.status(400).json({ error: 'Missing required parameters (workflow)' })
     }
 
     // 查找启用的 LLM 配置
@@ -45,7 +45,7 @@ router.post('/monitor', async (req, res) => {
     // 开始执行工作流（异步）
     const executionId = await monitoredExecutor.startExecution(
       workflow,
-      input,
+      input || '',
       llmConfig,
       agentId,
       threadId,
@@ -382,8 +382,8 @@ router.post('/', async (req, res) => {
     const { workflow, input, agentId, threadId, params } = req.body
 
     // 验证必要参数
-    if (!workflow || !input) {
-      return res.status(400).json({ error: 'Missing required parameters (workflow and input)' })
+    if (!workflow) {
+      return res.status(400).json({ error: 'Missing required parameters (workflow)' })
     }
 
     // 查找启用的 LLM 配置
@@ -411,7 +411,7 @@ router.post('/', async (req, res) => {
     // 执行工作流
     const result = await monitoredExecutor.startExecution(
       workflow,
-      input,
+      input || '',
       llmConfig,
       agentId,
       threadId,

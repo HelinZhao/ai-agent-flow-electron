@@ -160,6 +160,7 @@ export interface NodeExecutionResult {
   output?: string
   error?: string
   variables?: Record<string, any>
+  params?: Record<string, any>
   metadata?: {
     nodeId: string
     type: string

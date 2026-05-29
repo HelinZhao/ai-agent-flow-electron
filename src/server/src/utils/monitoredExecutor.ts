@@ -262,6 +262,7 @@ export class MonitoredLangGraphExecutor {
             ...nodeResult,
             input: typeof input === 'object' ? JSON.stringify(input) : String(input || ''),
             variables: execState?.variables ? { ...execState.variables } : undefined,
+            params: execState?.params,
           })
 
           if (execState) {

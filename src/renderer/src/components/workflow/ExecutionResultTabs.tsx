@@ -30,6 +30,7 @@ export const NodeResultItem: React.FC<{ node: NodeExecutionResult }> = ({ node }
   const s = statusStyle[node.status] || statusStyle.pending
   const hasVariables = !!node.variables && Object.keys(node.variables).length > 0
   const hasInput = !!node.input
+  const hasParams = node.metadata?.type === 'start' && !!node.params && Object.keys(node.params).length > 0
 
   return (
     <div className={`rounded-xl border transition-colors ${
@@ -70,6 +71,7 @@ export const NodeResultItem: React.FC<{ node: NodeExecutionResult }> = ({ node }
           )}
           <div className="text-xs text-gray-500 dark:text-gray-400">ID: {node.nodeId}</div>
           {hasInput && <DataSection title="输入" content={node.input!} />}
+          {hasParams && <DataSection title="入参" content={JSON.stringify(node.params, null, 2)} />}
           {hasVariables && <DataSection title="变量" content={JSON.stringify(node.variables, null, 2)} />}
           {node.output && <DataSection title="输出" content={typeof node.output === 'string' ? node.output : JSON.stringify(node.output, null, 2)} />}
         </div>

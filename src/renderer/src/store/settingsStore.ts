@@ -19,7 +19,7 @@ interface SettingsState {
 
 const DEFAULTS = {
   layoutDirection: 'horizontal' as LayoutDirection,
-  autoSave: true,
+  autoSave: false,
   autoSaveInterval: 30,
   autoStart: false,
   showSystemAssistant: true,
