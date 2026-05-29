@@ -551,6 +551,7 @@ function WorkflowDesigner(props: WorkflowDesignerProps): React.JSX.Element {
             onEdgeDoubleClick={onEdgeDoubleClick}
             onDragOver={handleDragOver}
             onDrop={handleDrop}
+            onlyRenderVisibleElements
           >
             <Background />
             <Controls />

@@ -44,7 +44,7 @@ const Footer: React.FC<FooterProps> = ({ collapsed, onToggleCollapse }) => {
   }, [])
 
   return (
-    <footer className="hidden md:flex items-center justify-between bg-white/80 dark:bg-gray-800/80 backdrop-blur-md border-t border-gray-200/50 dark:border-gray-700/50 flex-shrink-0 h-9 px-4 text-xs text-gray-400 dark:text-gray-500">
+    <footer className="hidden md:flex items-center justify-between bg-white/80 dark:bg-gray-800/80 backdrop-blur-md border-t border-gray-200/50 dark:border-gray-700/50 flex-shrink-0 h-8 px-4 text-xs text-gray-400 dark:text-gray-500">
       <div className="flex items-center gap-3">
         <span className="flex items-center gap-1" title={connected ? '服务已连接' : '服务未连接'}>
           <span className={`w-1.5 h-1.5 rounded-full ${connected ? 'bg-green-500' : 'bg-red-500'}`} />

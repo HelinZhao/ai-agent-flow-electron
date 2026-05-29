@@ -30,7 +30,7 @@ router.get('/', async (req, res) => {
     return res.status(200).json(agents.map(a => formatAgent(a.toJSON())))
   } catch (error) {
     console.error('获取智能体列表错误:', error)
-    return res.status(500).json({ error: '服务器内部错误' })
+    return res.status(500).json({ error: error instanceof Error ? error.message : '服务器内部错误' })
   }
 })
 
@@ -57,7 +57,7 @@ router.post('/', async (req, res) => {
     return res.status(201).json(formatAgent(agent.toJSON()))
   } catch (error) {
     console.error('创建智能体错误:', error)
-    return res.status(500).json({ error: '服务器内部错误' })
+    return res.status(500).json({ error: error instanceof Error ? error.message : '服务器内部错误' })
   }
 })
 
@@ -74,7 +74,7 @@ router.get('/:id', async (req, res) => {
     return res.status(200).json(formatAgent(agent.toJSON()))
   } catch (error) {
     console.error('获取智能体错误:', error)
-    return res.status(500).json({ error: '服务器内部错误' })
+    return res.status(500).json({ error: error instanceof Error ? error.message : '服务器内部错误' })
   }
 })
 
@@ -118,7 +118,7 @@ router.put('/:id', async (req, res) => {
     return res.status(200).json(formatAgent(agent.toJSON()))
   } catch (error) {
     console.error('更新智能体错误:', error)
-    return res.status(500).json({ error: '服务器内部错误' })
+    return res.status(500).json({ error: error instanceof Error ? error.message : '服务器内部错误' })
   }
 })
 
@@ -143,7 +143,7 @@ router.delete('/:id', async (req, res) => {
     return res.status(204).send()
   } catch (error) {
     console.error('删除智能体错误:', error)
-    return res.status(500).json({ error: '服务器内部错误' })
+    return res.status(500).json({ error: error instanceof Error ? error.message : '服务器内部错误' })
   }
 })
 

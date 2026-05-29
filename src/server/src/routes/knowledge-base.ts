@@ -67,7 +67,7 @@ router.get('/', async (req, res) => {
     return res.status(200).json(result)
   } catch (error) {
     console.error('获取知识库列表错误:', error)
-    return res.status(500).json({ error: '服务器内部错误' })
+    return res.status(500).json({ error: error instanceof Error ? error.message : '服务器内部错误' })
   }
 })
 
@@ -102,7 +102,7 @@ router.post('/', async (req, res) => {
     return res.status(201).json(kb)
   } catch (error) {
     console.error('创建知识库错误:', error)
-    return res.status(500).json({ error: '服务器内部错误' })
+    return res.status(500).json({ error: error instanceof Error ? error.message : '服务器内部错误' })
   }
 })
 
@@ -135,7 +135,7 @@ router.put('/:id', async (req, res) => {
     return res.status(200).json(kb)
   } catch (error) {
     console.error('更新知识库错误:', error)
-    return res.status(500).json({ error: '服务器内部错误' })
+    return res.status(500).json({ error: error instanceof Error ? error.message : '服务器内部错误' })
   }
 })
 
@@ -155,7 +155,7 @@ router.delete('/:id', async (req, res) => {
     return res.status(200).json({ message: '知识库删除成功' })
   } catch (error) {
     console.error('删除知识库错误:', error)
-    return res.status(500).json({ error: '服务器内部错误' })
+    return res.status(500).json({ error: error instanceof Error ? error.message : '服务器内部错误' })
   }
 })
 
@@ -248,7 +248,7 @@ router.delete('/:id/documents/:docName', async (req, res) => {
     return res.status(200).json({ message: '文档删除成功' })
   } catch (error) {
     console.error('删除文档错误:', error)
-    return res.status(500).json({ error: '服务器内部错误' })
+    return res.status(500).json({ error: error instanceof Error ? error.message : '服务器内部错误' })
   }
 })
 
@@ -298,7 +298,7 @@ router.get('/:id/stats', async (req, res) => {
     return res.status(200).json(stats)
   } catch (error) {
     console.error('获取统计错误:', error)
-    return res.status(500).json({ error: '服务器内部错误' })
+    return res.status(500).json({ error: error instanceof Error ? error.message : '服务器内部错误' })
   }
 })
 
@@ -324,7 +324,7 @@ router.get('/:id/chunks/:docName', async (req, res) => {
     })))
   } catch (error) {
     console.error('获取分块列表错误:', error)
-    return res.status(500).json({ error: '服务器内部错误' })
+    return res.status(500).json({ error: error instanceof Error ? error.message : '服务器内部错误' })
   }
 })
 

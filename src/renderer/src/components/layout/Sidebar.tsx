@@ -36,7 +36,7 @@ const Sidebar: React.FC<SidebarProps> = ({ currentPage, onNavigate, navItems, co
 
   return (
     <>
-      <nav className={`hidden md:block bg-white/80 dark:bg-gray-800/80 backdrop-blur-md shadow-sm border-r border-gray-200/50 dark:border-gray-700/50 flex-shrink-0 z-30 transition-all duration-300 ${sidebarCollapsed ? 'w-16' : 'w-52'}`}>
+      <nav className={`hidden md:block bg-white/80 dark:bg-gray-800/80 backdrop-blur-md shadow-sm border-r border-gray-200/50 dark:border-gray-700/50 flex-shrink-0 z-30 transition-[width] duration-300 ${sidebarCollapsed ? 'w-16' : 'w-52'}`}>
         <div className="flex flex-col h-full">
           <div className="flex-1 flex flex-col pt-4 pb-2 space-y-2 overflow-y-auto [scrollbar-gutter:stable]">
             {navItems.map((item) => (

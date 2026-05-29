@@ -13,7 +13,7 @@ router.get('/', async (_, res) => {
     return res.status(200).json(vars)
   } catch (error) {
     console.error('获取环境变量列表错误:', error)
-    return res.status(500).json({ error: '服务器内部错误' })
+    return res.status(500).json({ error: error instanceof Error ? error.message : '服务器内部错误' })
   }
 })
 
@@ -40,7 +40,7 @@ router.post('/', async (req, res) => {
     return res.status(201).json(envVar.toJSON())
   } catch (error) {
     console.error('创建环境变量错误:', error)
-    return res.status(500).json({ error: '服务器内部错误' })
+    return res.status(500).json({ error: error instanceof Error ? error.message : '服务器内部错误' })
   }
 })
 
@@ -57,7 +57,7 @@ router.get('/:id', async (req, res) => {
     return res.status(200).json(envVar.toJSON())
   } catch (error) {
     console.error('获取环境变量错误:', error)
-    return res.status(500).json({ error: '服务器内部错误' })
+    return res.status(500).json({ error: error instanceof Error ? error.message : '服务器内部错误' })
   }
 })
 
@@ -82,7 +82,7 @@ router.put('/:id', async (req, res) => {
     return res.status(200).json(envVar.toJSON())
   } catch (error) {
     console.error('更新环境变量错误:', error)
-    return res.status(500).json({ error: '服务器内部错误' })
+    return res.status(500).json({ error: error instanceof Error ? error.message : '服务器内部错误' })
   }
 })
 
@@ -101,7 +101,7 @@ router.delete('/:id', async (req, res) => {
     return res.status(204).send()
   } catch (error) {
     console.error('删除环境变量错误:', error)
-    return res.status(500).json({ error: '服务器内部错误' })
+    return res.status(500).json({ error: error instanceof Error ? error.message : '服务器内部错误' })
   }
 })
 

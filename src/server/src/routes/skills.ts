@@ -28,7 +28,7 @@ router.get('/', async (req, res) => {
     return res.status(200).json(skills)
   } catch (error) {
     console.error('获取技能列表错误:', error)
-    return res.status(500).json({ error: '服务器内部错误' })
+    return res.status(500).json({ error: error instanceof Error ? error.message : '服务器内部错误' })
   }
 })
 
@@ -49,7 +49,7 @@ router.post('/', async (req, res) => {
     return res.status(201).json(skill.toJSON())
   } catch (error) {
     console.error('创建技能错误:', error)
-    return res.status(500).json({ error: '服务器内部错误' })
+    return res.status(500).json({ error: error instanceof Error ? error.message : '服务器内部错误' })
   }
 })
 
@@ -66,7 +66,7 @@ router.get('/:id', async (req, res) => {
     return res.status(200).json(skill.toJSON())
   } catch (error) {
     console.error('获取技能错误:', error)
-    return res.status(500).json({ error: '服务器内部错误' })
+    return res.status(500).json({ error: error instanceof Error ? error.message : '服务器内部错误' })
   }
 })
 
@@ -90,7 +90,7 @@ router.put('/:id', async (req, res) => {
     return res.status(200).json(skill.toJSON())
   } catch (error) {
     console.error('更新技能错误:', error)
-    return res.status(500).json({ error: '服务器内部错误' })
+    return res.status(500).json({ error: error instanceof Error ? error.message : '服务器内部错误' })
   }
 })
 
@@ -108,7 +108,7 @@ router.delete('/:id', async (req, res) => {
     return res.status(204).send()
   } catch (error) {
     console.error('删除技能错误:', error)
-    return res.status(500).json({ error: '服务器内部错误' })
+    return res.status(500).json({ error: error instanceof Error ? error.message : '服务器内部错误' })
   }
 })
 

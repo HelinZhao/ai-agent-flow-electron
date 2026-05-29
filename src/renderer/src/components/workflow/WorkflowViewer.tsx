@@ -53,6 +53,7 @@ function Viewer({ nodes, edges }: WorkflowViewerData) {
         }
         setSelectedNode(wfNode)
       }}
+      onlyRenderVisibleElements
       onPaneClick={() => setSelectedNode(null)}
     >
       <Background variant={BackgroundVariant.Dots} gap={16} size={1} color="#e5e7eb" />

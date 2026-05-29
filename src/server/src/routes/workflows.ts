@@ -39,7 +39,7 @@ router.get('/', async (req, res) => {
     return res.status(200).send(JSON.stringify(result, null, 2))
   } catch (error) {
     console.error('获取工作流列表错误:', error)
-    return res.status(500).json({ error: '服务器内部错误' })
+    return res.status(500).json({ error: error instanceof Error ? error.message : '服务器内部错误' })
   }
 })
 
@@ -65,7 +65,7 @@ router.post('/', async (req, res) => {
     })
   } catch (error) {
     console.error('创建工作流错误:', error)
-    return res.status(500).json({ error: '服务器内部错误' })
+    return res.status(500).json({ error: error instanceof Error ? error.message : '服务器内部错误' })
   }
 })
 
@@ -85,7 +85,7 @@ router.get('/:id', async (req, res) => {
     })
   } catch (error) {
     console.error('获取工作流错误:', error)
-    return res.status(500).json({ error: '服务器内部错误' })
+    return res.status(500).json({ error: error instanceof Error ? error.message : '服务器内部错误' })
   }
 })
 
@@ -116,7 +116,7 @@ router.put('/:id', async (req, res) => {
     })
   } catch (error) {
     console.error('更新工作流错误:', error)
-    return res.status(500).json({ error: '服务器内部错误' })
+    return res.status(500).json({ error: error instanceof Error ? error.message : '服务器内部错误' })
   }
 })
 
@@ -134,7 +134,7 @@ router.delete('/:id', async (req, res) => {
     return res.status(204).send()
   } catch (error) {
     console.error('删除工作流错误:', error)
-    return res.status(500).json({ error: '服务器内部错误' })
+    return res.status(500).json({ error: error instanceof Error ? error.message : '服务器内部错误' })
   }
 })
 

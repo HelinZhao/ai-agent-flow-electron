@@ -31,7 +31,7 @@ router.get('/', async (_req, res) => {
       return res.status(200).json([])
     }
 
-    return res.status(500).json({ error: '服务器内部错误' })
+    return res.status(500).json({ error: error instanceof Error ? error.message : '服务器内部错误' })
   }
 })
 
@@ -56,7 +56,7 @@ router.get('/active', async (_req, res) => {
       return res.status(200).json({})
     }
 
-    return res.status(500).json({ error: '服务器内部错误' })
+    return res.status(500).json({ error: error instanceof Error ? error.message : '服务器内部错误' })
   }
 })
 
@@ -93,7 +93,7 @@ router.post('/', async (req, res) => {
     return res.status(201).json(newConfig)
   } catch (error) {
     console.error('创建LLM配置错误:', error)
-    return res.status(500).json({ error: '服务器内部错误' })
+    return res.status(500).json({ error: error instanceof Error ? error.message : '服务器内部错误' })
   }
 })
 
@@ -122,7 +122,7 @@ router.put('/:id', async (req, res) => {
     return res.status(200).json(config)
   } catch (error) {
     console.error('更新LLM配置错误:', error)
-    return res.status(500).json({ error: '服务器内部错误' })
+    return res.status(500).json({ error: error instanceof Error ? error.message : '服务器内部错误' })
   }
 })
 
@@ -157,7 +157,7 @@ router.delete('/:id', async (req, res) => {
     return res.status(200).json({ message: '配置删除成功' })
   } catch (error) {
     console.error('删除LLM配置错误:', error)
-    return res.status(500).json({ error: '服务器内部错误' })
+    return res.status(500).json({ error: error instanceof Error ? error.message : '服务器内部错误' })
   }
 })
 
@@ -180,7 +180,7 @@ router.post('/:id/activate', async (req, res) => {
     return res.status(200).json({ message: '配置切换成功', config })
   } catch (error) {
     console.error('切换LLM配置错误:', error)
-    return res.status(500).json({ error: '服务器内部错误' })
+    return res.status(500).json({ error: error instanceof Error ? error.message : '服务器内部错误' })
   }
 })
 

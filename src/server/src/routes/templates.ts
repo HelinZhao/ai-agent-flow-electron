@@ -15,7 +15,7 @@ router.get('/', async (req, res) => {
     return res.status(200).json(templates)
   } catch (error) {
     console.error('获取模板列表错误:', error)
-    return res.status(500).json({ error: '服务器内部错误' })
+    return res.status(500).json({ error: error instanceof Error ? error.message : '服务器内部错误' })
   }
 })
 
@@ -26,7 +26,7 @@ router.get('/:id', async (req, res) => {
     if (!template) return res.status(404).json({ error: '模板不存在' })
     return res.status(200).json(template)
   } catch (error) {
-    return res.status(500).json({ error: '服务器内部错误' })
+    return res.status(500).json({ error: error instanceof Error ? error.message : '服务器内部错误' })
   }
 })
 

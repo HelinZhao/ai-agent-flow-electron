@@ -69,6 +69,13 @@ const CustomSelect: React.FC<CustomSelectProps> = ({
     lg: 'text-lg'
   };
 
+  const dropdownPadding = {
+    xs: 'px-2 py-1.5',
+    sm: 'px-3 py-2',
+    md: 'px-4 py-2.5',
+    lg: 'px-5 py-3'
+  };
+
   const isBorderless = variant === 'borderless';
 
   const updateDropdownPos = useCallback(() => {
@@ -198,7 +205,7 @@ const CustomSelect: React.FC<CustomSelectProps> = ({
     >
       <div role="listbox">
         {options.length === 0 ? (
-          <div className={`px-4 py-3 ${dropdownTextSize[size]} text-gray-500 dark:text-gray-400 text-center`}>
+          <div className={`${dropdownPadding[size]} ${dropdownTextSize[size]} text-gray-500 dark:text-gray-400 text-center`}>
             暂无选项
           </div>
         ) : (
@@ -207,7 +214,8 @@ const CustomSelect: React.FC<CustomSelectProps> = ({
               key={option.value}
               data-value={option.value}
               className={`
-                px-4 py-3 cursor-pointer transition-colors duration-150
+                cursor-pointer transition-colors duration-150
+                ${dropdownPadding[size]}
                 flex items-center justify-between group
                 ${option.value === value
                   ? 'bg-gradient-to-r from-blue-50 to-purple-50 dark:from-blue-900/30 dark:to-purple-900/30 text-blue-700 dark:text-blue-300'
