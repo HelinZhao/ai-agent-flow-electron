@@ -1,10 +1,11 @@
 import { memo, useEffect, useRef, useState } from 'react'
+import { useDebounce, useDebounceEffect } from 'ahooks'
+import CustomInput from '@renderer/components/ui/CustomInput'
 import { ExecutionSummary, WorkflowExecutionProgress, TokenUsageSummary } from '@renderer/types'
 import { workflowExecutionApi, tokenUsageApi } from '@renderer/lib/api'
 import { useWorkflowStore } from '@renderer/store/workflowStore'
 import Pagination from '@renderer/components/ui/Pagination'
 import ExecutionResultTabs from '@renderer/components/workflow/ExecutionResultTabs'
-import { useDebounceEffect } from 'ahooks'
 
 const PAGE_SIZE = 20
 
@@ -52,6 +53,8 @@ const ExecutionMonitor = () => {
   const [page, setPage] = useState(1)
   const [filter, setFilter] = useState<StatusFilter>('all')
   const [isLoading, setIsLoading] = useState(true)
+  const [searchTerm, setSearchTerm] = useState('')
+  const debouncedSearch = useDebounce(searchTerm, { wait: 300 })
   const [expandedId, setExpandedId] = useState<string | null>(null)
   const [detailId, setDetailId] = useState<string | null>(null)
   const pollingRef = useRef<ReturnType<typeof setInterval>>(null)
@@ -70,7 +73,7 @@ const ExecutionMonitor = () => {
 
     const poll = async () => {
       try {
-        const result = await workflowExecutionApi.listExecutions(statusParam, page, PAGE_SIZE)
+        const result = await workflowExecutionApi.listExecutions(statusParam, page, PAGE_SIZE, debouncedSearch || undefined)
         if (cancelled) return
         setExecutions(result.data)
         setTotal(result.total)
@@ -92,7 +95,7 @@ const ExecutionMonitor = () => {
       cancelled = true
       if (pollingRef.current) clearTimeout(pollingRef.current)
     }
-  }, [statusParam, page, currentPage])
+  }, [statusParam, page, currentPage, debouncedSearch])
 
   const handleStop = async (id: string) => {
     try {
@@ -121,16 +124,29 @@ const ExecutionMonitor = () => {
   return (
     <div className="py-4 px-6">
       {/* 标题 */}
-      <div className="mb-4">
-        <div className="flex items-center gap-2 mb-1">
-          <svg className="w-6 h-6 text-blue-500" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-            <path d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4" />
-          </svg>
-          <h1 className="text-xl font-bold bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent">
-            执行监控
-          </h1>
+      <div className="flex items-start justify-between mb-4">
+        <div>
+          <div className="flex items-center gap-2 mb-1">
+            <svg className="w-6 h-6 text-blue-500" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+              <path d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4" />
+            </svg>
+            <h1 className="text-xl font-bold bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent">
+              执行监控
+            </h1>
+          </div>
+          <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">实时查看工作流执行状态，管理运行中的任务，追踪执行历史和节点输出</p>
         </div>
-        <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">实时查看工作流执行状态，管理运行中的任务，追踪执行历史和节点输出</p>
+        <div className="flex-shrink-0 ml-4" style={{ width: 200 }}>
+          <CustomInput
+            value={searchTerm}
+            onChange={e => { setSearchTerm(e.target.value); setPage(1) }}
+            placeholder="搜索工作流名称..."
+            size="sm"
+            clearable
+            className="max-w-[240px] rounded-xl"
+            leftIcon={<svg className="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><circle cx="11" cy="11" r="8" /><path d="m21 21-4.35-4.35" /></svg>}
+          />
+        </div>
       </div>
 
       {/* 过滤标签 */}
@@ -280,10 +296,10 @@ const ExecutionMonitor = () => {
                   <div className="w-full bg-gray-100 dark:bg-gray-700/50 rounded-full h-2 overflow-hidden">
                     <div
                       className={`h-full rounded-full transition-all duration-500 ${exec.status === 'failed'
-                          ? 'bg-gradient-to-r from-red-500 to-red-400'
-                          : exec.status === 'completed'
-                            ? 'bg-gradient-to-r from-green-500 to-emerald-400'
-                            : 'bg-gradient-to-r from-blue-500 to-blue-400'
+                        ? 'bg-gradient-to-r from-red-500 to-red-400'
+                        : exec.status === 'completed'
+                          ? 'bg-gradient-to-r from-green-500 to-emerald-400'
+                          : 'bg-gradient-to-r from-blue-500 to-blue-400'
                         }`}
                       style={{ width: `${Math.max(exec.progress, exec.status === 'running' ? 2 : 0)}%` }}
                     />
@@ -492,10 +508,10 @@ const DetailModal: React.FC<DetailModalProps> = ({ executionId, onClose, onStop,
             </div>
             <div className="w-full bg-gray-100 dark:bg-gray-700/50 rounded-full h-2 overflow-hidden">
               <div className={`h-full rounded-full transition-all duration-500 ${metrics.status === 'failed'
-                  ? 'bg-gradient-to-r from-red-500 to-red-400'
-                  : metrics.status === 'completed'
-                    ? 'bg-gradient-to-r from-green-500 to-emerald-400'
-                    : 'bg-gradient-to-r from-blue-500 to-blue-400'
+                ? 'bg-gradient-to-r from-red-500 to-red-400'
+                : metrics.status === 'completed'
+                  ? 'bg-gradient-to-r from-green-500 to-emerald-400'
+                  : 'bg-gradient-to-r from-blue-500 to-blue-400'
                 }`}
                 style={{ width: `${Math.max(metrics.progress, isRunning ? 2 : 0)}%` }} />
             </div>

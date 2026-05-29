@@ -323,7 +323,7 @@ export const LOG_MAX_ENTRIES = 2000
 // ========== 文件上传 ==========
 
 /** 知识库文档上传允许的文件扩展名 */
-export const KB_UPLOAD_EXTENSIONS = ['.txt', '.md']
+export const KB_UPLOAD_EXTENSIONS = ['.txt', '.md', '.pdf', '.csv']
 
 // ========== MCP 服务器配置 ==========
 

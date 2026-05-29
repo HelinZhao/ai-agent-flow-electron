@@ -98,7 +98,9 @@ export default function Marketplace(): React.JSX.Element {
           value={searchTerm}
           onChange={e => setSearchTerm(e.target.value)}
           size="sm"
+          clearable
           className="max-w-[240px] rounded-xl"
+          leftIcon={<svg className="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><circle cx="11" cy="11" r="8" /><path d="m21 21-4.35-4.35" /></svg>}
         />
       </div>
 

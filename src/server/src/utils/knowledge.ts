@@ -49,7 +49,19 @@ async function readFileContent(filePath: string): Promise<string> {
   if (ext === '.txt' || ext === '.md') {
     return await fs.readFile(filePath, 'utf-8')
   }
-  throw new Error(`暂不支持 ${ext} 格式的文件，仅支持 txt/md`)
+  if (ext === '.pdf') {
+    const pdfParse = (await import('pdf-parse')).default
+    const buffer = await fs.readFile(filePath)
+    const data = await pdfParse(buffer)
+    return data.text
+  }
+  if (ext === '.csv') {
+    const text = await fs.readFile(filePath, 'utf-8')
+    const rows = text.split('\n').filter(r => r.trim())
+    // 每行转为 "列1 | 列2 | 列3 ..." 格式，方便 LLM 理解
+    return rows.map(r => r.split(/[,\t]/).map(c => c.trim()).join(' | ')).join('\n')
+  }
+  throw new Error(`暂不支持 ${ext} 格式的文件，仅支持 txt/md/pdf/csv`)
 }
 
 // 处理上传文档：分块 → embedding → 存储

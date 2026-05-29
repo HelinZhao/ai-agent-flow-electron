@@ -231,8 +231,13 @@ router.get('/progress-sse/:executionId', (req, res) => {
 // 获取所有执行记录列表
 router.get('/list', (req, res) => {
   try {
-    const { status, page: pageStr, pageSize: pageSizeStr } = req.query
-    const allExecutions = monitoredExecutor.getAllExecutions(status as string | undefined)
+    const { status, name, page: pageStr, pageSize: pageSizeStr } = req.query
+    let allExecutions = monitoredExecutor.getAllExecutions(status as string | undefined)
+    // 按工作流名称搜索
+    if (name && typeof name === 'string') {
+      const lowerName = name.toLowerCase()
+      allExecutions = allExecutions.filter(e => e.workflowName.toLowerCase().includes(lowerName))
+    }
     const total = allExecutions.length
 
     const page = Math.max(1, parseInt(pageStr as string, 10) || 1)

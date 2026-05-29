@@ -31,7 +31,7 @@ const upload = multer({
     if (KB_UPLOAD_EXTENSIONS.includes(ext)) {
       cb(null, true)
     } else {
-      cb(new Error(`暂不支持 ${ext} 格式的文件，仅支持 txt/md`))
+      cb(new Error(`暂不支持 ${ext} 格式的文件，仅支持 txt/md/pdf/csv`))
     }
   }
 })

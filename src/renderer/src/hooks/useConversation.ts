@@ -404,6 +404,13 @@ export function useConversation() {
     ? (conversationsRef.current[selectedAgent.id]?.length ?? 0) > messages.length
     : false
 
+  const searchAllMessages = useCallback((term: string): ChatMessageType[] => {
+    if (!term.trim() || !selectedAgent) return messages
+    const all = conversationsRef.current[selectedAgent.id] || []
+    const lowerTerm = term.toLowerCase()
+    return all.filter(m => m.content.toLowerCase().includes(lowerTerm))
+  }, [selectedAgent, messages])
+
   return {
     selectedAgent, setSelectedAgent: switchAgent,
     messages, inputMessage, setInputMessage, pendingAttachments, setPendingAttachments,
@@ -414,6 +421,6 @@ export function useConversation() {
     sendMessage, handleApprove, handleAutoApprove, handleTerminate,
     startNewChat, clearCurrentchatRecord, regenerate,
     loadMoreMessages, hasMoreMessages,
-    scrollToBottom, messagesEndRef,
+    scrollToBottom, messagesEndRef, searchAllMessages,
   }
 }

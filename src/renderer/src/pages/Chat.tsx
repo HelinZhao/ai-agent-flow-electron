@@ -36,6 +36,7 @@ export default function Chat(): React.JSX.Element {
     startNewChat, clearCurrentchatRecord, regenerate,
     loadMoreMessages, hasMoreMessages,
     messagesEndRef: convMessagesEndRef,
+    searchAllMessages,
   } = conv
 
   // 输入框拖拽缩放
@@ -241,7 +242,7 @@ export default function Chat(): React.JSX.Element {
                     const searchTerm = messageSearch.trim().toLowerCase()
                     const hasSearch = searchTerm.length > 0
                     const filtered = hasSearch
-                      ? messages.filter(m => m.content.toLowerCase().includes(searchTerm))
+                      ? searchAllMessages(searchTerm)
                       : messages
 
                     // 定位最后一条 agent 消息的索引（在过滤后的数组中的位置）

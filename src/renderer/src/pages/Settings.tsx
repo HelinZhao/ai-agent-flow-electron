@@ -84,10 +84,10 @@ const SETTINGS_TABS = [
   { id: 'env-vars', label: '环境变量', desc: '工作流环境变量管理' },
   { id: 'theme', label: '外观主题', desc: '界面颜色与显示' },
   { id: 'data', label: '数据管理', desc: '数据库与存储空间' },
+  { id: 'token-usage', label: 'Token 用量', desc: '各模型 Token 消耗统计' },
+  { id: 'git', label: 'Git', desc: '版本控制与历史管理' },
   { id: 'sponsor', label: '赞助支持', desc: '赞助项目发展' },
   { id: 'about', label: '关于', desc: '版本信息与技术栈' },
-  { id: 'git', label: 'Git', desc: '版本控制与历史管理' },
-  { id: 'token-usage', label: 'Token 用量', desc: '各模型 Token 消耗统计' },
 ]
 
 export default function Settings(): React.JSX.Element {
