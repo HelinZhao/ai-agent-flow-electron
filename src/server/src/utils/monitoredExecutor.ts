@@ -8,7 +8,7 @@ import { AttachmentPayload, buildHumanMessage } from './shared'
 import { v4 as uuidv4 } from 'uuid'
 import { SqliteSaver } from '@langchain/langgraph-checkpoint-sqlite'
 import { DB_FILENAME, DANGEROUS_TOOLS } from '../config'
-import { EnvVarModel } from '../models'
+import { EnvVarModel, LLMConfigModel } from '../models'
 import { createFrontendActionTool, createGetContextTool } from '../tools/frontendTools'
 
 import { ExecutionState, PASSTHROUGH_NODES, ExecutionTerminatedError, NodeExecutorDeps } from './executor/types'
@@ -16,6 +16,8 @@ import { executeMonitoredNode } from './executor/nodes'
 import { mergeThreadAttachments } from './executor/helpers'
 
 const checkpointer = SqliteSaver.fromConnString(getUserDataDir(DB_FILENAME))
+
+import { CHAT_MAX_HISTORY, CHAT_KEEP_LATEST } from '../config'
 
 export class MonitoredLangGraphExecutor {
   private executionStates = new Map<string, ExecutionState>()
@@ -416,6 +418,41 @@ export class MonitoredLangGraphExecutor {
 
   clearEnvVarsCache(): void { this.envVarsCache = null }
 
+  // ============================================================
+  //  对话历史压缩
+  // ============================================================
+  private async compressThreadHistory(threadId: string): Promise<void> {
+    const messages = this.threadMessages.get(threadId)
+    if (!messages || messages.length <= CHAT_MAX_HISTORY) return
+
+    const toSummarize = messages.slice(0, messages.length - CHAT_KEEP_LATEST)
+    const recent = messages.slice(-CHAT_KEEP_LATEST)
+
+    const text = toSummarize
+      .map(m => `[${m.type}] ${typeof m.content === 'string' ? m.content.slice(0, 500) : '(非文本内容)'}`)
+      .join('\n')
+
+    let summary = ''
+    try {
+      const config = await LLMConfigModel.findOne({ where: { isActive: true } })
+      if (!config) { this.threadMessages.set(threadId, recent); return }
+      const llmConfig: LLMConfig = {
+        provider: config.provider, apiKey: config.apiKey, model: config.model,
+        baseUrl: config.baseUrl, temperature: 0, maxTokens: 1024,
+      }
+      const { content } = await callLLM(
+        `请用中文将以下对话压缩为一段简洁的摘要，保留关键决策、结论和用户意图（不超过 300 字）：\n\n${text}`,
+        llmConfig,
+      )
+      summary = content
+    } catch { /* 压缩失败则直接丢弃旧消息 */ }
+
+    const compressed = summary
+      ? [new AIMessage(`【历史摘要】\n${summary}`), ...recent]
+      : recent
+
+    this.threadMessages.set(threadId, compressed)
+  }
 
   // ============================================================
   //  状态查询与列表
@@ -647,6 +684,8 @@ export class MonitoredLangGraphExecutor {
   ): Promise<void> {
     try {
       const state = this.executionStates.get(executionId)
+      // 压缩过长历史
+      if (threadId) await this.compressThreadHistory(threadId)
       const conversationHistory = this.threadMessages.get(threadId) || []
       const userMessage = new HumanMessage(input)
       const updatedHistory = [...conversationHistory, userMessage]

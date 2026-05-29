@@ -406,3 +406,11 @@ export const ATTACHMENT_CONTENT_TYPES: Record<string, string> = {
   '.wav': 'audio/wav',
   '.mp4': 'video/mp4',
 }
+
+// ========== 对话历史压缩 ==========
+
+/** 超过此消息数量触发历史压缩 */
+export const CHAT_MAX_HISTORY = 80
+
+/** 压缩后保留的最近消息数 */
+export const CHAT_KEEP_LATEST = 40
