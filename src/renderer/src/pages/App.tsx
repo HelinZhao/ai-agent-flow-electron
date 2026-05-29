@@ -25,17 +25,17 @@ import {
 } from '@renderer/components/icons/NavIcons';
 
 const navItems = [
-  { path: '/chat', label: 'AI对话', icon: <ChatIcon />, page: <Chat /> },
-  { path: '/', label: '工作流', icon: <WorkflowIcon />, page: <Workflow /> },
-  { path: '/agents', label: 'Agent', icon: <AgentIcon />, page: <Agents /> },
-  { path: '/skills', label: '技能', icon: <SkillsIcon />, page: <Skills /> },
-  { path: '/knowledge', label: '知识库', icon: <KnowledgeIcon />, page: <Knowledge /> },
-  { path: '/triggers', label: '触发器', icon: <TriggersIcon />, page: <Triggers /> },
-  { path: '/mcp', label: 'MCP服务', icon: <McpIcon />, page: <McpServers /> },
-  { path: '/marketplace', label: '模板市场', icon: <MarketplaceIcon />, page: <Marketplace /> },
-  { path: '/monitor', label: '执行监控', icon: <MonitorIcon />, page: <ExecutionMonitor /> },
-  { path: '/settings', label: '设置', icon: <SettingsIcon />, page: <Settings /> },
-  { path: '/logs', label: '日志', icon: <LogsIcon />, page: <Logs /> }
+  { path: '/chat', label: 'AI对话', icon: <ChatIcon />, page: <Chat />, group: '核心' },
+  { path: '/', label: '工作流', icon: <WorkflowIcon />, page: <Workflow />, group: '核心' },
+  { path: '/agents', label: 'Agent', icon: <AgentIcon />, page: <Agents />, group: '核心' },
+  { path: '/skills', label: '技能', icon: <SkillsIcon />, page: <Skills />, group: '能力' },
+  { path: '/knowledge', label: '知识库', icon: <KnowledgeIcon />, page: <Knowledge />, group: '能力' },
+  { path: '/triggers', label: '触发器', icon: <TriggersIcon />, page: <Triggers />, group: '能力' },
+  { path: '/mcp', label: 'MCP服务', icon: <McpIcon />, page: <McpServers />, group: '能力' },
+  { path: '/marketplace', label: '模板市场', icon: <MarketplaceIcon />, page: <Marketplace />, group: '资源' },
+  { path: '/monitor', label: '执行监控', icon: <MonitorIcon />, page: <ExecutionMonitor />, group: '运维' },
+  { path: '/settings', label: '设置', icon: <SettingsIcon />, page: <Settings />, group: '系统' },
+  { path: '/logs', label: '日志', icon: <LogsIcon />, page: <Logs />, group: '系统' }
 ]
 
 let init = false

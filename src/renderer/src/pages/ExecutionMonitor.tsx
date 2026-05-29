@@ -136,17 +136,15 @@ const ExecutionMonitor = () => {
           </div>
           <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">实时查看工作流执行状态，管理运行中的任务，追踪执行历史和节点输出</p>
         </div>
-        <div className="flex-shrink-0 ml-4" style={{ width: 200 }}>
-          <CustomInput
-            value={searchTerm}
-            onChange={e => { setSearchTerm(e.target.value); setPage(1) }}
-            placeholder="搜索工作流名称..."
-            size="sm"
-            clearable
-            className="max-w-[240px] rounded-xl"
-            leftIcon={<svg className="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><circle cx="11" cy="11" r="8" /><path d="m21 21-4.35-4.35" /></svg>}
-          />
-        </div>
+        <CustomInput
+          value={searchTerm}
+          onChange={e => { setSearchTerm(e.target.value); setPage(1) }}
+          placeholder="搜索工作流名称..."
+          size="sm"
+          clearable
+          className="max-w-[240px] rounded-xl"
+          leftIcon={<svg className="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><circle cx="11" cy="11" r="8" /><path d="m21 21-4.35-4.35" /></svg>}
+        />
       </div>
 
       {/* 过滤标签 */}
