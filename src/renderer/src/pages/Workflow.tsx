@@ -273,14 +273,14 @@ export default function Workflow(): React.JSX.Element {
     return (
       <div className="px-6 py-4 h-full flex flex-col">
         {/* 顶部导航 */}
-        <div className="flex items-center space-x-3 mb-4 flex-shrink-0 relative">
-          <button
-            onClick={handleBack}
-            className="flex items-center justify-center w-8 h-8 rounded-lg text-gray-500 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors"
-          >
-            <svg className="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M15 19l-7-7 7-7" /></svg>
-          </button>
-          <div className="flex items-center space-x-2">
+        <div className="flex items-center justify-between mb-4 flex-shrink-0 relative">
+          <div className="flex items-center space-x-3">
+            <button
+              onClick={handleBack}
+              className="flex items-center justify-center w-8 h-8 rounded-lg text-gray-500 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors"
+            >
+              <svg className="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M15 19l-7-7 7-7" /></svg>
+            </button>
             <div className="w-8 h-8 bg-gradient-to-r from-blue-500 to-purple-600 rounded-lg flex items-center justify-center flex-shrink-0">
               <span className="text-white font-bold text-sm">🔄</span>
             </div>
@@ -291,7 +291,7 @@ export default function Workflow(): React.JSX.Element {
               )}
             </div>
           </div>
-          <div className="ml-auto">
+          <div>
             <GitHistoryForEntity type="workflows" entityId={selectedWorkflow.id} entityName={selectedWorkflow.name} />
           </div>
           {saveMessage && (

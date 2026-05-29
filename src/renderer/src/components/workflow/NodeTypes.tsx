@@ -2,6 +2,7 @@ import { Handle, Position } from '@xyflow/react';
 import { NODE_DEFS_MAP } from './nodes';
 import { useContext } from 'react';
 import { LayoutDirectionContext } from './LayoutDirectionContext';
+import { useWorkflowStore } from '@renderer/store/workflowStore'
 
 // -- 节点颜色片段（集中拼装，避免各节点重复计算） --
 
@@ -666,6 +667,44 @@ export function CatchNode({ data, selected }: { data: any; selected: boolean }):
         <div className="flex-1 text-left">
           <div className="font-bold text-gray-800">{def.shortLabel}</div>
           <div className="text-xs text-gray-700 font-medium mt-0.5">{data.label}</div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ============================================================
+//  TeamNode
+// ============================================================
+export function TeamNode({ data, selected }: { data: any; selected: boolean }): React.JSX.Element {
+  const direction = useContext(LayoutDirectionContext)
+  const def = NODE_DEFS_MAP['team']
+  const team = useWorkflowStore(state => state.teams.find(t => t.id === data.config?.teamId))
+  const targetPos = direction === 'vertical' ? Position.Top : Position.Left
+  const sourcePos = direction === 'vertical' ? Position.Bottom : Position.Right
+  const memberCount = team?.memberIds
+    ? (typeof team.memberIds === 'string' ? JSON.parse(team.memberIds) : team.memberIds).length
+    : 0
+  return (
+    <div className={`node-team group relative px-4 py-3 min-w-[160px] ${nodeBg(def)} rounded-lg transition-shadowduration-300 ${nodeBorder(def)} ${selected ? nodeRing(def) : 'hover:shadow-glow-md dark:hover:shadow-glow-md-w'}`}>
+      <Handle type="target" position={targetPos} className={handleClass(def)} />
+      <Handle type="source" position={sourcePos} className={handleClass(def)} />
+      <div className="flex items-center space-x-3">
+        <div className={iconBox(def)}>
+          <span className="text-black text-base">{def.icon}</span>
+        </div>
+        <div className="flex-1 text-left">
+          <div className="font-bold text-gray-800">{def.shortLabel}</div>
+          <div className="text-xs text-gray-700 font-medium mt-0.5">{data.label}</div>
+          {team ? (
+            <div className="text-xs text-gray-600 font-medium mt-1 bg-white/30 rounded border border-white/40 max-w-[140px] truncate">
+              {team.name} · {memberCount} 人
+            </div>
+          ) : data.config?.teamId ? (
+            <div className="text-xs text-amber-500 font-medium mt-1">团队不可用</div>
+          ) : (
+            <div className="text-xs text-gray-500 font-medium mt-1">未配置团队</div>
+          )}
         </div>
       </div>
     </div>

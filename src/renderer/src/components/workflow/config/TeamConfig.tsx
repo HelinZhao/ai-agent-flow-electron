@@ -1,4 +1,6 @@
 import { useWorkflowStore } from '@renderer/store/workflowStore'
+import CustomSelect from '../../ui/CustomSelect'
+import CustomTextarea from '../../ui/CustomTextarea'
 
 interface TeamConfigProps {
   config: Record<string, any>
@@ -14,16 +16,15 @@ export default function TeamConfig({ config, onConfigChange }: TeamConfigProps) 
     <div className="space-y-4">
       <div>
         <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5">选择团队</label>
-        <select
+        <CustomSelect
           value={config.teamId || ''}
-          onChange={e => onConfigChange({ ...config, teamId: e.target.value })}
-          className="w-full px-3 py-2 text-sm rounded-xl border border-gray-200 dark:border-gray-600 bg-white dark:bg-gray-800 text-gray-800 dark:text-gray-200"
-        >
-          <option value="">— 选择团队 —</option>
-          {teams.map(t => (
-            <option key={t.id} value={t.id}>{t.name}</option>
-          ))}
-        </select>
+          onChange={(val) => onConfigChange({ ...config, teamId: val })}
+          options={[
+            { value: '', label: '— 选择团队 —' },
+            ...teams.map(t => ({ value: t.id, label: t.name }))
+          ]}
+          size="sm"
+        />
         {teams.length === 0 && (
           <p className="text-xs text-amber-500 mt-1">请先创建团队</p>
         )}
@@ -41,6 +42,23 @@ export default function TeamConfig({ config, onConfigChange }: TeamConfigProps) 
                 : selectedTeam.memberIds
               ).length
             } 人
+          </p>
+        </div>
+      )}
+
+      {selectedTeam && (
+        <div>
+          <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5">
+            任务描述
+          </label>
+          <CustomTextarea
+            value={config.taskDescription || ''}
+            onChange={(e) => onConfigChange({ ...config, taskDescription: e.target.value })}
+            placeholder="分配给团队的任务描述，支持 {{$input}} 模板变量"
+            rows={3}
+          />
+          <p className="text-xs text-gray-400 dark:text-gray-500 mt-1">
+            可使用 <code className="text-blue-500">&#123;&#123;$input&#125;&#125;</code> 引用前序节点输出
           </p>
         </div>
       )}
