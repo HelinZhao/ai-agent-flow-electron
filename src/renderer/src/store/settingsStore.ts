@@ -9,11 +9,13 @@ interface SettingsState {
   autoSaveInterval: number // 秒
   autoStart: boolean
   showSystemAssistant: boolean
+  gitEnabled: boolean
   setLayoutDirection: (dir: LayoutDirection) => void
   setAutoSave: (on: boolean) => void
   setAutoSaveInterval: (sec: number) => void
   setAutoStart: (on: boolean) => void
   setShowSystemAssistant: (on: boolean) => void
+  setGitEnabled: (on: boolean) => void
   reset: () => void
 }
 
@@ -23,6 +25,7 @@ const DEFAULTS = {
   autoSaveInterval: 30,
   autoStart: false,
   showSystemAssistant: true,
+  gitEnabled: false,
 }
 
 export const useSettingsStore = create<SettingsState>()(
@@ -35,6 +38,7 @@ export const useSettingsStore = create<SettingsState>()(
       setAutoSaveInterval: (autoSaveInterval) => set({ autoSaveInterval }),
       setAutoStart: (autoStart) => set({ autoStart }),
       setShowSystemAssistant: (showSystemAssistant) => set({ showSystemAssistant }),
+      setGitEnabled: (gitEnabled) => set({ gitEnabled }),
       reset: () => set(DEFAULTS),
     }),
     {

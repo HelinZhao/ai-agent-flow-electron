@@ -2,10 +2,13 @@ import { useState, useEffect } from 'react'
 import CustomButton from '@renderer/components/ui/CustomButton'
 import CustomSwitch from '@renderer/components/ui/CustomSwitch'
 import CustomInput from '@renderer/components/ui/CustomInput'
+import MessageBanner from '@renderer/components/ui/MessageBanner'
+import { useSettingsStore } from '@renderer/store/settingsStore'
 
 const isElectron = Boolean(window.electron || window.api)
 
 export default function SettingsGit() {
+  const setGitEnabledStore = useSettingsStore(s => s.setGitEnabled)
   const [enabled, setEnabled] = useState(false)
   const [repoPath, setRepoPath] = useState('')
   const [initialized, setInitialized] = useState(false)
@@ -18,6 +21,7 @@ export default function SettingsGit() {
     window.api!.git.loadConfig().then(cfg => {
       setEnabled(cfg.enabled)
       setRepoPath(cfg.repoPath)
+      setGitEnabledStore(cfg.enabled && !!cfg.repoPath)
       if (cfg.enabled && cfg.repoPath) {
         setInitialized(true)
         refreshStatus(cfg.repoPath)
@@ -34,6 +38,7 @@ export default function SettingsGit() {
 
   const handleToggle = async (checked: boolean) => {
     setEnabled(checked)
+    setGitEnabledStore(checked && !!repoPath)
     if (checked && repoPath) {
       try {
         await window.api!.git.initRepo(repoPath)
@@ -43,6 +48,7 @@ export default function SettingsGit() {
         refreshStatus(repoPath)
       } catch (e: any) {
         setEnabled(false)
+        setGitEnabledStore(false)
         setMessage({ type: 'error', text: '初始化 Git 仓库失败: ' + (e.message || e) })
       }
     } else {
@@ -55,6 +61,7 @@ export default function SettingsGit() {
     setSaving(true)
     try {
       await window.api!.git.saveConfig({ enabled, repoPath })
+      setGitEnabledStore(enabled && !!repoPath)
       if (enabled) {
         await window.api!.git.initRepo(repoPath)
         setInitialized(true)
@@ -83,24 +90,18 @@ export default function SettingsGit() {
     <div className="space-y-6">
       <div>
         <h3 className="text-lg font-bold text-gray-900 dark:text-white">Git 版本控制</h3>
-        <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">将工作流、Agent 和技能数据以 JSON 文件形式同步到 Git 仓库，自动记录每次变更</p>
+        <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">将工作流、Agent 和技能数据以 JSON 文件形式同步到 Git 仓库，通过 Git 面板手动暂存和提交</p>
       </div>
 
       {message && (
-        <div className={`px-4 py-2.5 rounded-xl text-sm ${
-          message.type === 'success'
-            ? 'bg-green-50 dark:bg-green-900/20 text-green-700 dark:text-green-300 border border-green-200 dark:border-green-800/50'
-            : 'bg-red-50 dark:bg-red-900/20 text-red-700 dark:text-red-300 border border-red-200 dark:border-red-800/50'
-        }`}>
-          {message.text}
-        </div>
+        <MessageBanner type={message.type} text={message.text} onClose={() => setMessage(null)} />
       )}
 
       <div className="bg-white dark:bg-gray-800/60 rounded-xl border border-gray-200 dark:border-gray-700 p-5 space-y-4">
         <div className="flex items-center justify-between">
           <div>
             <p className="text-sm font-medium text-gray-900 dark:text-white">启用 Git 同步</p>
-            <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">保存数据时自动写入 Git 仓库并提交</p>
+            <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">保存数据时同步写入 JSON 文件到 Git 仓库，通过底部 Git 面板手动提交</p>
           </div>
           <CustomSwitch checked={enabled} onChange={handleToggle} />
         </div>

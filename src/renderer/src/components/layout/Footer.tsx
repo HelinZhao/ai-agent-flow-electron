@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react'
 import { checkHealth } from '@renderer/lib/api'
 import { useWorkflowStore } from '@renderer/store/workflowStore'
+import { useSettingsStore } from '@renderer/store/settingsStore'
 import GitPanel from '@renderer/components/git/GitPanel'
 
 interface FooterProps {
@@ -16,6 +17,7 @@ const Footer: React.FC<FooterProps> = ({ collapsed, onToggleCollapse }) => {
   const [connected, setConnected] = useState(true)
   const [cpu, setCpu] = useState(0)
   const [memory, setMemory] = useState(0)
+  const gitEnabled = useSettingsStore(s => s.gitEnabled)
 
   useEffect(() => {
     let timer: ReturnType<typeof setTimeout>
@@ -68,7 +70,7 @@ const Footer: React.FC<FooterProps> = ({ collapsed, onToggleCollapse }) => {
         )}
       </div>
       <div className="flex items-center gap-2">
-        <GitPanel />
+        {gitEnabled && <GitPanel />}
         {onToggleCollapse && (
           <button
             onClick={onToggleCollapse}
