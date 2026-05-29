@@ -1,6 +1,8 @@
-import { memo } from 'react'
+import { memo, useEffect, useState } from 'react'
 import ExecutionResultTabs from './ExecutionResultTabs'
-import { WorkflowExecutionProgress } from '@renderer/types'
+import { WorkflowExecutionProgress, TokenUsageSummary } from '@renderer/types'
+import { tokenUsageApi } from '@renderer/lib/api'
+import { useDebounceEffect } from 'ahooks'
 
 interface ExecutionProgressPanelProps {
   progress: WorkflowExecutionProgress | null
@@ -47,6 +49,18 @@ const ExecutionProgressPanel: React.FC<ExecutionProgressPanelProps> = ({
 
   const { metrics, nodeResults, logs, currentNodeId, currentNodeLabel, executionPath } = progress
   const badge = STATUS_BADGE[metrics?.status] || STATUS_BADGE.completed
+
+  // 执行路径或状态变化时查一次 token 用量
+  const [tokenUsage, setTokenUsage] = useState<TokenUsageSummary | null>(null)
+
+  useDebounceEffect(() => {
+    if (!progress) return
+    let cancelled = false
+    tokenUsageApi.getByExecution(progress.executionId).then(({ summary }) => {
+      if (!cancelled) setTokenUsage(summary)
+    }).catch(() => { })
+    return () => { cancelled = true }
+  }, [progress?.executionId, progress?.executionPath?.length], { wait: 200 })
 
   return (
     <div className={`bg-white dark:bg-gray-800 rounded-xl border border-gray-200/50 dark:border-gray-700/50 shadow-sm flex flex-col ${className}`} style={{ height: 'calc(100vh - 200px)' }}>
@@ -117,6 +131,7 @@ const ExecutionProgressPanel: React.FC<ExecutionProgressPanelProps> = ({
         currentNodeLabel={currentNodeLabel}
         executionPath={executionPath}
         compact
+        tokenUsage={tokenUsage || undefined}
       />
     </div>
   )

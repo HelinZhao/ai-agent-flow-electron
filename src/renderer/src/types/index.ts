@@ -228,6 +228,25 @@ export interface PaginatedExecutions {
   pageSize: number
 }
 
+// Token 用量相关
+export interface TokenUsageItem {
+  id: string
+  executionId: string
+  nodeId?: string
+  provider: string
+  model: string
+  promptTokens: number
+  completionTokens: number
+  totalTokens: number
+  createdAt: string
+}
+
+export interface TokenUsageSummary {
+  promptTokens: number
+  completionTokens: number
+  totalTokens: number
+}
+
 // 工具审批相关类型
 export interface ToolApprovalAction {
   name: string

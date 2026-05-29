@@ -1,9 +1,10 @@
 import { memo, useEffect, useRef, useState } from 'react'
-import { ExecutionSummary, WorkflowExecutionProgress } from '@renderer/types'
-import { workflowExecutionApi } from '@renderer/lib/api'
+import { ExecutionSummary, WorkflowExecutionProgress, TokenUsageSummary } from '@renderer/types'
+import { workflowExecutionApi, tokenUsageApi } from '@renderer/lib/api'
 import { useWorkflowStore } from '@renderer/store/workflowStore'
 import Pagination from '@renderer/components/ui/Pagination'
 import ExecutionResultTabs from '@renderer/components/workflow/ExecutionResultTabs'
+import { useDebounceEffect } from 'ahooks'
 
 const PAGE_SIZE = 20
 
@@ -278,13 +279,12 @@ const ExecutionMonitor = () => {
                   </div>
                   <div className="w-full bg-gray-100 dark:bg-gray-700/50 rounded-full h-2 overflow-hidden">
                     <div
-                      className={`h-full rounded-full transition-all duration-500 ${
-                        exec.status === 'failed'
+                      className={`h-full rounded-full transition-all duration-500 ${exec.status === 'failed'
                           ? 'bg-gradient-to-r from-red-500 to-red-400'
                           : exec.status === 'completed'
                             ? 'bg-gradient-to-r from-green-500 to-emerald-400'
                             : 'bg-gradient-to-r from-blue-500 to-blue-400'
-                      }`}
+                        }`}
                       style={{ width: `${Math.max(exec.progress, exec.status === 'running' ? 2 : 0)}%` }}
                     />
                   </div>
@@ -383,6 +383,7 @@ interface DetailModalProps {
 
 const DetailModal: React.FC<DetailModalProps> = ({ executionId, onClose, onStop, onPause, onResume }) => {
   const [progress, setProgress] = useState<WorkflowExecutionProgress | null>(null)
+  const [tokenUsage, setTokenUsage] = useState<TokenUsageSummary | null>(null)
 
   useEffect(() => {
     let cancelled = false
@@ -408,6 +409,16 @@ const DetailModal: React.FC<DetailModalProps> = ({ executionId, onClose, onStop,
 
     return () => { cancelled = true; if (timer) clearInterval(timer) }
   }, [executionId])
+
+  // 执行路径或状态变化时查一次 token 用量
+  useDebounceEffect(() => {
+    if (!progress) return
+    let cancelled = false
+    tokenUsageApi.getByExecution(executionId).then(({ summary }) => {
+      if (!cancelled) setTokenUsage(summary)
+    }).catch(() => { })
+    return () => { cancelled = true }
+  }, [executionId, progress?.executionPath?.length], { wait: 200 })
 
   if (!progress) {
     return (
@@ -480,13 +491,12 @@ const DetailModal: React.FC<DetailModalProps> = ({ executionId, onClose, onStop,
               <span className="font-medium">{metrics.progress}%</span>
             </div>
             <div className="w-full bg-gray-100 dark:bg-gray-700/50 rounded-full h-2 overflow-hidden">
-              <div className={`h-full rounded-full transition-all duration-500 ${
-                metrics.status === 'failed'
+              <div className={`h-full rounded-full transition-all duration-500 ${metrics.status === 'failed'
                   ? 'bg-gradient-to-r from-red-500 to-red-400'
                   : metrics.status === 'completed'
                     ? 'bg-gradient-to-r from-green-500 to-emerald-400'
                     : 'bg-gradient-to-r from-blue-500 to-blue-400'
-              }`}
+                }`}
                 style={{ width: `${Math.max(metrics.progress, isRunning ? 2 : 0)}%` }} />
             </div>
           </div>
@@ -499,6 +509,7 @@ const DetailModal: React.FC<DetailModalProps> = ({ executionId, onClose, onStop,
           currentNodeId={currentNodeId}
           currentNodeLabel={currentNodeLabel}
           executionPath={executionPath || []}
+          tokenUsage={tokenUsage || undefined}
         />
       </div>
     </>

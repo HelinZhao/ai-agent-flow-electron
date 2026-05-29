@@ -16,6 +16,7 @@ interface ExecutionResultTabsProps {
   currentNodeLabel?: string
   executionPath: string[]
   compact?: boolean
+  tokenUsage?: { promptTokens: number; completionTokens: number; totalTokens: number }
 }
 
 // 节点结果项（可展开）
@@ -124,7 +125,7 @@ export const LogItem: React.FC<{ log: any }> = ({ log }) => {
 }
 
 const ExecutionResultTabs: React.FC<ExecutionResultTabsProps> = ({
-  metrics, nodeResults, logs, currentNodeId, currentNodeLabel, executionPath, compact
+  metrics, nodeResults, logs, currentNodeId, currentNodeLabel, executionPath, compact, tokenUsage
 }) => {
   const [tab, setTab] = useState<'overview' | 'nodes' | 'logs'>('overview')
 
@@ -179,6 +180,21 @@ const ExecutionResultTabs: React.FC<ExecutionResultTabsProps> = ({
                 </div>
               </div>
             </div>
+            {tokenUsage && tokenUsage.totalTokens > 0 && (
+              <div className="bg-white/80 dark:bg-gray-800/80 backdrop-blur-sm rounded-xl border border-gray-200/50 dark:border-gray-700/50 p-3">
+                <div className="flex items-center gap-1 mb-0.5">
+                  <svg className="w-3 h-3 text-purple-500" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z" /></svg>
+                  <span className="text-xs font-medium text-gray-500 dark:text-gray-400">Token 用量</span>
+                </div>
+                <div className="flex items-center gap-3 mt-1">
+                  <span className="text-xs text-gray-500 dark:text-gray-400">输入 <strong className="text-gray-700 dark:text-gray-300">{tokenUsage.promptTokens.toLocaleString()}</strong></span>
+                  <span className="text-gray-300 dark:text-gray-600">|</span>
+                  <span className="text-xs text-gray-500 dark:text-gray-400">输出 <strong className="text-gray-700 dark:text-gray-300">{tokenUsage.completionTokens.toLocaleString()}</strong></span>
+                  <span className="text-gray-300 dark:text-gray-600">|</span>
+                  <span className="text-xs text-gray-500 dark:text-gray-400">总计 <strong className="text-gray-900 dark:text-white">{tokenUsage.totalTokens.toLocaleString()}</strong></span>
+                </div>
+              </div>
+            )}
             {currentNodeId && (
               <div className="bg-blue-50 dark:bg-blue-900/20 rounded-xl border border-blue-200/50 dark:border-blue-800/50 p-3">
                 <div className="flex items-center gap-2 mb-1">

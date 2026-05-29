@@ -12,7 +12,9 @@ import {
   KnowledgeChunk,
   Trigger,
   EnvVar,
-  Template
+  Template,
+  TokenUsageItem,
+  TokenUsageSummary
 } from '@renderer/types'
 import { API_BASE_URL, POLL_MAX_ATTEMPTS, POLL_INTERVAL } from '@renderer/config'
 
@@ -629,4 +631,9 @@ export const ollamaApi = {
       eventSource.close()
     }
   }
+}
+
+export const tokenUsageApi = {
+  getByExecution: (executionId: string): Promise<{ details: TokenUsageItem[]; summary: TokenUsageSummary }> =>
+    api.get(`/token-usage/by-execution/${executionId}`),
 }

@@ -59,6 +59,12 @@ export interface ApiConfig {
   timeout?: number
 }
 
+export interface TokenUsage {
+  promptTokens: number
+  completionTokens: number
+  totalTokens: number
+}
+
 export interface LLMConfig {
   provider: 'openai' | 'anthropic' | 'azure' | 'bailian' | 'longcat' | 'deepseek' | 'ollama'
   apiKey: string

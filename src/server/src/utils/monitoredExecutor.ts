@@ -1,7 +1,7 @@
 import { Workflow, LLMConfig, WorkflowBranch } from '../types'
 import { StateGraph, Annotation, START, END, CompiledStateGraph, interrupt, Command } from '@langchain/langgraph'
 import { BaseMessage, HumanMessage, AIMessage } from '@langchain/core/messages'
-import { callLLM } from './llm'
+import { callLLM, callLLMWithTracking } from './llm'
 import { HITLRequest, HITLResponse, HITLDecision, CallLLMOptions } from './hitl'
 import { getUserDataDir, saveAttachmentToDisk } from './file'
 import { AttachmentPayload, buildHumanMessage } from './shared'
@@ -680,7 +680,7 @@ export class MonitoredLangGraphExecutor {
         extraTools.push(createFrontendActionTool(executionId, (id, data) => this.broadcastToSSEClients(id, data)))
         extraTools.push(createGetContextTool())
       }
-      const result = await callLLM(prompt, llmConfig, updatedHistory, enabledTools || [], llmOptions, attachments, extraTools)
+      const result = await callLLMWithTracking(executionId, undefined, llmConfig.provider, llmConfig.model, prompt, llmConfig, updatedHistory, enabledTools || [], llmOptions, attachments, extraTools)
 
       const aiMessage = new AIMessage(result)
       this.threadMessages.set(threadId, [...updatedHistory, aiMessage])

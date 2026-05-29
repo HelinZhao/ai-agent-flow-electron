@@ -1,5 +1,5 @@
-import { BaseMessage, HumanMessage } from '@langchain/core/messages'
-import { LLMConfig } from '../types'
+import { BaseMessage, HumanMessage, AIMessage } from '@langchain/core/messages'
+import { LLMConfig, TokenUsage } from '../types'
 import { ChatOpenAI } from '@langchain/openai'
 import { createAgent, humanInTheLoopMiddleware } from "langchain"
 import { MemorySaver } from "@langchain/langgraph"
@@ -28,6 +28,18 @@ const isRetryableError = (error: any): boolean => {
 
 const sleep = (ms: number) => new Promise(resolve => setTimeout(resolve, ms))
 
+function extractTokenUsage(msg: any): TokenUsage | undefined {
+  const meta = msg?.usage_metadata
+  if (meta?.input_tokens !== undefined || meta?.output_tokens !== undefined) {
+    return {
+      promptTokens: meta.input_tokens ?? 0,
+      completionTokens: meta.output_tokens ?? 0,
+      totalTokens: meta.total_tokens ?? 0,
+    }
+  }
+  return undefined
+}
+
 export const callLLM = async (
   prompt: string,
   llmConfig: LLMConfig,
@@ -36,13 +48,13 @@ export const callLLM = async (
   options?: CallLLMOptions,
   attachments?: AttachmentPayload[],
   extraTools?: any[]
-): Promise<string> => {
+): Promise<{ content: string; tokenUsage?: TokenUsage }> => {
   const maxAttempts = LLM_MAX_RETRIES
   let lastError: Error | null = null
 
   for (let attempt = 1; attempt <= maxAttempts; attempt++) {
     try {
-      return await callLLMOnce(prompt, llmConfig, conversationHistory, enabledTools, attempt, options, attachments, extraTools)
+      return await callLLMOnce(prompt, llmConfig, conversationHistory, enabledTools, attempt, options, attachments, extraTools) as any
     } catch (error) {
       lastError = error instanceof Error ? error : new Error(String(error))
       if (!isRetryableError(lastError) || attempt >= maxAttempts) {
@@ -66,7 +78,7 @@ const callLLMOnce = async (
   options?: CallLLMOptions,
   attachments?: AttachmentPayload[],
   extraTools?: any[]
-): Promise<string> => {
+): Promise<{ content: string; tokenUsage?: TokenUsage }> => {
   const hasTools = enabledTools.length > 0 || (extraTools?.length ?? 0) > 0
   const effectiveMaxTokens = hasTools
     ? Math.max(llmConfig.maxTokens || DEFAULT_MAX_TOKENS, MIN_MAX_TOKENS_WITH_TOOLS)
@@ -156,8 +168,8 @@ const callLLMOnce = async (
 
   // 无工具且无 HITL 时直接调用模型，绕过 createAgent 避免 LangGraph 注入动态元数据破坏缓存
   if (!hasTools && !useHITL) {
-    const response = await llm.invoke(messages)
-    return response.content.toString()
+    const response = await llm.invoke(messages) as AIMessage
+    return { content: response.content.toString(), tokenUsage: extractTokenUsage(response) }
   }
 
   // 有工具或 HITL 时走 createAgent 路径
@@ -217,12 +229,13 @@ const callLLMOnce = async (
       }
     }
 
-    const finalContent = result.messages?.[result.messages.length - 1]?.content?.toString() || ''
+    const lastMsg = result.messages?.[result.messages.length - 1]
+    const finalContent = lastMsg?.content?.toString() || ''
     if (!finalContent) {
       console.log(`[LLM Agent] agent 返回内容为空，可能因递归限制(${recursionLimit})或步数不足被截断`)
     }
     console.log(`[LLM Agent] 执行完成，共${stepCount}步`)
-    return finalContent
+    return { content: finalContent, tokenUsage: extractTokenUsage(lastMsg) }
   }
 
   // 无 HITL：stream 模式追踪每一步
@@ -260,10 +273,45 @@ const callLLMOnce = async (
       console.log(`[LLM Agent] agent 返回内容为空，可能因递归限制(${recursionLimit})或步数不足被截断`)
     }
     console.log(`[LLM Agent] 执行完成，共${stepCount}步`)
-    return finalContent
+    return { content: finalContent, tokenUsage: extractTokenUsage(lastAgentMsg) }
   }
 
   // 无工具时直接 invoke
   const response = await agent.invoke({ messages }, { recursionLimit });
-  return response.messages[response.messages.length - 1].content.toString()
+  const lastMsg = response.messages[response.messages.length - 1]
+  return { content: lastMsg.content.toString(), tokenUsage: extractTokenUsage(lastMsg) }
+}
+
+/** 调用 LLM 并记录 token 用量到 usage_logs 表 */
+export async function callLLMWithTracking(
+  executionId: string,
+  nodeId: string | undefined,
+  provider: string,
+  model: string,
+  prompt: string,
+  llmConfig: LLMConfig,
+  conversationHistory?: BaseMessage[],
+  enabledTools?: string[],
+  options?: CallLLMOptions,
+  attachments?: AttachmentPayload[],
+  extraTools?: any[],
+): Promise<string> {
+  const { content, tokenUsage } = await callLLM(prompt, llmConfig, conversationHistory, enabledTools, options, attachments, extraTools)
+  if (tokenUsage) {
+    try {
+      const { UsageLogModel } = await import('../models')
+      await UsageLogModel.create({
+        executionId,
+        nodeId,
+        provider,
+        model,
+        promptTokens: tokenUsage.promptTokens,
+        completionTokens: tokenUsage.completionTokens,
+        totalTokens: tokenUsage.totalTokens,
+      })
+    } catch (err) {
+      console.error('[TokenUsage] 记录失败:', err)
+    }
+  }
+  return content
 }

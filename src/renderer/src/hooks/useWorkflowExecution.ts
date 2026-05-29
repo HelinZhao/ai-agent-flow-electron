@@ -92,10 +92,7 @@ export function useWorkflowExecution({
       clearInterval(pollIntervalRef.current)
     }
 
-    // 立即获取一次进度
-    fetchProgress(execId)
-
-    // 设置定时轮询（每1秒更新一次）
+    // 设置定时轮询（每1秒更新一次），首次请求由 interval 触发
     pollIntervalRef.current = setInterval(() => {
       if (execId) {
         fetchProgress(execId)

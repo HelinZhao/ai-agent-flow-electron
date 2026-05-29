@@ -8,7 +8,7 @@ export type { HITLRequest, HITLDecision, HITLResponse, CallLLMOptions } from './
 export { isVisionModel, type AttachmentPayload } from './shared'
 
 // LLM 调用
-export { getLLMEndpoint, callLLM } from './llm'
+export { getLLMEndpoint, callLLM, callLLMWithTracking } from './llm'
 
 // API 调用
 export { executeApiCall } from './api'
