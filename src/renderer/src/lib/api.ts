@@ -14,7 +14,8 @@ import {
   EnvVar,
   Template,
   TokenUsageItem,
-  TokenUsageSummary
+  TokenUsageSummary,
+  ModelTokenUsage
 } from '@renderer/types'
 import { API_BASE_URL, POLL_MAX_ATTEMPTS, POLL_INTERVAL } from '@renderer/config'
 
@@ -636,4 +637,7 @@ export const ollamaApi = {
 export const tokenUsageApi = {
   getByExecution: (executionId: string): Promise<{ details: TokenUsageItem[]; summary: TokenUsageSummary }> =>
     api.get(`/token-usage/by-execution/${executionId}`),
+
+  getSummary: (): Promise<ModelTokenUsage[]> =>
+    api.get('/token-usage/summary'),
 }

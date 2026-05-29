@@ -247,6 +247,15 @@ export interface TokenUsageSummary {
   totalTokens: number
 }
 
+export interface ModelTokenUsage {
+  provider: string
+  model: string
+  promptTokens: number
+  completionTokens: number
+  totalTokens: number
+  callCount: number
+}
+
 // 工具审批相关类型
 export interface ToolApprovalAction {
   name: string

@@ -46,6 +46,11 @@ export async function executeMonitoredNode(
   }
 
   for (let attempt = 0; attempt <= retryCount; attempt++) {
+    // 每次重试前检查执行是否已被终止
+    if (deps.executionStates.get(ctx.executionId)?.status !== 'running') {
+      throw new ExecutionTerminatedError()
+    }
+
     if (attempt > 0) {
       const delay = backoff === 'exponential'
         ? retryDelay * Math.pow(2, attempt - 1)
@@ -59,7 +64,15 @@ export async function executeMonitoredNode(
           nodeId: ctx.node.id,
         })
       }
-      await new Promise(resolve => setTimeout(resolve, delay))
+      await Promise.race([
+        new Promise(resolve => setTimeout(resolve, delay)),
+        execState?.abortController?.signal
+          ? new Promise((_, reject) => {
+              const onAbort = () => reject(new ExecutionTerminatedError())
+              execState!.abortController!.signal.addEventListener('abort', onAbort, { once: true })
+            })
+          : Promise.resolve(),
+      ])
     }
 
     try {

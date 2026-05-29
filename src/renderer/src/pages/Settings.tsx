@@ -10,6 +10,7 @@ import SettingsAbout from './settings/SettingsAbout';
 import SettingsSponsor from './settings/SettingsSponsor';
 import SettingsEnvVars from './settings/SettingsEnvVars';
 import SettingsGit from './settings/SettingsGit';
+import SettingsTokenUsage from './settings/SettingsTokenUsage';
 
 const TAB_ICONS: Record<string, React.ReactNode> = {
   llm: (
@@ -67,6 +68,11 @@ const TAB_ICONS: Record<string, React.ReactNode> = {
       <circle cx="18" cy="18" r="3" /><circle cx="6" cy="6" r="3" /><path d="M13 6h3a2 2 0 0 1 2 2v7" /><line x1="6" y1="9" x2="6" y2="15" /><path d="M9 18h4" />
     </svg>
   ),
+  'token-usage': (
+    <svg className="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z" />
+    </svg>
+  ),
 }
 
 const SETTINGS_TABS = [
@@ -81,6 +87,7 @@ const SETTINGS_TABS = [
   { id: 'sponsor', label: '赞助支持', desc: '赞助项目发展' },
   { id: 'about', label: '关于', desc: '版本信息与技术栈' },
   { id: 'git', label: 'Git', desc: '版本控制与历史管理' },
+  { id: 'token-usage', label: 'Token 用量', desc: '各模型 Token 消耗统计' },
 ]
 
 export default function Settings(): React.JSX.Element {
@@ -110,6 +117,8 @@ export default function Settings(): React.JSX.Element {
         return <SettingsAbout />;
       case 'git':
         return <SettingsGit />;
+      case 'token-usage':
+        return <SettingsTokenUsage />;
       default:
         return <SettingsLLM />;
     }
