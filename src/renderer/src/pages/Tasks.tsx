@@ -218,7 +218,7 @@ export default function Tasks() {
                     <th className={`px-2 py-3 ${COL_WIDTHS.chevron}`} />
                   </tr>
                 </thead>
-                <tbody className="divide-y divide-gray-100 dark:divide-gray-700">
+                <tbody className="divide-y divide-gray-200 dark:divide-gray-700">
                   {tasks.map(task => (
                     <>
                       {/* Main row */}

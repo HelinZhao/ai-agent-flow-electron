@@ -81,7 +81,7 @@ function TimelineCard({ task }: { task: Task }) {
   if (items.length === 0) return null
 
   return (
-    <div className="bg-white/60 dark:bg-gray-900/40 rounded-lg border border-gray-100 dark:border-gray-700/50 p-3.5">
+    <div className="bg-white/60 dark:bg-gray-900/40 rounded-lg border border-gray-200 dark:border-gray-700/50 p-3.5">
       <SectionHeader icon={IconTimeline} label="时间线" />
       <div className="relative ml-1">
         <div className="absolute left-[5px] top-2 bottom-2 w-px bg-gray-200 dark:bg-gray-700" />
@@ -109,7 +109,7 @@ function TimelineCard({ task }: { task: Task }) {
 
 function TeamCard({ task, getTeamName }: { task: Task; getTeamName: (id?: string) => string }) {
   return (
-    <div className="bg-white/60 dark:bg-gray-900/40 rounded-lg border border-gray-100 dark:border-gray-700/50 p-3.5">
+    <div className="bg-white/60 dark:bg-gray-900/40 rounded-lg border border-gray-200 dark:border-gray-700/50 p-3.5">
       <SectionHeader icon={IconTeam} label="认领团队" />
       <div className="text-xs text-gray-700 dark:text-gray-300 font-medium">
         {getTeamName(task.claimedBy)}
@@ -121,7 +121,7 @@ function TeamCard({ task, getTeamName }: { task: Task; getTeamName: (id?: string
 function ExecutionIdCard({ task }: { task: Task }) {
   if (!task.executionId) return null
   return (
-    <div className="bg-white/60 dark:bg-gray-900/40 rounded-lg border border-gray-100 dark:border-gray-700/50 p-3.5">
+    <div className="bg-white/60 dark:bg-gray-900/40 rounded-lg border border-gray-200 dark:border-gray-700/50 p-3.5">
       <SectionHeader icon={IconResult} label="执行 ID" />
       <div className="text-[10px] text-gray-600 dark:text-gray-400 font-mono truncate" title={task.executionId}>
         {task.executionId}
@@ -137,7 +137,7 @@ export default function TaskDetailRow({ task, colSpan, getTeamName, onCancel, on
   const showRestart = task.status === 'completed' || task.status === 'failed'
 
   return (
-    <tr className="bg-blue-50/40 dark:bg-blue-900/10 border-b border-gray-100 dark:border-gray-700">
+    <tr className="bg-blue-50/40 dark:bg-blue-900/10 border-b border-gray-200 dark:border-gray-700">
       <td colSpan={colSpan} className="px-6 py-4">
         <div className="space-y-4">
           {/* Restart badge */}
@@ -146,7 +146,7 @@ export default function TaskDetailRow({ task, colSpan, getTeamName, onCancel, on
           {/* ── Description ── */}
           <div>
             <SectionHeader icon={IconDescription} label="描述" />
-            <div className="bg-white/60 dark:bg-gray-900/40 rounded-lg border border-gray-100 dark:border-gray-700/50 p-3.5">
+            <div className="bg-white/60 dark:bg-gray-900/40 rounded-lg border border-gray-200 dark:border-gray-700/50 p-3.5">
               <div className="text-sm text-gray-700 dark:text-gray-300 whitespace-pre-wrap leading-relaxed max-h-60 overflow-y-auto">
                 {task.description || <span className="text-gray-400 italic">暂无描述</span>}
               </div>
