@@ -169,6 +169,17 @@ async function migrateMcpServersTable(): Promise<void> {
   }
 }
 
+async function migrateTaskColumns(): Promise<void> {
+  try {
+    const q = sequelize.getQueryInterface()
+    const table = await q.describeTable('tasks') as Record<string, unknown>
+    if (!table.restartedFrom) {
+      await sequelize.query('ALTER TABLE tasks ADD COLUMN restartedFrom TEXT;')
+      console.log('[Migration] tasks.restartedFrom column added')
+    }
+  } catch { /* empty */ }
+}
+
 async function resetStaleTasks(): Promise<void> {
   try {
     const { TaskModel } = await import('../models/Task')
@@ -239,6 +250,7 @@ export const initDatabase = async (): Promise<void> => {
     await migrateParamsColumn()
     await migrateMcpServersTable()
     await migrateTeamColumns()
+    await migrateTaskColumns()
     await resetStaleTasks()
   } catch (error) {
     console.error('数据库连接失败:', error)

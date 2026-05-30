@@ -4,28 +4,14 @@ import { changeNotifier } from '../utils/dataChangeNotifier'
 
 const router = Router()
 
-// 列表（分页 + 排序）
+// 列表
 router.get('/', async (_req, res) => {
   try {
-    const { status, page, pageSize, sortBy, sortOrder } = _req.query
+    const { status } = _req.query
     const where = status ? { status: String(status) } : {}
-
-    const p = Math.max(1, parseInt(String(page || '1'), 10))
-    const ps = Math.min(100, Math.max(1, parseInt(String(pageSize || '20'), 10)))
-
-    // 白名单排序字段
-    const sortField = ['createdAt', 'updatedAt', 'priority', 'title'].includes(String(sortBy || ''))
-      ? String(sortBy) : 'createdAt'
-    const orderDir = sortOrder === 'asc' ? 'ASC' : 'DESC'
-
-    const { rows: tasks, count: total } = await TaskModel.findAndCountAll({
-      where,
-      order: [[sortField, orderDir]],
-      offset: (p - 1) * ps,
-      limit: ps,
-    })
-    return res.json({ tasks, total, page: p, pageSize: ps, totalPages: Math.ceil(total / ps) })
-  } catch (error) {
+    const tasks = await TaskModel.findAll({ where, order: [['createdAt', 'DESC']] })
+    return res.json(tasks)
+  } catch {
     return res.status(500).json({ error: '获取任务列表失败' })
   }
 })
@@ -40,7 +26,7 @@ router.post('/', async (req, res) => {
     const task = await TaskModel.create({ title, description, priority: priority ?? 1, status: 'pending' } as any)
     changeNotifier.emitChange('tasks')
     return res.status(201).json(task)
-  } catch (error) {
+  } catch {
     return res.status(500).json({ error: '创建任务失败' })
   }
 })
@@ -51,7 +37,7 @@ router.get('/:id', async (req, res) => {
     const task = await TaskModel.findByPk(req.params.id)
     if (!task) return res.status(404).json({ error: '任务不存在' })
     return res.json(task)
-  } catch (error) {
+  } catch {
     return res.status(500).json({ error: '获取任务失败' })
   }
 })
@@ -71,7 +57,7 @@ router.put('/:id', async (req, res) => {
     await task.save()
     changeNotifier.emitChange('tasks')
     return res.json(task)
-  } catch (error) {
+  } catch {
     return res.status(500).json({ error: '更新任务失败' })
   }
 })
@@ -84,7 +70,7 @@ router.delete('/:id', async (req, res) => {
     await task.destroy()
     changeNotifier.emitChange('tasks')
     return res.json({ success: true })
-  } catch (error) {
+  } catch {
     return res.status(500).json({ error: '删除任务失败' })
   }
 })
@@ -107,7 +93,7 @@ router.post('/claim-next', async (req, res) => {
 
     changeNotifier.emitChange('tasks')
     return res.json({ claimed: true, task })
-  } catch (error) {
+  } catch {
     return res.status(500).json({ error: '认领任务失败' })
   }
 })
@@ -130,7 +116,7 @@ router.post('/:id/assign', async (req, res) => {
     changeNotifier.emitChange('tasks')
 
     return res.json(task)
-  } catch (error) {
+  } catch {
     return res.status(500).json({ error: '指派任务失败' })
   }
 })
@@ -146,8 +132,40 @@ router.post('/:id/complete', async (req, res) => {
     await task.save()
     changeNotifier.emitChange('tasks')
     return res.json(task)
-  } catch (error) {
+  } catch {
     return res.status(500).json({ error: '完成任务失败' })
+  }
+})
+
+// 重启任务（仅 completed / failed 可重启）
+router.post('/:id/restart', async (req, res) => {
+  try {
+    const task = await TaskModel.findByPk(req.params.id)
+    if (!task) return res.status(404).json({ error: '任务不存在' })
+    if (task.status !== 'completed' && task.status !== 'failed') {
+      return res.status(400).json({ error: '只能重启已完成或失败的任务' })
+    }
+
+    // 保存快照
+    task.restartedFrom = JSON.stringify({
+      status: task.status,
+      result: task.result,
+      error: task.error,
+      completedAt: task.completedAt,
+      claimedBy: task.claimedBy,
+    })
+    task.status = 'pending'
+    task.result = ''
+    task.error = ''
+    task.claimedBy = ''
+    task.executionId = ''
+    task.claimedAt = undefined
+    task.completedAt = undefined
+    await task.save()
+    changeNotifier.emitChange('tasks')
+    return res.json(task)
+  } catch {
+    return res.status(500).json({ error: '重启任务失败' })
   }
 })
 
@@ -162,7 +180,7 @@ router.post('/:id/fail', async (req, res) => {
     await task.save()
     changeNotifier.emitChange('tasks')
     return res.json(task)
-  } catch (error) {
+  } catch {
     return res.status(500).json({ error: '标记失败失败' })
   }
 })

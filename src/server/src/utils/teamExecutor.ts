@@ -323,6 +323,7 @@ async function executePipeline(
 
   let currentInput = params.taskDescription
   let lastOutput = ''
+  let pipelineSuccessCount = 0
 
   for (let i = 0; i < orderedMembers.length; i++) {
     const mid = orderedMembers[i]
@@ -370,6 +371,7 @@ async function executePipeline(
         params.executionId, params.nodeId, params.llmConfig,
         member, promptParts.join('\n'),
       )
+      pipelineSuccessCount++
       currentInput = lastOutput
     } catch (error) {
       const errorMsg = error instanceof Error ? error.message : '流水线环节执行失败'
@@ -381,7 +383,7 @@ async function executePipeline(
 
   return {
     output: lastOutput,
-    metadata: { mode: 'pipeline', memberCount: orderedMembers.length, successCount: orderedMembers.length },
+    metadata: { mode: 'pipeline', memberCount: orderedMembers.length, successCount: pipelineSuccessCount },
   }
 }
 

@@ -647,16 +647,8 @@ export const teamApi = {
 }
 
 export const taskApi = {
-  getAll: (params?: { status?: string; page?: number; pageSize?: number; sortBy?: string; sortOrder?: string }): Promise<{ tasks: Task[]; total: number; page: number; pageSize: number; totalPages: number }> => {
-    const q = new URLSearchParams()
-    if (params?.status) q.set('status', params.status)
-    if (params?.page) q.set('page', String(params.page))
-    if (params?.pageSize) q.set('pageSize', String(params.pageSize))
-    if (params?.sortBy) q.set('sortBy', params.sortBy)
-    if (params?.sortOrder) q.set('sortOrder', params.sortOrder)
-    const qs = q.toString()
-    return api.get('/tasks' + (qs ? `?${qs}` : ''))
-  },
+  getAll: (status?: string): Promise<Task[]> =>
+    api.get('/tasks' + (status ? `?status=${status}` : '')),
   getById: (id: string): Promise<Task> => api.get(`/tasks/${id}`),
   create: (data: { title: string; description: string; priority?: number }): Promise<Task> =>
     api.post('/tasks', data),
@@ -668,6 +660,8 @@ export const taskApi = {
     api.post(`/tasks/${id}/complete`, { result }),
   fail: (id: string, error: string): Promise<Task> =>
     api.post(`/tasks/${id}/fail`, { error }),
+  restart: (id: string): Promise<Task> =>
+    api.post(`/tasks/${id}/restart`),
   assign: (id: string, teamId: string): Promise<Task> =>
     api.post(`/tasks/${id}/assign`, { teamId }),
 }

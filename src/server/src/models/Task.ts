@@ -11,6 +11,7 @@ export interface TaskAttributes {
   executionId?: string    // 关联的执行 ID
   result?: string         // 成功输出
   error?: string          // 失败消息
+  restartedFrom?: string  // 重启前的执行快照（JSON）
   claimedAt?: Date
   completedAt?: Date
   createdAt: Date
@@ -35,6 +36,7 @@ export class TaskModel
   declare executionId?: string
   declare result?: string
   declare error?: string
+  declare restartedFrom?: string
   declare claimedAt?: Date
   declare completedAt?: Date
   declare createdAt: Date
@@ -77,6 +79,10 @@ TaskModel.init(
       allowNull: true,
     },
     error: {
+      type: DataTypes.TEXT,
+      allowNull: true,
+    },
+    restartedFrom: {
       type: DataTypes.TEXT,
       allowNull: true,
     },

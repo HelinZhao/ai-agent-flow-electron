@@ -7,7 +7,8 @@ import CustomSelect from '@renderer/components/ui/CustomSelect'
 import ItemPickerModal from '@renderer/components/ui/ItemPickerModal'
 import Pagination from '@renderer/components/ui/Pagination'
 import { taskApi } from '@renderer/lib/api'
-import type { Task } from '@renderer/types'
+
+const PAGE_SIZE = 20
 
 const STATUS_LABEL: Record<string, string> = {
   pending: '待处理',
@@ -41,12 +42,9 @@ const FILTERS = [
 ]
 
 export default function Tasks() {
-  const { teams } = useAppStore()
-  const [tasks, setTasks] = useState<Task[]>([])
+  const { teams, tasks: allTasks } = useAppStore()
   const [statusFilter, setStatusFilter] = useState<string>('')
   const [page, setPage] = useState(1)
-  const [totalPages, setTotalPages] = useState(1)
-  const [loading, setLoading] = useState(true)
   const [showCreate, setShowCreate] = useState(false)
   const [expandedId, setExpandedId] = useState<string | null>(null)
   const [formTitle, setFormTitle] = useState('')
@@ -55,19 +53,16 @@ export default function Tasks() {
   const [saving, setSaving] = useState(false)
   const [assigningTaskId, setAssigningTaskId] = useState<string | null>(null)
 
-  const fetchTasks = async (p: number) => {
-    setLoading(true)
-    try {
-      const res = await taskApi.getAll({ status: statusFilter || undefined, page: p, pageSize: 20, sortBy: 'createdAt', sortOrder: 'desc' })
-      setTasks(res.tasks)
-      setTotalPages(res.totalPages)
-      setPage(res.page)
-      setExpandedId(null)
-    } catch { /* ignore */ }
-    finally { setLoading(false) }
-  }
+  const goToPage = (p: number) => { setPage(p); setExpandedId(null) }
 
-  useEffect(() => { fetchTasks(1) }, [statusFilter]) // eslint-disable-line
+  const filtered = (statusFilter ? allTasks.filter(t => t.status === statusFilter) : allTasks)
+    .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())
+  const totalPages = Math.max(1, Math.ceil(filtered.length / PAGE_SIZE))
+  const safePage = Math.min(page, totalPages)
+  const tasks = filtered.slice((safePage - 1) * PAGE_SIZE, safePage * PAGE_SIZE)
+
+  // 切换筛选时回到第一页
+  useEffect(() => { setPage(1) }, [statusFilter])
 
   const handleCreate = async () => {
     if (!formTitle.trim() || !formDesc.trim()) return
@@ -78,7 +73,6 @@ export default function Tasks() {
       setFormTitle('')
       setFormDesc('')
       setFormPriority(1)
-      fetchTasks(page)
     } finally { setSaving(false) }
   }
 
@@ -86,14 +80,12 @@ export default function Tasks() {
     if (!confirm('确定删除此任务？')) return
     await taskApi.delete(id)
     if (expandedId === id) setExpandedId(null)
-    fetchTasks(page)
   }
 
   const handleAssign = async (taskId: string, teamIds: string[]) => {
     if (teamIds.length === 0) return
     await taskApi.assign(taskId, teamIds[0])
     setAssigningTaskId(null)
-    fetchTasks(page)
   }
 
   const getTeamName = (id?: string) => id ? teams.find(t => t.id === id)?.name || id : '-'
@@ -143,9 +135,7 @@ export default function Tasks() {
 
       {/* Table area */}
       <div className="flex-1 flex flex-col min-h-0">
-        {loading ? (
-          <div className="flex-1 flex items-center justify-center text-gray-400">加载中...</div>
-        ) : !tasks || tasks.length === 0 ? (
+        {allTasks.length === 0 ? (
           <div className="flex-1 flex flex-col items-center justify-center text-gray-400 dark:text-gray-500">
             <div className="flex items-center justify-center w-20 h-20 rounded-2xl bg-gradient-to-br from-blue-100 to-purple-100 dark:from-blue-900/30 dark:to-purple-900/30 mb-6">
               <span className="text-4xl">🎫</span>
@@ -245,6 +235,18 @@ export default function Tasks() {
                               {/* Left: Description */}
                               <div className="md:col-span-2">
                                 <h4 className="text-xs font-semibold text-gray-700 dark:text-gray-400 uppercase tracking-wider mb-2">描述</h4>
+                                {task.restartedFrom && (() => {
+                                  const prev = JSON.parse(task.restartedFrom)
+                                  return (
+                                    <div className="mb-4 p-3 bg-orange-50 dark:bg-orange-900/10 rounded-lg border border-orange-200 dark:border-orange-800/50 text-xs">
+                                      <span className="font-semibold text-orange-600 dark:text-orange-400">↻ 已重启</span>
+                                      <span className="text-gray-500 dark:text-gray-400 ml-2">
+                                        前一次: {prev.status === 'completed' ? '已完成' : '失败'}
+                                        {prev.completedAt && ` · ${new Date(prev.completedAt).toLocaleString('zh-CN')}`}
+                                      </span>
+                                    </div>
+                                  )
+                                })()}
                                 <p className="text-sm text-gray-700 dark:text-gray-300 whitespace-pre-wrap leading-relaxed">
                                   {task.description || '暂无描述'}
                                 </p>
@@ -307,6 +309,16 @@ export default function Tasks() {
                                         </span>
                                       </div>
                                     )}
+                                    {(task.status === 'completed' || task.status === 'failed') && (
+                                      <div className="pt-2">
+                                        <button
+                                          onClick={async (e) => { e.stopPropagation(); await taskApi.restart(task.id) }}
+                                          className="w-full text-center py-1.5 text-xs font-medium rounded-lg bg-orange-50 dark:bg-orange-900/20 text-orange-600 dark:text-orange-400 hover:bg-orange-100 dark:hover:bg-orange-900/40 border border-orange-200 dark:border-orange-800 transition-colors"
+                                        >
+                                          重启任务
+                                        </button>
+                                      </div>
+                                    )}
                                   </div>
                                 </div>
                               </div>
@@ -319,7 +331,7 @@ export default function Tasks() {
                 </tbody>
               </table>
             </div>
-            <Pagination page={page} totalPages={totalPages} onChange={fetchTasks} />
+            <Pagination page={safePage} totalPages={totalPages} onChange={goToPage} />
           </>
         )}
       </div>

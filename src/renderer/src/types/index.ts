@@ -374,6 +374,7 @@ export interface Task {
   executionId?: string
   result?: string
   error?: string
+  restartedFrom?: string
   claimedAt?: string
   completedAt?: string
   createdAt: string

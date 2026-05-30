@@ -138,7 +138,7 @@ export const useAppStore = create<AppState>()(
             agentApi.getAll().catch(() => [] as Agent[]),
             triggerApi.getAll().catch(() => [] as Trigger[]),
             teamApi.getAll().catch(() => [] as Team[]),
-            taskApi.getAll().then(r => r.tasks).catch(() => [] as Task[]),
+            taskApi.getAll().catch(() => [] as Task[]),
           ])
 
           set({ workflows: workflowsRes || [] })
@@ -172,7 +172,7 @@ export const useAppStore = create<AppState>()(
       setTeams: (teams: Team[]) => set({ teams }),
       setTasks: (tasks: Task[]) => set({ tasks }),
       fetchTasks: async () => {
-        const tasks = await taskApi.getAll().then(r => r.tasks).catch(() => [] as Task[])
+        const tasks = await taskApi.getAll().catch(() => [] as Task[])
         set({ tasks })
       },
       setLLMConfigs: (configs: LLMConfig[]) => set({ llmConfigs: configs }),
@@ -732,7 +732,7 @@ export const useAppStore = create<AppState>()(
                     break
                   }
                   case 'tasks': {
-                    const tasks = await taskApi.getAll().then(r => r.tasks).catch(() => [] as Task[])
+                    const tasks = await taskApi.getAll().catch(() => [] as Task[])
                     set({ tasks })
                     break
                   }

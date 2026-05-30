@@ -93,10 +93,20 @@ async function executeTask(task: any, teamId: string, llmConfig: LLMConfig): Pro
     nodeId: 'scheduler',
   })
 
-  const hasError = result.metadata?.error
-  if (hasError) {
+  const meta = result.metadata || {}
+  const mode = meta.mode as string
+  const memberCount = meta.memberCount as number || 0
+  const successCount = meta.successCount as number || 0
+
+  // 流水线要求全部成功，其他模式部分成功即可
+  const isFailed = mode === 'pipeline'
+    ? successCount < memberCount
+    : memberCount > 0 && successCount === 0
+
+  const execError = meta.error
+  if (execError || isFailed) {
     await TaskModel.update(
-      { status: 'failed', error: hasError, completedAt: new Date() },
+      { status: 'failed', error: execError || '所有成员执行失败', completedAt: new Date() },
       { where: { id: task.id } },
     )
   } else {
