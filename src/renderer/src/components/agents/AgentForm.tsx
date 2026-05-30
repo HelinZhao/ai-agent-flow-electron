@@ -2,7 +2,7 @@ import { useState, useEffect, useCallback } from 'react';
 import { Agent, Skill, Workflow } from '@renderer/types';
 import { TOOL_DEFINITIONS } from '@renderer/config';
 import { mcpApi } from '@renderer/lib/mcpApi';
-import { useWorkflowStore } from '@renderer/store/appStore';
+import { useAppStore } from '@renderer/store/appStore';
 import MarkdownIt from 'markdown-it';
 import MdEditor from 'react-markdown-editor-lite';
 import 'react-markdown-editor-lite/lib/index.css';
@@ -129,8 +129,8 @@ export default function AgentForm({ agent, skills, workflows, onSave, onCancel, 
   mcpToolDefs.forEach(t => { isMcpToolMap[t.id] = true })
   const hasWorkflows = workflows.length > 0;
   const hasSkills = skills.length > 0;
-  const llmConfigs = useWorkflowStore((s) => s.llmConfigs);
-  const activeLLMConfig = useWorkflowStore((s) => s.activeLLMConfig);
+  const llmConfigs = useAppStore((s) => s.llmConfigs);
+  const activeLLMConfig = useAppStore((s) => s.activeLLMConfig);
   const AGENT_SCHEMA: Record<string, string> = {
     name: 'Agent 名称',
     description: 'Agent 描述',

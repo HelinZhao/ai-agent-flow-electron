@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
 import { Template } from '@renderer/types'
-import { useWorkflowStore } from '@renderer/store/appStore'
+import { useAppStore } from '@renderer/store/appStore'
 import { mcpApi } from '@renderer/lib/mcpApi'
 import Modal from '@renderer/components/ui/Modal'
 import CustomButton from '@renderer/components/ui/CustomButton'
@@ -21,12 +21,12 @@ const TABS = [
 const TYPE_LABELS: Record<string, string> = { workflow: '工作流', agent: 'Agent', skill: '技能', api: 'API 模板', mcp: 'MCP 配置', code: '代码片段', cli: 'CLI 模板', sql: 'SQL 模板' }
 
 export default function Marketplace(): React.JSX.Element {
-  const templates = useWorkflowStore(s => s.templates)
-  const fetchTemplates = useWorkflowStore(s => s.fetchTemplates)
-  const addWorkflow = useWorkflowStore(s => s.addWorkflow)
-  const addAgent = useWorkflowStore(s => s.addAgent)
-  const addSkill = useWorkflowStore(s => s.addSkill)
-  const mcpServers = useWorkflowStore(s => s.mcpServers)
+  const templates = useAppStore(s => s.templates)
+  const fetchTemplates = useAppStore(s => s.fetchTemplates)
+  const addWorkflow = useAppStore(s => s.addWorkflow)
+  const addAgent = useAppStore(s => s.addAgent)
+  const addSkill = useAppStore(s => s.addSkill)
+  const mcpServers = useAppStore(s => s.mcpServers)
   const [activeTab, setActiveTab] = useState('')
   const [selected, setSelected] = useState<Template | null>(null)
   const [importing, setImporting] = useState(false)

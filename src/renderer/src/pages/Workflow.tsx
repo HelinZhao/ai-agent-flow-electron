@@ -1,6 +1,6 @@
 import React, { useState, useCallback, useRef, useMemo } from 'react';
 import WorkflowDesigner from '@renderer/components/workflow/WorkflowDesigner';
-import { useWorkflowStore } from '@renderer/store/appStore';
+import { useAppStore } from '@renderer/store/appStore';
 import { WorkflowNode, WorkflowEdge, type Workflow } from '@renderer/types';
 import { useMemoizedFn } from 'ahooks';
 import { ReactFlowProvider } from '@xyflow/react';
@@ -19,7 +19,7 @@ import { showToast } from '@renderer/components/ui/toast/MessageToast';
 import { workflowApi } from '@renderer/lib/api';
 
 export default function Workflow(): React.JSX.Element {
-  const { workflows, addWorkflow, updateWorkflow, deleteWorkflow, initialize, activeLLMConfig } = useWorkflowStore();
+  const { workflows, addWorkflow, updateWorkflow, deleteWorkflow, initialize, activeLLMConfig } = useAppStore();
   const [selectedWorkflowId, setSelectedWorkflowId] = useState<string | null>(null);
   const [saveMessage, setSaveMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
 

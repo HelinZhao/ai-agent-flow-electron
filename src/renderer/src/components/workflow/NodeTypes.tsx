@@ -2,7 +2,7 @@ import { Handle, Position } from '@xyflow/react';
 import { NODE_DEFS_MAP } from './nodes';
 import { useContext } from 'react';
 import { LayoutDirectionContext } from './LayoutDirectionContext';
-import { useWorkflowStore } from '@renderer/store/appStore'
+import { useAppStore } from '@renderer/store/appStore'
 
 // -- 节点颜色片段（集中拼装，避免各节点重复计算） --
 
@@ -679,7 +679,7 @@ export function CatchNode({ data, selected }: { data: any; selected: boolean }):
 export function TeamNode({ data, selected }: { data: any; selected: boolean }): React.JSX.Element {
   const direction = useContext(LayoutDirectionContext)
   const def = NODE_DEFS_MAP['team']
-  const team = useWorkflowStore(state => state.teams.find(t => t.id === data.config?.teamId))
+  const team = useAppStore(state => state.teams.find(t => t.id === data.config?.teamId))
   const targetPos = direction === 'vertical' ? Position.Top : Position.Left
   const sourcePos = direction === 'vertical' ? Position.Bottom : Position.Right
   const memberCount = team?.memberIds

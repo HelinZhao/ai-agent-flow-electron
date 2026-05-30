@@ -1,5 +1,5 @@
 import React, { useState, useCallback } from 'react';
-import { useWorkflowStore } from '@renderer/store/appStore';
+import { useAppStore } from '@renderer/store/appStore';
 import { Agent } from '@renderer/types';
 import CustomInput from '@renderer/components/ui/CustomInput';
 import CustomButton from '@renderer/components/ui/CustomButton';
@@ -122,7 +122,7 @@ const AgentCard = React.memo(function AgentCard({
 
 // ─── Main Page ───
 export default function Agents(): React.JSX.Element {
-  const { agents, skills, addAgent, updateAgent, deleteAgent, workflows, llmConfigs } = useWorkflowStore();
+  const { agents, skills, addAgent, updateAgent, deleteAgent, workflows, llmConfigs } = useAppStore();
   const [selectedAgentId, setSelectedAgentId] = useState<string | null>(null);
   const [searchTerm, setSearchTerm] = useState('');
   const [isEditing, setIsEditing] = useState(false);

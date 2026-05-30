@@ -8,7 +8,7 @@ import { workflowApi, skillApi, agentApi, teamApi, taskApi, llmConfigApi, knowle
 import { STORAGE_KEY, STORAGE_PERSIST_FIELDS, API_BASE_URL } from '@renderer/config'
 import { gitWriteEntity } from '@renderer/lib/gitWriteEntity'
 
-interface WorkflowState {
+interface AppState {
   workflows: Workflow[]
   skills: Skill[]
   agents: Agent[]
@@ -103,7 +103,7 @@ interface WorkflowState {
   setActiveLLMConfig: (config: LLMConfig | null) => void
 }
 
-export const useWorkflowStore = create<WorkflowState>()(
+export const useAppStore = create<AppState>()(
   persist(
     (set, get) => ({
       workflows: [],

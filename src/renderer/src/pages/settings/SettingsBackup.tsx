@@ -1,5 +1,5 @@
 import { useState, useRef } from 'react'
-import { useWorkflowStore } from '@renderer/store/appStore'
+import { useAppStore } from '@renderer/store/appStore'
 import { triggerApi } from '@renderer/lib/api'
 import MessageBanner from '@renderer/components/ui/MessageBanner'
 
@@ -7,7 +7,7 @@ export default function SettingsBackup() {
   const {
     workflows, skills, agents, llmConfigs, triggers, knowledgeBases,
     addWorkflow, addSkill, addAgent, addLLMConfig, addKnowledgeBase, fetchTriggers
-  } = useWorkflowStore()
+  } = useAppStore()
   const [message, setMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null)
   const [importing, setImporting] = useState(false)
   const fileRef = useRef<HTMLInputElement>(null)

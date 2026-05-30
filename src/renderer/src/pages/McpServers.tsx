@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
 import { mcpApi, McpServer } from '@renderer/lib/mcpApi'
-import { useWorkflowStore } from '@renderer/store/appStore'
+import { useAppStore } from '@renderer/store/appStore'
 import CustomButton from '@renderer/components/ui/CustomButton'
 import CustomSwitch from '@renderer/components/ui/CustomSwitch'
 import McpServerFormModal, { McpServerFormData } from '@renderer/components/mcp/McpServerFormModal'
@@ -23,8 +23,8 @@ const STATUS_CONFIG: Record<string, { label: string; dot: string; bg: string }> 
 }
 
 export default function McpServers(): React.JSX.Element {
-  const servers = useWorkflowStore(s => s.mcpServers)
-  const fetchMcpServers = useWorkflowStore(s => s.fetchMcpServers)
+  const servers = useAppStore(s => s.mcpServers)
+  const fetchMcpServers = useAppStore(s => s.fetchMcpServers)
   const [loading, setLoading] = useState(true)
   const [showForm, setShowForm] = useState(false)
   const [editingServer, setEditingServer] = useState<McpServer | null>(null)

@@ -1,5 +1,5 @@
 import React from 'react';
-import { useWorkflowStore } from '@renderer/store/appStore';
+import { useAppStore } from '@renderer/store/appStore';
 import MarkdownPreview from '@renderer/components/MarkdownPreview';
 import CustomSelect from '../../ui/CustomSelect';
 
@@ -9,7 +9,7 @@ interface SkillConfigProps {
 }
 
 const SkillConfig: React.FC<SkillConfigProps> = ({ config, onConfigChange }) => {
-  const skills = useWorkflowStore((s) => s.skills);
+  const skills = useAppStore((s) => s.skills);
   const selectedSkill = skills.find(s => s.id === config.skillId);
   return (
     <div className="space-y-4">

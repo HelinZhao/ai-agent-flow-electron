@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react'
 import { Workflow } from '@renderer/types'
 import { workflowApi } from '@renderer/lib/api'
-import { useWorkflowStore } from '@renderer/store/appStore'
+import { useAppStore } from '@renderer/store/appStore'
 import CustomSelect from '../../ui/CustomSelect'
 import CustomInput from '../../ui/CustomInput'
 import ExpressionInput from '../ExpressionInput'
@@ -13,7 +13,7 @@ interface LoopConfigProps {
 }
 
 const LoopConfig: React.FC<LoopConfigProps> = ({ config, onConfigChange, workflowId }) => {
-  const workflows = useWorkflowStore((s) => s.workflows)
+  const workflows = useAppStore((s) => s.workflows)
   const availableWorkflows = workflows.filter(w => w.id !== workflowId)
   const [targetParams, setTargetParams] = useState<{ name: string; displayName: string; type: string; required?: boolean }[]>([])
 

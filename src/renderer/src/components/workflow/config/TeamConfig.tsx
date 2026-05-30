@@ -1,4 +1,4 @@
-import { useWorkflowStore } from '@renderer/store/appStore'
+import { useAppStore } from '@renderer/store/appStore'
 import CustomSelect from '../../ui/CustomSelect'
 import CustomTextarea from '../../ui/CustomTextarea'
 
@@ -8,7 +8,7 @@ interface TeamConfigProps {
 }
 
 export default function TeamConfig({ config, onConfigChange }: TeamConfigProps) {
-  const { teams } = useWorkflowStore()
+  const { teams } = useAppStore()
 
   const selectedTeam = teams.find(t => t.id === config.teamId)
 

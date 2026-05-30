@@ -1,5 +1,5 @@
 import React, { useState, useCallback } from 'react'
-import { useWorkflowStore } from '@renderer/store/appStore'
+import { useAppStore } from '@renderer/store/appStore'
 import CustomInput from '@renderer/components/ui/CustomInput'
 import CustomButton from '@renderer/components/ui/CustomButton'
 import ResponsiveGrid from '@renderer/components/ui/ResponsiveGrid'
@@ -128,7 +128,7 @@ const TeamCard = React.memo(function TeamCard({
 
 // ─── Main Page ───
 export default function Teams() {
-  const { teams, agents, tasks: allTasks, addTeam, updateTeam, deleteTeam } = useWorkflowStore()
+  const { teams, agents, tasks: allTasks, addTeam, updateTeam, deleteTeam } = useAppStore()
   const [selectedTeamId, setSelectedTeamId] = useState<string | null>(null)
   const [searchTerm, setSearchTerm] = useState('')
   const [isEditing, setIsEditing] = useState(false)

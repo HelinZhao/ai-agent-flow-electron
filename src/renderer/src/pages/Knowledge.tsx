@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react'
 import { useForm } from 'react-hook-form'
-import { useWorkflowStore } from '@renderer/store/appStore'
+import { useAppStore } from '@renderer/store/appStore'
 import { KnowledgeBase } from '@renderer/types'
 import CustomInput from '@renderer/components/ui/CustomInput'
 import CustomButton from '@renderer/components/ui/CustomButton'
@@ -114,7 +114,7 @@ export default function Knowledge(): React.JSX.Element {
     addKnowledgeBase,
     updateKnowledgeBase,
     deleteKnowledgeBase,
-  } = useWorkflowStore()
+  } = useAppStore()
 
   const [isLoading, setIsLoading] = useState(false)
   const [message, setMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null)

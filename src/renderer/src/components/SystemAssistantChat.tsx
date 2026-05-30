@@ -1,5 +1,5 @@
 import { useState, useRef, useEffect, useCallback } from 'react'
-import { useWorkflowStore } from '@renderer/store/appStore'
+import { useAppStore } from '@renderer/store/appStore'
 import { useBudingStore } from '@renderer/store/budingStore'
 import { useSettingsStore } from '@renderer/store/settingsStore'
 import { workflowExecutionApi } from '@renderer/lib/api'
@@ -16,7 +16,7 @@ const BTN_SIZE = 48
 const GAP = 24
 
 export default function SystemAssistantChat() {
-  const { agents, activeLLMConfig } = useWorkflowStore()
+  const { agents, activeLLMConfig } = useAppStore()
   const open = useBudingStore(s => s.open)
   const setOpen = useBudingStore(s => s.setOpen)
   const assistContext = useBudingStore(s => s.assistContext)

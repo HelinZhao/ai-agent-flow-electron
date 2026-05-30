@@ -1,5 +1,5 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { useWorkflowStore } from '@renderer/store/appStore';
+import { useAppStore } from '@renderer/store/appStore';
 import { AttachmentMetadata } from '@renderer/types';
 import { AttachmentData, processFileAttachment, formatFileSize } from '@renderer/lib/attachmentUtils';
 import { SERVER_BASE_URL, TOOL_LABEL_MAP } from '@renderer/config';
@@ -11,7 +11,7 @@ import CustomButton from '@renderer/components/ui/CustomButton';
 import CustomInput from '@renderer/components/ui/CustomInput';
 
 export default function Chat(): React.JSX.Element {
-  const { agents, activeLLMConfig } = useWorkflowStore();
+  const { agents, activeLLMConfig } = useAppStore();
   const [searchTerm, setSearchTerm] = useState('');
   const [showSearch, setShowSearch] = useState(false);
   const [messageSearch, setMessageSearch] = useState('');

@@ -2,7 +2,7 @@ import ClickSpark from "@renderer/components/ClickSpark";
 import Layout from "@renderer/components/layout/Layout";
 import '@renderer/assets/react-flow-custom.css';
 import '@renderer/assets/iconfont.css';
-import { useWorkflowStore } from "@renderer/store/appStore";
+import { useAppStore } from "@renderer/store/appStore";
 import { useEffect, useState } from "react";
 import { ollamaApi } from "@renderer/lib/api";
 import OllamaInstallDialog from "@renderer/components/OllamaInstallDialog";
@@ -45,10 +45,10 @@ const navItems = [
 let init = false
 
 export default function App(): React.JSX.Element {
-  const initialize = useWorkflowStore(state => state.initialize);
-  const currentPage = useWorkflowStore(state => state.currentPage);
-  const setCurrentPage = useWorkflowStore(state => state.setCurrentPage);
-  const error = useWorkflowStore(state => state.error);
+  const initialize = useAppStore(state => state.initialize);
+  const currentPage = useAppStore(state => state.currentPage);
+  const setCurrentPage = useAppStore(state => state.setCurrentPage);
+  const error = useAppStore(state => state.error);
   const [initializing, setInitializing] = useState(true);
   const [showModelDialog, setShowModelDialog] = useState(false);
   const [showOllamaDialog, setShowOllamaDialog] = useState(false);

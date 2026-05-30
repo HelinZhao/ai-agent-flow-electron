@@ -28,7 +28,7 @@ export class MonitoredLangGraphExecutor {
   private agentCallStack = new Set<string>()
   private workflowCallStack = new Set<string>()
 
-  private WorkflowState = Annotation.Root({
+  private AppState = Annotation.Root({
     messages: Annotation<BaseMessage[]>({
       reducer: (x, y) => x.concat(y),
     }),
@@ -195,7 +195,7 @@ export class MonitoredLangGraphExecutor {
     const branchMap: Record<string, WorkflowBranch> = {}
     const branch2Targets: Map<string, string[]> = new Map()
     const nodeResults = new Map<string, any>()
-    const graph = new StateGraph(this.WorkflowState)
+    const graph = new StateGraph(this.AppState)
     const connectedNodes = new Set<string>()
     const node2Sources = new Map<string, string[]>()
     const node2Targets = new Map<string, string[]>()

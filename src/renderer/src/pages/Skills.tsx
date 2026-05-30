@@ -1,5 +1,5 @@
 import React, { useState, useCallback } from 'react';
-import { useWorkflowStore } from '@renderer/store/appStore';
+import { useAppStore } from '@renderer/store/appStore';
 import { Skill } from '@renderer/types';
 import CustomInput from '@renderer/components/ui/CustomInput';
 import CustomButton from '@renderer/components/ui/CustomButton';
@@ -84,7 +84,7 @@ const SkillCard = React.memo(function SkillCard({
 
 // ─── Main Page ───
 export default function Skills(): React.JSX.Element {
-  const { skills, addSkill, updateSkill, deleteSkill } = useWorkflowStore();
+  const { skills, addSkill, updateSkill, deleteSkill } = useAppStore();
   const [selectedSkillId, setSelectedSkillId] = useState<string | null>(null);
   const [searchTerm, setSearchTerm] = useState('');
   const [isEditing, setIsEditing] = useState(false);

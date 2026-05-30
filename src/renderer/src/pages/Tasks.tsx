@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { useWorkflowStore } from '@renderer/store/appStore'
+import { useAppStore } from '@renderer/store/appStore'
 import CustomButton from '@renderer/components/ui/CustomButton'
 import CustomInput from '@renderer/components/ui/CustomInput'
 import CustomTextarea from '@renderer/components/ui/CustomTextarea'
@@ -28,7 +28,7 @@ const PRIORITY_LABEL: Record<number, { label: string; color: string }> = {
 }
 
 export default function Tasks() {
-  const { teams, tasks: storeTasks } = useWorkflowStore()
+  const { teams, tasks: storeTasks } = useAppStore()
   const [statusFilter, setStatusFilter] = useState<string>('')
   const [showCreate, setShowCreate] = useState(false)
   const [selectedTask, setSelectedTask] = useState<Task | null>(null)

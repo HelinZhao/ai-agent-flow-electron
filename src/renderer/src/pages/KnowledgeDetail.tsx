@@ -1,5 +1,5 @@
 import React, { useState, useRef } from 'react'
-import { useWorkflowStore } from '@renderer/store/appStore'
+import { useAppStore } from '@renderer/store/appStore'
 import { KnowledgeBase } from '@renderer/types'
 import { knowledgeBaseApi } from '@renderer/lib/api'
 import CustomButton from '@renderer/components/ui/CustomButton'
@@ -14,7 +14,7 @@ interface KnowledgeDetailProps {
 }
 
 export default function KnowledgeDetail({ kb, onBack }: KnowledgeDetailProps): React.JSX.Element {
-  const { uploadDocumentToKB, deleteDocumentFromKB, getKnowledgeBases } = useWorkflowStore()
+  const { uploadDocumentToKB, deleteDocumentFromKB, getKnowledgeBases } = useAppStore()
 
   const [isLoading, setIsLoading] = useState(false)
   const [message, setMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null)

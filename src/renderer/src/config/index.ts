@@ -247,7 +247,7 @@ export const CODE_FILE_EXTENSIONS = [
 // ========== 存储键名 ==========
 
 /** Zustand persist 存储键 */
-export const STORAGE_KEY = 'workflow-storage'
+export const STORAGE_KEY = 'app-storage'
 
 /** Zustand persist 白名单字段 */
 export const STORAGE_PERSIST_FIELDS = ['workflows', 'skills', 'agents', 'teams', 'llmConfigs', 'activeLLMConfig', 'currentPage']

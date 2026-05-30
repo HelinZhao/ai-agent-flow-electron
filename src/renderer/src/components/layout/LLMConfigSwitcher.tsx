@@ -1,4 +1,4 @@
-import { useWorkflowStore } from '@renderer/store/appStore';
+import { useAppStore } from '@renderer/store/appStore';
 import CustomSelect, { SelectOption } from '../ui/CustomSelect';
 
 function ConfigLabel({ name, provider, isActive }: { name: string; provider: string, isActive: boolean }) {
@@ -18,7 +18,7 @@ function ConfigLabel({ name, provider, isActive }: { name: string; provider: str
 }
 
 export default function LLMConfigSwitcher() {
-  const { llmConfigs, activeLLMConfig, activateLLMConfig } = useWorkflowStore();
+  const { llmConfigs, activeLLMConfig, activateLLMConfig } = useAppStore();
 
   if (!activeLLMConfig) {
     return (

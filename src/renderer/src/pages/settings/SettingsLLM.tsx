@@ -1,6 +1,6 @@
 import React, { useState, useRef } from 'react';
 import { useForm } from 'react-hook-form';
-import { useWorkflowStore } from '@renderer/store/appStore';
+import { useAppStore } from '@renderer/store/appStore';
 import { LLMConfig } from '@renderer/types';
 import { llmConfigApi } from '@renderer/lib/api';
 import CustomSelect from '@renderer/components/ui/CustomSelect';
@@ -38,7 +38,7 @@ export default function SettingsLLM(): React.JSX.Element {
     updateLLMConfig,
     deleteLLMConfig,
     activateLLMConfig,
-  } = useWorkflowStore();
+  } = useAppStore();
 
   const [isSaving, setIsSaving] = useState(false);
   const [isTesting, setIsTesting] = useState(false);

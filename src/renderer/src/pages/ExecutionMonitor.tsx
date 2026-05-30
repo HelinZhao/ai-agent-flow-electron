@@ -3,7 +3,7 @@ import { useDebounce, useDebounceEffect } from 'ahooks'
 import CustomInput from '@renderer/components/ui/CustomInput'
 import { ExecutionSummary, WorkflowExecutionProgress, TokenUsageSummary } from '@renderer/types'
 import { workflowExecutionApi, tokenUsageApi } from '@renderer/lib/api'
-import { useWorkflowStore } from '@renderer/store/appStore'
+import { useAppStore } from '@renderer/store/appStore'
 import Pagination from '@renderer/components/ui/Pagination'
 import ExecutionResultTabs from '@renderer/components/workflow/ExecutionResultTabs'
 
@@ -59,7 +59,7 @@ const ExecutionMonitor = () => {
   const [detailId, setDetailId] = useState<string | null>(null)
   const pollingRef = useRef<ReturnType<typeof setInterval>>(null)
   const intervalRef = useRef(2000)
-  const currentPage = useWorkflowStore(s => s.currentPage)
+  const currentPage = useAppStore(s => s.currentPage)
 
   const totalPages = Math.max(1, Math.ceil(total / PAGE_SIZE))
 

@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { VariableConfig } from '@renderer/types';
-import { useWorkflowStore } from '@renderer/store/appStore';
+import { useAppStore } from '@renderer/store/appStore';
 import { TOOL_DEFINITIONS } from '@renderer/config';
 import { mcpApi } from '@renderer/lib/mcpApi';
 import VariableConfigModal from '../VariableConfigModal';
@@ -175,8 +175,8 @@ const LLMConfig: React.FC<LLMConfigProps> = ({ config, onConfigChange }) => {
   const [editingVariable, setEditingVariable] = useState<VariableConfig | null>(null);
   const [variables, setVariables] = useState<VariableConfig[]>(config.variables || []);
   const [mcpTools, setMcpTools] = useState<typeof TOOL_DEFINITIONS>([]);
-  const knowledgeBases = useWorkflowStore((s) => s.knowledgeBases);
-  const getKnowledgeBases = useWorkflowStore((s) => s.getKnowledgeBases);
+  const knowledgeBases = useAppStore((s) => s.knowledgeBases);
+  const getKnowledgeBases = useAppStore((s) => s.getKnowledgeBases);
 
   useEffect(() => {
     if (knowledgeBases.length === 0) getKnowledgeBases()
@@ -188,8 +188,8 @@ const LLMConfig: React.FC<LLMConfigProps> = ({ config, onConfigChange }) => {
     }).catch(() => {})
   }, [])
 
-  const llmConfigs = useWorkflowStore((s) => s.llmConfigs);
-  const skills = useWorkflowStore((s) => s.skills);
+  const llmConfigs = useAppStore((s) => s.llmConfigs);
+  const skills = useAppStore((s) => s.skills);
 
   // 当外部config变化时同步更新本地状态
   React.useEffect(() => {

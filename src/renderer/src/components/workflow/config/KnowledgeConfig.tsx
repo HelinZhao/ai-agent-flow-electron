@@ -1,5 +1,5 @@
 import React, { useEffect } from 'react'
-import { useWorkflowStore } from '@renderer/store/appStore'
+import { useAppStore } from '@renderer/store/appStore'
 import CustomSelect from '../../ui/CustomSelect'
 import CustomInput from '../../ui/CustomInput'
 import ExpressionInput from '../ExpressionInput'
@@ -10,8 +10,8 @@ interface KnowledgeConfigProps {
 }
 
 const KnowledgeConfig: React.FC<KnowledgeConfigProps> = ({ config, onConfigChange }) => {
-  const knowledgeBases = useWorkflowStore(s => s.knowledgeBases)
-  const getKnowledgeBases = useWorkflowStore(s => s.getKnowledgeBases)
+  const knowledgeBases = useAppStore(s => s.knowledgeBases)
+  const getKnowledgeBases = useAppStore(s => s.getKnowledgeBases)
 
   useEffect(() => { getKnowledgeBases() }, [])
 

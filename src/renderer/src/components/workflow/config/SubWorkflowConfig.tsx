@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { VariableConfig, Workflow } from '@renderer/types';
 import { workflowApi } from '@renderer/lib/api';
-import { useWorkflowStore } from '@renderer/store/appStore';
+import { useAppStore } from '@renderer/store/appStore';
 import CustomSelect from '../../ui/CustomSelect';
 import ExpressionInput from '../ExpressionInput';
 
@@ -12,7 +12,7 @@ interface WorkflowConfigProps {
 }
 
 const SubWorkflowConfig: React.FC<WorkflowConfigProps> = ({ config, onConfigChange, workflowId }) => {
-  const workflows = useWorkflowStore((s) => s.workflows);
+  const workflows = useAppStore((s) => s.workflows);
   const availableWorkflows = workflows.filter(w => w.id !== workflowId);
   const [targetParams, setTargetParams] = useState<VariableConfig[]>([]);
 

@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react'
 import { checkHealth } from '@renderer/lib/api'
-import { useWorkflowStore } from '@renderer/store/appStore'
+import { useAppStore } from '@renderer/store/appStore'
 import { useSettingsStore } from '@renderer/store/settingsStore'
 import GitPanel from '@renderer/components/git/GitPanel'
 
@@ -12,8 +12,8 @@ interface FooterProps {
 const isElectron = Boolean(window.electron || window.api)
 
 const Footer: React.FC<FooterProps> = ({ collapsed, onToggleCollapse }) => {
-  const loading = useWorkflowStore(state => state.loading);
-  const initialize = useWorkflowStore(state => state.initialize);
+  const loading = useAppStore(state => state.loading);
+  const initialize = useAppStore(state => state.initialize);
   const [connected, setConnected] = useState(true)
   const [cpu, setCpu] = useState(0)
   const [memory, setMemory] = useState(0)

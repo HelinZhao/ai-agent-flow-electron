@@ -2,7 +2,7 @@ import { useEffect, useState, useRef, useCallback } from 'react'
 import { useForm, Controller } from 'react-hook-form'
 import { Trigger, VariableConfig } from '@renderer/types'
 import { triggerApi, workflowApi } from '@renderer/lib/api'
-import { useWorkflowStore } from '@renderer/store/appStore'
+import { useAppStore } from '@renderer/store/appStore'
 import { CRON_PRESETS, WEBHOOK_BASE_URL } from '@renderer/config'
 import Modal from '@renderer/components/ui/Modal'
 import CustomButton from '@renderer/components/ui/CustomButton'
@@ -83,11 +83,11 @@ export default function Triggers(): React.JSX.Element {
     }
   }, [editingId, setValue])
 
-  const triggers = useWorkflowStore(s => s.triggers)
-  const setTriggers = useWorkflowStore(s => s.setTriggers)
-  const workflows = useWorkflowStore(s => s.workflows)
-  const agents = useWorkflowStore(s => s.agents)
-  const teams = useWorkflowStore(s => s.teams)
+  const triggers = useAppStore(s => s.triggers)
+  const setTriggers = useAppStore(s => s.setTriggers)
+  const workflows = useAppStore(s => s.workflows)
+  const agents = useAppStore(s => s.agents)
+  const teams = useAppStore(s => s.teams)
 
   const refresh = async () => {
     try {

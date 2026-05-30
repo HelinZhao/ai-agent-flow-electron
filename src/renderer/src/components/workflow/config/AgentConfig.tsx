@@ -1,5 +1,5 @@
 import React from 'react';
-import { useWorkflowStore } from '@renderer/store/appStore';
+import { useAppStore } from '@renderer/store/appStore';
 import CustomSelect from '../../ui/CustomSelect';
 
 interface AgentConfigProps {
@@ -8,7 +8,7 @@ interface AgentConfigProps {
 }
 
 const AgentConfig: React.FC<AgentConfigProps> = ({ config, onConfigChange }) => {
-    const agents = useWorkflowStore((s) => s.agents);
+    const agents = useAppStore((s) => s.agents);
   
   return (
     <div className="space-y-4">
