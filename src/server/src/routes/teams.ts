@@ -15,7 +15,7 @@ router.get('/', async (_req, res) => {
 
 router.post('/', async (req, res) => {
   try {
-    const { name, description, captainId, memberIds, mode } = req.body
+    const { name, description, captainId, memberIds, mode, autoClaimEnabled, autoClaimInterval } = req.body
     if (!name || !description) {
       res.status(400).json({ error: '名称和描述不能为空' })
       return
@@ -26,6 +26,8 @@ router.post('/', async (req, res) => {
       captainId: captainId || null,
       memberIds: JSON.stringify(memberIds || []),
       mode: mode || 'captain_distribute',
+      autoClaimEnabled: autoClaimEnabled ?? false,
+      autoClaimInterval: autoClaimInterval ?? 60,
     })
     changeNotifier.emitChange('teams')
     res.status(201).json(team)
@@ -48,12 +50,14 @@ router.put('/:id', async (req, res) => {
   try {
     const team = await TeamModel.findByPk(req.params.id)
     if (!team) { res.status(404).json({ error: '团队不存在' }); return }
-    const { name, description, captainId, memberIds, mode } = req.body
+    const { name, description, captainId, memberIds, mode, autoClaimEnabled, autoClaimInterval } = req.body
     if (name !== undefined) team.name = name
     if (description !== undefined) team.description = description
     if (captainId !== undefined) team.captainId = captainId || null
     if (memberIds !== undefined) team.memberIds = JSON.stringify(memberIds)
     if (mode !== undefined) team.mode = mode
+    if (autoClaimEnabled !== undefined) team.autoClaimEnabled = autoClaimEnabled
+    if (autoClaimInterval !== undefined) team.autoClaimInterval = autoClaimInterval
     await team.save()
     changeNotifier.emitChange('teams')
     res.json(team)

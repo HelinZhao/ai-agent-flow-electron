@@ -18,11 +18,12 @@ import Triggers from "./Triggers";
 import Knowledge from "./Knowledge";
 import McpServers from "./McpServers";
 import Teams from "./Teams";
+import Tasks from "./Tasks";
 import Marketplace from "./Marketplace";
 import ToastContainer from '@renderer/components/ui/toast/ToastContainer';
 import {
   ChatIcon, WorkflowIcon, AgentIcon, TeamIcon, SkillsIcon, KnowledgeIcon,
-  TriggersIcon, McpIcon, MarketplaceIcon, MonitorIcon, SettingsIcon, LogsIcon
+  TriggersIcon, McpIcon, MarketplaceIcon, MonitorIcon, SettingsIcon, LogsIcon, TicketIcon
 } from '@renderer/components/icons/NavIcons';
 
 const navItems = [
@@ -30,6 +31,7 @@ const navItems = [
   { path: '/', label: '工作流', icon: <WorkflowIcon />, page: <Workflow />, group: '核心' },
   { path: '/agents', label: 'Agent', icon: <AgentIcon />, page: <Agents />, group: '核心' },
   { path: '/teams', label: '团队', icon: <TeamIcon />, page: <Teams />, group: '核心' },
+  { path: '/tasks', label: '任务池', icon: <TicketIcon />, page: <Tasks />, group: '核心' },
   { path: '/skills', label: '技能', icon: <SkillsIcon />, page: <Skills />, group: '能力' },
   { path: '/knowledge', label: '知识库', icon: <KnowledgeIcon />, page: <Knowledge />, group: '能力' },
   { path: '/triggers', label: '触发器', icon: <TriggersIcon />, page: <Triggers />, group: '能力' },

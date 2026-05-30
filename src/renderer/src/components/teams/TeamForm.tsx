@@ -11,6 +11,8 @@ export interface TeamFormData {
   captainId?: string
   memberIds: string[]
   mode: string
+  autoClaimEnabled?: boolean
+  autoClaimInterval?: number
 }
 
 interface TeamFormProps {
@@ -19,6 +21,8 @@ interface TeamFormProps {
   captainId: string; setCaptainId: (v: string) => void
   memberIds: string[]; setMemberIds: (v: string[]) => void
   mode: string; setMode: (v: string) => void
+  autoClaimEnabled: boolean; setAutoClaimEnabled: (v: boolean) => void
+  autoClaimInterval: number; setAutoClaimInterval: (v: number) => void
   agents: { id: string; name: string }[]
   saving: boolean; isCreate: boolean
   onSubmit: () => void; onCancel: () => void
@@ -33,7 +37,8 @@ const MODE_OPTIONS = [
 export default function TeamForm({
   name, setName, description, setDescription,
   captainId, setCaptainId, memberIds, setMemberIds,
-  mode, setMode, agents, saving, isCreate, onSubmit, onCancel,
+  mode, setMode, autoClaimEnabled, setAutoClaimEnabled, autoClaimInterval, setAutoClaimInterval,
+  agents, saving, isCreate, onSubmit, onCancel,
 }: TeamFormProps) {
   const [pickerOpen, setPickerOpen] = useState(false);
 
@@ -194,6 +199,41 @@ export default function TeamForm({
         onApply={(ids) => { setMemberIds(ids); setPickerOpen(false) }}
         onClose={() => setPickerOpen(false)}
       />
+
+      {/* ── 自动接取 ── */}
+      <section>
+        <div className="flex items-center gap-2 mb-5">
+          <div className="w-1 h-5 bg-teal-500 rounded-full" />
+          <h3 className="text-base font-semibold text-gray-800 dark:text-gray-200">自动接取任务</h3>
+        </div>
+        <div className="space-y-4">
+          <label className="flex items-center gap-3 cursor-pointer">
+            <div
+              onClick={() => setAutoClaimEnabled(!autoClaimEnabled)}
+              className={`relative w-10 h-5 rounded-full transition-colors ${autoClaimEnabled ? 'bg-teal-500' : 'bg-gray-300 dark:bg-gray-600'}`}
+            >
+              <div className={`absolute top-0.5 left-0.5 w-4 h-4 rounded-full bg-white shadow transition-transform ${autoClaimEnabled ? 'translate-x-5' : ''}`} />
+            </div>
+            <div>
+              <span className="text-sm font-medium text-gray-700 dark:text-gray-300">启用自动接取</span>
+              <p className="text-xs text-gray-400 dark:text-gray-500">服务端后台轮询任务池，自动认领并执行待办任务</p>
+            </div>
+          </label>
+
+          {autoClaimEnabled && (
+            <div>
+              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5">轮询间隔（秒）</label>
+              <CustomInput
+                type="number"
+                value={String(autoClaimInterval)}
+                onChange={e => setAutoClaimInterval(Math.max(10, Number(e.target.value) || 60))}
+                min={10}
+              />
+              <p className="text-xs text-gray-400 dark:text-gray-500 mt-1">每次轮询间隔时间，最小 10 秒</p>
+            </div>
+          )}
+        </div>
+      </section>
 
       {/* ── Form Actions ── */}
       <div className="flex items-center justify-end gap-3 pt-6 mt-8 border-t border-gray-200 dark:border-gray-700">

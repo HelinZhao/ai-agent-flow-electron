@@ -41,6 +41,7 @@ export const NODE_DEFS: NodeDef[] = [
   { type: 'agent', shortLabel: 'Agent', defaultLabel: 'Agent 节点', color: 'red', category: 'integration', hasTargetHandle: true, hasSourceHandle: true, icon: '🤖' },
   { type: 'subWorkflow', shortLabel: '子工作流', defaultLabel: '子工作流节点', color: 'cyan', category: 'integration', hasTargetHandle: true, hasSourceHandle: true, icon: '🔗' },
   { type: 'team', shortLabel: '团队', defaultLabel: '团队协作节点', color: 'indigo', category: 'integration', hasTargetHandle: true, hasSourceHandle: true, icon: '👥' },
+  { type: 'taskPool', shortLabel: '任务池', defaultLabel: '任务池节点', color: 'teal', category: 'integration', hasTargetHandle: true, hasSourceHandle: true, icon: '🎫' },
 ]
 
 export const NODE_DEFS_MAP: Record<string, NodeDef> = Object.fromEntries(NODE_DEFS.map(n => [n.type, n]))

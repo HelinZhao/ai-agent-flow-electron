@@ -12,7 +12,7 @@ export interface BranchNodeConfig {
 
 export interface WorkflowNode {
   id: string
-  type: 'start' | 'skill' | 'branch' | 'api' | 'llm' | 'agent' | 'cli' | 'text' | 'end' | 'subWorkflow' | 'mcp' | 'code' | 'note' | 'loop' | 'catch' | 'transform' | 'split' | 'merge' | 'sleep' | 'if' | 'knowledge' | 'variable' | 'database' | 'team'
+  type: 'start' | 'skill' | 'branch' | 'api' | 'llm' | 'agent' | 'cli' | 'text' | 'end' | 'subWorkflow' | 'mcp' | 'code' | 'note' | 'loop' | 'catch' | 'transform' | 'split' | 'merge' | 'sleep' | 'if' | 'knowledge' | 'variable' | 'database' | 'team' | 'taskPool'
   position: { x: number; y: number }
   data: {
     label: string
@@ -61,6 +61,8 @@ export interface Team {
   captainId?: string
   memberIds: string[]
   mode: string
+  autoClaimEnabled?: boolean
+  autoClaimInterval?: number
   createdAt: Date
   updatedAt: Date
 }
@@ -349,7 +351,7 @@ export interface Trigger {
   name: string
   type: 'cron' | 'webhook'
   cronExpression?: string
-  targetType: 'workflow' | 'agent'
+  targetType: 'workflow' | 'agent' | 'team'
   targetId: string
   input: string
   params?: string
@@ -358,6 +360,22 @@ export interface Trigger {
   nextRunAt?: string
   lastRunAt?: string
   lastRunStatus?: 'success' | 'failed' | 'running'
+  createdAt: string
+  updatedAt: string
+}
+
+export interface Task {
+  id: string
+  title: string
+  description: string
+  status: 'pending' | 'assigned' | 'claimed' | 'completed' | 'failed'
+  priority: number
+  claimedBy?: string
+  executionId?: string
+  result?: string
+  error?: string
+  claimedAt?: string
+  completedAt?: string
   createdAt: string
   updatedAt: string
 }

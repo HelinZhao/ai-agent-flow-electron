@@ -42,7 +42,8 @@ function describeCronSimple(expr: string): string {
 
 const TARGET_TYPE_LABEL: Record<string, string> = {
   workflow: '工作流',
-  agent: 'Agent'
+  agent: 'Agent',
+  team: '团队',
 }
 
 export default function Triggers(): React.JSX.Element {
@@ -86,6 +87,7 @@ export default function Triggers(): React.JSX.Element {
   const setTriggers = useWorkflowStore(s => s.setTriggers)
   const workflows = useWorkflowStore(s => s.workflows)
   const agents = useWorkflowStore(s => s.agents)
+  const teams = useWorkflowStore(s => s.teams)
 
   const refresh = async () => {
     try {
@@ -98,9 +100,15 @@ export default function Triggers(): React.JSX.Element {
 
   useEffect(() => { refresh() }, [])
 
-  const targetOptions = (formTargetType === 'workflow' ? workflows : agents).map((w: { id: string; name: string }) => ({
+  const getTargetList = (type: string) => {
+    if (type === 'workflow') return workflows
+    if (type === 'agent') return agents
+    if (type === 'team') return teams
+    return []
+  }
+  const targetOptions = getTargetList(formTargetType).map((w: { id: string; name: string }) => ({
     value: w.id,
-    label: w.name
+    label: w.name,
   }))
 
   const openCreate = () => {
@@ -203,7 +211,7 @@ export default function Triggers(): React.JSX.Element {
 
   const handleTargetTypeChange = (v: string) => {
     setValue('targetType', v)
-    const targets = v === 'workflow' ? workflows : agents
+    const targets = getTargetList(v)
     setValue('targetId', targets[0]?.id || '')
   }
 
@@ -465,7 +473,8 @@ export default function Triggers(): React.JSX.Element {
                   onChange={handleTargetTypeChange}
                   options={[
                     { value: 'workflow', label: '工作流' },
-                    { value: 'agent', label: 'Agent' }
+                    { value: 'agent', label: 'Agent' },
+                    { value: 'team', label: '团队' },
                   ]}
                 />
               </div>
@@ -475,7 +484,7 @@ export default function Triggers(): React.JSX.Element {
                   value={formTargetId}
                   onChange={v => setValue('targetId', v)}
                   options={targetOptions}
-                  placeholder={targetOptions.length === 0 ? `暂无${formTargetType === 'workflow' ? '工作流' : 'Agent'}` : '请选择...'}
+                  placeholder={targetOptions.length === 0 ? `暂无${({ workflow: '工作流', agent: 'Agent', team: '团队' })[formTargetType as string] || '目标'}` : '请选择...'}
                 />
               </div>
             </div>

@@ -1,9 +1,10 @@
 import { create } from 'zustand'
 import { persist } from 'zustand/middleware'
-import { Workflow, Skill, Agent, Team, LLMConfig, KnowledgeBase, Trigger, EnvVar, Template } from '@renderer/types'
+import debounce from 'lodash/debounce'
+import { Workflow, Skill, Agent, Team, Task, LLMConfig, KnowledgeBase, Trigger, EnvVar, Template } from '@renderer/types'
 import type { McpServer } from '@renderer/lib/mcpApi'
 import { mcpApi } from '@renderer/lib/mcpApi'
-import { workflowApi, skillApi, agentApi, teamApi, llmConfigApi, knowledgeBaseApi, triggerApi, envVarApi, templateApi, waitForServer } from '@renderer/lib/api'
+import { workflowApi, skillApi, agentApi, teamApi, taskApi, llmConfigApi, knowledgeBaseApi, triggerApi, envVarApi, templateApi, waitForServer } from '@renderer/lib/api'
 import { STORAGE_KEY, STORAGE_PERSIST_FIELDS, API_BASE_URL } from '@renderer/config'
 import { gitWriteEntity } from '@renderer/lib/gitWriteEntity'
 
@@ -12,6 +13,7 @@ interface WorkflowState {
   skills: Skill[]
   agents: Agent[]
   teams: Team[]
+  tasks: Task[]
   llmConfigs: LLMConfig[]
   activeLLMConfig: LLMConfig | null
   currentPage: string
@@ -88,6 +90,8 @@ interface WorkflowState {
   disconnectEventStream: () => void
 
   // Team actions
+  setTasks: (tasks: Task[]) => void
+  fetchTasks: () => Promise<void>
 
   // Internal helper methods
   setLoading: (loading: boolean) => void
@@ -106,6 +110,7 @@ export const useWorkflowStore = create<WorkflowState>()(
       skills: [],
       agents: [],
       teams: [],
+      tasks: [],
       llmConfigs: [],
       activeLLMConfig: null,
       knowledgeBases: [],
@@ -127,12 +132,13 @@ export const useWorkflowStore = create<WorkflowState>()(
           await waitForServer()
 
           // 并行加载所有数据
-          const [workflowsRes, skillsRes, agentsRes, triggersRes, teamsRes] = await Promise.all([
+          const [workflowsRes, skillsRes, agentsRes, triggersRes, teamsRes, tasksRes] = await Promise.all([
             workflowApi.getAll().catch(() => [] as Workflow[]),
             skillApi.getAll().catch(() => [] as Skill[]),
             agentApi.getAll().catch(() => [] as Agent[]),
             triggerApi.getAll().catch(() => [] as Trigger[]),
             teamApi.getAll().catch(() => [] as Team[]),
+            taskApi.getAll().catch(() => [] as Task[]),
           ])
 
           set({ workflows: workflowsRes || [] })
@@ -140,6 +146,7 @@ export const useWorkflowStore = create<WorkflowState>()(
           set({ agents: agentsRes || [] })
           set({ triggers: triggersRes || [] })
           set({ teams: teamsRes || [] })
+          set({ tasks: tasksRes || [] })
 
           // 加载知识库和LLM配置
           await Promise.all([
@@ -163,6 +170,11 @@ export const useWorkflowStore = create<WorkflowState>()(
       setSkills: (skills: Skill[]) => set({ skills }),
       setAgents: (agents: Agent[]) => set({ agents }),
       setTeams: (teams: Team[]) => set({ teams }),
+      setTasks: (tasks: Task[]) => set({ tasks }),
+      fetchTasks: async () => {
+        const tasks = await taskApi.getAll().catch(() => [] as Task[])
+        set({ tasks })
+      },
       setLLMConfigs: (configs: LLMConfig[]) => set({ llmConfigs: configs }),
       setActiveLLMConfig: (config: LLMConfig | null) => set({ activeLLMConfig: config }),
       setKnowledgeBases: (kbs: KnowledgeBase[]) => set({ knowledgeBases: kbs }),
@@ -670,58 +682,76 @@ export const useWorkflowStore = create<WorkflowState>()(
         state.eventSource?.close()
 
         const es = new EventSource(`${API_BASE_URL}/events`)
-        es.onmessage = async (e) => {
-          try {
-            state.setLoading(true)
-            const { resource } = JSON.parse(e.data)
-            switch (resource) {
-              case 'workflows': {
-                const workflows = await workflowApi.getAll().catch(() => [] as Workflow[])
-                set({ workflows })
-                break
+        const debouncedFetchers = new Map<string, ReturnType<typeof debounce>>()
+        const getFetcher = (resource: string) => {
+          let fn = debouncedFetchers.get(resource)
+          if (!fn) {
+            fn = debounce(async () => {
+              try {
+                state.setLoading(true)
+                switch (resource) {
+                  case 'workflows': {
+                    const workflows = await workflowApi.getAll().catch(() => [] as Workflow[])
+                    set({ workflows })
+                    break
+                  }
+                  case 'agents': {
+                    const agents = await agentApi.getAll().catch(() => [] as Agent[])
+                    set({ agents })
+                    break
+                  }
+                  case 'skills': {
+                    const skills = await skillApi.getAll().catch(() => [] as Skill[])
+                    set({ skills })
+                    break
+                  }
+                  case 'llm-config':
+                    get().getLLMConfigs()
+                    break
+                  case 'knowledge-base':
+                    get().getKnowledgeBases()
+                    break
+                  case 'triggers': {
+                    const triggers = await triggerApi.getAll().catch(() => [] as Trigger[])
+                    set({ triggers })
+                    break
+                  }
+                  case 'mcp-servers': {
+                    const servers = await mcpApi.getAll().catch(() => [] as McpServer[])
+                    set({ mcpServers: servers })
+                    break
+                  }
+                  case 'environment-variables': {
+                    const envVars = await envVarApi.getAll().catch(() => [] as EnvVar[])
+                    set({ envVars })
+                    break
+                  }
+                  case 'teams': {
+                    const teams = await teamApi.getAll().catch(() => [] as Team[])
+                    set({ teams })
+                    break
+                  }
+                  case 'tasks': {
+                    const tasks = await taskApi.getAll().catch(() => [] as Task[])
+                    set({ tasks })
+                    break
+                  }
+                }
+              } catch (err) {
+                console.error('[EventStream] 解析事件失败:', err)
+              } finally {
+                state.setLoading(false)
               }
-              case 'agents': {
-                const agents = await agentApi.getAll().catch(() => [] as Agent[])
-                set({ agents })
-                break
-              }
-              case 'skills': {
-                const skills = await skillApi.getAll().catch(() => [] as Skill[])
-                set({ skills })
-                break
-              }
-              case 'llm-config':
-                get().getLLMConfigs()
-                break
-              case 'knowledge-base':
-                get().getKnowledgeBases()
-                break
-              case 'triggers': {
-                const triggers = await triggerApi.getAll().catch(() => [] as Trigger[])
-                set({ triggers })
-                break
-              }
-              case 'mcp-servers': {
-                const servers = await mcpApi.getAll().catch(() => [] as McpServer[])
-                set({ mcpServers: servers })
-                break
-              }
-              case 'environment-variables': {
-                const envVars = await envVarApi.getAll().catch(() => [] as EnvVar[])
-                set({ envVars })
-                break
-              }
-              case 'teams': {
-                const teams = await teamApi.getAll().catch(() => [] as Team[])
-                set({ teams })
-                break
-              }
-            }
-          } catch (err) {
-            console.error('[EventStream] 解析事件失败:', err)
-          } finally {
-            state.setLoading(false)
+            }, 400)
+            debouncedFetchers.set(resource, fn)
           }
+          return fn
+        }
+        es.onmessage = (e) => {
+          try {
+            const { resource } = JSON.parse(e.data)
+            getFetcher(resource)()
+          } catch { /* ignore */ }
         }
         es.onerror = () => {
           console.warn('[EventStream] 连接异常，等待重连...')

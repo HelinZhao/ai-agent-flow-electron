@@ -6,7 +6,7 @@ export interface TriggerAttributes {
   name: string
   type: 'cron' | 'webhook'
   cronExpression?: string
-  targetType: 'workflow' | 'agent'
+  targetType: 'workflow' | 'agent' | 'team'
   targetId: string
   input: string
   params?: string

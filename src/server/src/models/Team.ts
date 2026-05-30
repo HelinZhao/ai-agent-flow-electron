@@ -8,6 +8,8 @@ export interface TeamAttributes {
   captainId?: string       // Agent ID as captain
   memberIds: string        // JSON array of Agent IDs
   mode: string             // 'captain_distribute' | 'discuss' | 'pipeline'
+  autoClaimEnabled?: boolean
+  autoClaimInterval?: number
   createdAt: Date
   updatedAt: Date
 }
@@ -27,6 +29,8 @@ export class TeamModel
   declare captainId?: string
   declare memberIds: string
   declare mode: string
+  declare autoClaimEnabled?: boolean
+  declare autoClaimInterval?: number
   declare createdAt: Date
   declare updatedAt: Date
 }
@@ -58,6 +62,16 @@ TeamModel.init(
     mode: {
       type: DataTypes.STRING,
       defaultValue: 'captain_distribute'
+    },
+    autoClaimEnabled: {
+      type: DataTypes.BOOLEAN,
+      defaultValue: false,
+      allowNull: true,
+    },
+    autoClaimInterval: {
+      type: DataTypes.INTEGER,
+      defaultValue: 60,
+      allowNull: true,
     },
     createdAt: {
       type: DataTypes.DATE,

@@ -1,5 +1,5 @@
 import { SkillModel, LLMConfigModel, AgentModel, WorkflowModel } from '../../models'
-import { callLLM, callLLMWithTracking } from '../llm'
+import { callLLMWithTracking } from '../llm'
 import { executeApiCall } from '../api'
 import { executeCliCommand, executeCliTemplate } from '../cli'
 import { retrieveContext } from '../knowledge'
@@ -13,6 +13,7 @@ import type { HITLRequest, HITLDecision, HITLResponse } from '../hitl'
 import type { ExecCtx, NodeExecutorDeps } from './types'
 import { ExecutionTerminatedError } from './types'
 import { resolveParams, resolveNodeRefs, buildNodeContext, parseInputAsArray, evaluateBranches, resolveNodeParams } from './helpers'
+import { executeTeamStandalone } from '../teamExecutor'
 
 /**
  * 各节点类型的执行逻辑，由 monitoredExecutor.ts 中的主类调用以分散职责。
@@ -134,6 +135,8 @@ async function executeNode(deps: NodeExecutorDeps, ctx: ExecCtx): Promise<Record
     case 'api': return await executeApi(deps, ctx)
     case 'llm': return await executeLLM(deps, ctx)
     case 'agent': return await executeAgent(deps, ctx)
+    case 'team': return await executeTeam(deps, ctx)
+    case 'taskPool': return await executeTaskPool(deps, ctx)
     case 'subWorkflow': return await executeSubWorkflow(deps, ctx)
     case 'cli': return await executeCli(deps, ctx)
     case 'mcp': return await executeMCP(deps, ctx)
@@ -407,7 +410,144 @@ async function executeAgent(deps: NodeExecutorDeps, ctx: ExecCtx) {
   }
 }
 
-// --- 子工作流 ---
+// ============================================================
+//  团队协作（委托给 teamExecutor 执行）
+// ============================================================
+
+/** 工作流中 Team 节点的执行入口 */
+async function executeTeam(deps: NodeExecutorDeps, ctx: ExecCtx) {
+  const { node, input, llmConfig, params, nodeResults, workflowEnvVars, variables } = ctx
+
+  const teamId = node.data.config?.teamId as string | undefined
+  if (!teamId) {
+    return { output: input, metadata: { nodeId: node.id, type: 'team', error: '未配置团队 ID', label: node.data?.label } }
+  }
+
+  const taskDesc = resolveParams(
+    (node.data.config?.taskDescription as string) || '{{$input}}',
+    input, params, nodeResults, workflowEnvVars, variables, deps.envVarsCache,
+  )
+
+  try {
+    const execState = deps.executionStates.get(ctx.executionId)
+    const result = await executeTeamStandalone({
+      teamId,
+      taskDescription: taskDesc,
+      llmConfig,
+      executionId: ctx.executionId,
+      nodeId: node.id,
+      logCallback: execState ? (msg) => {
+        execState.logs.push({
+          timestamp: new Date(), level: 'info',
+          message: msg, nodeId: node.id,
+        })
+      } : undefined,
+    })
+
+    return {
+      output: result.output,
+      metadata: { ...result.metadata, nodeId: node.id, label: node.data?.label, type: 'team' },
+    }
+  } catch (error) {
+    if (error instanceof ExecutionTerminatedError) throw error
+    const errorMsg = error instanceof Error ? error.message : '团队执行失败'
+    return { output: errorMsg, metadata: { nodeId: node.id, type: 'team', error: errorMsg, label: node.data?.label } }
+  }
+}
+
+// --- taskPool 节点（从需求池认领任务） ---
+async function executeTaskPool(deps: NodeExecutorDeps, ctx: ExecCtx) {
+  const { node, input, llmConfig, params, nodeResults, workflowEnvVars, variables } = ctx
+  const { TaskModel } = await import('../../models')
+
+  const teamId = node.data.config?.teamId as string | undefined
+  if (!teamId) {
+    return { output: input, metadata: { nodeId: node.id, type: 'taskPool', error: '未配置团队 ID', label: node.data?.label } }
+  }
+
+  const taskDescTemplate = (node.data.config?.taskDescription as string) || ''
+
+  try {
+    // 查找下一个待办任务
+    const task = await TaskModel.findOne({
+      where: { status: 'pending' },
+      order: [['priority', 'DESC'], ['createdAt', 'ASC']],
+    })
+
+    if (!task) {
+      return { output: '任务池为空', metadata: { nodeId: node.id, type: 'taskPool', poolEmpty: true, label: node.data?.label } }
+    }
+
+    // 原子认领
+    const [affectedCount] = await TaskModel.update(
+      { status: 'claimed', claimedAt: new Date(), claimedBy: teamId, executionId: ctx.executionId },
+      { where: { id: task.id, status: 'pending' } },
+    )
+
+    if (affectedCount === 0) {
+      // 并发竞争失败，重试一次
+      return { output: '任务已被其他节点认领', metadata: { nodeId: node.id, type: 'taskPool', poolEmpty: true, label: node.data?.label } }
+    }
+
+    // 解析任务描述模板
+    let resolvedDesc = task.description
+    if (taskDescTemplate) {
+      resolvedDesc = resolveParams(
+        taskDescTemplate
+          .replace(/\{\{\$task\.title\}\}/g, task.title)
+          .replace(/\{\{\$task\.description\}\}/g, task.description),
+        input, params, nodeResults, workflowEnvVars, variables, deps.envVarsCache,
+      )
+    }
+
+    const execState = deps.executionStates.get(ctx.executionId)
+    if (execState) {
+      execState.logs.push({
+        timestamp: new Date(), level: 'info',
+        message: `从任务池认领任务: ${task.title}`,
+        nodeId: node.id,
+      })
+    }
+
+    // 执行团队
+    const teamResult = await executeTeamStandalone({
+      teamId,
+      taskDescription: resolvedDesc,
+      llmConfig,
+      executionId: ctx.executionId,
+      nodeId: node.id,
+      logCallback: execState ? (msg) => {
+        execState.logs.push({
+          timestamp: new Date(), level: 'info',
+          message: msg, nodeId: node.id,
+        })
+      } : undefined,
+    })
+
+    // 标记任务完成/失败
+    const hasError = teamResult.metadata?.error
+    if (hasError) {
+      await TaskModel.update(
+        { status: 'failed', error: hasError, completedAt: new Date() },
+        { where: { id: task.id } },
+      )
+    } else {
+      await TaskModel.update(
+        { status: 'completed', result: teamResult.output, completedAt: new Date() },
+        { where: { id: task.id } },
+      )
+    }
+
+    return {
+      output: teamResult.output,
+      metadata: { ...teamResult.metadata, nodeId: node.id, type: 'taskPool', taskId: task.id, taskTitle: task.title, label: node.data?.label },
+    }
+  } catch (error) {
+    if (error instanceof ExecutionTerminatedError) throw error
+    const errorMsg = error instanceof Error ? error.message : '任务池执行失败'
+    return { output: errorMsg, metadata: { nodeId: node.id, type: 'taskPool', error: errorMsg, label: node.data?.label } }
+  }
+}
 async function executeSubWorkflow(deps: NodeExecutorDeps, ctx: ExecCtx) {
   const { executionId, node, input, llmConfig, attachments, params: parentParams, nodeResults, workflowEnvVars, variables } = ctx
   const workflowId = node.data.config?.workflowId as string | undefined

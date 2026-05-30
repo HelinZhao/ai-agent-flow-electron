@@ -24,6 +24,7 @@ import KnowledgeConfig from './config/KnowledgeConfig';
 import VariableConfig from './config/VariableConfig';
 import DatabaseConfig from './config/DatabaseConfig';
 import TeamConfig from './config/TeamConfig';
+import TaskPoolConfig from './config/TaskPoolConfig';
 import StartConfig from './config/StartConfig';
 import CustomInput from '../ui/CustomInput';
 import CustomButton from '../ui/CustomButton';
@@ -64,6 +65,7 @@ const BG_COLORS: Record<string, string> = {
   variable: 'bg-slate-500',
   database: 'bg-violet-500',
   team: 'bg-indigo-500',
+  taskPool: 'bg-teal-500',
 }
 
 const NodeConfigPanel: React.FC<NodeConfigPanelProps> = ({ node, onClose, onSave, workflowId, readOnly }: NodeConfigPanelProps) => {
@@ -135,6 +137,8 @@ const NodeConfigPanel: React.FC<NodeConfigPanelProps> = ({ node, onClose, onSave
 
       case 'team':
         return <TeamConfig config={config} onConfigChange={setConfig} />;
+      case 'taskPool':
+        return <TaskPoolConfig config={config} onConfigChange={setConfig} />;
       case 'database':
         return <DatabaseConfig config={config} onConfigChange={setConfig} />;
 

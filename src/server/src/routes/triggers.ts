@@ -1,7 +1,7 @@
 import { Router } from 'express'
 import { Op } from 'sequelize'
 import { v4 as uuidv4 } from 'uuid'
-import { TriggerModel, AgentModel, WorkflowModel, LLMConfigModel } from '../models'
+import { TriggerModel, AgentModel, WorkflowModel, LLMConfigModel, TeamModel } from '../models'
 import { timingWheel, cronToNextTime } from '../utils/timingWheel'
 import { monitoredExecutor } from './execute-workflow'
 import { WEBHOOK_RATE_LIMIT, WEBHOOK_RATE_WINDOW } from '../config'
@@ -136,6 +136,17 @@ async function fireTrigger(triggerId: string, payload?: { input?: string; params
           skillsContext
         )
       }
+    } else if (trigger.targetType === 'team') {
+      const team = await TeamModel.findByPk(trigger.targetId)
+      if (!team) throw new Error(`团队 ${trigger.targetId} 不存在`)
+      const { executeTeamStandalone } = await import('../utils/teamExecutor')
+      await executeTeamStandalone({
+        teamId: team.id,
+        taskDescription: triggerInput,
+        llmConfig,
+        executionId: `trigger-team-${trigger.id}-${Date.now()}`,
+        nodeId: 'trigger-team',
+      })
     }
 
     await trigger.update({ lastRunStatus: 'success' })

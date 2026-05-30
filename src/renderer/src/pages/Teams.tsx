@@ -12,12 +12,14 @@ import type { TeamFormData } from '@renderer/components/teams/TeamForm'
 const TeamCard = React.memo(function TeamCard({
   team,
   agentNames,
+  taskCounts,
   onEdit,
   onDelete,
   onSelect,
 }: {
   team: Team
   agentNames: Record<string, string>
+  taskCounts: { pending: number; running: number }
   onEdit: (team: Team) => void
   onDelete: (id: string) => void
   onSelect: (id: string) => void
@@ -55,14 +57,32 @@ const TeamCard = React.memo(function TeamCard({
           </div>
         </div>
 
-        {/* Mode badge */}
-        <div className="flex items-center gap-2 mb-2.5">
+        {/* Mode badge + status */}
+        <div className="flex items-center gap-2 mb-2.5 flex-wrap">
           <span className="inline-flex items-center px-1.5 py-0.5 text-[10px] font-medium rounded-full bg-indigo-50 dark:bg-indigo-900/20 text-indigo-600 dark:text-indigo-400 border border-indigo-200 dark:border-indigo-800">
             {modeLabel[team.mode] || team.mode}
           </span>
           <span className="text-[10px] text-gray-400 dark:text-gray-500">
             {memberIds.length} 名成员
           </span>
+          {taskCounts.running > 0 ? (
+            <span className="inline-flex items-center px-1.5 py-0.5 text-[10px] font-medium rounded-full bg-amber-50 dark:bg-amber-900/20 text-amber-600 dark:text-amber-400 border border-amber-200 dark:border-amber-800">
+              执行中
+            </span>
+          ) : taskCounts.pending > 0 ? (
+            <span className="inline-flex items-center px-1.5 py-0.5 text-[10px] font-medium rounded-full bg-blue-50 dark:bg-blue-900/20 text-blue-600 dark:text-blue-400 border border-blue-200 dark:border-blue-800">
+              {taskCounts.pending} 项待办
+            </span>
+          ) : (
+            <span className="inline-flex items-center px-1.5 py-0.5 text-[10px] font-medium rounded-full bg-gray-50 dark:bg-gray-700/30 text-gray-400 dark:text-gray-500 border border-gray-200 dark:border-gray-700">
+              空闲
+            </span>
+          )}
+          {team.autoClaimEnabled && (
+            <span className="inline-flex items-center px-1.5 py-0.5 text-[10px] font-medium rounded-full bg-teal-50 dark:bg-teal-900/20 text-teal-600 dark:text-teal-400 border border-teal-200 dark:border-teal-800">
+              自动接取
+            </span>
+          )}
         </div>
 
         {/* Member preview */}
@@ -108,10 +128,19 @@ const TeamCard = React.memo(function TeamCard({
 
 // ─── Main Page ───
 export default function Teams() {
-  const { teams, agents, addTeam, updateTeam, deleteTeam } = useWorkflowStore()
+  const { teams, agents, tasks: allTasks, addTeam, updateTeam, deleteTeam } = useWorkflowStore()
   const [selectedTeamId, setSelectedTeamId] = useState<string | null>(null)
   const [searchTerm, setSearchTerm] = useState('')
   const [isEditing, setIsEditing] = useState(false)
+
+  // 每个团队的待办/执行中任务数
+  const teamTaskCounts: Record<string, { pending: number; running: number }> = {}
+  for (const t of allTasks) {
+    if (!t.claimedBy) continue
+    if (!teamTaskCounts[t.claimedBy]) teamTaskCounts[t.claimedBy] = { pending: 0, running: 0 }
+    if (t.status === 'assigned') teamTaskCounts[t.claimedBy].pending++
+    if (t.status === 'claimed') teamTaskCounts[t.claimedBy].running++
+  }
 
   const selectedTeam = selectedTeamId
     ? teams.find(t => t.id === selectedTeamId) ?? null
@@ -240,6 +269,7 @@ export default function Teams() {
               key={team.id}
               team={team}
               agentNames={agentNames}
+              taskCounts={teamTaskCounts[team.id] || { pending: 0, running: 0 }}
               onSelect={handleSelect}
               onEdit={handleEdit}
               onDelete={handleDelete}
@@ -303,13 +333,15 @@ function TeamDetailView({
     team ? (typeof team.memberIds === 'string' ? JSON.parse(team.memberIds) : team.memberIds) : [],
   )
   const [mode, setMode] = useState(team?.mode || 'captain_distribute')
+  const [autoClaimEnabled, setAutoClaimEnabled] = useState(team?.autoClaimEnabled ?? false)
+  const [autoClaimInterval, setAutoClaimInterval] = useState(team?.autoClaimInterval ?? 60)
   const [saving, setSaving] = useState(false)
 
   const handleSubmit = async () => {
     if (!name.trim() || !description.trim()) return
     setSaving(true)
     try {
-      await onSave({ name: name.trim(), description: description.trim(), captainId: captainId || undefined, memberIds, mode })
+      await onSave({ name: name.trim(), description: description.trim(), captainId: captainId || undefined, memberIds, mode, autoClaimEnabled, autoClaimInterval })
     } finally {
       setSaving(false)
     }
@@ -344,6 +376,8 @@ function TeamDetailView({
             captainId={captainId} setCaptainId={setCaptainId}
             memberIds={memberIds} setMemberIds={setMemberIds}
             mode={mode} setMode={setMode}
+            autoClaimEnabled={autoClaimEnabled} setAutoClaimEnabled={setAutoClaimEnabled}
+            autoClaimInterval={autoClaimInterval} setAutoClaimInterval={setAutoClaimInterval}
             agents={agents}
             saving={saving}
             isCreate={!team}

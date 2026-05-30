@@ -169,6 +169,34 @@ async function migrateMcpServersTable(): Promise<void> {
   }
 }
 
+async function resetStaleTasks(): Promise<void> {
+  try {
+    const { TaskModel } = await import('../models/Task')
+    const [affected] = await TaskModel.update(
+      { status: 'pending' },
+      { where: { status: 'claimed' } },
+    )
+    if (affected > 0) {
+      console.log(`[Startup] 已将 ${affected} 个未完成的任务重置为待处理状态`)
+    }
+  } catch { /* tasks 表可能还不存在 */ }
+}
+
+async function migrateTeamColumns(): Promise<void> {
+  try {
+    const q = sequelize.getQueryInterface()
+    const table = await q.describeTable('teams') as Record<string, unknown>
+    if (!table.autoClaimEnabled) {
+      await sequelize.query('ALTER TABLE teams ADD COLUMN autoClaimEnabled INTEGER DEFAULT 0;')
+      console.log('[Migration] teams.autoClaimEnabled column added')
+    }
+    if (!table.autoClaimInterval) {
+      await sequelize.query('ALTER TABLE teams ADD COLUMN autoClaimInterval INTEGER DEFAULT 60;')
+      console.log('[Migration] teams.autoClaimInterval column added')
+    }
+  } catch { /* empty */ }
+}
+
 async function migrateParamsColumn(): Promise<void> {
   try {
     const q = sequelize.getQueryInterface()
@@ -210,6 +238,8 @@ export const initDatabase = async (): Promise<void> => {
     await seedTemplates()
     await migrateParamsColumn()
     await migrateMcpServersTable()
+    await migrateTeamColumns()
+    await resetStaleTasks()
   } catch (error) {
     console.error('数据库连接失败:', error)
     throw error

@@ -20,6 +20,7 @@ import templatesRouter from './routes/templates'
 import assistContextRouter from './routes/assist-context'
 import tokenUsageRouter from './routes/token-usage'
 import teamsRouter from './routes/teams'
+import tasksRouter from './routes/tasks'
 import { mcpConnectionManager } from './mcp'
 import { getUserDataDir, migrateOldDataDir } from './utils'
 import {
@@ -115,6 +116,7 @@ export class LocalServer {
     this.app.use('/api/assist-context', assistContextRouter)
     this.app.use('/api/token-usage', tokenUsageRouter)
     this.app.use('/api/teams', teamsRouter)
+    this.app.use('/api/tasks', tasksRouter)
 
     // Ollama 模型状态与拉取路由
     this.app.get('/api/ollama/status', async (_req, res) => {
@@ -361,6 +363,11 @@ export class LocalServer {
     }
     timingWheel.start()
     console.log(`[TriggerScheduler] 已加载 ${enabledCronTriggers.length} 个定时触发器`)
+
+    // 启动自动接取调度器
+    const { startAutoClaimScheduler } = await import('./utils/autoClaimScheduler')
+    startAutoClaimScheduler()
+    console.log('[AutoClaim] 自动接取调度器已启动')
 
     // 初始化 Ollama 服务（知识库 embedding 依赖）
     await this.initOllama()

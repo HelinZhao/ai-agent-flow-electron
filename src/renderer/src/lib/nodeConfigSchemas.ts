@@ -43,6 +43,10 @@ export const NODE_CONFIG_SCHEMAS: Record<string, Record<string, string>> = {
     teamId: '绑定的团队 ID',
     taskDescription: '分配给团队的任务描述，支持 {{input}} 模板变量',
   },
+  taskPool: {
+    teamId: '绑定的团队 ID',
+    taskDescription: '任务描述模板，留空使用任务原文。支持 {{$task.title}} {{$task.description}} 变量',
+  },
   database: {
     dbType: '数据库类型：sqlite / postgres / mysql / mssql / mongodb / redis',
     connectionConfig: '连接配置 JSON',

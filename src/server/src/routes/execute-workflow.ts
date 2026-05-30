@@ -584,6 +584,45 @@ router.post('/agent-chat-monitor', async (req, res) => {
   }
 })
 
+// 团队直接对话（对标 agent-chat-monitor，不经过工作流）
+router.post('/team-chat-monitor', async (req, res) => {
+  try {
+    const { teamId, input } = req.body
+    if (!teamId || !input) {
+      return res.status(400).json({ error: '缺少必要参数 teamId 和 input' })
+    }
+    const { TeamModel } = await import('../models')
+    const team = await TeamModel.findByPk(teamId)
+    if (!team) {
+      return res.status(404).json({ error: '团队不存在', success: false })
+    }
+    const activeLLMConfig = await LLMConfigModel.findOne({ where: { isActive: true } })
+    if (!activeLLMConfig) {
+      return res.status(400).json({ error: '未配置 LLM', message: '请先激活一个 LLM 配置' })
+    }
+    const llmConfig: LLMConfig = {
+      provider: activeLLMConfig.provider, apiKey: activeLLMConfig.apiKey,
+      model: activeLLMConfig.model, baseUrl: activeLLMConfig.baseUrl,
+      temperature: activeLLMConfig.temperature, maxTokens: activeLLMConfig.maxTokens,
+    }
+    const { executeTeamStandalone } = await import('../utils/teamExecutor')
+    const result = await executeTeamStandalone({
+      teamId, taskDescription: input, llmConfig,
+      executionId: `team-chat-${Date.now()}`, nodeId: 'team-chat',
+    })
+    return res.json({
+      executionId: `team-chat-${Date.now()}`, success: true,
+      message: '团队执行完成', teamName: team.name,
+      output: result.output, metadata: result.metadata,
+    })
+  } catch (error) {
+    console.error('团队对话执行错误:', error)
+    return res.status(500).json({
+      error: '团队执行失败',
+      message: error instanceof Error ? error.message : '未知错误，请稍后重试',
+    })
+  }
+})
 
 // 单节点测试（不构建完整工作流图）
 router.post('/test-node', async (req, res) => {

@@ -1,4 +1,6 @@
-import type { Team } from '@renderer/types';
+import { useState, useEffect } from 'react'
+import type { Team, Task } from '@renderer/types';
+import { taskApi } from '@renderer/lib/api';
 
 interface TeamDetailProps {
   team: Team
@@ -22,6 +24,26 @@ const MODE_META: Record<string, { icon: string; desc: string }> = {
 export default function TeamDetail({ team, getAgentName, onEdit, onDelete }: TeamDetailProps) {
   const modeInfo = MODE_META[team.mode] || { icon: '🤖', desc: team.mode };
   const memberList = typeof team.memberIds === 'string' ? JSON.parse(team.memberIds) : team.memberIds;
+  const [teamTasks, setTeamTasks] = useState<Task[]>([]);
+
+  useEffect(() => {
+    taskApi.getAll().then(all => {
+      setTeamTasks(all.filter(t => t.claimedBy === team.id));
+    }).catch(() => {});
+  }, [team.id]);
+
+  const STATUS_LABEL: Record<string, string> = {
+    assigned: '待执行',
+    claimed: '执行中',
+    completed: '已完成',
+    failed: '失败',
+  };
+  const STATUS_COLOR: Record<string, string> = {
+    assigned: 'bg-blue-50 dark:bg-blue-900/20 text-blue-600 dark:text-blue-400',
+    claimed: 'bg-amber-50 dark:bg-amber-900/20 text-amber-600 dark:text-amber-400',
+    completed: 'bg-emerald-50 dark:bg-emerald-900/20 text-emerald-600 dark:text-emerald-400',
+    failed: 'bg-red-50 dark:bg-red-900/20 text-red-600 dark:text-red-400',
+  };
 
   return (
     <>
@@ -109,6 +131,22 @@ export default function TeamDetail({ team, getAgentName, onEdit, onDelete }: Tea
 
         <div className="bg-white/80 dark:bg-gray-800/80 backdrop-blur-sm rounded-xl border border-gray-200/50 dark:border-gray-700/50 p-4">
           <div className="flex items-center gap-2 mb-3">
+            <div className="w-6 h-6 rounded-md bg-teal-50 dark:bg-teal-900/20 flex items-center justify-center">
+              <span className="text-xs text-teal-500">⚡</span>
+            </div>
+            <span className="text-sm font-medium text-gray-700 dark:text-gray-300">自动接取</span>
+          </div>
+          <p className="text-sm text-gray-900 dark:text-white pl-8">
+            {team.autoClaimEnabled ? (
+              <span>已启用（每 {team.autoClaimInterval || 60} 秒轮询）</span>
+            ) : (
+              <span className="text-gray-400 dark:text-gray-500">未启用</span>
+            )}
+          </p>
+        </div>
+
+        <div className="bg-white/80 dark:bg-gray-800/80 backdrop-blur-sm rounded-xl border border-gray-200/50 dark:border-gray-700/50 p-4">
+          <div className="flex items-center gap-2 mb-3">
             <div className="w-6 h-6 rounded-md bg-cyan-50 dark:bg-cyan-900/20 flex items-center justify-center">
               <span className="text-xs text-cyan-500">🔄</span>
             </div>
@@ -145,6 +183,34 @@ export default function TeamDetail({ team, getAgentName, onEdit, onDelete }: Tea
             </div>
           ) : (
             <p className="text-sm text-gray-400 dark:text-gray-500 text-center py-4">暂无成员</p>
+          )}
+        </div>
+      </div>
+
+      {/* ── 团队待办 ── */}
+      <div className="mt-6">
+        <div className="flex items-center gap-2 mb-3">
+          <div className="w-1 h-5 bg-teal-500 rounded-full" />
+          <h3 className="text-base font-semibold text-gray-800 dark:text-gray-200">待办任务</h3>
+          <span className="text-xs text-gray-400 dark:text-gray-500">（{teamTasks.length} 项）</span>
+        </div>
+        <div className="bg-white/80 dark:bg-gray-800/80 backdrop-blur-sm rounded-xl border border-gray-200/50 dark:border-gray-700/50 p-5">
+          {teamTasks.length > 0 ? (
+            <div className="space-y-2">
+              {teamTasks.map(t => (
+                <div key={t.id} className="flex items-center gap-3 p-2 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700/30 transition-colors">
+                  <span className={`inline-flex items-center px-1.5 py-0.5 text-[10px] font-medium rounded-full ${STATUS_COLOR[t.status] || ''}`}>
+                    {STATUS_LABEL[t.status] || t.status}
+                  </span>
+                  <span className="text-sm text-gray-900 dark:text-white truncate flex-1">{t.title}</span>
+                  <span className="text-xs text-gray-400 dark:text-gray-500 flex-shrink-0">
+                    {new Date(t.createdAt).toLocaleDateString('zh-CN')}
+                  </span>
+                </div>
+              ))}
+            </div>
+          ) : (
+            <p className="text-sm text-gray-400 dark:text-gray-500 text-center py-4">暂无待办任务</p>
           )}
         </div>
       </div>

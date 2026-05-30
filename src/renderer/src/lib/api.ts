@@ -4,6 +4,7 @@ import {
   Skill,
   Agent,
   Team,
+  Task,
   LLMConfig,
   WorkflowExecutionProgress,
   WorkflowExecutionMetrics,
@@ -644,6 +645,30 @@ export const teamApi = {
   update: (id: string, data: Partial<Team>): Promise<Team> => api.put(`/teams/${id}`, data),
   delete: (id: string): Promise<void> => api.delete(`/teams/${id}`)
 }
+
+export const taskApi = {
+  getAll: (status?: string): Promise<Task[]> =>
+    api.get('/tasks' + (status ? `?status=${status}` : '')),
+  getById: (id: string): Promise<Task> => api.get(`/tasks/${id}`),
+  create: (data: { title: string; description: string; priority?: number }): Promise<Task> =>
+    api.post('/tasks', data),
+  update: (id: string, data: Partial<Task>): Promise<Task> => api.put(`/tasks/${id}`, data),
+  delete: (id: string): Promise<void> => api.delete(`/tasks/${id}`),
+  claimNext: (claimedBy?: string, executionId?: string): Promise<{ claimed: boolean; task: Task | null }> =>
+    api.post('/tasks/claim-next', { claimedBy, executionId }),
+  complete: (id: string, result: string): Promise<Task> =>
+    api.post(`/tasks/${id}/complete`, { result }),
+  fail: (id: string, error: string): Promise<Task> =>
+    api.post(`/tasks/${id}/fail`, { error }),
+  assign: (id: string, teamId: string): Promise<Task> =>
+    api.post(`/tasks/${id}/assign`, { teamId }),
+}
+
+export const teamChatMonitor = (data: {
+  teamId: string
+  input: string
+}): Promise<{ executionId: string; success: boolean; message: string; teamName: string }> =>
+  api.post('/team-chat-monitor', data)
 
 export const tokenUsageApi = {
   getByExecution: (executionId: string): Promise<{ details: TokenUsageItem[]; summary: TokenUsageSummary }> =>

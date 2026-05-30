@@ -395,6 +395,18 @@ this.app.use('/api/new-route', newRouter)
 
 ## 更新日志
 
+### v2.0.0
+
+- **团队管理重构**：团队成为一等实体，支持直聊 `POST /team-chat-monitor`
+- **三种协作模式**：队长分发、全员讨论、流水线，按团队配置自动执行
+- **需求池系统**：Task 模型 + 任务池节点 + 手动指派 → 调度器串行消费
+- **自动接取任务**：团队开启 auto-claim 后自动从池中认领执行
+- **触发器支持团队**：Cron/Webhook 可直接触发团队执行
+- **团队执行锁**：全局统一控制，主动触发排队等候，被动触发跳过
+- **SSE 防抖**：Lodash debounce，每 resource 独立防抖 400ms
+- **团队状态展示**：卡片显示空闲/待办/执行中状态 + 自动接取标签
+- **数据库迁移**：teams 表自动新增 autoClaimEnabled/autoClaimInterval 列
+
 ### v1.7.0
 
 - **数据库查询节点**：支持 SQLite/PostgreSQL/MySQL/SQL Server/MongoDB/Redis 六种数据库，SQL 和连接串支持模板变量
