@@ -7,6 +7,7 @@ import TeamDetail from '@renderer/components/teams/TeamDetail'
 import TeamForm from '@renderer/components/teams/TeamForm'
 import type { Team } from '@renderer/types'
 import type { TeamFormData } from '@renderer/components/teams/TeamForm'
+import { TeamIcon } from '@renderer/components/icons/NavIcons'
 
 // ─── Team Card ───
 const TeamCard = React.memo(function TeamCard({
@@ -45,7 +46,9 @@ const TeamCard = React.memo(function TeamCard({
         {/* Header */}
         <div className="flex items-start gap-2.5 mb-2">
           <div className="flex items-center justify-center w-9 h-9 rounded-lg bg-gradient-to-br from-indigo-50 to-purple-50 dark:from-indigo-900/30 dark:to-purple-900/30 flex-shrink-0">
-            <span className="text-base">👥</span>
+            <span className="text-base text-gray-600 dark:text-white">
+              <TeamIcon />
+            </span>
           </div>
           <div className="min-w-0">
             <h4 className="text-sm font-semibold text-gray-900 dark:text-white truncate">

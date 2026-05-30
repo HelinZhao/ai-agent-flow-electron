@@ -1,5 +1,6 @@
 import { TeamModel, LLMConfigModel, TaskModel } from '../models'
 import { executeTeamStandalone } from './teamExecutor'
+import { changeNotifier } from './dataChangeNotifier'
 import type { LLMConfig } from '../types'
 
 /** 正在执行中的团队，调度器据此判断空闲状态 */
@@ -51,6 +52,7 @@ async function tick(): Promise<void> {
       { where: { id: task.id, status: 'pending' } },
     )
     if (affected === 0) continue
+    changeNotifier.emitChange('tasks')
 
     console.log(`[Scheduler] 团队「${team.name}」认领任务: ${task.title}`)
   }
@@ -70,6 +72,7 @@ async function tick(): Promise<void> {
 
     // 标记为执行中
     await TaskModel.update({ status: 'claimed' }, { where: { id: task.id } })
+    changeNotifier.emitChange('tasks')
     busyTeams.add(teamId)
 
     // 异步执行，完成后自动处理下一个
@@ -102,6 +105,7 @@ async function executeTask(task: any, teamId: string, llmConfig: LLMConfig): Pro
       { where: { id: task.id } },
     )
   }
+  changeNotifier.emitChange('tasks')
 
   console.log(`[Scheduler] 团队完成任务: ${task.title}`)
 }

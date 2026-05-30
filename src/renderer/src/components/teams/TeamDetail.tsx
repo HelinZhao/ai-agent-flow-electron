@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react'
 import type { Team, Task } from '@renderer/types';
 import { taskApi } from '@renderer/lib/api';
+import { TeamIcon } from '../icons/NavIcons';
 
 interface TeamDetailProps {
   team: Team
@@ -52,7 +53,9 @@ export default function TeamDetail({ team, getAgentName, onEdit, onDelete }: Tea
         <div className="flex items-start justify-between">
           <div className="flex items-start gap-4">
             <div className="flex items-center justify-center w-14 h-14 rounded-xl shadow-lg flex-shrink-0 bg-gradient-to-br from-indigo-500 to-purple-600">
-              <span className="text-2xl text-white">👥</span>
+              <span className="text-2xl text-white">
+                <TeamIcon />
+              </span>
             </div>
             <div>
               <div className="flex items-center gap-2 mb-1">

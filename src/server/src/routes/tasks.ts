@@ -4,13 +4,27 @@ import { changeNotifier } from '../utils/dataChangeNotifier'
 
 const router = Router()
 
-// 列表
+// 列表（分页 + 排序）
 router.get('/', async (_req, res) => {
   try {
-    const { status } = _req.query
+    const { status, page, pageSize, sortBy, sortOrder } = _req.query
     const where = status ? { status: String(status) } : {}
-    const tasks = await TaskModel.findAll({ where, order: [['priority', 'DESC'], ['createdAt', 'ASC']] })
-    return res.json(tasks)
+
+    const p = Math.max(1, parseInt(String(page || '1'), 10))
+    const ps = Math.min(100, Math.max(1, parseInt(String(pageSize || '20'), 10)))
+
+    // 白名单排序字段
+    const sortField = ['createdAt', 'updatedAt', 'priority', 'title'].includes(String(sortBy || ''))
+      ? String(sortBy) : 'createdAt'
+    const orderDir = sortOrder === 'asc' ? 'ASC' : 'DESC'
+
+    const { rows: tasks, count: total } = await TaskModel.findAndCountAll({
+      where,
+      order: [[sortField, orderDir]],
+      offset: (p - 1) * ps,
+      limit: ps,
+    })
+    return res.json({ tasks, total, page: p, pageSize: ps, totalPages: Math.ceil(total / ps) })
   } catch (error) {
     return res.status(500).json({ error: '获取任务列表失败' })
   }
