@@ -93,15 +93,43 @@ export function formatSize(bytes: number): string {
   return `${(bytes / (1024 * 1024)).toFixed(1)} MB`
 }
 
-// 安全JSON解析函数
+// 安全JSON解析函数（自动提取 markdown 代码块和裸 JSON）
 export const safeJsonParse = <T>(str: string | undefined, defaultValue: T): T => {
   if (!str) return defaultValue
+
+  // 尝试直接解析
   try {
     return JSON.parse(str)
-  } catch (error) {
-    console.error('JSON解析失败:', error)
-    return defaultValue
+  } catch { /* 继续尝试提取 */ }
+
+  // 尝试提取 markdown 代码块中的 JSON（```json ... ```）
+  const codeBlockMatch = str.match(/```(?:json)?\s*([\s\S]*?)```/)
+  if (codeBlockMatch) {
+    try {
+      return JSON.parse(codeBlockMatch[1].trim())
+    } catch { /* 继续尝试 */ }
   }
+
+  // 尝试提取第一个 { 到最后一个 } 之间的内容
+  const firstBrace = str.indexOf('{')
+  const lastBrace = str.lastIndexOf('}')
+  if (firstBrace !== -1 && lastBrace > firstBrace) {
+    try {
+      return JSON.parse(str.slice(firstBrace, lastBrace + 1))
+    } catch { /* 继续尝试 */ }
+  }
+
+  // 尝试提取第一个 [ 到最后一个 ] 之间的内容
+  const firstBracket = str.indexOf('[')
+  const lastBracket = str.lastIndexOf(']')
+  if (firstBracket !== -1 && lastBracket > firstBracket) {
+    try {
+      return JSON.parse(str.slice(firstBracket, lastBracket + 1))
+    } catch { /* 放弃 */ }
+  }
+
+  console.error('JSON解析失败:', str.substring(0, 200))
+  return defaultValue
 }
 
 export function setAccurateTimer(type: 'interval' | 'timeout', callback: () => void, ms: number) {

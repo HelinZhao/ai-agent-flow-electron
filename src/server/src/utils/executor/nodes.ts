@@ -455,96 +455,47 @@ async function executeTeam(deps: NodeExecutorDeps, ctx: ExecCtx) {
   }
 }
 
-// --- taskPool 节点（从需求池认领任务） ---
+// --- taskPool 节点（发布任务到任务池） ---
 async function executeTaskPool(deps: NodeExecutorDeps, ctx: ExecCtx) {
-  const { node, input, llmConfig, params, nodeResults, workflowEnvVars, variables } = ctx
+  const { node, input, params, nodeResults, workflowEnvVars, variables } = ctx
   const { TaskModel } = await import('../../models')
 
-  const teamId = node.data.config?.teamId as string | undefined
-  if (!teamId) {
-    return { output: input, metadata: { nodeId: node.id, type: 'taskPool', error: '未配置团队 ID', label: node.data?.label } }
-  }
-
-  const taskDescTemplate = (node.data.config?.taskDescription as string) || ''
+  const titleTemplate = (node.data.config?.title as string) || ''
+  const descTemplate = (node.data.config?.description as string) || ''
+  const priority = (node.data.config?.priority ?? 1) as number
 
   try {
-    // 查找下一个待办任务
-    const task = await TaskModel.findOne({
-      where: { status: 'pending' },
-      order: [['priority', 'DESC'], ['createdAt', 'ASC']],
-    })
+    // 解析模板（支持 {{$input}} 和工作流变量）
+    const title = titleTemplate
+      ? resolveParams(titleTemplate, input, params, nodeResults, workflowEnvVars, variables, deps.envVarsCache)
+      : input
+    const description = descTemplate
+      ? resolveParams(descTemplate, input, params, nodeResults, workflowEnvVars, variables, deps.envVarsCache)
+      : input
 
-    if (!task) {
-      return { output: '任务池为空', metadata: { nodeId: node.id, type: 'taskPool', poolEmpty: true, label: node.data?.label } }
-    }
-
-    // 原子认领
-    const [affectedCount] = await TaskModel.update(
-      { status: 'claimed', claimedAt: new Date(), claimedBy: teamId, executionId: ctx.executionId },
-      { where: { id: task.id, status: 'pending' } },
-    )
-
-    if (affectedCount === 0) {
-      // 并发竞争失败，重试一次
-      return { output: '任务已被其他节点认领', metadata: { nodeId: node.id, type: 'taskPool', poolEmpty: true, label: node.data?.label } }
-    }
-
-    // 解析任务描述模板
-    let resolvedDesc = task.description
-    if (taskDescTemplate) {
-      resolvedDesc = resolveParams(
-        taskDescTemplate
-          .replace(/\{\{\$task\.title\}\}/g, task.title)
-          .replace(/\{\{\$task\.description\}\}/g, task.description),
-        input, params, nodeResults, workflowEnvVars, variables, deps.envVarsCache,
-      )
-    }
+    const task = await TaskModel.create({
+      title: String(title).trim() || '来自工作流的任务',
+      description: String(description).trim() || '无描述',
+      priority,
+      status: 'pending',
+    } as any)
 
     const execState = deps.executionStates.get(ctx.executionId)
     if (execState) {
       execState.logs.push({
         timestamp: new Date(), level: 'info',
-        message: `从任务池认领任务: ${task.title}`,
+        message: `发布任务到任务池: ${task.title}`,
         nodeId: node.id,
       })
     }
 
-    // 执行团队
-    const teamResult = await executeTeamStandalone({
-      teamId,
-      taskDescription: resolvedDesc,
-      llmConfig,
-      executionId: ctx.executionId,
-      nodeId: node.id,
-      logCallback: execState ? (msg) => {
-        execState.logs.push({
-          timestamp: new Date(), level: 'info',
-          message: msg, nodeId: node.id,
-        })
-      } : undefined,
-    })
-
-    // 标记任务完成/失败
-    const hasError = teamResult.metadata?.error
-    if (hasError) {
-      await TaskModel.update(
-        { status: 'failed', error: hasError, completedAt: new Date() },
-        { where: { id: task.id } },
-      )
-    } else {
-      await TaskModel.update(
-        { status: 'completed', result: teamResult.output, completedAt: new Date() },
-        { where: { id: task.id } },
-      )
-    }
-
     return {
-      output: teamResult.output,
-      metadata: { ...teamResult.metadata, nodeId: node.id, type: 'taskPool', taskId: task.id, taskTitle: task.title, label: node.data?.label },
+      output: `任务已发布: ${task.title}`,
+      metadata: { nodeId: node.id, type: 'taskPool', taskId: task.id, taskTitle: task.title, taskPriority: priority, label: node.data?.label },
     }
   } catch (error) {
     if (error instanceof ExecutionTerminatedError) throw error
-    const errorMsg = error instanceof Error ? error.message : '任务池执行失败'
+    const errorMsg = error instanceof Error ? error.message : '发布任务失败'
     return { output: errorMsg, metadata: { nodeId: node.id, type: 'taskPool', error: errorMsg, label: node.data?.label } }
   }
 }

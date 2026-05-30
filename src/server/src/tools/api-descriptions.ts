@@ -6,7 +6,7 @@
 export const WORKFLOWS_API_DESCRIPTION = `调用工作流和执行相关的 REST API。路径 {id} 用实际值替换。
 
 ⚠️ 只允许以下23种节点type，禁止发明其他type:
-start, end, llm, branch, skill, api, agent, cli, text, subWorkflow, loop, split, merge, transform, mcp, code, sleep, catch, note, if, knowledge, variable, database
+start, end, llm, branch, skill, api, agent, cli, text, subWorkflow, loop, split, merge, transform, mcp, code, sleep, catch, note, if, knowledge, variable, database, taskPool
 
 节点通用结构: {"id":"唯一id","type":"上面之一","position":{"x":0,"y":0},"data":{"label":"显示名","config":{...}}}
 通用可选(retry): retryCount(重试次数), retryDelay(间隔ms), retryBackoff(fixed|exponential)
@@ -34,6 +34,7 @@ knowledge → knowledgeBaseId(知识库id), query(检索查询,支持模板变�
 if → condition(JS布尔表达式, 如 $input.length > 10), 支持模板变量, 边上condition为"true"/"false"
 variable → mode(set/get), items[{name,value}], value支持模板变量, set存入$vars.xxx可被下游引用, get取出输出
 database → dbType(sqlite|postgres|mysql|mssql|mongodb|redis), connectionConfig(JSON), sql(SQL语句或Redis命令), collection(集合名), operation(find|aggregate等), query(JSON查询), mode(query|execute)
+taskPool → title(标题模板,支持{{$input}}), description(描述模板), priority(0低1普通2高3紧急) 发布任务到需求池
 
 边(edge)结构: {"id":"唯一id","source":"源节点id","target":"目标节点id"}
 分支/条件节点的出边额外: "condition":"分支id或true/false", "label":"分支标签"
@@ -183,3 +184,35 @@ GET  /api/health                                — 健康检查
 GET  /api/info                                  — 应用信息(版本/平台)
 GET  /                                           — API根目录(所有端点)
 GET  /health                                    — 健康检查(无前缀)`
+
+export const TEAMS_API_DESCRIPTION = `调用团队管理的 REST API。路径 {id} 用实际值替换。
+
+团队是 Agent 的集合，支持三种协作模式：
+  captain_distribute — 队长拆解任务 → 分配成员 → 队长汇总
+  discuss           — 所有成员独立分析 → 队长汇总
+  pipeline          — 流水线依次处理，上一环节输出为下一环节输入
+
+GET  /api/teams                                  — 列表(updatedAt DESC)
+POST /api/teams                                  — 创建 {"name":"","description":"","captainId":"(队长id)","memberIds":["成员id数组"],"mode":"captain_distribute|discuss|pipeline","autoClaimEnabled":false,"autoClaimInterval":60}
+GET  /api/teams/{id}                             — 详情
+PUT  /api/teams/{id}                             — 更新(同创建字段，部分更新)
+DEL  /api/teams/{id}                             — 删除
+
+POST /api/team-chat-monitor                      — 直聊执行 {"teamId":"","input":"","executionId":"(可选)"} 返回 {executionId,success,message,teamName}`
+
+export const TASKS_API_DESCRIPTION = `调用任务池管理的 REST API。路径 {id} 用实际值替换。
+
+任务状态流转: pending → assigned(已指派给团队) → claimed(执行中) → completed/failed
+              pending可直接被调度器认领，也可手动指派给指定团队
+
+GET    /api/tasks                                 — 列表(?status=pending|assigned|claimed|completed|failed&page=1&pageSize=20&sortBy=createdAt&sortOrder=desc) 返回 {tasks[],total,page,pageSize,totalPages}
+POST   /api/tasks                                 — 创建 {"title":"","description":"","priority":0|1|2|3}
+GET    /api/tasks/{id}                            — 详情
+PUT    /api/tasks/{id}                            — 更新(仅pending可修改，title/description/priority)
+DEL    /api/tasks/{id}                            — 删除
+POST   /api/tasks/claim-next                      — 调度器认领下一个待办 {"claimedBy":"团队id","executionId":"调度id"} 返回 {claimed:bool,task}
+POST   /api/tasks/{id}/assign                     — 指派给团队 {"teamId":""} 仅pending可指派，状态→assigned
+POST   /api/tasks/{id}/complete                   — 完成任务 {"result":"执行结果输出"} 状态→completed
+POST   /api/tasks/{id}/fail                       — 标记失败 {"error":"错误信息"} 状态→failed
+POST   /api/tasks/{id}/restart                    — 重启(仅completed/failed)，保存快照(restartedFrom)后回退为pending
+POST   /api/tasks/{id}/cancel                     — 终止(仅claimed/assigned)，中断LLM请求并回退为pending`

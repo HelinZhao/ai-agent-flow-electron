@@ -340,7 +340,7 @@ export class LocalServer {
         enabledTools: JSON.stringify([
           'readFile', 'writeFile', 'listDirectory', 'executeCommand',
           'httpRequest', 'webSearch',
-          'workflowsApi', 'agentsSkillsApi', 'knowledgeApi', 'configApi',
+          'workflowsApi', 'agentsSkillsApi', 'teamsApi', 'tasksApi', 'knowledgeApi', 'configApi',
           'readSkill',
         ]),
       } as AgentAttributes)

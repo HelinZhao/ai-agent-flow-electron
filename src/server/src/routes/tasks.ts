@@ -1,6 +1,7 @@
 import { Router } from 'express'
 import { TaskModel } from '../models'
 import { changeNotifier } from '../utils/dataChangeNotifier'
+import { freeTeam, cancelExecution } from '../utils/autoClaimScheduler'
 
 const router = Router()
 
@@ -42,21 +43,54 @@ router.get('/:id', async (req, res) => {
   }
 })
 
-// 更新
+// 更新（按状态控制可编辑字段 + 原子条件防竞态）
 router.put('/:id', async (req, res) => {
   try {
     const task = await TaskModel.findByPk(req.params.id)
     if (!task) return res.status(404).json({ error: '任务不存在' })
-    if (task.status !== 'pending') {
-      return res.status(400).json({ error: '只能修改待处理的任务' })
-    }
+
     const { title, description, priority } = req.body
-    if (title !== undefined) task.title = title
-    if (description !== undefined) task.description = description
-    if (priority !== undefined) task.priority = priority
-    await task.save()
-    changeNotifier.emitChange('tasks')
-    return res.json(task)
+    const updates: Record<string, any> = {}
+
+    switch (task.status) {
+      case 'pending': {
+        // 待处理：全字段可改，原子条件确保未被调度器中途认领
+        if (title !== undefined) updates.title = title
+        if (description !== undefined) updates.description = description
+        if (priority !== undefined) updates.priority = priority
+        if (Object.keys(updates).length === 0) return res.json(task)
+        const [affected] = await TaskModel.update(updates, { where: { id: task.id, status: 'pending' } })
+        if (affected === 0) return res.status(409).json({ error: '任务状态已变更，请刷新后重试' })
+        changeNotifier.emitChange('tasks')
+        return res.json({ ...task.toJSON(), ...updates })
+      }
+
+      case 'assigned': {
+        // 已指派：仅可改标题，原子条件防中途执行
+        if (title === undefined) return res.status(400).json({ error: '已指派的任务只能修改标题' })
+        const [affected] = await TaskModel.update({ title }, { where: { id: task.id, status: 'assigned' } })
+        if (affected === 0) return res.status(409).json({ error: '任务已开始执行，无法修改' })
+        changeNotifier.emitChange('tasks')
+        return res.json({ ...task.toJSON(), title })
+      }
+
+      case 'completed':
+      case 'failed': {
+        // 终端状态：可改标题和描述（不影响执行结果）
+        if (title !== undefined) updates.title = title
+        if (description !== undefined) updates.description = description
+        if (Object.keys(updates).length === 0) return res.json(task)
+        await TaskModel.update(updates, { where: { id: task.id } })
+        changeNotifier.emitChange('tasks')
+        return res.json({ ...task.toJSON(), ...updates })
+      }
+
+      case 'claimed':
+        return res.status(400).json({ error: '任务正在执行中，无法编辑' })
+
+      default:
+        return res.status(400).json({ error: '当前状态不允许编辑' })
+    }
   } catch {
     return res.status(500).json({ error: '更新任务失败' })
   }
@@ -182,6 +216,32 @@ router.post('/:id/fail', async (req, res) => {
     return res.json(task)
   } catch {
     return res.status(500).json({ error: '标记失败失败' })
+  }
+})
+
+// 终止任务（仅 claimed / assigned 可终止，回退为 pending）
+router.post('/:id/cancel', async (req, res) => {
+  try {
+    const task = await TaskModel.findByPk(req.params.id)
+    if (!task) return res.status(404).json({ error: '任务不存在' })
+    if (task.status !== 'claimed' && task.status !== 'assigned') {
+      return res.status(400).json({ error: '只能终止处理中或已指派的任务' })
+    }
+    const teamId = task.claimedBy || ''
+    // 先中断 LLM 请求，再更新数据库
+    cancelExecution(task.id)
+    task.status = 'failed'
+    task.error = '用户终止'
+    task.claimedBy = ''
+    task.executionId = ''
+    task.claimedAt = undefined
+    task.completedAt = new Date()
+    await task.save()
+    freeTeam(teamId)
+    changeNotifier.emitChange('tasks')
+    return res.json(task)
+  } catch {
+    return res.status(500).json({ error: '终止任务失败' })
   }
 })
 

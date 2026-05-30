@@ -168,7 +168,7 @@ const callLLMOnce = async (
 
   // 无工具且无 HITL 时直接调用模型，绕过 createAgent 避免 LangGraph 注入动态元数据破坏缓存
   if (!hasTools && !useHITL) {
-    const response = await llm.invoke(messages) as AIMessage
+    const response = await llm.invoke(messages, { signal: options?.signal }) as AIMessage
     return { content: response.content.toString(), tokenUsage: extractTokenUsage(response) }
   }
 
@@ -199,6 +199,7 @@ const callLLMOnce = async (
     let result: any = await agent.invoke({ messages }, {
       configurable: { thread_id: threadId },
       recursionLimit,
+      signal: options?.signal,
     })
 
     while (result.__interrupt__ && result.__interrupt__.length > 0) {
@@ -217,6 +218,7 @@ const callLLMOnce = async (
       result = await agent.invoke(new Command({ resume: hitlResponse }), {
         configurable: { thread_id: threadId },
         recursionLimit,
+        signal: options?.signal,
       })
 
       // 解析 resume 后的中间步骤（工具执行结果）
@@ -242,7 +244,7 @@ const callLLMOnce = async (
   if (hasTools) {
     let lastAgentMsg: any = null
     let stepCount = 0
-    const stream = await agent.stream({ messages }, { recursionLimit })
+    const stream = await agent.stream({ messages }, { recursionLimit, signal: options?.signal })
 
     for await (const rawChunk of stream) {
       const chunk = rawChunk as any
@@ -277,7 +279,7 @@ const callLLMOnce = async (
   }
 
   // 无工具时直接 invoke
-  const response = await agent.invoke({ messages }, { recursionLimit });
+  const response = await agent.invoke({ messages }, { recursionLimit, signal: options?.signal });
   const lastMsg = response.messages[response.messages.length - 1]
   return { content: lastMsg.content.toString(), tokenUsage: extractTokenUsage(lastMsg) }
 }

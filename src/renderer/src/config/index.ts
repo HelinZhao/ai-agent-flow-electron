@@ -281,6 +281,8 @@ export const TOOL_DEFINITIONS: ToolDef[] = [
   { id: 'webSearch', label: '网页搜索', description: '搜索网页获取信息' },
   { id: 'workflowsApi', label: '工作流API', description: '管理工作流和执行（CRUD+执行）' },
   { id: 'agentsSkillsApi', label: 'Agent/技能API', description: '管理 Agent 和技能（CRUD）' },
+  { id: 'teamsApi', label: '团队API', description: '调用团队管理接口，管理 Agent 团队及其协作模式' },
+  { id: 'tasksApi', label: '任务API', description: '调用任务池管理接口，创建、指派、终止任务' },
   { id: 'knowledgeApi', label: '知识库API', description: '管理知识库和 RAG 检索' },
   { id: 'configApi', label: '系统配置API', description: 'LLM 配置、触发器、系统设置' },
   { id: 'readSkill', label: '读取技能', description: '读取指定技能的完整内容' },

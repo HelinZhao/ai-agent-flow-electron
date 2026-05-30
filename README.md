@@ -26,7 +26,7 @@ AI Agent Flow Electron 是一个基于 Electron + React + TypeScript 的**桌面
 - 无工作流时自动降级为 LLM 对话
 
 ### 🔄 可视化工作流
-- 基于 React Flow 的拖拽式编辑器，23 种节点类型组合编排
+- 基于 React Flow 的拖拽式编辑器，25 种节点类型组合编排
 - 一键 Dagre 自动布局
 - 实时执行进度、节点状态、耗时监控
 
@@ -164,6 +164,8 @@ npm run download-model
 | Sleep | 睡眠 | 延迟指定时间后透传输入 |
 | CLI | 命令行 | 执行 Shell 命令或预设模板 |
 | End | 出口 | 汇总并返回最终结果 |
+| Team | 团队协作 | 多 Agent 协同执行（队长分发/全员讨论/流水线三种模式） |
+| TaskPool | 发布任务 | 将工作流结果发布到任务池，供团队异步认领处理 |
 | Catch | 错误处理 | 捕获上游失败节点的错误信息 |
 | Note | 注释 | 纯可视化注释，不参与执行 |
 
@@ -255,6 +257,30 @@ ai-agent-flow-electron/
 | POST | `/api/agents` | 创建 Agent |
 | PUT | `/api/agents/:id` | 更新 Agent |
 | DELETE | `/api/agents/:id` | 删除 Agent |
+
+### 团队
+| 方法 | 路径 | 说明 |
+|------|------|------|
+| GET | `/api/teams` | 获取所有团队 |
+| POST | `/api/teams` | 创建团队 |
+| GET | `/api/teams/:id` | 获取单个团队 |
+| PUT | `/api/teams/:id` | 更新团队 |
+| DELETE | `/api/teams/:id` | 删除团队 |
+| POST | `/api/team-chat-monitor` | 直聊执行团队 |
+
+### 任务池
+| 方法 | 路径 | 说明 |
+|------|------|------|
+| GET | `/api/tasks` | 获取所有任务 |
+| POST | `/api/tasks` | 创建任务 |
+| GET | `/api/tasks/:id` | 获取单个任务 |
+| PUT | `/api/tasks/:id` | 更新任务（按状态限制可编辑字段） |
+| DELETE | `/api/tasks/:id` | 删除任务 |
+| POST | `/api/tasks/:id/assign` | 指派给团队 |
+| POST | `/api/tasks/:id/complete` | 完成任务 |
+| POST | `/api/tasks/:id/fail` | 标记失败 |
+| POST | `/api/tasks/:id/restart` | 重启任务 |
+| POST | `/api/tasks/:id/cancel` | 终止执行中的任务 |
 
 ### 技能
 | 方法 | 路径 | 说明 |
@@ -394,6 +420,19 @@ this.app.use('/api/new-route', newRouter)
 ---
 
 ## 更新日志
+
+### v2.1.0
+
+- **任务池页面全面优化**：表格改用展开行详情替代侧边面板，添加筛选空态、粘性表头、斑马纹、主题色统一为 blue/purple
+- **任务编辑功能**：按状态控制可编辑字段（pending 全字段、assigned 仅标题、completed/failed 标题+描述），后端原子更新防竞态
+- **任务终止中断 LLM**：AbortController 链路直达 ChatOpenAI.invoke，取消时真正中断 HTTP 请求停止消耗 token
+- **任务池节点改发任务**：从"消费 pending 任务"改为"发布任务到池"，标题/描述支持 {{$input}} 模板，可选优先级
+- **团队/任务 API 工具**：为 AI 助手布丁追加 teamsApi、tasksApi 工具，可管理团队和任务池
+- **指派交互优化**：改用 ItemPickerModal 选择团队，一键指派
+- **创建/编辑弹窗改用 Modal 组件**：统一拖拽、遮罩层关闭行为
+- **表单管理**：改用 react-hook-form 管理创建/编辑表单状态
+- **执行结果 Markdown 渲染**：完成任务的输出用 MarkdownPreview 组件展示
+- **safeJsonParse 增强**：自动提取 markdown 代码块和裸 JSON，提高 LLM 解析容错
 
 ### v2.0.0
 

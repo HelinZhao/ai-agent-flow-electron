@@ -6,6 +6,9 @@ import type { LLMConfig } from '../types'
 /** 正在执行中的团队，调度器据此判断空闲状态 */
 const busyTeams = new Set<string>()
 
+/** 正在执行的任务 id → AbortController，用于取消执行 */
+const executionMap = new Map<string, AbortController>()
+
 let globalTimer: ReturnType<typeof setInterval> | null = null
 
 let llmConfigCache: LLMConfig | null = null
@@ -76,13 +79,25 @@ async function tick(): Promise<void> {
     busyTeams.add(teamId)
 
     // 异步执行，完成后自动处理下一个
-    executeTask(task, teamId, llmConfig).finally(() => {
-      busyTeams.delete(teamId)
-    })
+    const abortController = new AbortController()
+    executionMap.set(task.id, abortController)
+    executeTask(task, teamId, llmConfig, abortController.signal)
+      .catch((err) => {
+        // AbortError 是预期的取消行为，不当作异常
+        if (err?.name === 'AbortError') {
+          console.log(`[Scheduler] 任务执行已终止: ${task.title}`)
+        } else {
+          console.error(`[Scheduler] 任务执行异常: ${task.title}`, err)
+        }
+      })
+      .finally(() => {
+        busyTeams.delete(teamId)
+        executionMap.delete(task.id)
+      })
   }
 }
 
-async function executeTask(task: any, teamId: string, llmConfig: LLMConfig): Promise<void> {
+async function executeTask(task: any, teamId: string, llmConfig: LLMConfig, signal?: AbortSignal): Promise<void> {
   console.log(`[Scheduler] 团队开始执行任务: ${task.title}`)
 
   const result = await executeTeamStandalone({
@@ -91,6 +106,7 @@ async function executeTask(task: any, teamId: string, llmConfig: LLMConfig): Pro
     llmConfig,
     executionId: `scheduler-${task.id}`,
     nodeId: 'scheduler',
+    signal,
   })
 
   const meta = result.metadata || {}
@@ -102,6 +118,13 @@ async function executeTask(task: any, teamId: string, llmConfig: LLMConfig): Pro
   const isFailed = mode === 'pipeline'
     ? successCount < memberCount
     : memberCount > 0 && successCount === 0
+
+  // 如果任务已被取消（status 不再为 claimed），跳过更新
+  const current = await TaskModel.findByPk(task.id)
+  if (!current || current.status !== 'claimed') {
+    console.log(`[Scheduler] 任务已取消，跳过状态更新: ${task.title}`)
+    return
+  }
 
   const execError = meta.error
   if (execError || isFailed) {
@@ -132,4 +155,21 @@ export function stopAutoClaimScheduler(): void {
     globalTimer = null
   }
   busyTeams.clear()
+  // 中断所有正在执行的 LLM 请求
+  for (const ctrl of executionMap.values()) ctrl.abort()
+  executionMap.clear()
+}
+
+/** 释放团队忙碌状态（取消任务时调用） */
+export function freeTeam(teamId: string): void {
+  busyTeams.delete(teamId)
+}
+
+/** 中断指定任务的 LLM 请求（取消任务时调用） */
+export function cancelExecution(taskId: string): void {
+  const ctrl = executionMap.get(taskId)
+  if (ctrl) {
+    ctrl.abort()
+    executionMap.delete(taskId)
+  }
 }

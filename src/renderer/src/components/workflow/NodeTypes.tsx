@@ -421,6 +421,38 @@ export function TransformNode({ data, selected }: { data: any; selected: boolean
 }
 
 // ============================================================
+//  TaskPoolNode
+// ============================================================
+export function TaskPoolNode({ data, selected }: { data: any; selected: boolean }): React.JSX.Element {
+  const direction = useContext(LayoutDirectionContext)
+  const def = NODE_DEFS_MAP['taskPool']
+  const targetPos = direction === 'vertical' ? Position.Top : Position.Left
+  const sourcePos = direction === 'vertical' ? Position.Bottom : Position.Right
+  const hasTitle = !!data.config?.title
+  const priority = data.config?.priority ?? 1
+  const priorityLabel = ['低', '普通', '高', '紧急'][priority] || '普通'
+  return (
+    <div className={`node-taskpool group relative px-4 py-3 min-w-[160px] ${nodeBg(def)} rounded-lg transition-shadowduration-300 ${nodeBorder(def)} ${selected ? nodeRing(def) : 'hover:shadow-glow-md dark:hover:shadow-glow-md-w'}`}>
+      <Handle type="target" position={targetPos} className={handleClass(def)} />
+      <Handle type="source" position={sourcePos} className={handleClass(def)} />
+      <div className="flex items-center space-x-3">
+        <div className={iconBox(def)}>
+          <span className="text-black text-base">{def.icon}</span>
+        </div>
+        <div className="flex-1 text-left">
+          <div className="font-bold text-gray-800">{def.shortLabel}</div>
+          <div className="text-xs text-gray-700 font-medium mt-0.5">{data.label}</div>
+          <div className="text-xs text-gray-500 font-medium mt-1">
+            {hasTitle ? `标题模板: ${data.config.title.substring(0, 16)}${data.config.title.length > 16 ? '…' : ''}` : '使用上游输入'}
+            <span className="ml-2 text-[10px] opacity-60">{priorityLabel}优先级</span>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ============================================================
 //  SplitNode
 // ============================================================
 export function SplitNode({ data, selected }: { data: any; selected: boolean }): React.JSX.Element {

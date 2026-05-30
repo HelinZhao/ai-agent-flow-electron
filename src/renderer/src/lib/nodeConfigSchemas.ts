@@ -44,8 +44,9 @@ export const NODE_CONFIG_SCHEMAS: Record<string, Record<string, string>> = {
     taskDescription: '分配给团队的任务描述，支持 {{input}} 模板变量',
   },
   taskPool: {
-    teamId: '绑定的团队 ID',
-    taskDescription: '任务描述模板，留空使用任务原文。支持 {{$task.title}} {{$task.description}} 变量',
+    title: '任务标题模板，支持 {{$input}} 和工作流变量。留空使用上游输入',
+    description: '任务描述模板，支持 {{$input}} 和工作流变量。留空使用上游输入',
+    priority: '优先级: 0=低, 1=普通, 2=高, 3=紧急',
   },
   database: {
     dbType: '数据库类型：sqlite / postgres / mysql / mssql / mongodb / redis',

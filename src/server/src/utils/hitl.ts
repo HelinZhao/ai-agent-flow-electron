@@ -15,4 +15,5 @@ export interface HITLResponse {
 export interface CallLLMOptions {
   approvalCallback?: (request: HITLRequest) => Promise<HITLResponse>
   cache?: boolean
+  signal?: AbortSignal
 }

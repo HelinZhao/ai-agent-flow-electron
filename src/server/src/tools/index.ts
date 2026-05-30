@@ -12,6 +12,8 @@ import {
   AGENTS_SKILLS_API_DESCRIPTION,
   KNOWLEDGE_API_DESCRIPTION,
   CONFIG_API_DESCRIPTION,
+  TEAMS_API_DESCRIPTION,
+  TASKS_API_DESCRIPTION,
 } from './api-descriptions'
 
 // 当前平台信息（用于工具描述，避免 LLM 用错路径格式和用户名）
@@ -170,6 +172,8 @@ const inferResource = (path: string): string | null => {
   if (path.includes('/api/llm-config')) return 'llm-config'
   if (path.includes('/api/triggers')) return 'triggers'
   if (path.includes('/api/mcp-servers')) return 'mcp-servers'
+  if (path.includes('/api/teams')) return 'teams'
+  if (path.includes('/api/tasks')) return 'tasks'
   return null
 }
 
@@ -260,6 +264,34 @@ export const configApiTool = tool(
   }
 )
 
+export const teamsApiTool = tool(
+  async ({ method, path, body }: { method: string; path: string; body?: string }) =>
+    callInternalApi(method, path, body),
+  {
+    name: 'teamsApi',
+    description: TEAMS_API_DESCRIPTION,
+    schema: z.object({
+      method: z.enum(['GET', 'POST', 'PUT', 'DELETE']).describe('HTTP 方法'),
+      path: z.string().describe('API 路径，如 /api/teams 或 /api/teams/some-id'),
+      body: z.string().optional().describe('JSON 请求体（POST/PUT 时需要）'),
+    }),
+  }
+)
+
+export const tasksApiTool = tool(
+  async ({ method, path, body }: { method: string; path: string; body?: string }) =>
+    callInternalApi(method, path, body),
+  {
+    name: 'tasksApi',
+    description: TASKS_API_DESCRIPTION,
+    schema: z.object({
+      method: z.enum(['GET', 'POST', 'PUT', 'DELETE']).describe('HTTP 方法'),
+      path: z.string().describe('API 路径，如 /api/tasks 或 /api/tasks/some-id'),
+      body: z.string().optional().describe('JSON 请求体（POST/PUT 时需要）'),
+    }),
+  }
+)
+
 export const readSkillTool = tool(
   async ({ skillId }: { skillId: string }) => {
     try {
@@ -289,6 +321,8 @@ const ALL_TOOLS: Record<string, any> = {
   webSearch: webSearchTool,
   workflowsApi: workflowsApiTool,
   agentsSkillsApi: agentsSkillsApiTool,
+  teamsApi: teamsApiTool,
+  tasksApi: tasksApiTool,
   knowledgeApi: knowledgeApiTool,
   configApi: configApiTool,
   readSkill: readSkillTool,
@@ -324,6 +358,8 @@ export const TOOL_DEFINITIONS: ToolDefinition[] = [
   { id: 'webSearch', label: '网页搜索', description: '搜索网页获取信息' },
   { id: 'workflowsApi', label: '工作流API', description: '调用工作流和执行管理接口' },
   { id: 'agentsSkillsApi', label: 'Agent/技能API', description: '调用 Agent 和技能管理接口' },
+  { id: 'teamsApi', label: '团队API', description: '调用团队管理接口，管理 Agent 团队及其协作模式' },
+  { id: 'tasksApi', label: '任务API', description: '调用任务池管理接口，创建、指派、终止任务' },
   { id: 'knowledgeApi', label: '知识库API', description: '调用知识库管理接口' },
   { id: 'configApi', label: '系统配置API', description: '调用 LLM 配置、触发器、系统设置接口' },
   { id: 'readSkill', label: '读取技能', description: '读取指定技能的完整内容' },

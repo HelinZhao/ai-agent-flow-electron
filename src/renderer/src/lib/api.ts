@@ -662,6 +662,8 @@ export const taskApi = {
     api.post(`/tasks/${id}/fail`, { error }),
   restart: (id: string): Promise<Task> =>
     api.post(`/tasks/${id}/restart`),
+  cancel: (id: string): Promise<Task> =>
+    api.post(`/tasks/${id}/cancel`),
   assign: (id: string, teamId: string): Promise<Task> =>
     api.post(`/tasks/${id}/assign`, { teamId }),
 }

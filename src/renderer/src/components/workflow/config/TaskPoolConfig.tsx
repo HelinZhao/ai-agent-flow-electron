@@ -1,6 +1,6 @@
-import { useAppStore } from '@renderer/store/appStore'
-import CustomSelect from '../../ui/CustomSelect'
+import CustomInput from '../../ui/CustomInput'
 import CustomTextarea from '../../ui/CustomTextarea'
+import CustomSelect from '../../ui/CustomSelect'
 
 interface TaskPoolConfigProps {
   config: Record<string, any>
@@ -8,52 +8,52 @@ interface TaskPoolConfigProps {
 }
 
 export default function TaskPoolConfig({ config, onConfigChange }: TaskPoolConfigProps) {
-  const { teams } = useAppStore()
-
-  const selectedTeam = teams.find(t => t.id === config.teamId)
-
   return (
     <div className="space-y-4">
       <div>
-        <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5">选择团队</label>
+        <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5">
+          标题模板 <span className="text-gray-400 font-normal">（可选）</span>
+        </label>
+        <CustomInput
+          value={config.title || ''}
+          onChange={(e) => onConfigChange({ ...config, title: e.target.value })}
+          placeholder='留空则使用上游输入。支持 {{$input}}'
+          size="sm"
+        />
+        <p className="text-xs text-gray-400 mt-1">
+          可使用 <code className="text-blue-500">{'{{$input}}'}</code> 引用上游输入
+        </p>
+      </div>
+
+      <div>
+        <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5">
+          描述模板 <span className="text-gray-400 font-normal">（可选）</span>
+        </label>
+        <CustomTextarea
+          value={config.description || ''}
+          onChange={(e) => onConfigChange({ ...config, description: e.target.value })}
+          placeholder="留空则使用上游输入。支持 {{$input}} 和工作流变量"
+          rows={3}
+        />
+        <p className="text-xs text-gray-400 mt-1">
+          可使用 <code className="text-blue-500">{'{{$input}}'}</code>、<code className="text-blue-500">{'{{$nodes.xxx.output}}'}</code> 等模板变量
+        </p>
+      </div>
+
+      <div>
+        <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5">优先级</label>
         <CustomSelect
-          value={config.teamId || ''}
-          onChange={(val) => onConfigChange({ ...config, teamId: val })}
+          value={String(config.priority ?? 1)}
+          onChange={(v) => onConfigChange({ ...config, priority: Number(v) })}
           options={[
-            { value: '', label: '— 选择团队 —' },
-            ...teams.map(t => ({ value: t.id, label: t.name }))
+            { value: '0', label: '低' },
+            { value: '1', label: '普通' },
+            { value: '2', label: '高' },
+            { value: '3', label: '紧急' },
           ]}
           size="sm"
         />
-        {teams.length === 0 && (
-          <p className="text-xs text-amber-500 mt-1">请先创建团队</p>
-        )}
       </div>
-
-      {selectedTeam && (
-        <div className="p-3 bg-gray-50 dark:bg-gray-900/30 rounded-lg text-xs space-y-1">
-          <p className="text-gray-500">协作模式: {
-            { captain_distribute: '队长分发', discuss: '全员讨论', pipeline: '流水线' }[selectedTeam.mode] || selectedTeam.mode
-          }</p>
-        </div>
-      )}
-
-      {selectedTeam && (
-        <div>
-          <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5">
-            任务描述模板 <span className="text-gray-400 font-normal">（可选）</span>
-          </label>
-          <CustomTextarea
-            value={config.taskDescription || ''}
-            onChange={(e) => onConfigChange({ ...config, taskDescription: e.target.value })}
-            placeholder="留空则直接使用任务描述。支持 {{$task.title}} {{$task.description}}"
-            rows={3}
-          />
-          <p className="text-xs text-gray-400 dark:text-gray-500 mt-1">
-            可使用 <code className="text-blue-500">&#123;&#123;$task.title&#125;&#125;</code> 和 <code className="text-blue-500">&#123;&#123;$task.description&#125;&#125;</code> 引用任务字段
-          </p>
-        </div>
-      )}
     </div>
   )
 }

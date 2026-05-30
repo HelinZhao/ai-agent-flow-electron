@@ -15,6 +15,7 @@ export interface TeamExecParams {
   executionId: string
   nodeId: string
   logCallback?: (msg: string) => void
+  signal?: AbortSignal
 }
 
 // ============================================================
@@ -38,7 +39,7 @@ async function resolveAgentLlmConfig(agent: any, defaultLlmConfig: LLMConfig): P
 /** 调用单个 Agent 并返回文本结果 */
 async function callAgent(
   executionId: string, nodeId: string, llmConfig: LLMConfig,
-  agent: any, prompt: string,
+  agent: any, prompt: string, signal?: AbortSignal,
 ): Promise<string> {
   const agentLlmConfig = await resolveAgentLlmConfig(agent, llmConfig)
 
@@ -58,7 +59,7 @@ async function callAgent(
     executionId, nodeId,
     agentLlmConfig.provider, agentLlmConfig.model,
     finalPrompt, agentLlmConfig,
-    undefined, finalTools, undefined, undefined,
+    undefined, finalTools, { signal }, undefined,
   )
 }
 
@@ -116,7 +117,7 @@ async function executeCaptainDistribute(
     try {
       const decompResult = await callAgent(
         params.executionId, params.nodeId, params.llmConfig,
-        captain, decompPrompt,
+        captain, decompPrompt, params.signal,
       )
       const parsed: any = safeJsonParse(decompResult, null)
       if (parsed && parsed.assignments && Array.isArray(parsed.assignments)) {
@@ -165,7 +166,7 @@ async function executeCaptainDistribute(
     try {
       const result = await callAgent(
         params.executionId, params.nodeId, params.llmConfig,
-        member, memberPrompt,
+        member, memberPrompt, params.signal,
       )
       memberResults[mid] = { output: result }
     } catch (error) {
@@ -204,7 +205,7 @@ async function executeCaptainDistribute(
     try {
       finalOutput = await callAgent(
         params.executionId, params.nodeId, params.llmConfig,
-        captain, synthesisPrompt,
+        captain, synthesisPrompt, params.signal,
       )
     } catch {
       finalOutput = orderedMembers
@@ -253,7 +254,7 @@ async function executeDiscuss(
     try {
       const result = await callAgent(
         params.executionId, params.nodeId, params.llmConfig,
-        member, discussPrompt,
+        member, discussPrompt, params.signal,
       )
       memberResults[mid] = { output: result }
       logCallback?.(`成员 ${member.name} 完成讨论输出`)
@@ -292,7 +293,7 @@ async function executeDiscuss(
     try {
       finalOutput = await callAgent(
         params.executionId, params.nodeId, params.llmConfig,
-        captain, synthesisPrompt,
+        captain, synthesisPrompt, params.signal,
       )
     } catch {
       finalOutput = memberIds
@@ -369,7 +370,7 @@ async function executePipeline(
     try {
       lastOutput = await callAgent(
         params.executionId, params.nodeId, params.llmConfig,
-        member, promptParts.join('\n'),
+        member, promptParts.join('\n'), params.signal,
       )
       pipelineSuccessCount++
       currentInput = lastOutput
