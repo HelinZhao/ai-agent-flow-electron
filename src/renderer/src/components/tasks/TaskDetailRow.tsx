@@ -138,7 +138,7 @@ export default function TaskDetailRow({ task, colSpan, getTeamName, onCancel, on
 
   return (
     <tr className="bg-blue-50/40 dark:bg-blue-900/10 border-b border-gray-200 dark:border-gray-700">
-      <td colSpan={colSpan} className="px-6 py-4">
+      <td colSpan={colSpan} className="px-6 pt-4">
         <div className="space-y-4">
           {/* Restart badge */}
           <RestartBadge task={task} />
@@ -210,11 +210,11 @@ export default function TaskDetailRow({ task, colSpan, getTeamName, onCancel, on
             )}
           </div>
 
-          {/* Collapse button */}
-          <div className="flex justify-center pt-1">
+          {/* Collapse - full-width sticky bar */}
+          <div className="-mx-6 -mb-4 mt-2">
             <button
               onClick={(e) => { e.stopPropagation(); onClose() }}
-              className="flex items-center gap-1 px-3 py-1.5 text-xs text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 rounded-md hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors"
+              className="w-full flex items-center justify-center gap-1.5 py-1.5 text-xs text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 hover:bg-gray-100/60 dark:hover:bg-gray-800/40 transition-colors"
               title="收起"
             >
               <svg className="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">

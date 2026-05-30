@@ -249,38 +249,51 @@ export default function Tasks() {
                         <td className="px-4 py-3" onClick={e => e.stopPropagation()}>
                           <div className="flex items-center gap-1.5">
                             {task.status === 'pending' && (
-                              <CustomButton
+                              <button
+                                title="指派"
                                 onClick={(e) => { e.stopPropagation(); setAssigningTaskId(task.id) }}
-                                size="xs"
-                                variant="primary"
+                                className="flex items-center justify-center w-7 h-7 rounded-lg bg-indigo-50 dark:bg-indigo-900/20 text-indigo-500 dark:text-indigo-400 hover:bg-indigo-100 dark:hover:bg-indigo-900/40 border border-indigo-200 dark:border-indigo-800 transition-colors"
                               >
-                                指派
-                              </CustomButton>
+                                <svg viewBox="0 0 1024 1024" className="w-3.5 h-3.5">
+                                  <path d="M43.2 404.8v469.312c0 23.552 19.136 42.688 42.688 42.688h128a42.688 42.688 0 0 0 42.688-42.688V404.8a42.688 42.688 0 0 0-42.688-42.688h-128a42.688 42.688 0 0 0-42.688 42.688z m85.376 42.624h42.624v384H128.64v-384z" fill="#FFDC64" />
+                                  <path d="M171.2 874.112V404.8c0-11.968 5.12-23.424 13.888-31.488q228.48-209.152 265.408-240.448 52.736-44.8 102.016-14.72 45.44 27.712 45.44 106.432 0 40.832-27.52 80.128-13.952 19.968-47.232 52.864l-4.48 4.544 356.48 0.064q44.096 0 75.392 31.168 31.232 31.232 31.36 75.392v0.128q0 44.16-31.36 75.52-31.232 31.232-75.456 31.232h-134.272l-37.12 241.28-0.192 1.024q-6.528 36.416-33.92 63.232-36.48 35.648-94.528 35.648H213.888a42.688 42.688 0 0 1-42.688-42.688z m403.904-42.688H256.64V423.552Q471.168 227.2 505.728 197.888q1.792-1.536 3.328-2.624 3.584 10.752 3.584 29.312 0 23.36-49.472 72.32-28.096 27.84-39.424 43.264-23.872 32.256-23.872 64.64c0 23.552 19.136 42.624 42.688 42.624l432.576 0.064q8.96 0 15.168 6.272 6.272 6.208 6.272 15.104 0 21.44-21.44 21.44h-170.88a42.688 42.688 0 0 0-42.176 36.16l-42.56 276.8q-5.376 28.16-44.416 28.16z" fill="#FFDC64" />
+                                </svg>
+                              </button>
                             )}
                             {(task.status === 'claimed' || task.status === 'assigned') && (
                               <button
+                                title="终止"
                                 onClick={(e) => { e.stopPropagation(); handleCancel(task.id) }}
-                                className="text-xs text-red-500 hover:text-red-700 dark:hover:text-red-400 font-medium transition-colors"
+                                className="flex items-center justify-center w-7 h-7 rounded-lg bg-red-50 dark:bg-red-900/20 text-red-500 dark:text-red-400 hover:bg-red-100 dark:hover:bg-red-900/40 border border-red-200 dark:border-red-800 transition-colors"
                               >
-                                终止
+                                <svg className="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                                  <circle cx="12" cy="12" r="10" />
+                                  <line x1="4.93" y1="4.93" x2="19.07" y2="19.07" />
+                                </svg>
                               </button>
                             )}
                             {task.status !== 'claimed' && (
-                              <CustomButton
+                              <button
+                                title="编辑"
                                 onClick={(e) => { e.stopPropagation(); openEdit(task) }}
-                                size="xs"
-                                variant="secondary"
+                                className="flex items-center justify-center w-7 h-7 rounded-lg bg-indigo-50 dark:bg-indigo-900/20 text-indigo-500 dark:text-indigo-400 hover:bg-indigo-100 dark:hover:bg-indigo-900/40 border border-indigo-200 dark:border-indigo-800 transition-colors"
                               >
-                                编辑
-                              </CustomButton>
+                                <svg className="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                                  <path d="M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7" />
+                                  <path d="M18.5 2.5a2.121 2.121 0 013 3L12 15l-4 1 1-4 9.5-9.5z" />
+                                </svg>
+                              </button>
                             )}
-                            <CustomButton
+                            <button
+                              title="删除"
                               onClick={(e) => { e.stopPropagation(); handleDelete(task.id) }}
-                              variant="danger"
-                              size="xs"
+                              className="flex items-center justify-center w-7 h-7 rounded-lg bg-red-50 dark:bg-red-900/20 text-red-500 dark:text-red-400 hover:bg-red-100 dark:hover:bg-red-900/40 border border-red-200 dark:border-red-800 transition-colors"
                             >
-                              删除
-                            </CustomButton>
+                              <svg className="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                                <polyline points="3 6 5 6 21 6" />
+                                <path d="M19 6v14a2 2 0 01-2 2H7a2 2 0 01-2-2V6m3 0V4a2 2 0 012-2h4a2 2 0 012 2v2" />
+                              </svg>
+                            </button>
                           </div>
                         </td>
                         <td className="px-2 py-3">
