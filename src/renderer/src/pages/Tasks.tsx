@@ -119,17 +119,14 @@ export default function Tasks() {
       {/* Filters */}
       <div className="flex items-center gap-2 mb-4">
         {FILTERS.map(s => (
-          <button
+          <CustomButton
             key={s.value}
             onClick={() => setStatusFilter(s.value)}
-            className={`px-3 py-1 text-xs font-medium rounded-lg border transition-colors ${
-              statusFilter === s.value
-                ? 'bg-blue-600 text-white border-blue-600 shadow-sm'
-                : 'bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-400 border-gray-200 dark:border-gray-700 hover:border-blue-400 dark:hover:border-blue-500'
-            }`}
+            variant={statusFilter === s.value ? 'primary' : 'ghost'}
+            size="sm"
           >
             {s.label}
-          </button>
+          </CustomButton>
         ))}
       </div>
 
@@ -159,8 +156,8 @@ export default function Tasks() {
               <table className="w-full text-sm bg-white dark:bg-gray-900">
                 <thead className="sticky top-0 z-10">
                   <tr className="bg-gray-100/95 dark:bg-gray-800/95 backdrop-blur-sm text-left">
-                    <th className="px-4 py-3 font-medium text-gray-700 dark:text-gray-400 text-xs uppercase tracking-wider w-[70px]">优先级</th>
-                    <th className="px-4 py-3 font-medium text-gray-700 dark:text-gray-400 text-xs uppercase tracking-wider w-[80px]">状态</th>
+                    <th className="px-4 py-3 font-medium text-gray-700 dark:text-gray-400 text-xs uppercase tracking-wider w-[80px]">优先级</th>
+                    <th className="px-4 py-3 font-medium text-gray-700 dark:text-gray-400 text-xs uppercase tracking-wider w-[90px] text-center">状态</th>
                     <th className="px-4 py-3 font-medium text-gray-700 dark:text-gray-400 text-xs uppercase tracking-wider">标题</th>
                     <th className="px-4 py-3 font-medium text-gray-700 dark:text-gray-400 text-xs uppercase tracking-wider hidden sm:table-cell w-[130px]">认领团队</th>
                     <th className="px-4 py-3 font-medium text-gray-700 dark:text-gray-400 text-xs uppercase tracking-wider hidden md:table-cell w-[150px]">创建时间</th>
@@ -179,12 +176,12 @@ export default function Tasks() {
                         onClick={() => toggleExpand(task.id)}
                       >
                         <td className={`px-4 py-3 ${expandedId === task.id ? 'border-l-2 border-l-blue-400 dark:border-l-blue-500' : ''}`}>
-                          <span className={`inline-flex items-center px-2 py-0.5 text-[10px] font-semibold rounded-full ${PRIORITY_LABEL[task.priority]?.color || ''}`}>
+                          <span className={`inline-flex items-center px-2 py-0.5 text-xs font-semibold rounded-full ${PRIORITY_LABEL[task.priority]?.color || ''}`}>
                             {PRIORITY_LABEL[task.priority]?.label || task.priority}
                           </span>
                         </td>
                         <td className="px-4 py-3">
-                          <span className={`inline-flex items-center px-2 py-0.5 text-[10px] font-medium rounded-full border ${STATUS_COLOR[task.status] || ''}`}>
+                          <span className={`inline-flex items-center px-2 py-0.5 text-xs font-medium rounded-full border ${STATUS_COLOR[task.status] || ''}`}>
                             {STATUS_LABEL[task.status] || task.status}
                           </span>
                         </td>
@@ -200,19 +197,21 @@ export default function Tasks() {
                         <td className="px-4 py-3" onClick={e => e.stopPropagation()}>
                           <div className="flex items-center gap-1.5">
                             {task.status === 'pending' && (
-                              <button
+                              <CustomButton
                                 onClick={(e) => { e.stopPropagation(); setAssigningTaskId(task.id) }}
-                                className="text-xs text-blue-600 dark:text-blue-400 hover:text-blue-800 dark:hover:text-blue-300 font-medium transition-colors"
+                                size="xs"
+                                variant="primary"
                               >
                                 指派
-                              </button>
+                              </CustomButton>
                             )}
-                            <button
+                            <CustomButton
                               onClick={(e) => { e.stopPropagation(); handleDelete(task.id) }}
-                              className="text-xs text-red-400 hover:text-red-600 dark:hover:text-red-400 transition-colors"
+                              variant="danger"
+                              size="xs"
                             >
                               删除
-                            </button>
+                            </CustomButton>
                           </div>
                         </td>
                         <td className="px-2 py-3">
@@ -304,7 +303,7 @@ export default function Tasks() {
                                     {task.executionId && (
                                       <div className="flex justify-between">
                                         <span className="text-gray-400">执行 ID</span>
-                                        <span className="text-gray-700 dark:text-gray-300 font-mono text-[10px] truncate max-w-[140px]" title={task.executionId}>
+                                        <span className="text-gray-700 dark:text-gray-300 font-mono text-xs truncate max-w-[140px]" title={task.executionId}>
                                           {task.executionId}
                                         </span>
                                       </div>

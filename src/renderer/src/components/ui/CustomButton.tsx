@@ -20,15 +20,15 @@ const CustomButton: React.FC<CustomButtonProps> = ({
 }) => {
   const sizeClasses = {
     xs: 'px-2 py-1 text-xs min-h-[24px] rounded-md',
-    sm: 'px-3 py-1.5 text-sm min-h-[32px] rounded-xl',
+    sm: 'px-3 py-1.5 text-sm min-h-[34px] rounded-xl',
     md: 'px-4 py-2.5 text-base min-h-[44px] rounded-xl',
     lg: 'px-6 py-3.5 text-lg min-h-[52px] rounded-xl',
     xl: 'px-8 py-4 text-lg min-h-[56px] rounded-xl'
   };
 
   const variantClasses = {
-    primary: 'bg-gradient-to-r border border-blue-500 from-blue-500 to-blue-600 text-white hover:from-blue-600 hover:to-blue-700 hover:border-blue-600 shadow-lg hover:shadow-xl',
-    secondary: 'border border-gray-300/70 dark:border-gray-600/50 text-gray-700 dark:text-gray-300 bg-white/70 dark:bg-gray-700/70 hover:bg-gray-50/50 dark:hover:bg-gray-700/50',
+    primary: 'bg-gradient-to-r from-blue-500 to-blue-600 text-white hover:from-blue-600 hover:to-blue-700 hover:border-blue-600 shadow-lg hover:shadow-xl',
+    secondary: 'text-gray-700 dark:text-gray-300 bg-white/70 dark:bg-gray-700/70 hover:bg-gray-50/50 dark:hover:bg-gray-700/50',
     success: 'bg-gradient-to-r from-green-500 to-green-600 text-white hover:from-green-600 hover:to-green-700 shadow-lg hover:shadow-xl',
     danger: 'bg-gradient-to-r from-red-500 to-red-600 text-white hover:from-red-600 hover:to-red-700 shadow-lg hover:shadow-xl',
     warning: 'bg-gradient-to-r from-yellow-500 to-yellow-600 text-white hover:from-yellow-600 hover:to-yellow-700 shadow-lg hover:shadow-xl',
