@@ -2,7 +2,7 @@ import { Handle, Position } from '@xyflow/react';
 import { NODE_DEFS_MAP } from './nodes';
 import { useContext } from 'react';
 import { LayoutDirectionContext } from './LayoutDirectionContext';
-import { useWorkflowStore } from '@renderer/store/workflowStore'
+import { useWorkflowStore } from '@renderer/store/appStore'
 
 // -- 节点颜色片段（集中拼装，避免各节点重复计算） --
 

@@ -2,7 +2,7 @@ import { useState, useEffect, useCallback } from 'react';
 import { Agent, Skill, Workflow } from '@renderer/types';
 import { TOOL_DEFINITIONS } from '@renderer/config';
 import { mcpApi } from '@renderer/lib/mcpApi';
-import { useWorkflowStore } from '@renderer/store/workflowStore';
+import { useWorkflowStore } from '@renderer/store/appStore';
 import MarkdownIt from 'markdown-it';
 import MdEditor from 'react-markdown-editor-lite';
 import 'react-markdown-editor-lite/lib/index.css';

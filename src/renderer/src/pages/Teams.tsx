@@ -1,5 +1,5 @@
 import React, { useState, useCallback } from 'react'
-import { useWorkflowStore } from '@renderer/store/workflowStore'
+import { useWorkflowStore } from '@renderer/store/appStore'
 import CustomInput from '@renderer/components/ui/CustomInput'
 import CustomButton from '@renderer/components/ui/CustomButton'
 import ResponsiveGrid from '@renderer/components/ui/ResponsiveGrid'

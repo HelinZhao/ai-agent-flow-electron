@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react'
 import { useForm } from 'react-hook-form'
-import { useWorkflowStore } from '@renderer/store/workflowStore'
+import { useWorkflowStore } from '@renderer/store/appStore'
 import { KnowledgeBase } from '@renderer/types'
 import CustomInput from '@renderer/components/ui/CustomInput'
 import CustomButton from '@renderer/components/ui/CustomButton'

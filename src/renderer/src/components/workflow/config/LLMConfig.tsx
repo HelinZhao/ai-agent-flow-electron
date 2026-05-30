@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { VariableConfig } from '@renderer/types';
-import { useWorkflowStore } from '@renderer/store/workflowStore';
+import { useWorkflowStore } from '@renderer/store/appStore';
 import { TOOL_DEFINITIONS } from '@renderer/config';
 import { mcpApi } from '@renderer/lib/mcpApi';
 import VariableConfigModal from '../VariableConfigModal';

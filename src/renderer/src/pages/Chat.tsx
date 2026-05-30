@@ -1,5 +1,5 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { useWorkflowStore } from '@renderer/store/workflowStore';
+import { useWorkflowStore } from '@renderer/store/appStore';
 import { AttachmentMetadata } from '@renderer/types';
 import { AttachmentData, processFileAttachment, formatFileSize } from '@renderer/lib/attachmentUtils';
 import { SERVER_BASE_URL, TOOL_LABEL_MAP } from '@renderer/config';

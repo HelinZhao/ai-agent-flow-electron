@@ -1,6 +1,6 @@
 import React, { useState, useRef } from 'react';
 import { useForm } from 'react-hook-form';
-import { useWorkflowStore } from '@renderer/store/workflowStore';
+import { useWorkflowStore } from '@renderer/store/appStore';
 import { LLMConfig } from '@renderer/types';
 import { llmConfigApi } from '@renderer/lib/api';
 import CustomSelect from '@renderer/components/ui/CustomSelect';

@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
 import { Template } from '@renderer/types'
-import { useWorkflowStore } from '@renderer/store/workflowStore'
+import { useWorkflowStore } from '@renderer/store/appStore'
 import { mcpApi } from '@renderer/lib/mcpApi'
 import Modal from '@renderer/components/ui/Modal'
 import CustomButton from '@renderer/components/ui/CustomButton'

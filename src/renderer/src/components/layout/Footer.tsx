@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react'
 import { checkHealth } from '@renderer/lib/api'
-import { useWorkflowStore } from '@renderer/store/workflowStore'
+import { useWorkflowStore } from '@renderer/store/appStore'
 import { useSettingsStore } from '@renderer/store/settingsStore'
 import GitPanel from '@renderer/components/git/GitPanel'
 

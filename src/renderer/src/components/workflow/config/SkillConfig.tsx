@@ -1,5 +1,5 @@
 import React from 'react';
-import { useWorkflowStore } from '@renderer/store/workflowStore';
+import { useWorkflowStore } from '@renderer/store/appStore';
 import MarkdownPreview from '@renderer/components/MarkdownPreview';
 import CustomSelect from '../../ui/CustomSelect';
 

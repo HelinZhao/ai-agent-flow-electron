@@ -2,7 +2,7 @@ import ClickSpark from "@renderer/components/ClickSpark";
 import Layout from "@renderer/components/layout/Layout";
 import '@renderer/assets/react-flow-custom.css';
 import '@renderer/assets/iconfont.css';
-import { useWorkflowStore } from "@renderer/store/workflowStore";
+import { useWorkflowStore } from "@renderer/store/appStore";
 import { useEffect, useState } from "react";
 import { ollamaApi } from "@renderer/lib/api";
 import OllamaInstallDialog from "@renderer/components/OllamaInstallDialog";

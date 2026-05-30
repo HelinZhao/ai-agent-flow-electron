@@ -1,5 +1,5 @@
 import { useState, useRef } from 'react'
-import { useWorkflowStore } from '@renderer/store/workflowStore'
+import { useWorkflowStore } from '@renderer/store/appStore'
 import { triggerApi } from '@renderer/lib/api'
 import MessageBanner from '@renderer/components/ui/MessageBanner'
 

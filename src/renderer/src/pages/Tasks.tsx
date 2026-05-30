@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { useWorkflowStore } from '@renderer/store/workflowStore'
+import { useWorkflowStore } from '@renderer/store/appStore'
 import CustomButton from '@renderer/components/ui/CustomButton'
 import CustomInput from '@renderer/components/ui/CustomInput'
 import CustomTextarea from '@renderer/components/ui/CustomTextarea'

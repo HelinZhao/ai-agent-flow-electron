@@ -1,5 +1,5 @@
 import React from 'react';
-import { useWorkflowStore } from '@renderer/store/workflowStore';
+import { useWorkflowStore } from '@renderer/store/appStore';
 import CustomSelect from '../../ui/CustomSelect';
 
 interface AgentConfigProps {

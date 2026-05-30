@@ -1,4 +1,4 @@
-import { useWorkflowStore } from '@renderer/store/workflowStore';
+import { useWorkflowStore } from '@renderer/store/appStore';
 import CustomSelect, { SelectOption } from '../ui/CustomSelect';
 
 function ConfigLabel({ name, provider, isActive }: { name: string; provider: string, isActive: boolean }) {

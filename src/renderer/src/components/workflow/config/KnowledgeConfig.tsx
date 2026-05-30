@@ -1,5 +1,5 @@
 import React, { useEffect } from 'react'
-import { useWorkflowStore } from '@renderer/store/workflowStore'
+import { useWorkflowStore } from '@renderer/store/appStore'
 import CustomSelect from '../../ui/CustomSelect'
 import CustomInput from '../../ui/CustomInput'
 import ExpressionInput from '../ExpressionInput'

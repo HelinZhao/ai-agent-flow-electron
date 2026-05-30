@@ -1,5 +1,5 @@
 import { useState, useRef, useEffect, useCallback } from 'react'
-import { useWorkflowStore } from '@renderer/store/workflowStore'
+import { useWorkflowStore } from '@renderer/store/appStore'
 import { useBudingStore } from '@renderer/store/budingStore'
 import { useSettingsStore } from '@renderer/store/settingsStore'
 import { workflowExecutionApi } from '@renderer/lib/api'

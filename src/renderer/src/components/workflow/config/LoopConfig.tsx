@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react'
 import { Workflow } from '@renderer/types'
 import { workflowApi } from '@renderer/lib/api'
-import { useWorkflowStore } from '@renderer/store/workflowStore'
+import { useWorkflowStore } from '@renderer/store/appStore'
 import CustomSelect from '../../ui/CustomSelect'
 import CustomInput from '../../ui/CustomInput'
 import ExpressionInput from '../ExpressionInput'

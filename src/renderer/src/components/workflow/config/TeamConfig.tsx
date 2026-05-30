@@ -1,4 +1,4 @@
-import { useWorkflowStore } from '@renderer/store/workflowStore'
+import { useWorkflowStore } from '@renderer/store/appStore'
 import CustomSelect from '../../ui/CustomSelect'
 import CustomTextarea from '../../ui/CustomTextarea'
 

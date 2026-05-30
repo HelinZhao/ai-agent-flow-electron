@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
 import { mcpApi, McpServer } from '@renderer/lib/mcpApi'
-import { useWorkflowStore } from '@renderer/store/workflowStore'
+import { useWorkflowStore } from '@renderer/store/appStore'
 import CustomButton from '@renderer/components/ui/CustomButton'
 import CustomSwitch from '@renderer/components/ui/CustomSwitch'
 import McpServerFormModal, { McpServerFormData } from '@renderer/components/mcp/McpServerFormModal'

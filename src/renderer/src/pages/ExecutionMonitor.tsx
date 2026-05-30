@@ -3,7 +3,7 @@ import { useDebounce, useDebounceEffect } from 'ahooks'
 import CustomInput from '@renderer/components/ui/CustomInput'
 import { ExecutionSummary, WorkflowExecutionProgress, TokenUsageSummary } from '@renderer/types'
 import { workflowExecutionApi, tokenUsageApi } from '@renderer/lib/api'
-import { useWorkflowStore } from '@renderer/store/workflowStore'
+import { useWorkflowStore } from '@renderer/store/appStore'
 import Pagination from '@renderer/components/ui/Pagination'
 import ExecutionResultTabs from '@renderer/components/workflow/ExecutionResultTabs'
 
