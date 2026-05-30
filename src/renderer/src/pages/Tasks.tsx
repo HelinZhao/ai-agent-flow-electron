@@ -1,5 +1,5 @@
-import { useState, useEffect } from 'react'
-import { useForm } from 'react-hook-form'
+import { useState, useCallback, useMemo } from 'react'
+import { useForm, useWatch } from 'react-hook-form'
 import { useAppStore } from '@renderer/store/appStore'
 import CustomButton from '@renderer/components/ui/CustomButton'
 import CustomInput from '@renderer/components/ui/CustomInput'
@@ -10,7 +10,9 @@ import Modal from '@renderer/components/ui/Modal'
 import Pagination from '@renderer/components/ui/Pagination'
 import { taskApi } from '@renderer/lib/api'
 import TaskDetailRow from '@renderer/components/tasks/TaskDetailRow'
+import AiAssistButton from '@renderer/components/AiAssistButton'
 import type { Task } from '@renderer/types'
+import type { FrontendAction } from '@renderer/lib/frontendActionBus'
 
 const PAGE_SIZE = 20
 
@@ -53,7 +55,11 @@ const FILTERS = [
   { value: 'completed', label: '已完成' },
   { value: 'failed', label: '失败' },
 ]
-
+const TASK_SCHEMA: Record<string, string> = {
+  title: '任务标题',
+  description: '任务描述，将作为团队执行的输入',
+  priority: '优先级（0=低, 1=普通, 2=高, 3=紧急）',
+}
 export default function Tasks() {
   const { teams, tasks: allTasks } = useAppStore()
   const [statusFilter, setStatusFilter] = useState<string>('')
@@ -78,16 +84,26 @@ export default function Tasks() {
     defaultValues: { title: '', description: '', priority: 1 },
   })
 
+  const createTitle = useWatch({ control: createForm.control, name: 'title' })
+  const createDescription = useWatch({ control: createForm.control, name: 'description' })
+  const createPriority = useWatch({ control: createForm.control, name: 'priority' })
+
+  const editTitle = useWatch({ control: editForm.control, name: 'title' })
+  const editDescription = useWatch({ control: editForm.control, name: 'description' })
+  const editPriority = useWatch({ control: editForm.control, name: 'priority' })
+
   const goToPage = (p: number) => { setPage(p); setExpandedId(null) }
+
+  const setFilter = (filter: string) => {
+    setStatusFilter(filter)
+    setPage(1)
+  }
 
   const filtered = (statusFilter ? allTasks.filter(t => t.status === statusFilter) : allTasks)
     .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())
   const totalPages = Math.max(1, Math.ceil(filtered.length / PAGE_SIZE))
   const safePage = Math.min(page, totalPages)
   const tasks = filtered.slice((safePage - 1) * PAGE_SIZE, safePage * PAGE_SIZE)
-
-  // 切换筛选时回到第一页
-  useEffect(() => { setPage(1) }, [statusFilter])
 
   const handleCreate = createForm.handleSubmit(async (data) => {
     await taskApi.create(data)
@@ -138,6 +154,24 @@ export default function Tasks() {
     setExpandedId(prev => prev === id ? null : id)
   }
 
+  const onAiAction = useCallback((form: ReturnType<typeof useForm<TaskFormData>>) => {
+    return (action: FrontendAction) => {
+      if (action.action !== 'setConfig' || !action.payload) return
+      for (const [key, value] of Object.entries(action.payload)) {
+        form.setValue(key as keyof TaskFormData, value)
+      }
+    }
+  }, [])
+
+  const editSchema = useMemo(() => {
+    if (!editingTask) return TASK_SCHEMA
+    if (editingTask.status === 'assigned') return { title: TASK_SCHEMA.title } as Record<string, string>
+    if (editingTask.status === 'completed' || editingTask.status === 'failed') {
+      return { title: TASK_SCHEMA.title, description: TASK_SCHEMA.description } as Record<string, string>
+    }
+    return TASK_SCHEMA
+  }, [editingTask])
+
   return (
     <div className="px-6 py-4 h-full flex flex-col">
       {/* Header */}
@@ -163,7 +197,7 @@ export default function Tasks() {
         {FILTERS.map(s => (
           <CustomButton
             key={s.value}
-            onClick={() => setStatusFilter(s.value)}
+            onClick={() => setFilter(s.value)}
             variant={statusFilter === s.value ? 'primary' : 'ghost'}
             size="sm"
           >
@@ -199,7 +233,7 @@ export default function Tasks() {
             </svg>
             <p className="text-sm font-medium text-gray-900 dark:text-white">未找到匹配的任务</p>
             <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">尝试使用其他筛选条件</p>
-            <CustomButton onClick={() => setStatusFilter('')} variant="ghost" size="sm" className="mt-4">
+            <CustomButton onClick={() => setFilter('')} variant="ghost" size="sm" className="mt-4">
               清除筛选
             </CustomButton>
           </div>
@@ -207,7 +241,7 @@ export default function Tasks() {
           <>
             <div className="flex-1 overflow-auto rounded-xl border border-gray-200 dark:border-gray-700/50">
               <table className="w-full text-sm bg-white dark:bg-gray-900">
-                <thead className="sticky top-0 z-10">
+                <thead className="sticky top-0 z-10 shadow-[0_2px_6px_rgba(0,0,0,0.06)]">
                   <tr className="bg-gray-100/95 dark:bg-gray-800/95 backdrop-blur-sm text-left">
                     <th className={`px-4 py-3 font-medium text-gray-700 dark:text-gray-400 text-xs uppercase tracking-wider ${COL_WIDTHS.priority} text-center`}>优先级</th>
                     <th className={`px-4 py-3 font-medium text-gray-700 dark:text-gray-400 text-xs uppercase tracking-wider ${COL_WIDTHS.status} text-center`}>状态</th>
@@ -346,28 +380,37 @@ export default function Tasks() {
           </div>
         }
         footer={
-          <>
-            <CustomButton onClick={() => { createForm.reset(); setShowCreate(false) }} variant="secondary" size='sm'>取消</CustomButton>
-            <CustomButton onClick={handleCreate} variant="primary" loading={createForm.formState.isSubmitting} size='sm'>
-              <span>✨</span>
-              <span>创建任务</span>
-            </CustomButton>
-          </>
+          <div className="flex items-center justify-between w-full">
+            <AiAssistButton context={{
+              contextType: 'task-editor',
+              contextId: '__create__',
+              label: createTitle || '新任务',
+              data: createForm.getValues(),
+              schema: TASK_SCHEMA,
+            }} onAction={onAiAction(createForm)} />
+            <div className="flex items-center gap-2">
+              <CustomButton onClick={() => { createForm.reset(); setShowCreate(false) }} variant="secondary" size='sm'>取消</CustomButton>
+              <CustomButton onClick={handleCreate} variant="primary" loading={createForm.formState.isSubmitting} size='sm'>
+                <span>✨</span>
+                <span>创建任务</span>
+              </CustomButton>
+            </div>
+          </div>
         }
       >
         <div className="space-y-4">
           <div>
             <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5">标题 <span className="text-red-500">*</span></label>
-            <CustomInput value={createForm.watch('title')} onChange={e => createForm.setValue('title', e.target.value)} placeholder="输入任务标题" autoFocus size='sm' />
+            <CustomInput value={createTitle} onChange={e => createForm.setValue('title', e.target.value)} placeholder="输入任务标题" autoFocus size='sm' />
           </div>
           <div>
             <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5">描述 <span className="text-red-500">*</span></label>
-            <CustomTextarea value={createForm.watch('description')} onChange={e => createForm.setValue('description', e.target.value)} placeholder="任务描述，将被作为团队执行的输入" rows={3} size='sm' />
+            <CustomTextarea value={createDescription} onChange={e => createForm.setValue('description', e.target.value)} placeholder="任务描述，将被作为团队执行的输入" rows={3} size='sm' />
           </div>
           <div>
             <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5">优先级</label>
             <CustomSelect
-              value={String(createForm.watch('priority'))}
+              value={String(createPriority)}
               onChange={v => createForm.setValue('priority', Number(v))}
               options={[
                 { value: '0', label: '低' },
@@ -396,12 +439,23 @@ export default function Tasks() {
           </div>
         }
         footer={
-          <>
-            <CustomButton onClick={() => { setEditingTask(null); setEditError('') }} variant="secondary">取消</CustomButton>
-            <CustomButton onClick={handleEditSave} variant="primary" loading={editForm.formState.isSubmitting}>
-              保存
-            </CustomButton>
-          </>
+          <div className="flex items-center justify-between w-full">
+            {editingTask && (
+              <AiAssistButton context={{
+                contextType: 'task-editor',
+                contextId: editingTask.id,
+                label: editTitle || '编辑任务',
+                data: editForm.getValues(),
+                schema: editSchema,
+              }} onAction={onAiAction(editForm)} />
+            )}
+            <div className="flex items-center gap-2">
+              <CustomButton onClick={() => { setEditingTask(null); setEditError('') }} variant="secondary" size='sm'>取消</CustomButton>
+              <CustomButton onClick={handleEditSave} variant="primary" loading={editForm.formState.isSubmitting} size='sm'>
+                保存
+              </CustomButton>
+            </div>
+          </div>
         }
       >
         <div className="space-y-4">
@@ -412,17 +466,17 @@ export default function Tasks() {
           )}
           <div>
             <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5">标题 <span className="text-red-500">*</span></label>
-            <CustomInput value={editForm.watch('title')} onChange={e => editForm.setValue('title', e.target.value)} placeholder="任务标题" autoFocus />
+            <CustomInput value={editTitle} onChange={e => editForm.setValue('title', e.target.value)} placeholder="任务标题" autoFocus />
           </div>
           <div>
             <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5">描述 <span className="text-red-500">*</span></label>
-            <CustomTextarea value={editForm.watch('description')} onChange={e => editForm.setValue('description', e.target.value)} placeholder="任务描述" rows={3} />
+            <CustomTextarea value={editDescription} onChange={e => editForm.setValue('description', e.target.value)} placeholder="任务描述" rows={3} disabled={editingTask?.status === 'assigned'} />
           </div>
           {editingTask?.status === 'pending' && (
             <div>
               <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5">优先级</label>
               <CustomSelect
-                value={String(editForm.watch('priority'))}
+                value={String(editPriority)}
                 onChange={v => editForm.setValue('priority', Number(v))}
                 options={[
                   { value: '0', label: '低' },

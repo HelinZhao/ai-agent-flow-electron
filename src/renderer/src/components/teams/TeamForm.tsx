@@ -1,9 +1,11 @@
-import { useState } from 'react';
+import { useState, useCallback } from 'react';
 import CustomInput from '@renderer/components/ui/CustomInput';
 import CustomTextarea from '@renderer/components/ui/CustomTextarea';
 import CustomSelect from '@renderer/components/ui/CustomSelect';
 import CustomButton from '@renderer/components/ui/CustomButton';
 import ItemPickerModal from '@renderer/components/ui/ItemPickerModal';
+import AiAssistButton from '@renderer/components/AiAssistButton';
+import type { FrontendAction } from '@renderer/lib/frontendActionBus';
 
 export interface TeamFormData {
   name: string
@@ -25,6 +27,7 @@ interface TeamFormProps {
   autoClaimInterval: number; setAutoClaimInterval: (v: number) => void
   agents: { id: string; name: string }[]
   saving: boolean; isCreate: boolean
+  teamId?: string
   onSubmit: () => void; onCancel: () => void
 }
 
@@ -38,9 +41,30 @@ export default function TeamForm({
   name, setName, description, setDescription,
   captainId, setCaptainId, memberIds, setMemberIds,
   mode, setMode, autoClaimEnabled, setAutoClaimEnabled, autoClaimInterval, setAutoClaimInterval,
-  agents, saving, isCreate, onSubmit, onCancel,
+  agents, saving, isCreate, teamId, onSubmit, onCancel,
 }: TeamFormProps) {
   const [pickerOpen, setPickerOpen] = useState(false);
+
+  const TEAM_SCHEMA: Record<string, string> = {
+    name: '团队名称',
+    description: '团队描述',
+    captainId: '队长 Agent ID',
+    memberIds: '成员 Agent ID 数组',
+    mode: '协作模式（captain_distribute / discuss / pipeline）',
+    autoClaimEnabled: '是否启用自动接取任务',
+    autoClaimInterval: '自动接取间隔（秒）',
+  }
+
+  const onAiAction = useCallback((action: FrontendAction) => {
+    if (action.action !== 'setConfig' || !action.payload) return
+    if (action.payload.name !== undefined) setName(action.payload.name)
+    if (action.payload.description !== undefined) setDescription(action.payload.description)
+    if (action.payload.captainId !== undefined) setCaptainId(action.payload.captainId)
+    if (action.payload.memberIds !== undefined) setMemberIds(action.payload.memberIds)
+    if (action.payload.mode !== undefined) setMode(action.payload.mode)
+    if (action.payload.autoClaimEnabled !== undefined) setAutoClaimEnabled(action.payload.autoClaimEnabled)
+    if (action.payload.autoClaimInterval !== undefined) setAutoClaimInterval(action.payload.autoClaimInterval)
+  }, [setName, setDescription, setCaptainId, setMemberIds, setMode, setAutoClaimEnabled, setAutoClaimInterval])
 
   const selectedMembers = memberIds
     .map(id => agents.find(a => a.id === id))
@@ -236,11 +260,20 @@ export default function TeamForm({
       </section>
 
       {/* ── Form Actions ── */}
-      <div className="flex items-center justify-end gap-3 pt-6 mt-8 border-t border-gray-200 dark:border-gray-700">
-        <CustomButton onClick={onCancel} variant="secondary">取消</CustomButton>
-        <CustomButton onClick={onSubmit} variant="primary" loading={saving} disabled={!name.trim() || !description.trim()}>
-          {isCreate ? '创建团队' : '保存修改'}
-        </CustomButton>
+      <div className="flex items-center justify-between gap-3 pt-6 mt-8 border-t border-gray-200 dark:border-gray-700">
+        <AiAssistButton context={{
+          contextType: 'team-editor',
+          contextId: teamId ?? '__create__',
+          label: name || '团队',
+          data: { name, description, captainId, memberIds, mode, autoClaimEnabled, autoClaimInterval },
+          schema: TEAM_SCHEMA,
+        }} onAction={onAiAction} />
+        <div className="flex items-center gap-3">
+          <CustomButton onClick={onCancel} variant="secondary">取消</CustomButton>
+          <CustomButton onClick={onSubmit} variant="primary" loading={saving} disabled={!name.trim() || !description.trim()}>
+            {isCreate ? '创建团队' : '保存修改'}
+          </CustomButton>
+        </div>
       </div>
     </div>
   );

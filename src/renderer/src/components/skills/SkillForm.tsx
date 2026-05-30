@@ -31,7 +31,6 @@ export default function SkillForm({ skill, onSave, onCancel }: SkillFormProps) {
   }
 
   const onAiAction = useCallback((action: FrontendAction) => {
-    console.log(action)
     if (action.action !== 'setConfig' || !action.payload) return
     if (action.payload.name !== undefined) setName(action.payload.name)
     if (action.payload.description !== undefined) setDescription(action.payload.description)

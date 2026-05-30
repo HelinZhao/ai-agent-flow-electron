@@ -27,7 +27,9 @@ export function createFrontendActionTool(executionId: string, broadcast: Broadca
 - node-config: 工作流节点配置。contextId 为节点 ID，action 为 "setConfig"，payload 为要修改的配置字段。
 - trigger-editor: 触发器编辑。contextId 为触发器 ID，action 为 "setConfig"，payload 包含表单字段。
 - skill-editor: 技能编辑。contextId 为技能 ID，action 为 "setConfig"，payload 包含表单字段。
-- agent-editor: Agent 编辑。contextId 为 Agent ID，action 为 "setConfig"，payload 包含表单字段。`,
+- agent-editor: Agent 编辑。contextId 为 Agent ID，action 为 "setConfig"，payload 包含表单字段。
+- task-editor: 任务编辑。contextId 为任务 ID，action 为 "setConfig"，payload 包含表单字段（title / description / priority）。
+- team-editor: 团队编辑。contextId 为团队 ID，action 为 "setConfig"，payload 包含表单字段（name / description / captainId / memberIds / mode / autoClaimEnabled / autoClaimInterval）。`,
       schema: z.object({
         contextType: z.string().describe('页面类型：node-config / trigger-editor / skill-editor 等'),
         contextId: z.string().describe('节点 ID，用户通常会告诉你'),

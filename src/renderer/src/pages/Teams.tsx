@@ -384,6 +384,7 @@ function TeamDetailView({
             agents={agents}
             saving={saving}
             isCreate={!team}
+            teamId={team?.id}
             onSubmit={handleSubmit}
             onCancel={onCancel}
           />
