@@ -9,7 +9,7 @@ import ItemPickerModal from '@renderer/components/ui/ItemPickerModal'
 import Modal from '@renderer/components/ui/Modal'
 import Pagination from '@renderer/components/ui/Pagination'
 import { taskApi } from '@renderer/lib/api'
-import MarkdownPreview from '@renderer/components/MarkdownPreview'
+import TaskDetailRow from '@renderer/components/tasks/TaskDetailRow'
 import type { Task } from '@renderer/types'
 
 const PAGE_SIZE = 20
@@ -296,168 +296,14 @@ export default function Tasks() {
 
                       {/* Expanded detail row */}
                       {expandedId === task.id && (
-                        <tr className="bg-blue-50/40 dark:bg-blue-900/10 border-b border-gray-100 dark:border-gray-700">
-                          <td colSpan={7} className="px-6 py-4">
-                            {/* Restart badge */}
-                            {task.restartedFrom && (() => {
-                              const prev = JSON.parse(task.restartedFrom)
-                              return (
-                                <div className="mb-4 p-3 bg-orange-50 dark:bg-orange-900/10 rounded-lg border border-orange-200 dark:border-orange-800/50 text-xs flex items-center gap-2">
-                                  <span className="font-semibold text-orange-600 dark:text-orange-400">↻ 已重启</span>
-                                  <span className="text-gray-500 dark:text-gray-400">
-                                    前一次: {prev.status === 'completed' ? '已完成' : '失败'}
-                                    {prev.completedAt && ` · ${new Date(prev.completedAt).toLocaleString('zh-CN')}`}
-                                  </span>
-                                </div>
-                              )
-                            })()}
-
-                            <div className="flex flex-col md:flex-row gap-6">
-                              {/* Left: Description + Result/Error */}
-                              <div className="flex-1 min-w-0">
-                                <p className="text-sm text-gray-700 dark:text-gray-300 whitespace-pre-wrap leading-relaxed bg-white/60 dark:bg-gray-900/30 rounded-lg p-3 border border-gray-100 dark:border-gray-700/50">
-                                  <h4 className="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider mb-2 flex items-center gap-1.5">
-                                    <svg className="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                                      <path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z" />
-                                      <polyline points="14 2 14 8 20 8" />
-                                    </svg>
-                                    描述
-                                  </h4>
-                                  {task.description || '暂无描述'}
-                                </p>
-
-                                {/* Result */}
-                                {task.status === 'completed' && task.result && (
-                                  <div className="mt-4">
-                                    <h4 className="text-xs font-semibold text-emerald-600 dark:text-emerald-400 uppercase tracking-wider mb-2 flex items-center gap-1.5">
-                                      <svg className="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                                        <path d="M22 11.08V12a10 10 0 11-5.93-9.14" />
-                                        <polyline points="22 4 12 14.01 9 11.01" />
-                                      </svg>
-                                      执行结果
-                                    </h4>
-                                    <div className="p-3 bg-white dark:bg-gray-900/40 rounded-lg border border-emerald-200/50 dark:border-emerald-800/50 max-h-48 overflow-auto">
-                                      <MarkdownPreview content={task.result} className="text-sm" />
-                                    </div>
-                                  </div>
-                                )}
-
-                                {/* Error */}
-                                {task.status === 'failed' && task.error && (
-                                  <div className="mt-4">
-                                    <h4 className="text-xs font-semibold text-red-500 uppercase tracking-wider mb-2 flex items-center gap-1.5">
-                                      <svg className="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                                        <circle cx="12" cy="12" r="10" />
-                                        <line x1="12" y1="8" x2="12" y2="12" />
-                                        <line x1="12" y1="16" x2="12.01" y2="16" />
-                                      </svg>
-                                      错误信息
-                                    </h4>
-                                    <div className="p-3 bg-red-50 dark:bg-red-900/10 rounded-lg border border-red-200/50 dark:border-red-800/50 max-h-48 overflow-auto">
-                                      <MarkdownPreview content={task.error} className="text-sm text-red-600 dark:text-red-400" />
-                                    </div>
-                                  </div>
-                                )}
-                              </div>
-
-                              {/* Right sidebar: Metadata */}
-                              <div className="w-full md:w-80 flex-shrink-0">
-                                <div className="bg-white/60 dark:bg-gray-900/30 rounded-lg border border-gray-100 dark:border-gray-700/50 p-4 space-y-4">
-                                  {/* Timeline */}
-                                  <div>
-                                    <h4 className="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider mb-2.5 flex items-center gap-1.5">
-                                      <svg className="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                                        <circle cx="12" cy="12" r="10" />
-                                        <polyline points="12 6 12 12 16 14" />
-                                      </svg>
-                                      时间线
-                                    </h4>
-                                    <div className="space-y-2.5 text-xs">
-                                      <div className="flex justify-between items-center">
-                                        <span className="text-gray-400">创建</span>
-                                        <span className="text-gray-700 dark:text-gray-300">{formatTime(task.createdAt)}</span>
-                                      </div>
-                                      {task.claimedAt && (
-                                        <div className="flex justify-between items-center">
-                                          <span className="text-gray-400">认领</span>
-                                          <span className="text-gray-700 dark:text-gray-300">{formatTime(task.claimedAt)}</span>
-                                        </div>
-                                      )}
-                                      {task.completedAt && (
-                                        <div className="flex justify-between items-center">
-                                          <span className="text-gray-400">完成</span>
-                                          <span className="text-gray-700 dark:text-gray-300">{formatTime(task.completedAt)}</span>
-                                        </div>
-                                      )}
-                                    </div>
-                                  </div>
-
-                                  <div className="border-t border-gray-100 dark:border-gray-700" />
-
-                                  {/* Team */}
-                                  <div>
-                                    <h4 className="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider mb-2.5 flex items-center gap-1.5">
-                                      <svg className="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                                        <path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2" />
-                                        <circle cx="9" cy="7" r="4" />
-                                        <path d="M23 21v-2a4 4 0 00-3-3.87" />
-                                        <path d="M16 3.13a4 4 0 010 7.75" />
-                                      </svg>
-                                      认领团队
-                                    </h4>
-                                    <div className="text-xs text-gray-700 dark:text-gray-300 font-medium">
-                                      {getTeamName(task.claimedBy)}
-                                    </div>
-                                  </div>
-
-                                  {/* Execution ID */}
-                                  {task.executionId && (
-                                    <>
-                                      <div className="border-t border-gray-100 dark:border-gray-700" />
-                                      <div>
-                                        <h4 className="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider mb-1.5">执行 ID</h4>
-                                        <div className="text-[10px] text-gray-600 dark:text-gray-400 font-mono truncate" title={task.executionId}>
-                                          {task.executionId}
-                                        </div>
-                                      </div>
-                                    </>
-                                  )}
-
-                                  {/* Cancel button */}
-                                  {(task.status === 'claimed' || task.status === 'assigned') && (
-                                    <>
-                                      <div className="border-t border-gray-100 dark:border-gray-700" />
-                                      <button
-                                        onClick={(e) => { e.stopPropagation(); handleCancel(task.id) }}
-                                        className="w-full flex items-center justify-center gap-1.5 py-2 text-xs font-medium rounded-lg bg-red-50 dark:bg-red-900/20 text-red-600 dark:text-red-400 hover:bg-red-100 dark:hover:bg-red-900/40 border border-red-200 dark:border-red-800 transition-colors"
-                                      >
-                                        <svg className="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                                          <circle cx="12" cy="12" r="10" />
-                                          <line x1="4.93" y1="4.93" x2="19.07" y2="19.07" />
-                                        </svg>
-                                        <span>终止任务</span>
-                                      </button>
-                                    </>
-                                  )}
-
-                                  {/* Restart button */}
-                                  {(task.status === 'completed' || task.status === 'failed') && (
-                                    <>
-                                      <div className="border-t border-gray-100 dark:border-gray-700" />
-                                      <button
-                                        onClick={async (e) => { e.stopPropagation(); await taskApi.restart(task.id) }}
-                                        className="w-full flex items-center justify-center gap-1.5 py-2 text-xs font-medium rounded-lg bg-orange-50 dark:bg-orange-900/20 text-orange-600 dark:text-orange-400 hover:bg-orange-100 dark:hover:bg-orange-900/40 border border-orange-200 dark:border-orange-800 transition-colors"
-                                      >
-                                        <span>↻</span>
-                                        <span>重启任务</span>
-                                      </button>
-                                    </>
-                                  )}
-                                </div>
-                              </div>
-                            </div>
-                          </td>
-                        </tr>
+                        <TaskDetailRow
+                          task={task}
+                          colSpan={7}
+                          getTeamName={getTeamName}
+                          onCancel={handleCancel}
+                          onRestart={(id) => taskApi.restart(id)}
+                          onClose={() => toggleExpand(task.id)}
+                        />
                       )}
                     </>
                   ))}
