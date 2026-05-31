@@ -724,6 +724,10 @@ export const teamExecutionApi = {
   getLastExecution: (teamId: string): Promise<{ executionId: string | null; lastEventAt?: string }> =>
     api.get(`/team-execution/last-execution/${teamId}`),
 
+  /** 获取团队的所有历史执行列表 */
+  getHistoryByTeam: (teamId: string): Promise<{ executions: { executionId: string; taskTitle?: string; lastEventAt: string; eventCount: number }[] }> =>
+    api.get(`/team-execution/history-by-team/${teamId}`),
+
   /** 获取指定 execution 的历史事件（通过文件 URL 直接读取解析） */
   getHistory: async (executionId: string): Promise<{ events: any[] }> => {
     const res = await api.get(`/team-execution/history/${executionId}`)

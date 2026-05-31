@@ -193,6 +193,12 @@ class TeamExecutionTracker {
   pushExecutionComplete(executionId: string, result: { status: 'completed' | 'failed'; result?: string; error?: string }): void {
     this.broadcast(executionId, { type: 'execution_complete', executionId, ...result, ...this.metaForBroadcast(executionId) })
     this.persistEvent(executionId, 'execution_complete', result)
+    // 清除待审批（任务已结束，不再需要审批）
+    const pending = this.pendingApprovals.get(executionId)
+    if (pending) {
+      this.pendingApprovals.delete(executionId)
+      pending.resolve({ decisions: pending.request.actionRequests.map(() => ({ type: 'reject', message: '任务已终止' })) })
+    }
     // 清理资源（延时，给 SSE 客户端时间消费）
     setTimeout(() => {
       this.sseClients.delete(executionId)

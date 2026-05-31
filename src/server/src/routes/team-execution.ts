@@ -2,7 +2,7 @@ import { Router } from 'express'
 import path from 'path'
 import fs from 'fs'
 import { teamExecutionTracker } from '../utils/teamExecutionTracker'
-import { logPath, LOG_DIR, safeFileName, findLatestExecutionByTeamId } from '../utils/teamExecutionFileStore'
+import { logPath, LOG_DIR, safeFileName, findLatestExecutionByTeamId, listExecutionsByTeamId } from '../utils/teamExecutionFileStore'
 
 const router = Router()
 
@@ -139,6 +139,16 @@ router.get('/last-execution/:teamId', (req, res) => {
     return res.json({ executionId: result.executionId, lastEventAt: result.mtime })
   } catch {
     return res.status(500).json({ error: '查询失败' })
+  }
+})
+
+/** 列出团队的所有历史执行 */
+router.get('/history-by-team/:teamId', (req, res) => {
+  try {
+    const executions = listExecutionsByTeamId(req.params.teamId)
+    return res.json({ executions })
+  } catch {
+    return res.status(500).json({ error: '获取历史列表失败' })
   }
 })
 

@@ -77,3 +77,35 @@ export function findLatestExecutionByTeamId(teamId: string): { executionId: stri
   }
 }
 
+/** 列出团队的所有历史执行（按时间倒序） */
+export function listExecutionsByTeamId(teamId: string): { executionId: string; taskTitle?: string; lastEventAt: Date; eventCount: number }[] {
+  ensureDir()
+  const result: { executionId: string; taskTitle?: string; lastEventAt: Date; eventCount: number }[] = []
+  try {
+    const files = fs.readdirSync(LOG_DIR).filter(f => f.endsWith('.jsonl'))
+    for (const file of files) {
+      const fp = path.join(LOG_DIR, file)
+      const content = fs.readFileSync(fp, 'utf-8')
+      const lines = content.split('\n').filter(Boolean)
+      if (lines.length === 0) continue
+      try {
+        const firstEvent = JSON.parse(lines[0])
+        if (firstEvent.teamId === teamId) {
+          const stat = fs.statSync(fp)
+          const originalExId = firstEvent.executionId || file.slice(0, -6)
+          result.push({
+            executionId: originalExId,
+            taskTitle: firstEvent.taskTitle,
+            lastEventAt: stat.mtime,
+            eventCount: lines.length,
+          })
+        }
+      } catch { /* skip */ }
+    }
+    result.sort((a, b) => b.lastEventAt.getTime() - a.lastEventAt.getTime())
+    return result
+  } catch {
+    return result
+  }
+}
+

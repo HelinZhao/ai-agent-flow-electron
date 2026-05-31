@@ -22,15 +22,34 @@ export default function TeamMonitor() {
   const { teams, tasks } = useAppStore()
   const loadHistory = useTeamExecutionStore(s => s.loadHistory)
   const markToolApproved = useTeamExecutionStore(s => s.markToolApproved)
+  const clearTeamEvents = useTeamExecutionStore(s => s.clearTeamEvents)
   const eventsByTeam = useTeamExecutionStore(s => s.eventsByTeam)
   const msgEndRef = useRef<HTMLDivElement>(null)
   const [selectedTeamId, setSelectedTeamId] = useState<string | null>(null)
+  const [historyList, setHistoryList] = useState<{ executionId: string; taskTitle?: string; lastEventAt: string; eventCount: number }[]>([])
   const historyLoadedRef = useRef<Set<string>>(new Set())
 
   const selectedTeam = teams.find(t => t.id === selectedTeamId)
 
   // 按 teamId 订阅事件（Zustand selector，Store 变了会重渲染）
   const teamEvents = useMemo(() => selectedTeamId ? (eventsByTeam[selectedTeamId] || []) : [], [selectedTeamId, eventsByTeam])
+
+  // 无活跃执行时加载历史列表（setState 在异步回调中，不触发级联渲染）
+  useEffect(() => {
+    if (!selectedTeamId || teamEvents.length > 0) return
+    let cancelled = false
+    teamExecutionApi.getHistoryByTeam(selectedTeamId).then(res => {
+      if (!cancelled) setHistoryList(res.executions || [])
+    }).catch(() => { })
+    return () => { cancelled = true }
+  }, [selectedTeamId, teamEvents.length])
+
+  // 点击历史记录
+  const handleSelectHistory = useCallback((executionId: string) => {
+    loadHistory(executionId)
+    // 切到不同的 execution 时重置历史加载标记
+    historyLoadedRef.current.delete(selectedTeamId!)
+  }, [loadHistory, selectedTeamId])
 
   // 从事件中提取执行概要
   const execSummary = useMemo(() => {
@@ -39,7 +58,7 @@ export default function TeamMonitor() {
     const last = teamEvents[teamEvents.length - 1]
     return {
       executionId: first.executionId,
-      taskTitle: first.data?.taskTitle,
+      taskTitle: (first as any).taskTitle || first.data?.taskTitle,
       execStatus: last.eventType === 'execution_complete'
         ? (last.data?.status === 'completed' ? 'completed' as const : 'failed' as const)
         : 'running' as const,
@@ -51,14 +70,9 @@ export default function TeamMonitor() {
     if (!selectedTeamId) return
     if (historyLoadedRef.current.has(selectedTeamId)) return
     historyLoadedRef.current.add(selectedTeamId)
-    console.log('[TeamMonitor] loading history for', selectedTeamId)
     teamExecutionApi.getLastExecution(selectedTeamId).then(res => {
-      console.log('[TeamMonitor] getLastExecution result:', res)
       if (res.executionId) {
-        console.log('[TeamMonitor] calling loadHistory:', res.executionId)
-        loadHistory(res.executionId).then(() => {
-          console.log('[TeamMonitor] loadHistory done, eventsByTeam now:', useTeamExecutionStore.getState().eventsByTeam[selectedTeamId]?.length)
-        })
+        loadHistory(res.executionId)
       }
     }).catch(err => console.error('[TeamMonitor] error:', err))
   }, [selectedTeamId, loadHistory])
@@ -125,42 +139,46 @@ export default function TeamMonitor() {
 
         <nav className="flex-1 px-2 pt-3 pb-3 space-y-0.5 overflow-y-auto">
           {teams.map(team => {
-            const hasEvents = !!(eventsByTeam[team.id]?.length)
+            const teamEvts = eventsByTeam[team.id] || []
+            const lastEvt = teamEvts[teamEvts.length - 1]
+            const isRunning = teamEvts.length > 0 && lastEvt?.eventType !== 'execution_complete'
             const isActive = selectedTeamId === team.id
             const initial = team.name.charAt(0).toUpperCase()
             return (
               <button
                 key={team.id}
                 onClick={() => setSelectedTeamId(team.id)}
-                className={`w-full flex items-center gap-2.5 px-2.5 py-2.5 text-sm rounded-lg transition-all duration-150 group relative ${
-                  isActive
+                className={`w-full flex items-center gap-2.5 px-2.5 py-2.5 text-sm rounded-lg transition-all duration-150 group relative ${isActive
                     ? 'bg-blue-50/80 dark:bg-blue-500/10 text-blue-700 dark:text-blue-300 shadow-sm'
                     : 'text-gray-700 dark:text-gray-300 bg-transparent hover:bg-gray-100 dark:hover:bg-gray-800/70'
-                }`}
+                  }`}
               >
                 {isActive && (
                   <span className="absolute left-0 top-1/2 -translate-y-1/2 w-0.5 h-4 bg-blue-600 dark:bg-blue-400 rounded-full" />
                 )}
                 <span
-                  className={`flex items-center justify-center w-7 h-7 rounded-lg flex-shrink-0 text-md font-bold transition-all ${
-                    hasEvents
+                  className={`flex items-center justify-center w-7 h-7 rounded-lg flex-shrink-0 text-md font-bold transition-all ${isRunning
                       ? 'bg-gradient-to-br from-emerald-500 to-teal-600 text-white shadow-sm shadow-emerald-500/20'
-                      : 'bg-gray-200/70 dark:bg-gray-700/70 text-gray-500 dark:text-gray-400'
-                  }`}
+                      : teamEvts.length > 0
+                        ? 'bg-gray-400/70 dark:bg-gray-500/70 text-white'
+                        : 'bg-gray-200/70 dark:bg-gray-700/70 text-gray-500 dark:text-gray-400'
+                    }`}
                 >
                   {initial}
                 </span>
                 <div className="text-left min-w-0 flex-1">
                   <div className="text-sm font-medium truncate leading-tight flex items-center gap-1.5">
                     {team.name}
-                    {hasEvents && (
+                    {isRunning && (
                       <span className="inline-block w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse shrink-0" title="执行中" />
                     )}
                   </div>
-                  {hasEvents ? (
+                  {isRunning ? (
                     <div className="text-xs mt-0.5 truncate text-blue-500 dark:text-blue-400 leading-tight">
                       {execSummary?.taskTitle || '执行中...'}
                     </div>
+                  ) : teamEvts.length > 0 ? (
+                    <div className="text-xs mt-0.5 truncate text-gray-500 dark:text-gray-400 leading-tight">已完成</div>
                   ) : (
                     <div className="text-xs mt-0.5 truncate text-gray-400 dark:text-gray-500 leading-tight">空闲</div>
                   )}
@@ -195,26 +213,54 @@ export default function TeamMonitor() {
             </div>
           </div>
         ) : teamEvents.length === 0 ? (
-          <div className="flex-1 flex items-center justify-center text-gray-400 dark:text-gray-500">
-            <div className="text-center">
-              <div className="text-4xl mb-3">💤</div>
-              <p className="text-sm font-medium text-gray-600 dark:text-gray-300">{selectedTeam.name}</p>
-              <p className="text-xs mt-1">当前没有正在执行的任务</p>
-            </div>
+          <div className="flex-1 flex flex-col items-center justify-center text-gray-400 dark:text-gray-500 p-6">
+            {historyList.length > 0 ? (
+              <div className="w-full max-w-md">
+                <h3 className="text-sm font-semibold text-gray-700 dark:text-gray-300 mb-3 text-center">{selectedTeam.name} - 历史执行</h3>
+                <div className="space-y-2">
+                  {historyList.map(h => (
+                    <button
+                      key={h.executionId}
+                      onClick={() => handleSelectHistory(h.executionId)}
+                      className="w-full text-left p-3 rounded-lg border border-gray-200 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-800/50 transition-colors"
+                    >
+                      <div className="text-xs font-medium text-gray-700 dark:text-gray-300 truncate">{h.taskTitle || '无标题'}</div>
+                      <div className="text-[11px] text-gray-400 mt-0.5">{new Date(h.lastEventAt).toLocaleString('zh-CN')} · {h.eventCount} 条事件</div>
+                    </button>
+                  ))}
+                </div>
+              </div>
+            ) : (
+              <div className="text-center">
+                <div className="text-4xl mb-3">💤</div>
+                <p className="text-sm font-medium text-gray-600 dark:text-gray-300">{selectedTeam.name}</p>
+                <p className="text-xs mt-1">当前没有正在执行的任务</p>
+              </div>
+            )}
           </div>
         ) : (
           <>
             <div className="flex-shrink-0 px-6 py-3 border-b border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 flex items-center gap-3">
+              {execSummary?.execStatus !== 'running' && (
+                <button
+                  onClick={() => clearTeamEvents(selectedTeamId!)}
+                  className="flex items-center justify-center w-7 h-7 rounded-lg text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors flex-shrink-0"
+                  title="返回历史列表"
+                >
+                  <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                    <path d="M15 19l-7-7 7-7" />
+                  </svg>
+                </button>
+              )}
               <div>
                 <h3 className="text-sm font-semibold text-gray-900 dark:text-white">{selectedTeam.name}</h3>
                 <p className="text-xs text-gray-500 dark:text-gray-400">{execSummary?.taskTitle || '执行中...'}</p>
               </div>
               {execSummary && (
-                <span className={`ml-auto text-xs font-medium px-2 py-0.5 rounded-full ${
-                  execSummary.execStatus === 'completed' ? 'bg-emerald-50 text-emerald-600 dark:bg-emerald-900/20 dark:text-emerald-400' :
-                  execSummary.execStatus === 'failed' ? 'bg-red-50 text-red-600 dark:bg-red-900/20 dark:text-red-400' :
-                  'bg-blue-50 text-blue-600 dark:bg-blue-900/20 dark:text-blue-400'
-                }`}>
+                <span className={`ml-auto text-xs font-medium px-2 py-0.5 rounded-full ${execSummary.execStatus === 'completed' ? 'bg-emerald-50 text-emerald-600 dark:bg-emerald-900/20 dark:text-emerald-400' :
+                    execSummary.execStatus === 'failed' ? 'bg-red-50 text-red-600 dark:bg-red-900/20 dark:text-red-400' :
+                      'bg-blue-50 text-blue-600 dark:bg-blue-900/20 dark:text-blue-400'
+                  }`}>
                   {execSummary.execStatus === 'completed' ? '已完成' : execSummary.execStatus === 'failed' ? '失败' : '运行中'}
                 </span>
               )}
@@ -254,11 +300,10 @@ export default function TeamMonitor() {
                   )}
 
                   {msg.type === 'tool_call' && (
-                    <div className={`p-3 rounded-lg border text-xs ${
-                      msg.actionRequests
+                    <div className={`p-3 rounded-lg border text-xs ${msg.actionRequests
                         ? 'bg-amber-50 dark:bg-amber-900/10 border-amber-200 dark:border-amber-800/50'
                         : 'bg-emerald-50 dark:bg-emerald-900/10 border-emerald-200 dark:border-emerald-800/50'
-                    }`}>
+                      }`}>
                       {msg.actionRequests ? (
                         <>
                           <div className="text-xs font-semibold text-amber-600 dark:text-amber-400 mb-2">🛡️ 工具调用待审批</div>
@@ -287,11 +332,10 @@ export default function TeamMonitor() {
                   )}
 
                   {msg.type === 'execution_complete' && (
-                    <div className={`p-3 rounded-lg border text-xs ${
-                      msg.execStatus === 'completed'
+                    <div className={`p-3 rounded-lg border text-xs ${msg.execStatus === 'completed'
                         ? 'bg-emerald-50 dark:bg-emerald-900/10 border-emerald-200 dark:border-emerald-800/50 text-emerald-700 dark:text-emerald-300'
                         : 'bg-red-50 dark:bg-red-900/10 border-red-200 dark:border-red-800/50 text-red-700 dark:text-red-300'
-                    }`}>
+                      }`}>
                       <span className="font-semibold">
                         {msg.execStatus === 'completed' ? '✅ 任务执行完成' : '❌ 任务执行失败'}
                       </span>

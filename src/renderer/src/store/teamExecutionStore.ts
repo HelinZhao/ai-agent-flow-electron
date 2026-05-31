@@ -27,6 +27,7 @@ interface TeamExecutionState {
   getTeamEvents: (teamId: string) => ExecutionEvent[]
   loadHistory: (executionId: string) => Promise<void>
   markToolApproved: (executionId: string, teamId?: string) => void
+  clearTeamEvents: (teamId: string) => void
 }
 
 let globalSSE: EventSource | null = null
@@ -97,6 +98,22 @@ export const useTeamExecutionStore = create<TeamExecutionState>((set, get) => ({
       const newTeam = { ...store.eventsByTeam }
       if (tid) newTeam[tid] = [...(newTeam[tid] || []), entry]
 
+      // 执行完成时自动清除该 execution 的待审批标记
+      if (event.type === 'execution_complete') {
+        newExec[exId] = newExec[exId].map(e =>
+          e.eventType === 'tool_call' && e.data?.actionRequests
+            ? { ...e, data: { ...e.data, actionRequests: undefined, approved: true } }
+            : e
+        )
+        if (tid) {
+          newTeam[tid] = newTeam[tid]!.map(e =>
+            e.eventType === 'tool_call' && e.data?.actionRequests
+              ? { ...e, data: { ...e.data, actionRequests: undefined, approved: true } }
+              : e
+          )
+        }
+      }
+
       set({ eventsByExecution: newExec, eventsByTeam: newTeam })
     })
 
@@ -118,6 +135,23 @@ export const useTeamExecutionStore = create<TeamExecutionState>((set, get) => ({
 
   getTeamEvents: (teamId: string) => {
     return get().eventsByTeam[teamId] || []
+  },
+
+  /** 清除指定团队的事件缓存（用于退出历史回看） */
+  clearTeamEvents: (teamId: string) => {
+    set(state => {
+      const newTeam = { ...state.eventsByTeam }
+      delete newTeam[teamId]
+      // 同时清除该团队相关 execution 的事件和文件加载标记
+      const newExec = { ...state.eventsByExecution }
+      for (const exId of Object.keys(newExec)) {
+        if (newExec[exId]?.some(e => e.teamId === teamId)) {
+          delete newExec[exId]
+          historyLoadedFromFile.delete(exId)
+        }
+      }
+      return { eventsByTeam: newTeam, eventsByExecution: newExec }
+    })
   },
 
   /** 标记某 execution 的待审批事件为已处理 */
