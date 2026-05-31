@@ -32,7 +32,7 @@ export function logPath(teamId: string, executionId: string): string {
 export function appendEvent(teamId: string | undefined, executionId: string, event: Record<string, any>): void {
   const subDir = safeFileName(teamId || 'unknown')
   ensureDir(subDir)
-  const line = JSON.stringify({ ...event, _persistedAt: new Date().toISOString() }) + '\n'
+  const line = JSON.stringify(event) + '\n'
   try {
     fs.appendFileSync(logPath(teamId || 'unknown', executionId), line, 'utf-8')
   } catch (err) {
@@ -127,4 +127,12 @@ export function logFileUrl(teamId: string, executionId: string): string {
 /** 检查日志文件是否存在 */
 export function logFileExists(teamId: string, executionId: string): boolean {
   return fs.existsSync(logPath(teamId, executionId))
+}
+
+/** 清除指定 execution 的历史日志文件（任务重启时调用，避免新旧事件混淆） */
+export function resetLogFile(teamId: string, executionId: string): void {
+  const fp = logPath(teamId, executionId)
+  if (fs.existsSync(fp)) {
+    try { fs.unlinkSync(fp) } catch { /* ignore */ }
+  }
 }

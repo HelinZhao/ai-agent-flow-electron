@@ -44,10 +44,28 @@ let globalSSE: EventSource | null = null
 /** 记录已从文件加载过的 executionId */
 const historyLoadedFromFile = new Set<string>()
 
+/** 将文件中短字段名的事件归一化为标准 ExecutionEvent */
+function normalizePersistedFields(e: any): any {
+  // 新格式用了短名（t/c/tn/tt/mi/mn/r/d），旧格式用长名
+  if (e.t != null) {
+    return {
+      eventType: e.t,
+      createdAt: e.c,
+      teamName: e.tn,
+      taskTitle: e.tt,
+      memberId: e.mi,
+      memberName: e.mn,
+      role: e.r,
+      data: e.d ?? {},
+    }
+  }
+  return e // 旧格式直接过
+}
+
 /** 按 createdAt 升序排序 */
 function eventTimeSorter(a: ExecutionEvent, b: ExecutionEvent): number {
-  const ta = new Date(a.createdAt || (a as any)._persistedAt || 0).getTime()
-  const tb = new Date(b.createdAt || (b as any)._persistedAt || 0).getTime()
+  const ta = new Date(a.createdAt || 0).getTime()
+  const tb = new Date(b.createdAt || 0).getTime()
   return ta - tb
 }
 
@@ -111,7 +129,10 @@ export const useTeamExecutionStore = create<TeamExecutionState>((set, get) => ({
       }
 
       set(state => {
-        const events = state.eventsByExecution[exId] || []
+        // 如果该 execution 之前已结束（留有 execution_complete），新执行事件到达时清空旧数据
+        const prevEvents = state.eventsByExecution[exId] || []
+        const wasCompleted = prevEvents.some(e => e.eventType === 'execution_complete')
+        const events = wasCompleted ? [] : prevEvents
         const newExec = {
           ...state.eventsByExecution,
           [exId]: [...events, entry],
@@ -216,25 +237,37 @@ export const useTeamExecutionStore = create<TeamExecutionState>((set, get) => ({
       const { events } = await teamExecutionApi.getHistory(teamId, executionId)
       if (events.length === 0) return
 
-      // 按时间正序处理：tool_approved 标记其前一个 tool_call 已审批
+      // 归一化短字段名（文件用短名节省体积，前端需要长名）
+      const expanded = events.map(e => normalizePersistedFields(e))
+      const sorted = [...expanded].sort(eventTimeSorter)
+
+      // 按时间正序处理：tool_approved 标记其前一个 tool_call 的状态
       const normalized: ExecutionEvent[] = []
-      const sorted = [...events].sort(eventTimeSorter)
 
       for (const e of sorted) {
-        // tool_approved 事件本身不显示，但用它标记前一个 tool_call 已审批
+        // tool_approved 事件本身不显示，用它标记前一个 tool_call 的状态
         if (e.eventType === 'tool_approved') {
           if (normalized.length > 0) {
             const last = normalized[normalized.length - 1]
             if (last.eventType === 'tool_call' && last.data?.actionRequests) {
-              last.data = { ...last.data, actionRequests: undefined, approved: true }
+              const isExpired = e.data?.reason === 'execution_terminated'
+              last.data = {
+                ...last.data,
+                actionRequests: undefined,
+                ...(isExpired ? { expired: true } : { approved: true }),
+              }
             }
           }
           continue
         }
 
+        // 文件不再持久化 executionId/teamId（可从路径推断），这里补回用于前端过滤
         const ev: ExecutionEvent = {
           ...e,
-          createdAt: e.createdAt || (e as any)._persistedAt || new Date().toISOString(),
+          id: '',
+          executionId,
+          teamId,
+          createdAt: e.createdAt || new Date().toISOString(),
           data: { ...(e.data || {}) },
         }
         normalized.push(ev)

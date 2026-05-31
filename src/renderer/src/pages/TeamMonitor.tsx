@@ -19,8 +19,8 @@ function buildTeamEventMap(eventsByExecution: Record<string, ExecutionEvent[]>):
   }
   for (const tid of Object.keys(map)) {
     map[tid].sort((a, b) => {
-      const ta = new Date(a.createdAt || (a as any)._persistedAt || 0).getTime()
-      const tb = new Date(b.createdAt || (b as any)._persistedAt || 0).getTime()
+      const ta = new Date(a.createdAt || 0).getTime()
+      const tb = new Date(b.createdAt || 0).getTime()
       return ta - tb
     })
   }
@@ -101,7 +101,7 @@ export default function TeamMonitor() {
 
   // 组装消息列表（每个事件携带自己的 actionRequests，由 tool_approved 文件事件决定是否剥离）
   const messages = useMemo(() => teamEvents.map((e: ExecutionEvent, idx: number) => {
-    const eventCreatedAt = e.createdAt || (e as any)._persistedAt || e.id || ''
+    const eventCreatedAt = e.createdAt || e.id || ''
     return {
       id: e.id || `${e.teamId || 'x'}-${e.eventType}-${eventCreatedAt}-${idx}`,
       type: e.eventType,

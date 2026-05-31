@@ -2,6 +2,7 @@ import { LLMConfigModel, AgentModel, TeamModel } from '../models'
 import { callLLMWithTracking } from './llm'
 import { safeJsonParse, buildSkillsContext } from './shared'
 import { teamExecutionTracker } from './teamExecutionTracker'
+import { resetLogFile } from './teamExecutionFileStore'
 import type { LLMConfig } from '../types'
 import type { CallLLMOptions } from './hitl'
 
@@ -470,6 +471,9 @@ export async function executeTeamStandalone(params: TeamExecParams): Promise<{
 
   // 从数据库读取的团队配置注入 params（调用方可能未传入）
   params.autoApproveTools = team.autoApproveTools ?? false
+
+  // 任务重启时清除旧日志文件，避免新旧事件混淆
+  resetLogFile(params.teamId, params.executionId)
 
   // 设置 tracker 元信息
   params.tracker?.setExecutionMeta(params.executionId, {

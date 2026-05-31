@@ -153,18 +153,19 @@ class TeamExecutionTracker {
   /** @param eventType 持久化事件类型（如 member_status、tool_call、tool_approved），不限 SSE 事件类型 */
   private persistEvent(executionId: string, eventType: string, extra: Record<string, any> = {}): void {
     const meta = this.executionMeta.get(executionId)
+    // 去掉 data 中与根层级重复的字段（memberId/memberName/role 在根层级已有）
+    const cleanData = { ...extra }
+    delete cleanData.memberId; delete cleanData.memberName; delete cleanData.role
+    // 字段名缩短节省日志体积（前端 loadHistory 会归一化回长名）
     appendEvent(meta?.teamId, executionId, {
-      id: '', // 占位，实际用 createdAt 去重
-      executionId,
-      eventType,
-      createdAt: new Date().toISOString(),
-      teamId: meta?.teamId,
-      teamName: meta?.teamName,
-      taskTitle: meta?.taskTitle,
-      memberId: extra.memberId,
-      memberName: extra.memberName,
-      role: extra.role,
-      data: extra,
+      t: eventType,
+      c: new Date().toISOString(),
+      tn: meta?.teamName,
+      tt: meta?.taskTitle,
+      mi: extra.memberId,
+      mn: extra.memberName,
+      r: extra.role,
+      d: cleanData,
     })
   }
 
