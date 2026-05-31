@@ -9,6 +9,7 @@ export interface ExecutionEvent {
   memberId?: string
   memberName?: string
   role?: string
+  taskTitle?: string  // 文件持久化时写入根层级
   data: Record<string, any>
   createdAt: string
 }
@@ -27,6 +28,8 @@ interface TeamExecutionState {
   pendingApprovalByExecution: Record<string, PendingApprovalInfo>
   /** 当前活跃的 executionId 列表 */
   activeExecutions: string[]
+  /** 当前活跃执行所属的 teamId 列表（由 poll 更新，供侧边栏判断实时状态） */
+  activeTeamIds: string[]
   initialized: boolean
 
   init: () => void
@@ -64,6 +67,7 @@ export const useTeamExecutionStore = create<TeamExecutionState>((set, get) => ({
   eventsByExecution: {},
   pendingApprovalByExecution: {},
   activeExecutions: [],
+  activeTeamIds: [],
   initialized: false,
 
   init: () => {
@@ -127,7 +131,10 @@ export const useTeamExecutionStore = create<TeamExecutionState>((set, get) => ({
     const poll = async () => {
       try {
         const data = await teamExecutionApi.list()
-        set({ activeExecutions: data.executions.map(e => e.executionId) })
+        set({
+          activeExecutions: data.executions.map(e => e.executionId),
+          activeTeamIds: data.executions.map(e => e.teamId).filter(Boolean) as string[],
+        })
       } catch { /* ignore */ }
     }
     poll()
@@ -137,7 +144,7 @@ export const useTeamExecutionStore = create<TeamExecutionState>((set, get) => ({
   destroy: () => {
     if (globalSSE) { globalSSE.close(); globalSSE = null }
     if (pollTimer) { clearInterval(pollTimer); pollTimer = null }
-    set({ initialized: false, eventsByExecution: {}, pendingApprovalByExecution: {}, activeExecutions: [] })
+    set({ initialized: false, eventsByExecution: {}, pendingApprovalByExecution: {}, activeExecutions: [], activeTeamIds: [] })
   },
 
   /** 从 eventsByExecution 实时聚合团队事件 */
@@ -158,7 +165,8 @@ export const useTeamExecutionStore = create<TeamExecutionState>((set, get) => ({
       for (const exId of Object.keys(newExec)) {
         if (newExec[exId]?.some(e => e.teamId === teamId)) {
           delete newExec[exId]
-          historyLoadedFromFile.delete(exId)
+          // historyLoadedFromFile 的 key 格式为 `${teamId}:${executionId}`
+          historyLoadedFromFile.delete(`${teamId}:${exId}`)
         }
       }
       return { eventsByExecution: newExec }

@@ -685,7 +685,7 @@ export const tokenUsageApi = {
 /** 团队执行实时监控 API */
 export const teamExecutionApi = {
   /** 获取活跃执行列表 */
-  list: (): Promise<{ executions: { executionId: string; taskTitle?: string; teamName?: string }[]; pendingApprovalCount: number }> =>
+  list: (): Promise<{ executions: { executionId: string; taskTitle?: string; teamName?: string; teamId?: string }[]; pendingApprovalCount: number }> =>
     api.get('/team-execution/list'),
 
   /** 订阅指定 execution 的 SSE 实时流 */

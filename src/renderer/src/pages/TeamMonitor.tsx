@@ -36,6 +36,7 @@ export default function TeamMonitor() {
   const clearTeamEvents = useTeamExecutionStore(s => s.clearTeamEvents)
   const pendingApprovalByExecution = useTeamExecutionStore(s => s.pendingApprovalByExecution)
   const eventsByExecution = useTeamExecutionStore(s => s.eventsByExecution)
+  const activeTeamIds = useTeamExecutionStore(s => s.activeTeamIds)
   const msgEndRef = useRef<HTMLDivElement>(null)
   const [selectedTeamId, setSelectedTeamId] = useState<string | null>(null)
   const [historyList, setHistoryList] = useState<{ executionId: string; taskTitle?: string; lastEventAt: string; eventCount: number }[]>([])
@@ -62,26 +63,23 @@ export default function TeamMonitor() {
     return () => { cancelled = true }
   }, [selectedTeamId, teamEvents.length])
 
-  // 点击历史记录
+  // 点击历史记录（Store 的 historyLoadedFromFile 会做去重，这里不用额外 guard）
   const handleSelectHistory = useCallback((executionId: string) => {
     if (!selectedTeamId) return
-    const key = `${selectedTeamId}:${executionId}`
-    if (!historyLoadedRef.current.has(key)) {
-      historyLoadedRef.current.add(key)
-      loadHistory(selectedTeamId, executionId)
-    }
+    loadHistory(selectedTeamId, executionId)
   }, [selectedTeamId, loadHistory])
 
   // 从事件中提取执行概要
   const execSummary = useMemo(() => {
     if (teamEvents.length === 0) return null
     const first = teamEvents[0]
-    const last = teamEvents[teamEvents.length - 1]
+    // 从后往前找 execution_complete 事件（文件事件的 taskTitle 在根层级）
+    const completeEvent = [...teamEvents].reverse().find(e => e.eventType === 'execution_complete')
     return {
       executionId: first.executionId,
-      taskTitle: first.data?.taskTitle ?? first.data?.taskTitle ?? null,
-      execStatus: last.eventType === 'execution_complete'
-        ? (last.data?.status === 'completed' ? 'completed' as const : 'failed' as const)
+      taskTitle: first.taskTitle || first.data?.taskTitle || null,
+      execStatus: completeEvent
+        ? (completeEvent.data?.status === 'completed' ? 'completed' as const : 'failed' as const)
         : 'running' as const,
     }
   }, [teamEvents])
@@ -165,11 +163,10 @@ export default function TeamMonitor() {
 
         <nav className="flex-1 px-2 pt-3 pb-3 space-y-0.5 overflow-y-auto">
           {teams.map(team => {
-            const teamEvts = allTeamEvents[team.id] || []
-            const lastEvt = teamEvts[teamEvts.length - 1]
-            // 检查是否有 pending 审批属于该团队（sync_state 已提供，无需等待文件加载）
+            // 实时状态（不受历史事件影响）：待审批中 或 活跃执行中
+            const isActiveNow = activeTeamIds.includes(team.id)
             const isPendingForTeam = Object.values(pendingApprovalByExecution).some(p => p.teamId === team.id)
-            const isRunning = isPendingForTeam || (teamEvts.length > 0 && lastEvt?.eventType !== 'execution_complete')
+            const isRunning = isActiveNow || isPendingForTeam
             const isActive = selectedTeamId === team.id
             const initial = team.name.charAt(0).toUpperCase()
             return (
@@ -187,9 +184,7 @@ export default function TeamMonitor() {
                 <span
                   className={`flex items-center justify-center w-7 h-7 rounded-lg flex-shrink-0 text-md font-bold transition-all ${isRunning
                     ? 'bg-gradient-to-br from-emerald-500 to-teal-600 text-white shadow-sm shadow-emerald-500/20'
-                    : teamEvts.length > 0
-                      ? 'bg-gray-400/70 dark:bg-gray-500/70 text-white'
-                      : 'bg-gray-200/70 dark:bg-gray-700/70 text-gray-500 dark:text-gray-400'
+                    : 'bg-gray-200/70 dark:bg-gray-700/70 text-gray-500 dark:text-gray-400'
                     }`}
                 >
                   {initial}
@@ -205,8 +200,6 @@ export default function TeamMonitor() {
                     <div className="text-xs mt-0.5 truncate text-blue-500 dark:text-blue-400 leading-tight">
                       {execSummary?.taskTitle || '执行中...'}
                     </div>
-                  ) : teamEvts.length > 0 ? (
-                    <div className="text-xs mt-0.5 truncate text-gray-500 dark:text-gray-400 leading-tight">已完成</div>
                   ) : (
                     <div className="text-xs mt-0.5 truncate text-gray-400 dark:text-gray-500 leading-tight">空闲</div>
                   )}
