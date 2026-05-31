@@ -26,9 +26,7 @@ interface TeamExecutionState {
   eventsByExecution: Record<string, ExecutionEvent[]>
   /** sync_state 标记的当前待审批（叠加层，不替代事件自身的 actionRequests） */
   pendingApprovalByExecution: Record<string, PendingApprovalInfo>
-  /** 当前活跃的 executionId 列表 */
-  activeExecutions: string[]
-  /** 当前活跃执行所属的 teamId 列表（由 poll 更新，供侧边栏判断实时状态） */
+  /** 当前活跃执行所属的 teamId 列表（由 sync_state + SSE 维护，侧边栏判断实时状态） */
   activeTeamIds: string[]
   initialized: boolean
 
@@ -37,13 +35,12 @@ interface TeamExecutionState {
   /** 按 teamId 推导事件（不再缓存，从 eventsByExecution 实时聚合） */
   getTeamEvents: (teamId: string) => ExecutionEvent[]
   loadHistory: (teamId: string, executionId: string) => Promise<void>
-  /** 清除待审批标记（审批结果已由服务端持久化到文件） */
-  markToolApproved: (executionId: string) => void
+  /** 清除待审批标记，同时标记 tool_call 为已处理（结果已写入文件） */
+  markToolApproved: (executionId: string, status?: 'approved' | 'rejected') => void
   clearTeamEvents: (teamId: string) => void
 }
 
 let globalSSE: EventSource | null = null
-let pollTimer: ReturnType<typeof setInterval> | null = null
 /** 记录已从文件加载过的 executionId */
 const historyLoadedFromFile = new Set<string>()
 
@@ -54,19 +51,23 @@ function eventTimeSorter(a: ExecutionEvent, b: ExecutionEvent): number {
   return ta - tb
 }
 
-/** 将 tool_call 中待审批的事件标记为已审批 */
-function clearApprovalsInEvents(events: ExecutionEvent[]): ExecutionEvent[] {
+/** 标记 tool_call 已处理（approved / rejected / expired） */
+function markToolCalls(events: ExecutionEvent[], status: 'approved' | 'rejected' | 'expired'): ExecutionEvent[] {
   return events.map(e =>
     e.eventType === 'tool_call' && e.data?.actionRequests
-      ? { ...e, data: { ...e.data, actionRequests: undefined, approved: true } }
+      ? { ...e, data: { ...e.data, actionRequests: undefined, [status]: true } }
       : e
   )
+}
+
+/** execution_complete 时标记残留的待审批 tool_call 为已过期（执行终止，未显式审批/拒绝的视为过期） */
+function clearApprovalsInEvents(events: ExecutionEvent[]): ExecutionEvent[] {
+  return markToolCalls(events, 'expired')
 }
 
 export const useTeamExecutionStore = create<TeamExecutionState>((set, get) => ({
   eventsByExecution: {},
   pendingApprovalByExecution: {},
-  activeExecutions: [],
   activeTeamIds: [],
   initialized: false,
 
@@ -75,7 +76,7 @@ export const useTeamExecutionStore = create<TeamExecutionState>((set, get) => ({
     set({ initialized: true })
 
     globalSSE = teamExecutionApi.subscribeAll((event) => {
-      // sync_state：只标记当前待审批，不插入事件
+      // sync_state：服务端推送的活跃执行快照（含 pending 审批 + 全部活跃 execution）
       if (event.type === 'sync_state' && event.state) {
         const pending: Record<string, PendingApprovalInfo> = {}
         for (const p of event.state.pendingApprovals || []) {
@@ -86,7 +87,12 @@ export const useTeamExecutionStore = create<TeamExecutionState>((set, get) => ({
             teamId: p.teamId,
           }
         }
-        set({ pendingApprovalByExecution: pending })
+        // 从活跃执行列表提取 teamId（用于侧边栏实时状态）
+        const activeTeams = new Set<string>()
+        for (const ex of event.state.executions || []) {
+          if (ex.teamId) activeTeams.add(ex.teamId)
+        }
+        set({ pendingApprovalByExecution: pending, activeTeamIds: Array.from(activeTeams) })
         return
       }
 
@@ -111,12 +117,34 @@ export const useTeamExecutionStore = create<TeamExecutionState>((set, get) => ({
           [exId]: [...events, entry],
         }
         let newPending = state.pendingApprovalByExecution
+        let newActiveTeams = state.activeTeamIds
+        const tid = entry.teamId
 
-        // execution_complete：清理待审批标记，并将所有 tool_call 标记为已审批
+        // 第一次见到该 team 的执行事件 → 加入活跃列表
+        if (tid && !newActiveTeams.includes(tid)) {
+          // 但如果不是实时 SSE（loadHistory 加载的）不加入
+          if (event._seq != null) {
+            newActiveTeams = [...newActiveTeams, tid]
+          }
+        }
+
+        // execution_complete：清理待审批标记 + 检查 team 是否还有其它活跃执行
         if (event.type === 'execution_complete') {
           newPending = { ...newPending }
           delete newPending[exId]
           newExec[exId] = clearApprovalsInEvents(newExec[exId])
+          if (tid) {
+            // 检查同 team 的其他 execution 的最后一条事件是否不是 execution_complete（而非历史中的任一条）
+            const execEntries = Object.entries(newExec) as [string, ExecutionEvent[]][]
+            const otherActive = execEntries.some(([otherExId, evts]) => {
+              if (otherExId === exId) return false
+              const last = evts[evts.length - 1]
+              return last?.eventType !== 'execution_complete'
+            })
+            if (!otherActive) {
+              newActiveTeams = newActiveTeams.filter(t => t !== tid)
+            }
+          }
         }
 
         // tool_approval_required：更新 pendingApprovalByExecution 叠加层
@@ -124,27 +152,16 @@ export const useTeamExecutionStore = create<TeamExecutionState>((set, get) => ({
           newPending = { ...newPending, [exId]: { actionRequests: event.actionRequests, teamId: event.teamId, taskTitle: event.taskTitle, teamName: event.teamName } }
         }
 
-        return { eventsByExecution: newExec, pendingApprovalByExecution: newPending }
+        return { eventsByExecution: newExec, pendingApprovalByExecution: newPending, activeTeamIds: newActiveTeams }
       })
     })
 
-    const poll = async () => {
-      try {
-        const data = await teamExecutionApi.list()
-        set({
-          activeExecutions: data.executions.map(e => e.executionId),
-          activeTeamIds: data.executions.map(e => e.teamId).filter(Boolean) as string[],
-        })
-      } catch { /* ignore */ }
-    }
-    poll()
-    pollTimer = setInterval(poll, 5000)
+    // 不再需要轮询——sync_state 提供初始快照，SSE 事件增量维护 activeTeamIds
   },
 
   destroy: () => {
     if (globalSSE) { globalSSE.close(); globalSSE = null }
-    if (pollTimer) { clearInterval(pollTimer); pollTimer = null }
-    set({ initialized: false, eventsByExecution: {}, pendingApprovalByExecution: {}, activeExecutions: [], activeTeamIds: [] })
+    set({ initialized: false, eventsByExecution: {}, pendingApprovalByExecution: {}, activeTeamIds: [] })
   },
 
   /** 从 eventsByExecution 实时聚合团队事件 */
@@ -173,8 +190,8 @@ export const useTeamExecutionStore = create<TeamExecutionState>((set, get) => ({
     })
   },
 
-  /** 清除待审批标记，同时将本地 tool_call 标记为已审批（结果已写入文件） */
-  markToolApproved: (executionId: string) => {
+  /** 清除待审批标记，同时标记 tool_call 为已处理（结果已写入文件） */
+  markToolApproved: (executionId: string, status: 'approved' | 'rejected' = 'approved') => {
     set(state => {
       const newPending = { ...state.pendingApprovalByExecution }
       delete newPending[executionId]
@@ -184,7 +201,7 @@ export const useTeamExecutionStore = create<TeamExecutionState>((set, get) => ({
         pendingApprovalByExecution: newPending,
         eventsByExecution: {
           ...state.eventsByExecution,
-          [executionId]: clearApprovalsInEvents(events),
+          [executionId]: markToolCalls(events, status),
         },
       }
     })

@@ -1,66 +1,40 @@
-import { useState, useEffect, useCallback } from 'react'
+import { useState, useCallback } from 'react'
 import { teamExecutionApi } from '@renderer/lib/api'
 import { useTeamExecutionStore } from '@renderer/store/teamExecutionStore'
 
-interface ApprovalItem {
-  executionId: string
-  taskTitle?: string
-  teamName?: string
-  teamId?: string
-  actionRequests: { name: string; args: Record<string, any>; description: string }[]
-}
-
-/** 获取待审批列表，返回 { items, count } */
-async function fetchPendingApprovals(): Promise<{ items: ApprovalItem[]; count: number }> {
-  const data = await teamExecutionApi.getPendingApprovalDetails()
-  return { items: data.items, count: data.count }
-}
-
 export default function ToolApprovalSidebar() {
   const [open, setOpen] = useState(false)
-  const [items, setItems] = useState<ApprovalItem[]>([])
-  const [count, setCount] = useState(0)
-
   const markToolApproved = useTeamExecutionStore(s => s.markToolApproved)
 
-  // 统一的刷新函数（供 effect 和回调复用）
-  const refresh = useCallback(async () => {
-    try {
-      const data = await fetchPendingApprovals()
-      setItems(data.items)
-      setCount(data.count)
-    } catch { /* ignore */ }
-  }, [])
-
-  // 轮询待审批列表（effect 直接复用 refresh）
-  useEffect(() => {
-    const id = setTimeout(refresh, 0) // 初始加载（延时避免同步 setState 警告）
-    const timer = setInterval(refresh, 3000)
-    return () => { clearTimeout(id); clearInterval(timer) }
-  }, [refresh])
+  // 直接从 store 订阅 pending 状态（sync_state + SSE 事件实时维护，无需轮询）
+  const pendingApprovalByExecution = useTeamExecutionStore(s => s.pendingApprovalByExecution)
+  const pendingItems = Object.entries(pendingApprovalByExecution).map(([executionId, info]) => ({
+    executionId,
+    taskTitle: info.taskTitle,
+    teamName: info.teamName,
+    teamId: info.teamId,
+    actionRequests: info.actionRequests,
+  }))
+  const count = pendingItems.length
 
   const handleApprove = useCallback(async (executionId: string, decisions: { type: 'approve' | 'reject'; message?: string }[]) => {
     try {
       await teamExecutionApi.approveTool(executionId, decisions)
       markToolApproved(executionId)
-      refresh()
     } catch { /* ignore */ }
-  }, [markToolApproved, refresh])
+  }, [markToolApproved])
 
   const handleAutoApprove = useCallback(async (executionId: string, toolName: string) => {
     try {
-      // 先设置自动审批，再统一批准当前待审批项
       await teamExecutionApi.autoApprove(executionId, toolName)
-      // 再尝试批准——若 setAutoApprove 已自动 resolve 则返回 404，忽略即可
       try {
         await teamExecutionApi.approveTool(executionId, [{ type: 'approve' }])
       } catch {
         // autoApprove 可能已自动放行，忽略 404
       }
       markToolApproved(executionId)
-      refresh()
     } catch { /* ignore */ }
-  }, [markToolApproved, refresh])
+  }, [markToolApproved])
 
   if (count === 0 && !open) return null
 
@@ -98,10 +72,10 @@ export default function ToolApprovalSidebar() {
           </div>
 
           <div className="flex-1 overflow-y-auto p-4 space-y-3">
-            {items.length === 0 ? (
+            {pendingItems.length === 0 ? (
               <p className="text-xs text-gray-400 dark:text-gray-500 text-center py-8">暂无待审批的工具调用</p>
             ) : (
-              items.map((item, i) => (
+              pendingItems.map((item, i) => (
                 <div key={i} className="p-3 bg-amber-50 dark:bg-amber-900/10 rounded-lg border border-amber-200 dark:border-amber-800/50 space-y-2">
                   <div className="text-xs">
                     <span className="font-medium text-gray-700 dark:text-gray-300">{item.teamName || '团队'}</span>

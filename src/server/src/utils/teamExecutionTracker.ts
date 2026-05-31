@@ -305,13 +305,17 @@ class TeamExecutionTracker {
   }
 
   /** 获取当前活跃状态（供 SSE 重连后重放） */
-  getActiveState(): { executionIds: string[]; pendingApprovals: Array<{
+  getActiveState(): { executions: { executionId: string; teamId?: string; taskTitle?: string; teamName?: string }[]; pendingApprovals: Array<{
     executionId: string; taskTitle?: string; teamName?: string; teamId?: string
     actionRequests: { name: string; args: Record<string, any>; description: string }[]
   }> } {
     const executionIds = this.getActiveExecutionIds()
     const pendingApprovals = this.getPendingApprovalDetails()
-    return { executionIds, pendingApprovals }
+    const executions = executionIds.map(id => {
+      const meta = this.executionMeta.get(id)
+      return { executionId: id, teamId: meta?.teamId, taskTitle: meta?.taskTitle, teamName: meta?.teamName }
+    })
+    return { executions, pendingApprovals }
   }
 
   /** 清理指定 execution 的所有状态 */

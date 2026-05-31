@@ -2,6 +2,7 @@ import { Router } from 'express'
 import { TaskModel } from '../models'
 import { changeNotifier } from '../utils/dataChangeNotifier'
 import { freeTeam, cancelExecution } from '../utils/autoClaimScheduler'
+import { teamExecutionTracker } from '../utils/teamExecutionTracker'
 
 const router = Router()
 
@@ -228,8 +229,16 @@ router.post('/:id/cancel', async (req, res) => {
       return res.status(400).json({ error: '只能终止处理中或已指派的任务' })
     }
     const teamId = task.claimedBy || ''
-    // 先中断 LLM 请求，再更新数据库
+    const executionId = `task:${task.id}`
+
+    // 通知 tracker 执行已终止（广播 SSE + resolve 待审批 + 清理状态）
+    teamExecutionTracker.pushExecutionComplete(executionId, { status: 'failed', error: '用户终止' })
+    // 立即清理 tracker 状态（不做延时等待，因为不会重连）
+    teamExecutionTracker.cleanup(executionId)
+
+    // 中断 LLM 请求
     cancelExecution(task.id)
+
     task.status = 'failed'
     task.error = '用户终止'
     task.claimedBy = ''

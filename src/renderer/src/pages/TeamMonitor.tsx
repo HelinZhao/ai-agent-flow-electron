@@ -115,6 +115,9 @@ export default function TeamMonitor() {
       toolArgs: e.data?.toolArgs as Record<string, any> | undefined,
       output: e.data?.output || e.data?.result,
       actionRequests: e.data?.actionRequests as Array<{ name: string; args: Record<string, any>; description: string }> | undefined,
+      toolApproved: e.data?.approved as boolean | undefined,
+      toolRejected: e.data?.rejected as boolean | undefined,
+      toolExpired: e.data?.expired as boolean | undefined,
       execStatus: e.data?.status as string | undefined,
       error: e.data?.error as string | undefined,
     }
@@ -124,7 +127,7 @@ export default function TeamMonitor() {
     try {
       const decisions = Array.from({ length: count }, () => ({ type: decision }))
       await teamExecutionApi.approveTool(executionId, decisions)
-      markToolApproved(executionId)
+      markToolApproved(executionId, decision === 'approve' ? 'approved' : 'rejected')
     } catch { /* ignore */ }
   }, [markToolApproved])
 
@@ -289,9 +292,12 @@ export default function TeamMonitor() {
 
             <div className="flex-1 overflow-y-auto px-6 py-4 space-y-3">
               {messages.map(msg => {
-                // 逐事件判断审批状态：只靠事件自身的 actionRequests（不依赖 per-execution 标记）
-                const showPendingApproval = !!msg.actionRequests
-                const actionRequests = msg.actionRequests || (msg.executionId ? pendingApprovalByExecution[msg.executionId]?.actionRequests : undefined)
+                // 逐事件判断审批状态
+                const isLivePending = !!msg.actionRequests && (msg.executionId in pendingApprovalByExecution)
+                const isExpiredTool = !!msg.toolExpired || (!!msg.actionRequests && !(msg.executionId in pendingApprovalByExecution))
+                const actionRequests = isLivePending
+                  ? (msg.actionRequests || pendingApprovalByExecution[msg.executionId]?.actionRequests)
+                  : undefined
                 const actionReqCount = actionRequests?.length || 0
 
                 return (
@@ -327,14 +333,14 @@ export default function TeamMonitor() {
                     )}
 
                     {msg.type === 'tool_call' && (
-                      <div className={`p-3 rounded-lg border text-xs ${showPendingApproval
+                      <div className={`p-3 rounded-lg border text-xs ${isLivePending
                         ? 'bg-amber-50 dark:bg-amber-900/10 border-amber-200 dark:border-amber-800/50'
-                        : 'bg-emerald-50 dark:bg-emerald-900/10 border-emerald-200 dark:border-emerald-800/50'
+                        : 'bg-gray-50 dark:bg-gray-800/30 border-gray-200 dark:border-gray-700'
                         }`}>
-                        {showPendingApproval && actionRequests ? (
+                        {isLivePending ? (
                           <>
                             <div className="text-xs font-semibold text-amber-600 dark:text-amber-400 mb-2">🛡️ 工具调用待审批</div>
-                            {actionRequests.map((a: any, i: number) => (
+                            {(actionRequests || []).map((a: any, i: number) => (
                               <div key={i} className="mb-2 last:mb-0 p-2 bg-white/60 dark:bg-gray-900/40 rounded text-xs">
                                 <div className="font-medium text-gray-700 dark:text-gray-300">{a.name}</div>
                                 {a.description && <div className="text-gray-500 mt-0.5">{a.description}</div>}
@@ -352,8 +358,12 @@ export default function TeamMonitor() {
                               >拒绝</button>
                             </div>
                           </>
+                        ) : isExpiredTool ? (
+                          <div className="text-gray-400 dark:text-gray-500 font-medium">⏳ 已过期</div>
+                        ) : msg.toolRejected ? (
+                          <div className="text-red-500 dark:text-red-400 font-medium">❌ 已拒绝</div>
                         ) : (
-                          <div className="text-emerald-600 dark:text-emerald-400 font-medium">✅ 已审批</div>
+                          <div className="text-emerald-600 dark:text-emerald-400 font-medium">✅ 已批准</div>
                         )}
                       </div>
                     )}
