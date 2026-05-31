@@ -421,6 +421,20 @@ this.app.use('/api/new-route', newRouter)
 
 ## 更新日志
 
+### v2.2.0
+
+- **团队执行看板**：新增 TeamMonitor 页面，实时消息流展示执行过程，支持历史回看
+- **SSE 去轮询**：单连接全局 SSE，sync_state 快照 + 增量事件维护 activeTeamIds
+- **审批侧栏去轮询**：ToolApprovalSidebar 响应式订阅 store，去掉 3s 轮询
+- **审批状态细化**：已批准/已拒绝/已过期三种状态区分显示
+- **团队无需审批选项**：autoApproveTools 配置开关，开启后工具自动放行
+- **任务终止通知 SSE**：取消时广播 execution_complete + resolve 待审批 Promise
+- **架构去双缓存**：eventsByTeam 改为 getter 推导，消除同步不一致
+- **文件存储按 teamId 子目录**：logs/<teamId>/<executionId>.jsonl 减少扫描
+- **服务端事件序列号**：SSE 事件附带 _seq 用于前端精确去重
+- **审批结果持久化**：tool_approved 事件写入文件，刷新后状态恢复
+- **StatusIcon 组件化**：消除 TeamMonitor/TaskDetailRow 间的重复定义
+
 ### v2.1.0
 
 - **任务池页面全面优化**：表格改用展开行详情替代侧边面板，添加筛选空态、粘性表头、斑马纹、主题色统一为 blue/purple
