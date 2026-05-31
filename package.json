@@ -112,5 +112,13 @@
       "electron",
       "esbuild"
     ]
-  }
+  },
+  "directories": {
+    "example": "examples"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://gitee.com/zhao_he_lin/ai-agent-flow-electron"
+  },
+  "keywords": []
 }

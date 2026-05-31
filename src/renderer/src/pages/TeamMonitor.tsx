@@ -6,6 +6,27 @@ import { useTeamExecutionStore } from '@renderer/store/teamExecutionStore'
 import { teamExecutionApi } from '@renderer/lib/api'
 import type { ExecutionEvent } from '@renderer/store/teamExecutionStore'
 
+/* ---------- helpers ---------- */
+
+function buildTeamEventMap(eventsByExecution: Record<string, ExecutionEvent[]>): Record<string, ExecutionEvent[]> {
+  const map: Record<string, ExecutionEvent[]> = {}
+  for (const events of Object.values(eventsByExecution)) {
+    for (const e of events) {
+      if (e.teamId) {
+        (map[e.teamId] ??= []).push(e)
+      }
+    }
+  }
+  for (const tid of Object.keys(map)) {
+    map[tid].sort((a, b) => {
+      const ta = new Date(a.createdAt || (a as any)._persistedAt || 0).getTime()
+      const tb = new Date(b.createdAt || (b as any)._persistedAt || 0).getTime()
+      return ta - tb
+    })
+  }
+  return map
+}
+
 /* ---------- main component ---------- */
 
 export default function TeamMonitor() {
@@ -13,22 +34,23 @@ export default function TeamMonitor() {
   const loadHistory = useTeamExecutionStore(s => s.loadHistory)
   const markToolApproved = useTeamExecutionStore(s => s.markToolApproved)
   const clearTeamEvents = useTeamExecutionStore(s => s.clearTeamEvents)
+  const pendingApprovalByExecution = useTeamExecutionStore(s => s.pendingApprovalByExecution)
+  const eventsByExecution = useTeamExecutionStore(s => s.eventsByExecution)
   const msgEndRef = useRef<HTMLDivElement>(null)
   const [selectedTeamId, setSelectedTeamId] = useState<string | null>(null)
   const [historyList, setHistoryList] = useState<{ executionId: string; taskTitle?: string; lastEventAt: string; eventCount: number }[]>([])
   const historyLoadedRef = useRef<Set<string>>(new Set())
-  // 当前选中的历史 executionId（用于区分历史回看 vs 实时事件）
-  const viewingHistoryIdRef = useRef<string | null>(null)
 
   const selectedTeam = teams.find(t => t.id === selectedTeamId)
 
-  // 细粒度 selector：只订阅选中团队的事件，避免全量订阅
-  const teamEvents = useTeamExecutionStore(
-    useCallback(s => (selectedTeamId ? s.eventsByTeam[selectedTeamId] ?? [] : []), [selectedTeamId]),
-  )
+  // 从 eventsByExecution 推导所有团队事件（侧边栏用）
+  const allTeamEvents = useMemo(() => buildTeamEventMap(eventsByExecution), [eventsByExecution])
 
-  // 侧边栏列表需要所有团队的事件来判断运行状态（粗粒度订阅）
-  const allTeamEvents = useTeamExecutionStore(s => s.eventsByTeam)
+  // 选中团队的事件列表
+  const teamEvents = useMemo(
+    () => (selectedTeamId ? allTeamEvents[selectedTeamId] ?? [] : []),
+    [allTeamEvents, selectedTeamId],
+  )
 
   // 无活跃执行时加载历史列表
   useEffect(() => {
@@ -40,7 +62,7 @@ export default function TeamMonitor() {
     return () => { cancelled = true }
   }, [selectedTeamId, teamEvents.length])
 
-  // 点击历史记录：基于 executionId 控制标记，不再依赖 selectedTeamId 闭包
+  // 点击历史记录
   const handleSelectHistory = useCallback((executionId: string) => {
     if (!selectedTeamId) return
     const key = `${selectedTeamId}:${executionId}`
@@ -48,10 +70,9 @@ export default function TeamMonitor() {
       historyLoadedRef.current.add(key)
       loadHistory(selectedTeamId, executionId)
     }
-    viewingHistoryIdRef.current = executionId
   }, [selectedTeamId, loadHistory])
 
-  // 从事件中提取执行概要（类型安全）
+  // 从事件中提取执行概要
   const execSummary = useMemo(() => {
     if (teamEvents.length === 0) return null
     const first = teamEvents[0]
@@ -80,12 +101,13 @@ export default function TeamMonitor() {
 
   const pendingTaskCount = tasks.filter(t => t.status === 'pending').length
 
-  // 组装消息列表
+  // 组装消息列表（每个事件携带自己的 actionRequests，由 tool_approved 文件事件决定是否剥离）
   const messages = useMemo(() => teamEvents.map((e: ExecutionEvent, idx: number) => {
     const eventCreatedAt = e.createdAt || (e as any)._persistedAt || e.id || ''
     return {
       id: e.id || `${e.teamId || 'x'}-${e.eventType}-${eventCreatedAt}-${idx}`,
       type: e.eventType,
+      executionId: e.executionId,
       timestamp: new Date(eventCreatedAt).getTime(),
       memberId: e.memberId,
       memberName: e.memberName,
@@ -104,9 +126,9 @@ export default function TeamMonitor() {
     try {
       const decisions = Array.from({ length: count }, () => ({ type: decision }))
       await teamExecutionApi.approveTool(executionId, decisions)
-      markToolApproved(executionId, selectedTeamId || undefined)
+      markToolApproved(executionId)
     } catch { /* ignore */ }
-  }, [selectedTeamId, markToolApproved])
+  }, [markToolApproved])
 
   useEffect(() => {
     msgEndRef.current?.scrollIntoView({ behavior: 'smooth' })
@@ -143,9 +165,11 @@ export default function TeamMonitor() {
 
         <nav className="flex-1 px-2 pt-3 pb-3 space-y-0.5 overflow-y-auto">
           {teams.map(team => {
-            const teamEvts = allTeamEvents[team.id] || [] // 使用全局 eventsByTeam 获取各自状态
+            const teamEvts = allTeamEvents[team.id] || []
             const lastEvt = teamEvts[teamEvts.length - 1]
-            const isRunning = teamEvts.length > 0 && lastEvt?.eventType !== 'execution_complete'
+            // 检查是否有 pending 审批属于该团队（sync_state 已提供，无需等待文件加载）
+            const isPendingForTeam = Object.values(pendingApprovalByExecution).some(p => p.teamId === team.id)
+            const isRunning = isPendingForTeam || (teamEvts.length > 0 && lastEvt?.eventType !== 'execution_complete')
             const isActive = selectedTeamId === team.id
             const initial = team.name.charAt(0).toUpperCase()
             return (
@@ -271,83 +295,90 @@ export default function TeamMonitor() {
             </div>
 
             <div className="flex-1 overflow-y-auto px-6 py-4 space-y-3">
-              {messages.map(msg => (
-                <div key={msg.id} className="text-sm">
-                  {(msg.type === 'member_status' || msg.type === 'member_output') && (
-                    <div className="flex items-start gap-2.5">
-                      <div className="flex-shrink-0 w-6 h-6 rounded-full bg-gray-200 dark:bg-gray-700 flex items-center justify-center text-[10px] font-medium text-gray-600 dark:text-gray-300 mt-0.5">
-                        {msg.role === 'captain' ? 'C' : msg.memberName?.charAt(0) || '?'}
-                      </div>
-                      <div className="flex-1 min-w-0">
-                        <div className="flex items-center gap-2">
-                          <span className="font-medium text-gray-700 dark:text-gray-300 text-xs">{msg.memberName}</span>
-                          <StatusIcon status={msg.status} />
+              {messages.map(msg => {
+                // 逐事件判断审批状态：只靠事件自身的 actionRequests（不依赖 per-execution 标记）
+                const showPendingApproval = !!msg.actionRequests
+                const actionRequests = msg.actionRequests || (msg.executionId ? pendingApprovalByExecution[msg.executionId]?.actionRequests : undefined)
+                const actionReqCount = actionRequests?.length || 0
+
+                return (
+                  <div key={msg.id} className="text-sm">
+                    {(msg.type === 'member_status' || msg.type === 'member_output') && (
+                      <div className="flex items-start gap-2.5">
+                        <div className="flex-shrink-0 w-6 h-6 rounded-full bg-gray-200 dark:bg-gray-700 flex items-center justify-center text-[10px] font-medium text-gray-600 dark:text-gray-300 mt-0.5">
+                          {msg.role === 'captain' ? 'C' : msg.memberName?.charAt(0) || '?'}
                         </div>
-                        {msg.status === 'thinking' && <p className="text-gray-400 text-xs mt-0.5">思考中...</p>}
-                        {msg.status === 'using_tool' && (
-                          <div className="mt-0.5 text-xs">
-                            <span className="text-amber-600 dark:text-amber-400 font-medium">使用工具: {msg.toolName}</span>
-                            {msg.toolArgs && (
-                              <pre className="mt-1 p-2 bg-gray-50 dark:bg-gray-800 rounded text-[10px] text-gray-600 dark:text-gray-400 overflow-x-auto">
-                                {JSON.stringify(msg.toolArgs, null, 2)}
-                              </pre>
-                            )}
+                        <div className="flex-1 min-w-0">
+                          <div className="flex items-center gap-2">
+                            <span className="font-medium text-gray-700 dark:text-gray-300 text-xs">{msg.memberName}</span>
+                            <StatusIcon status={msg.status} />
                           </div>
-                        )}
-                        {msg.output && (
-                          <div className="mt-1 p-2.5 bg-white dark:bg-gray-800/50 rounded-lg border border-gray-100 dark:border-gray-700/50">
-                            <MarkdownPreview content={msg.output} className="text-xs" />
-                          </div>
+                          {msg.status === 'thinking' && <p className="text-gray-400 text-xs mt-0.5">思考中...</p>}
+                          {msg.status === 'using_tool' && (
+                            <div className="mt-0.5 text-xs">
+                              <span className="text-amber-600 dark:text-amber-400 font-medium">使用工具: {msg.toolName}</span>
+                              {msg.toolArgs && (
+                                <pre className="mt-1 p-2 bg-gray-50 dark:bg-gray-800 rounded text-[10px] text-gray-600 dark:text-gray-400 overflow-x-auto">
+                                  {JSON.stringify(msg.toolArgs, null, 2)}
+                                </pre>
+                              )}
+                            </div>
+                          )}
+                          {msg.output && (
+                            <div className="mt-1 p-2.5 bg-white dark:bg-gray-800/50 rounded-lg border border-gray-100 dark:border-gray-700/50">
+                              <MarkdownPreview content={msg.output} className="text-xs" />
+                            </div>
+                          )}
+                        </div>
+                      </div>
+                    )}
+
+                    {msg.type === 'tool_call' && (
+                      <div className={`p-3 rounded-lg border text-xs ${showPendingApproval
+                        ? 'bg-amber-50 dark:bg-amber-900/10 border-amber-200 dark:border-amber-800/50'
+                        : 'bg-emerald-50 dark:bg-emerald-900/10 border-emerald-200 dark:border-emerald-800/50'
+                        }`}>
+                        {showPendingApproval && actionRequests ? (
+                          <>
+                            <div className="text-xs font-semibold text-amber-600 dark:text-amber-400 mb-2">🛡️ 工具调用待审批</div>
+                            {actionRequests.map((a: any, i: number) => (
+                              <div key={i} className="mb-2 last:mb-0 p-2 bg-white/60 dark:bg-gray-900/40 rounded text-xs">
+                                <div className="font-medium text-gray-700 dark:text-gray-300">{a.name}</div>
+                                {a.description && <div className="text-gray-500 mt-0.5">{a.description}</div>}
+                                <pre className="mt-1 text-[10px] text-gray-400 overflow-x-auto">{JSON.stringify(a.args, null, 2)}</pre>
+                              </div>
+                            ))}
+                            <div className="flex gap-2 mt-2">
+                              <button
+                                onClick={() => handleApprove(msg.executionId, 'approve', actionReqCount)}
+                                className="px-3 py-1 text-xs font-medium rounded-md bg-emerald-50 text-emerald-600 hover:bg-emerald-100 border border-emerald-200 transition-colors"
+                              >批准</button>
+                              <button
+                                onClick={() => handleApprove(msg.executionId, 'reject', actionReqCount)}
+                                className="px-3 py-1 text-xs font-medium rounded-md bg-red-50 text-red-600 hover:bg-red-100 border border-red-200 transition-colors"
+                              >拒绝</button>
+                            </div>
+                          </>
+                        ) : (
+                          <div className="text-emerald-600 dark:text-emerald-400 font-medium">✅ 已审批</div>
                         )}
                       </div>
-                    </div>
-                  )}
+                    )}
 
-                  {msg.type === 'tool_call' && (
-                    <div className={`p-3 rounded-lg border text-xs ${msg.actionRequests
-                      ? 'bg-amber-50 dark:bg-amber-900/10 border-amber-200 dark:border-amber-800/50'
-                      : 'bg-emerald-50 dark:bg-emerald-900/10 border-emerald-200 dark:border-emerald-800/50'
-                      }`}>
-                      {msg.actionRequests ? (
-                        <>
-                          <div className="text-xs font-semibold text-amber-600 dark:text-amber-400 mb-2">🛡️ 工具调用待审批</div>
-                          {msg.actionRequests.map((a: any, i: number) => (
-                            <div key={i} className="mb-2 last:mb-0 p-2 bg-white/60 dark:bg-gray-900/40 rounded text-xs">
-                              <div className="font-medium text-gray-700 dark:text-gray-300">{a.name}</div>
-                              {a.description && <div className="text-gray-500 mt-0.5">{a.description}</div>}
-                              <pre className="mt-1 text-[10px] text-gray-400 overflow-x-auto">{JSON.stringify(a.args, null, 2)}</pre>
-                            </div>
-                          ))}
-                          <div className="flex gap-2 mt-2">
-                            <button
-                              onClick={() => execSummary?.executionId && handleApprove(execSummary.executionId, 'approve', msg.actionRequests?.length || 0)}
-                              className="px-3 py-1 text-xs font-medium rounded-md bg-emerald-50 text-emerald-600 hover:bg-emerald-100 border border-emerald-200 transition-colors"
-                            >批准</button>
-                            <button
-                              onClick={() => execSummary?.executionId && handleApprove(execSummary.executionId, 'reject', msg.actionRequests?.length || 0)}
-                              className="px-3 py-1 text-xs font-medium rounded-md bg-red-50 text-red-600 hover:bg-red-100 border border-red-200 transition-colors"
-                            >拒绝</button>
-                          </div>
-                        </>
-                      ) : (
-                        <div className="text-emerald-600 dark:text-emerald-400 font-medium">✅ 已审批</div>
-                      )}
-                    </div>
-                  )}
-
-                  {msg.type === 'execution_complete' && (
-                    <div className={`p-3 rounded-lg border text-xs ${msg.execStatus === 'completed'
-                      ? 'bg-emerald-50 dark:bg-emerald-900/10 border-emerald-200 dark:border-emerald-800/50 text-emerald-700 dark:text-emerald-300'
-                      : 'bg-red-50 dark:bg-red-900/10 border-red-200 dark:border-red-800/50 text-red-700 dark:text-red-300'
-                      }`}>
-                      <span className="font-semibold">
-                        {msg.execStatus === 'completed' ? '✅ 任务执行完成' : '❌ 任务执行失败'}
-                      </span>
-                      {msg.error && <p className="mt-1 text-red-600 dark:text-red-400">{msg.error}</p>}
-                    </div>
-                  )}
-                </div>
-              ))}
+                    {msg.type === 'execution_complete' && (
+                      <div className={`p-3 rounded-lg border text-xs ${msg.execStatus === 'completed'
+                        ? 'bg-emerald-50 dark:bg-emerald-900/10 border-emerald-200 dark:border-emerald-800/50 text-emerald-700 dark:text-emerald-300'
+                        : 'bg-red-50 dark:bg-red-900/10 border-red-200 dark:border-red-800/50 text-red-700 dark:text-red-300'
+                        }`}>
+                        <span className="font-semibold">
+                          {msg.execStatus === 'completed' ? '✅ 任务执行完成' : '❌ 任务执行失败'}
+                        </span>
+                        {msg.error && <p className="mt-1 text-red-600 dark:text-red-400">{msg.error}</p>}
+                      </div>
+                    )}
+                  </div>
+                )
+              })}
               <div ref={msgEndRef} />
             </div>
           </>

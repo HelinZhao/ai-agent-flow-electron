@@ -39,15 +39,15 @@ export default function ToolApprovalSidebar() {
     return () => { clearTimeout(id); clearInterval(timer) }
   }, [refresh])
 
-  const handleApprove = useCallback(async (executionId: string, teamId: string | undefined, decisions: { type: 'approve' | 'reject'; message?: string }[]) => {
+  const handleApprove = useCallback(async (executionId: string, decisions: { type: 'approve' | 'reject'; message?: string }[]) => {
     try {
       await teamExecutionApi.approveTool(executionId, decisions)
-      markToolApproved(executionId, teamId)
+      markToolApproved(executionId)
       refresh()
     } catch { /* ignore */ }
   }, [markToolApproved, refresh])
 
-  const handleAutoApprove = useCallback(async (executionId: string, toolName: string, teamId: string | undefined) => {
+  const handleAutoApprove = useCallback(async (executionId: string, toolName: string) => {
     try {
       // 先设置自动审批，再统一批准当前待审批项
       await teamExecutionApi.autoApprove(executionId, toolName)
@@ -57,7 +57,7 @@ export default function ToolApprovalSidebar() {
       } catch {
         // autoApprove 可能已自动放行，忽略 404
       }
-      markToolApproved(executionId, teamId)
+      markToolApproved(executionId)
       refresh()
     } catch { /* ignore */ }
   }, [markToolApproved, refresh])
@@ -119,15 +119,15 @@ export default function ToolApprovalSidebar() {
                   ))}
                   <div className="flex gap-2 pt-1">
                     <button
-                      onClick={() => handleApprove(item.executionId, item.teamId, item.actionRequests.map(() => ({ type: 'approve' })))}
+                      onClick={() => handleApprove(item.executionId, item.actionRequests.map(() => ({ type: 'approve' })))}
                       className="flex-1 px-2 py-1 text-xs font-medium rounded bg-emerald-50 dark:bg-emerald-900/20 text-emerald-600 dark:text-emerald-400 hover:bg-emerald-100 dark:hover:bg-emerald-900/40 border border-emerald-200 dark:border-emerald-800 transition-colors"
                     >全部批准</button>
                     <button
-                      onClick={() => handleApprove(item.executionId, item.teamId, item.actionRequests.map(() => ({ type: 'reject' })))}
+                      onClick={() => handleApprove(item.executionId, item.actionRequests.map(() => ({ type: 'reject' })))}
                       className="flex-1 px-2 py-1 text-xs font-medium rounded bg-red-50 dark:bg-red-900/20 text-red-600 dark:text-red-400 hover:bg-red-100 dark:hover:bg-red-900/40 border border-red-200 dark:border-red-800 transition-colors"
                     >全部拒绝</button>
                     <button
-                      onClick={() => handleAutoApprove(item.executionId, item.actionRequests[0]?.name || '', item.teamId)}
+                      onClick={() => handleAutoApprove(item.executionId, item.actionRequests[0]?.name || '')}
                       className="px-2 py-1 text-xs font-medium rounded bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-400 hover:bg-gray-200 dark:hover:bg-gray-600 border border-gray-200 dark:border-gray-600 transition-colors"
                       title="以后自动批准此工具"
                     >🤖 auto</button>

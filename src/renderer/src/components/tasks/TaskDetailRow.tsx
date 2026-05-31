@@ -164,9 +164,7 @@ function extractStatus(e: ExecutionEvent): MemberState['status'] {
 }
 
 function TeamExecutionProgress({ executionId, teamId }: { executionId: string; teamId?: string }) {
-  const storeEvents = useTeamExecutionStore(s => s.eventsByExecution[executionId])
-  const teamEvents = useTeamExecutionStore(s => teamId ? s.eventsByTeam[teamId] : undefined)
-  const events = storeEvents || teamEvents
+  const events = useTeamExecutionStore(s => s.eventsByExecution[executionId])
   const loadHistory = useTeamExecutionStore(s => s.loadHistory)
 
   // 首次挂载时从文件加载历史（如果 store 里还没有）

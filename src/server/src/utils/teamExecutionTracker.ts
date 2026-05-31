@@ -1,5 +1,5 @@
 import { appendEvent } from './teamExecutionFileStore'
-import type { HITLRequest, HITLResponse } from './hitl'
+import type { HITLRequest, HITLResponse, HITLDecision } from './hitl'
 
 // ============================================================
 //  Types
@@ -47,9 +47,7 @@ export interface ExecutionCompleteEvent {
 export type TeamExecutionEvent = MemberStatusEvent | MemberOutputEvent | ToolApprovalRequiredEvent | ExecutionCompleteEvent
 
 /** SSE 事件携带服务端生成的唯一 seq，供前端去重 */
-export interface SSEServerEvent extends TeamExecutionEvent {
-  _seq: number
-}
+export type SSEServerEvent = TeamExecutionEvent & { _seq: number }
 
 interface SSEClient {
   res: any
@@ -152,7 +150,8 @@ class TeamExecutionTracker {
   }
 
   /** 追加事件到文件（不阻塞广播）。每条事件带唯一 createdAt 用于前端去重。 */
-  private persistEvent(executionId: string, eventType: TeamExecutionEvent['type'], extra: Record<string, any> = {}): void {
+  /** @param eventType 持久化事件类型（如 member_status、tool_call、tool_approved），不限 SSE 事件类型 */
+  private persistEvent(executionId: string, eventType: string, extra: Record<string, any> = {}): void {
     const meta = this.executionMeta.get(executionId)
     appendEvent(meta?.teamId, executionId, {
       id: '', // 占位，实际用 createdAt 去重
@@ -212,7 +211,9 @@ class TeamExecutionTracker {
     const pending = this.pendingApprovals.get(executionId)
     if (pending) {
       this.pendingApprovals.delete(executionId)
-      pending.resolve({ decisions: pending.request.actionRequests.map(() => ({ type: 'reject', message: '任务已终止' })) })
+      const decisions = pending.request.actionRequests.map(() => ({ type: 'reject' as const, message: '任务已终止' }))
+      pending.resolve({ decisions })
+      this.persistEvent(executionId, 'tool_approved', { decisions, reason: 'execution_terminated' })
     }
     // 清理资源（延时，给 SSE 客户端时间消费）
     setTimeout(() => {
@@ -236,11 +237,13 @@ class TeamExecutionTracker {
   }
 
   /** 提交审批决策 */
-  approveToolCall(executionId: string, decisions: { type: 'approve' | 'reject'; message?: string }[]): boolean {
+  approveToolCall(executionId: string, decisions: HITLDecision[]): boolean {
     const pending = this.pendingApprovals.get(executionId)
     if (!pending) return false
     this.pendingApprovals.delete(executionId)
     pending.resolve({ decisions })
+    // 持久化审批结果，下次刷新后能恢复正确状态
+    this.persistEvent(executionId, 'tool_approved', { decisions })
     return true
   }
 
@@ -255,7 +258,9 @@ class TeamExecutionTracker {
       const allApproved = pending.request.actionRequests.every(a => this.autoApprovedTools.get(executionId)?.has(a.name))
       if (allApproved) {
         this.pendingApprovals.delete(executionId)
-        pending.resolve({ decisions: pending.request.actionRequests.map(() => ({ type: 'approve' })) })
+        const decisions = pending.request.actionRequests.map(() => ({ type: 'approve' as const }))
+        pending.resolve({ decisions })
+        this.persistEvent(executionId, 'tool_approved', { decisions, autoApproved: true })
       }
     }
     return true
