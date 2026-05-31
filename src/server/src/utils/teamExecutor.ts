@@ -1,7 +1,9 @@
 import { LLMConfigModel, AgentModel, TeamModel } from '../models'
 import { callLLMWithTracking } from './llm'
 import { safeJsonParse, buildSkillsContext } from './shared'
+import { teamExecutionTracker } from './teamExecutionTracker'
 import type { LLMConfig } from '../types'
+import type { CallLLMOptions } from './hitl'
 
 // ============================================================
 //  可复用的团队执行逻辑（脱离 Workflow 节点上下文）
@@ -16,6 +18,11 @@ export interface TeamExecParams {
   nodeId: string
   logCallback?: (msg: string) => void
   signal?: AbortSignal
+  tracker?: typeof teamExecutionTracker
+  /** 团队名称（供 tracker 使用） */
+  teamName?: string
+  /** 任务标题（供 tracker 使用） */
+  taskTitle?: string
 }
 
 // ============================================================
@@ -40,6 +47,7 @@ async function resolveAgentLlmConfig(agent: any, defaultLlmConfig: LLMConfig): P
 async function callAgent(
   executionId: string, nodeId: string, llmConfig: LLMConfig,
   agent: any, prompt: string, signal?: AbortSignal,
+  approvalCallback?: CallLLMOptions['approvalCallback'],
 ): Promise<string> {
   const agentLlmConfig = await resolveAgentLlmConfig(agent, llmConfig)
 
@@ -59,7 +67,7 @@ async function callAgent(
     executionId, nodeId,
     agentLlmConfig.provider, agentLlmConfig.model,
     finalPrompt, agentLlmConfig,
-    undefined, finalTools, { signal }, undefined,
+    undefined, finalTools, { signal, approvalCallback }, undefined,
   )
 }
 
@@ -73,6 +81,48 @@ function buildMemberListText(agentMap: Map<string, any>, memberIds: string[]): s
 
 function getMemberName(agentMap: Map<string, any>, id: string): string {
   return agentMap.get(id)?.name || id
+}
+
+/** 带 tracker 调用的成员执行包装 */
+async function callMemberWithTracking(
+  params: TeamExecParams, agentMap: Map<string, any>,
+  memberId: string, role: 'captain' | 'member',
+  prompt: string,
+): Promise<string> {
+  const memberName = getMemberName(agentMap, memberId)
+  const member = agentMap.get(memberId)
+  const tracker = params.tracker
+  const execId = params.executionId
+
+  tracker?.pushMemberStatus(execId, { memberId, memberName, role, status: 'thinking' })
+
+  // 构造带有 HITL 的 approvalCallback
+  const approvalCallback: CallLLMOptions['approvalCallback'] = member?.enabledTools?.length
+    ? async (request) => {
+        // 过滤已自动审批的工具
+        const needApproval = request.actionRequests.filter(a => !tracker?.isToolAutoApproved(execId, a.name))
+        if (needApproval.length === 0) {
+          return { decisions: request.actionRequests.map(() => ({ type: 'approve' })) }
+        }
+        tracker?.pushMemberStatus(execId, { memberId, memberName, role, status: 'using_tool', toolName: needApproval[0]?.name, toolArgs: needApproval[0]?.args })
+        const filteredRequest = { actionRequests: needApproval, reviewConfigs: request.reviewConfigs.filter(rc => needApproval.some(a => a.name === rc.actionName)) }
+        return await tracker.registerPendingApproval(execId, filteredRequest)
+      }
+    : undefined
+
+  try {
+    const result = await callAgent(
+      execId, params.nodeId, params.llmConfig,
+      member, prompt, params.signal, approvalCallback,
+    )
+    tracker?.pushMemberOutput(execId, { memberId, memberName, role, output: result })
+    tracker?.pushMemberStatus(execId, { memberId, memberName, role, status: 'done' })
+    return result
+  } catch (error) {
+    const errorMsg = error instanceof Error ? error.message : '执行失败'
+    tracker?.pushMemberStatus(execId, { memberId, memberName, role, status: 'error', output: errorMsg })
+    throw error
+  }
 }
 
 // ============================================================
@@ -113,12 +163,16 @@ async function executeCaptainDistribute(
     ].join('\n')
 
     logCallback?.(`队长 ${captain.name} 开始拆解任务`)
+    params.tracker?.pushMemberStatus(params.executionId, { memberId: team.captainId, memberName: captain.name, role: 'captain', status: 'thinking' })
 
     try {
       const decompResult = await callAgent(
         params.executionId, params.nodeId, params.llmConfig,
         captain, decompPrompt, params.signal,
       )
+      if (decompResult) {
+        params.tracker?.pushMemberOutput(params.executionId, { memberId: team.captainId, memberName: captain.name, role: 'captain', output: `队长拆解完成:\n${decompResult.slice(0, 500)}` })
+      }
       const parsed: any = safeJsonParse(decompResult, null)
       if (parsed && parsed.assignments && Array.isArray(parsed.assignments)) {
         for (const a of parsed.assignments) {
@@ -164,10 +218,7 @@ async function executeCaptainDistribute(
     logCallback?.(`成员 ${member.name} 开始执行子任务`)
 
     try {
-      const result = await callAgent(
-        params.executionId, params.nodeId, params.llmConfig,
-        member, memberPrompt, params.signal,
-      )
+      const result = await callMemberWithTracking(params, agentMap, mid, 'member', memberPrompt)
       memberResults[mid] = { output: result }
     } catch (error) {
       const errorMsg = error instanceof Error ? error.message : '成员执行失败'
@@ -252,10 +303,7 @@ async function executeDiscuss(
     ].join('\n')
 
     try {
-      const result = await callAgent(
-        params.executionId, params.nodeId, params.llmConfig,
-        member, discussPrompt, params.signal,
-      )
+      const result = await callMemberWithTracking(params, agentMap, mid, 'member', discussPrompt)
       memberResults[mid] = { output: result }
       logCallback?.(`成员 ${member.name} 完成讨论输出`)
     } catch (error) {
@@ -368,10 +416,8 @@ async function executePipeline(
     logCallback?.(`流水线环节 ${i + 1}/${orderedMembers.length}: ${member.name}`)
 
     try {
-      lastOutput = await callAgent(
-        params.executionId, params.nodeId, params.llmConfig,
-        member, promptParts.join('\n'), params.signal,
-      )
+      const role = team.captainId && mid === team.captainId ? 'captain' : 'member'
+      lastOutput = await callMemberWithTracking(params, agentMap, mid, role, promptParts.join('\n'))
       pipelineSuccessCount++
       currentInput = lastOutput
     } catch (error) {
@@ -411,8 +457,16 @@ export async function executeTeamStandalone(params: TeamExecParams): Promise<{
 
   const memberIds: string[] = safeJsonParse(team.memberIds, [])
   if (memberIds.length === 0) {
+    params.tracker?.pushExecutionComplete(params.executionId, { status: 'failed', error: '团队没有成员' })
     return { output: '', metadata: { error: '团队没有成员' } }
   }
+
+  // 设置 tracker 元信息
+  params.tracker?.setExecutionMeta(params.executionId, {
+    taskTitle: params.taskTitle || params.taskDescription.slice(0, 100),
+    teamName: params.teamName || team.name,
+    teamId: params.teamId,
+  })
 
   const allAgentIds = team.captainId
     ? [team.captainId, ...memberIds.filter(id => id !== team.captainId)]
@@ -439,6 +493,14 @@ export async function executeTeamStandalone(params: TeamExecParams): Promise<{
   }
 
   params.logCallback?.(`团队「${team.name}」执行完成`)
+
+  const hasError = result.metadata?.error
+  const isFailed = result.metadata?.successCount === 0
+  if (hasError || isFailed) {
+    params.tracker?.pushExecutionComplete(params.executionId, { status: 'failed', error: hasError as string || '所有成员执行失败' })
+  } else {
+    params.tracker?.pushExecutionComplete(params.executionId, { status: 'completed', result: result.output })
+  }
 
   return {
     output: result.output,

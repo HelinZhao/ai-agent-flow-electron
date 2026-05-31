@@ -21,6 +21,7 @@ import assistContextRouter from './routes/assist-context'
 import tokenUsageRouter from './routes/token-usage'
 import teamsRouter from './routes/teams'
 import tasksRouter from './routes/tasks'
+import teamExecutionRouter from './routes/team-execution'
 import { mcpConnectionManager } from './mcp'
 import { getUserDataDir, migrateOldDataDir } from './utils'
 import {
@@ -117,6 +118,7 @@ export class LocalServer {
     this.app.use('/api/token-usage', tokenUsageRouter)
     this.app.use('/api/teams', teamsRouter)
     this.app.use('/api/tasks', tasksRouter)
+    this.app.use('/api/team-execution', teamExecutionRouter)
 
     // Ollama 模型状态与拉取路由
     this.app.get('/api/ollama/status', async (_req, res) => {

@@ -681,3 +681,57 @@ export const tokenUsageApi = {
   getSummary: (): Promise<ModelTokenUsage[]> =>
     api.get('/token-usage/summary'),
 }
+
+/** 团队执行实时监控 API */
+export const teamExecutionApi = {
+  /** 获取活跃执行列表 */
+  list: (): Promise<{ executions: { executionId: string; taskTitle?: string; teamName?: string }[]; pendingApprovalCount: number }> =>
+    api.get('/team-execution/list'),
+
+  /** 订阅指定 execution 的 SSE 实时流 */
+  subscribeSSE: (executionId: string, onEvent: (event: any) => void): EventSource => {
+    const es = new EventSource(`${API_BASE_URL}/team-execution/progress-sse/${executionId}`)
+    es.onmessage = (e) => {
+      try { onEvent(JSON.parse(e.data)) } catch { /* ignore malformed */ }
+    }
+    return es
+  },
+
+  /** 订阅全局 SSE（接收所有 team execution 的事件） */
+  subscribeAll: (onEvent: (event: any) => void): EventSource => {
+    const es = new EventSource(`${API_BASE_URL}/team-execution/progress-sse`)
+    es.onmessage = (e) => {
+      try { onEvent(JSON.parse(e.data)) } catch { /* ignore malformed */ }
+    }
+    return es
+  },
+
+  /** 批准/拒绝工具调用 */
+  approveTool: (executionId: string, decisions: { type: 'approve' | 'reject'; message?: string }[]): Promise<any> =>
+    api.post(`/team-execution/approve-tool/${executionId}`, { decisions }),
+
+  /** 设置自动审批 */
+  autoApprove: (executionId: string, toolName: string): Promise<any> =>
+    api.post(`/team-execution/auto-approve/${executionId}`, { toolName }),
+
+  /** 获取待审批列表 */
+  getPendingApprovalDetails: (): Promise<{
+    items: { executionId: string; taskTitle?: string; teamName?: string; actionRequests: { name: string; args: Record<string, any>; description: string }[] }[]
+    count: number
+  }> => api.get('/team-execution/pending-approvals'),
+
+  /** 按 teamId 查找最近的执行 executionId */
+  getLastExecution: (teamId: string): Promise<{ executionId: string | null; lastEventAt?: string }> =>
+    api.get(`/team-execution/last-execution/${teamId}`),
+
+  /** 获取指定 execution 的历史事件（通过文件 URL 直接读取解析） */
+  getHistory: async (executionId: string): Promise<{ events: any[] }> => {
+    const res = await api.get(`/team-execution/history/${executionId}`)
+    if (!res.url) return { events: res.events || [] }
+    const text = await fetch(`${API_BASE_URL}${res.url}`).then(r => r.text())
+    const events = text.split('\n').filter(Boolean).map(line => {
+      try { return JSON.parse(line) } catch { return null }
+    }).filter(Boolean)
+    return { events }
+  },
+}

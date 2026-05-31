@@ -19,8 +19,11 @@ import Knowledge from "./Knowledge";
 import McpServers from "./McpServers";
 import Teams from "./Teams";
 import Tasks from "./Tasks";
+import TeamMonitor from "./TeamMonitor";
 import Marketplace from "./Marketplace";
 import ToastContainer from '@renderer/components/ui/toast/ToastContainer';
+import ToolApprovalSidebar from '@renderer/components/tasks/ToolApprovalSidebar';
+import { useTeamExecutionStore } from '@renderer/store/teamExecutionStore';
 import {
   ChatIcon, WorkflowIcon, AgentIcon, TeamIcon, SkillsIcon, KnowledgeIcon,
   TriggersIcon, McpIcon, MarketplaceIcon, MonitorIcon, SettingsIcon, LogsIcon, TicketIcon
@@ -38,6 +41,7 @@ const navItems = [
   { path: '/mcp', label: 'MCP服务', icon: <McpIcon />, page: <McpServers />, group: '能力' },
   { path: '/marketplace', label: '模板市场', icon: <MarketplaceIcon />, page: <Marketplace />, group: '资源' },
   { path: '/monitor', label: '执行监控', icon: <MonitorIcon />, page: <ExecutionMonitor />, group: '运维' },
+  { path: '/team-monitor', label: '团队执行', icon: <TeamIcon />, page: <TeamMonitor />, group: '运维' },
   { path: '/settings', label: '设置', icon: <SettingsIcon />, page: <Settings />, group: '系统' },
   { path: '/logs', label: '日志', icon: <LogsIcon />, page: <Logs />, group: '系统' }
 ]
@@ -51,13 +55,16 @@ export default function App(): React.JSX.Element {
   const error = useAppStore(state => state.error);
   const [initializing, setInitializing] = useState(true);
   const [showModelDialog, setShowModelDialog] = useState(false);
+  const initTeamExecStore = useTeamExecutionStore(s => s.init);
   const [showOllamaDialog, setShowOllamaDialog] = useState(false);
 
   useEffect(() => {
     if (init) return
     init = true
-    initialize().finally(() => setInitializing(false))
-  }, [initialize]);
+    initialize()
+      .then(() => initTeamExecStore())
+      .finally(() => setInitializing(false))
+  }, [initialize, initTeamExecStore]);
 
   // 初始化完成后检查 Ollama 服务及模型状态
   useEffect(() => {
@@ -174,6 +181,7 @@ export default function App(): React.JSX.Element {
       <Layout currentPage={currentPage} onNavigate={setCurrentPage} navItems={navItems}>
         <ClickSpark />
         <ToastContainer />
+        <ToolApprovalSidebar />
       </Layout>
     </>
   );

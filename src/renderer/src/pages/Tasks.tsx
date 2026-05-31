@@ -1,4 +1,4 @@
-import { useState, useCallback, useMemo } from 'react'
+import { useState, useCallback, useMemo, Fragment } from 'react'
 import { useForm, useWatch } from 'react-hook-form'
 import { useAppStore } from '@renderer/store/appStore'
 import CustomButton from '@renderer/components/ui/CustomButton'
@@ -254,7 +254,7 @@ export default function Tasks() {
                 </thead>
                 <tbody className="divide-y divide-gray-200 dark:divide-gray-700">
                   {tasks.map(task => (
-                    <>
+                      <Fragment key={task.id}>
                       {/* Main row */}
                       <tr
                         className={`hover:bg-gray-50/80 dark:hover:bg-gray-800/30 cursor-pointer transition-colors even:bg-gray-50/40 dark:even:bg-gray-800/20 ${expandedId === task.id ? '!bg-blue-100 dark:!bg-blue-900/20' : ''
@@ -352,7 +352,7 @@ export default function Tasks() {
                           onClose={() => toggleExpand(task.id)}
                         />
                       )}
-                    </>
+                    </Fragment>
                   ))}
                 </tbody>
               </table>

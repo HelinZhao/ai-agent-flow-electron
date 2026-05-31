@@ -1,6 +1,8 @@
+import { useEffect, useMemo } from 'react'
 import type { Task } from '@renderer/types'
 import MarkdownPreview from '@renderer/components/MarkdownPreview'
 import SectionHeader from './SectionHeader'
+import { useTeamExecutionStore } from '@renderer/store/teamExecutionStore'
 
 interface TaskDetailRowProps {
   task: Task
@@ -130,6 +132,102 @@ function ExecutionIdCard({ task }: { task: Task }) {
   )
 }
 
+/* ---------- Team execution progress (compact) ---------- */
+
+interface MemberState {
+  memberId: string
+  memberName: string
+  role: 'captain' | 'member'
+  status: 'thinking' | 'using_tool' | 'done' | 'error'
+  toolName?: string
+  output?: string
+}
+
+function TeamExecutionProgress({ executionId, teamId }: { executionId: string; teamId?: string }) {
+  const storeEvents = useTeamExecutionStore(s => s.eventsByExecution[executionId])
+  const teamEvents = useTeamExecutionStore(s => teamId ? s.eventsByTeam[teamId] : undefined)
+  const events = storeEvents || teamEvents
+  const loadHistory = useTeamExecutionStore(s => s.loadHistory)
+
+  // 首次挂载时从文件加载历史（如果 store 里还没有）
+  useEffect(() => {
+    loadHistory(executionId)
+  }, [executionId, loadHistory])
+
+  // 从事件中提取成员最新状态
+  const members = useMemo(() => {
+    if (!events || events.length === 0) return []
+    const map = new Map<string, MemberState>()
+    for (const e of events) {
+      if (e.eventType === 'member_status' || e.eventType === 'member_output') {
+        map.set(e.memberId || e.data?.memberId, {
+          memberId: e.memberId || e.data?.memberId,
+          memberName: e.memberName || e.data?.memberName || '?',
+          role: (e.role || e.data?.role) as any,
+          status: (e.data?.status || 'thinking') as any,
+          toolName: e.data?.toolName,
+          output: e.data?.output || e.data?.result,
+        })
+      }
+    }
+    return Array.from(map.values())
+  }, [events])
+
+  const status = useMemo(() => {
+    if (!events || events.length === 0) return 'running'
+    const last = events[events.length - 1]
+    if (last.eventType === 'execution_complete') {
+      return last.data?.status === 'completed' ? 'completed' : 'failed'
+    }
+    return 'running'
+  }, [events])
+
+  if (members.length === 0 && status === 'running') {
+    return (
+      <div className="p-3 bg-white/60 dark:bg-gray-900/40 rounded-lg border border-blue-200/50 dark:border-blue-800/50 text-xs text-gray-500">
+        等待团队成员开始执行...
+      </div>
+    )
+  }
+
+  const statusIcon = (s: MemberState['status']) => {
+    switch (s) {
+      case 'thinking': return <span className="w-2 h-2 rounded-full bg-blue-400 animate-pulse inline-block" />
+      case 'using_tool': return <span className="text-amber-500">🔧</span>
+      case 'done': return <span className="text-emerald-500">✓</span>
+      case 'error': return <span className="text-red-500">✗</span>
+    }
+  }
+
+  return (
+    <div className="bg-white/60 dark:bg-gray-900/40 rounded-lg border border-blue-200/50 dark:border-blue-800/50 p-3">
+      <div className="text-xs font-semibold text-blue-600 dark:text-blue-400 uppercase tracking-wider mb-2 flex items-center gap-1.5">
+        <span className="w-2 h-2 rounded-full bg-blue-500 animate-pulse" />
+        团队执行状态
+        {status !== 'running' && (
+          <span className={`ml-1 font-normal ${status === 'completed' ? 'text-emerald-500' : 'text-red-500'}`}>
+            · {status === 'completed' ? '已完成' : '失败'}
+          </span>
+        )}
+      </div>
+      <div className="space-y-1.5">
+        {members.map(m => (
+          <div key={m.memberId} className="flex items-center gap-2 text-xs">
+            <span className="w-4 flex justify-center flex-shrink-0">{statusIcon(m.status)}</span>
+            <span className="font-medium text-gray-700 dark:text-gray-300 min-w-[60px]">{m.memberName}</span>
+            <span className="text-gray-400 truncate">
+              {m.status === 'thinking' && '思考中...'}
+              {m.status === 'using_tool' && `使用工具: ${m.toolName || '...'}`}
+              {m.status === 'done' && '已完成'}
+              {m.status === 'error' && '执行出错'}
+            </span>
+          </div>
+        ))}
+      </div>
+    </div>
+  )
+}
+
 /* ---------- main component ---------- */
 
 export default function TaskDetailRow({ task, colSpan, getTeamName, onCancel, onRestart, onClose }: TaskDetailRowProps) {
@@ -171,6 +269,11 @@ export default function TaskDetailRow({ task, colSpan, getTeamName, onCancel, on
                 <MarkdownPreview content={task.error} className="text-sm text-red-600 dark:text-red-400" />
               </div>
             </div>
+          )}
+
+          {/* ── Team execution progress (compact) ── */}
+          {task.status === 'claimed' && (task.executionId || task.id) && (
+            <TeamExecutionProgress executionId={`task:${task.id}`} teamId={task.claimedBy} />
           )}
 
           {/* ── Bottom row: metadata cards + actions ── */}

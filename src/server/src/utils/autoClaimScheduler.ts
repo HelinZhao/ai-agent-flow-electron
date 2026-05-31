@@ -1,6 +1,7 @@
 import { TeamModel, LLMConfigModel, TaskModel } from '../models'
 import { executeTeamStandalone } from './teamExecutor'
 import { changeNotifier } from './dataChangeNotifier'
+import { teamExecutionTracker } from './teamExecutionTracker'
 import type { LLMConfig } from '../types'
 
 /** 正在执行中的团队，调度器据此判断空闲状态 */
@@ -98,15 +99,21 @@ async function tick(): Promise<void> {
 }
 
 async function executeTask(task: any, teamId: string, llmConfig: LLMConfig, signal?: AbortSignal): Promise<void> {
+  const executionId = `task:${task.id}`
   console.log(`[Scheduler] 团队开始执行任务: ${task.title}`)
+
+  const team = await TeamModel.findByPk(teamId)
 
   const result = await executeTeamStandalone({
     teamId,
     taskDescription: task.description,
     llmConfig,
-    executionId: `scheduler-${task.id}`,
+    executionId,
     nodeId: 'scheduler',
     signal,
+    tracker: teamExecutionTracker,
+    teamName: team?.name,
+    taskTitle: task.title,
   })
 
   const meta = result.metadata || {}
