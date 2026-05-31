@@ -69,9 +69,14 @@ export function findLatestExecutionByTeamId(teamId: string): { executionId: stri
     for (const file of files) {
       const fp = path.join(dir, file)
       const stat = fs.statSync(fp)
+      if (stat.size === 0) continue
       const originalExId = file.replace(/\.jsonl$/, '')
-      // 从文件第一行读取原始 executionId
-      const firstLine = fs.readFileSync(fp, 'utf-8').split('\n')[0]
+      // 只读前 2KB 获取第一行
+      const fd = fs.openSync(fp, 'r')
+      const buf = Buffer.alloc(Math.min(stat.size, 2048))
+      fs.readSync(fd, buf, 0, buf.length, 0)
+      fs.closeSync(fd)
+      const firstLine = buf.toString('utf-8').split('\n')[0]
       const originalId = firstLine ? (() => { try { return JSON.parse(firstLine).executionId } catch { return null } })() : null
       const exId = originalId || originalExId.replace(/_/g, ':')
       if (!latest || stat.mtime > latest.mtime) {
@@ -94,18 +99,23 @@ export function listExecutionsByTeamId(teamId: string): { executionId: string; t
     const files = fs.readdirSync(dir).filter(f => f.endsWith('.jsonl'))
     for (const file of files) {
       const fp = path.join(dir, file)
-      const content = fs.readFileSync(fp, 'utf-8')
-      const lines = content.split('\n').filter(Boolean)
-      if (lines.length === 0) continue
+      const stat = fs.statSync(fp)
+      if (stat.size === 0) continue
+      // 只读第一行获取元信息，不加载全部内容
+      const fd = fs.openSync(fp, 'r')
+      const buf = Buffer.alloc(Math.min(stat.size, 2048)) // 前 2KB 足够读完第一行
+      fs.readSync(fd, buf, 0, buf.length, 0)
+      fs.closeSync(fd)
+      const firstLine = buf.toString('utf-8').split('\n')[0]
+      if (!firstLine) continue
       try {
-        const firstEvent = JSON.parse(lines[0])
-        const stat = fs.statSync(fp)
+        const firstEvent = JSON.parse(firstLine)
         const originalExId = firstEvent.executionId || file.replace(/\.jsonl$/, '').replace(/_/g, ':')
         result.push({
           executionId: originalExId,
-          taskTitle: firstEvent.taskTitle,
+          taskTitle: firstEvent.taskTitle || firstEvent.tt,
           lastEventAt: stat.mtime,
-          eventCount: lines.length,
+          eventCount: Math.max(0, Math.floor(stat.size / 80)), // 估算：每行约 80 字节
         })
       } catch { /* skip */ }
     }
