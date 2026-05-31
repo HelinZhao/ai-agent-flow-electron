@@ -31,6 +31,8 @@ interface TeamExecutionState {
 
 let globalSSE: EventSource | null = null
 let pollTimer: ReturnType<typeof setInterval> | null = null
+/** 记录已从文件加载过的 executionId */
+const historyLoadedFromFile = new Set<string>()
 
 export const useTeamExecutionStore = create<TeamExecutionState>((set, get) => ({
   eventsByExecution: {},
@@ -142,7 +144,12 @@ export const useTeamExecutionStore = create<TeamExecutionState>((set, get) => ({
     })
   },
 
+  /** 记录已从文件加载过的 execution，避免重复请求 */
+  _historyLoaded: Set<string>,
+
   loadHistory: async (executionId: string) => {
+    if (historyLoadedFromFile.has(executionId)) return
+    historyLoadedFromFile.add(executionId)
     const state = get()
     try {
       const { events } = await teamExecutionApi.getHistory(executionId)
