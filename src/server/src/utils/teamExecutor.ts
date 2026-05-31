@@ -23,6 +23,8 @@ export interface TeamExecParams {
   teamName?: string
   /** 任务标题（供 tracker 使用） */
   taskTitle?: string
+  /** 团队配置：使用工具无需审批，自动放行 */
+  autoApproveTools?: boolean
 }
 
 // ============================================================
@@ -99,6 +101,11 @@ async function callMemberWithTracking(
   // 构造带有 HITL 的 approvalCallback
   const approvalCallback: CallLLMOptions['approvalCallback'] = member?.enabledTools?.length
     ? async (request) => {
+        // 团队配置了无需审批→所有工具自动放行（不创建待审批条目）
+        if (params.autoApproveTools) {
+          tracker?.pushMemberStatus(execId, { memberId, memberName, role, status: 'using_tool', toolName: request.actionRequests[0]?.name, toolArgs: request.actionRequests[0]?.args })
+          return { decisions: request.actionRequests.map(() => ({ type: 'approve' })) }
+        }
         // 过滤已自动审批的工具
         const needApproval = request.actionRequests.filter(a => !tracker?.isToolAutoApproved(execId, a.name))
         if (needApproval.length === 0) {
@@ -460,6 +467,9 @@ export async function executeTeamStandalone(params: TeamExecParams): Promise<{
     params.tracker?.pushExecutionComplete(params.executionId, { status: 'failed', error: '团队没有成员' })
     return { output: '', metadata: { error: '团队没有成员' } }
   }
+
+  // 从数据库读取的团队配置注入 params（调用方可能未传入）
+  params.autoApproveTools = team.autoApproveTools ?? false
 
   // 设置 tracker 元信息
   params.tracker?.setExecutionMeta(params.executionId, {

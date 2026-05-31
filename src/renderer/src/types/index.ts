@@ -63,6 +63,7 @@ export interface Team {
   mode: string
   autoClaimEnabled?: boolean
   autoClaimInterval?: number
+  autoApproveTools?: boolean
   createdAt: Date
   updatedAt: Date
 }

@@ -205,6 +205,10 @@ async function migrateTeamColumns(): Promise<void> {
       await sequelize.query('ALTER TABLE teams ADD COLUMN autoClaimInterval INTEGER DEFAULT 60;')
       console.log('[Migration] teams.autoClaimInterval column added')
     }
+    if (!table.autoApproveTools) {
+      await sequelize.query('ALTER TABLE teams ADD COLUMN autoApproveTools INTEGER DEFAULT 0;')
+      console.log('[Migration] teams.autoApproveTools column added')
+    }
   } catch { /* empty */ }
 }
 

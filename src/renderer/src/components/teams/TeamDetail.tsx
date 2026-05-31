@@ -150,6 +150,22 @@ export default function TeamDetail({ team, getAgentName, onEdit, onDelete }: Tea
 
         <div className="bg-white/80 dark:bg-gray-800/80 backdrop-blur-sm rounded-xl border border-gray-200/50 dark:border-gray-700/50 p-4">
           <div className="flex items-center gap-2 mb-3">
+            <div className="w-6 h-6 rounded-md bg-rose-50 dark:bg-rose-900/20 flex items-center justify-center">
+              <span className="text-xs text-rose-500">🛡️</span>
+            </div>
+            <span className="text-sm font-medium text-gray-700 dark:text-gray-300">工具审批</span>
+          </div>
+          <p className="text-sm text-gray-900 dark:text-white pl-8">
+            {team.autoApproveTools ? (
+              <span>无需审批，自动放行</span>
+            ) : (
+              <span className="text-gray-400 dark:text-gray-500">需要审批</span>
+            )}
+          </p>
+        </div>
+
+        <div className="bg-white/80 dark:bg-gray-800/80 backdrop-blur-sm rounded-xl border border-gray-200/50 dark:border-gray-700/50 p-4">
+          <div className="flex items-center gap-2 mb-3">
             <div className="w-6 h-6 rounded-md bg-cyan-50 dark:bg-cyan-900/20 flex items-center justify-center">
               <span className="text-xs text-cyan-500">🔄</span>
             </div>

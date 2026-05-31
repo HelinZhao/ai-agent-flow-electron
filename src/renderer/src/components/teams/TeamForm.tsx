@@ -15,6 +15,7 @@ export interface TeamFormData {
   mode: string
   autoClaimEnabled?: boolean
   autoClaimInterval?: number
+  autoApproveTools?: boolean
 }
 
 interface TeamFormProps {
@@ -25,6 +26,7 @@ interface TeamFormProps {
   mode: string; setMode: (v: string) => void
   autoClaimEnabled: boolean; setAutoClaimEnabled: (v: boolean) => void
   autoClaimInterval: number; setAutoClaimInterval: (v: number) => void
+  autoApproveTools: boolean; setAutoApproveTools: (v: boolean) => void
   agents: { id: string; name: string }[]
   saving: boolean; isCreate: boolean
   teamId?: string
@@ -41,6 +43,7 @@ export default function TeamForm({
   name, setName, description, setDescription,
   captainId, setCaptainId, memberIds, setMemberIds,
   mode, setMode, autoClaimEnabled, setAutoClaimEnabled, autoClaimInterval, setAutoClaimInterval,
+  autoApproveTools, setAutoApproveTools,
   agents, saving, isCreate, teamId, onSubmit, onCancel,
 }: TeamFormProps) {
   const [pickerOpen, setPickerOpen] = useState(false);
@@ -53,6 +56,7 @@ export default function TeamForm({
     mode: '协作模式（captain_distribute / discuss / pipeline）',
     autoClaimEnabled: '是否启用自动接取任务',
     autoClaimInterval: '自动接取间隔（秒）',
+    autoApproveTools: '是否无需审批直接使用工具',
   }
 
   const onAiAction = useCallback((action: FrontendAction) => {
@@ -64,7 +68,8 @@ export default function TeamForm({
     if (action.payload.mode !== undefined) setMode(action.payload.mode)
     if (action.payload.autoClaimEnabled !== undefined) setAutoClaimEnabled(action.payload.autoClaimEnabled)
     if (action.payload.autoClaimInterval !== undefined) setAutoClaimInterval(action.payload.autoClaimInterval)
-  }, [setName, setDescription, setCaptainId, setMemberIds, setMode, setAutoClaimEnabled, setAutoClaimInterval])
+    if (action.payload.autoApproveTools !== undefined) setAutoApproveTools(action.payload.autoApproveTools)
+  }, [setName, setDescription, setCaptainId, setMemberIds, setMode, setAutoClaimEnabled, setAutoClaimInterval, setAutoApproveTools])
 
   const selectedMembers = memberIds
     .map(id => agents.find(a => a.id === id))
@@ -259,13 +264,33 @@ export default function TeamForm({
         </div>
       </section>
 
+      {/* ── 工具审批 ── */}
+      <section>
+        <div className="flex items-center gap-2 mb-5">
+          <div className="w-1 h-5 bg-rose-500 rounded-full" />
+          <h3 className="text-base font-semibold text-gray-800 dark:text-gray-200">工具审批</h3>
+        </div>
+        <label className="flex items-center gap-3 cursor-pointer">
+          <div
+            onClick={() => setAutoApproveTools(!autoApproveTools)}
+            className={`relative w-10 h-5 rounded-full transition-colors ${autoApproveTools ? 'bg-rose-500' : 'bg-gray-300 dark:bg-gray-600'}`}
+          >
+            <div className={`absolute top-0.5 left-0.5 w-4 h-4 rounded-full bg-white shadow transition-transform ${autoApproveTools ? 'translate-x-5' : ''}`} />
+          </div>
+          <div>
+            <span className="text-sm font-medium text-gray-700 dark:text-gray-300">无需审批直接使用工具</span>
+            <p className="text-xs text-gray-400 dark:text-gray-500">开启后团队成员调用工具时自动放行，不会产生待审批条目</p>
+          </div>
+        </label>
+      </section>
+
       {/* ── Form Actions ── */}
       <div className="flex items-center justify-between gap-3 pt-6 mt-8 border-t border-gray-200 dark:border-gray-700">
         <AiAssistButton context={{
           contextType: 'team-editor',
           contextId: teamId ?? '__create__',
           label: name || '团队',
-          data: { name, description, captainId, memberIds, mode, autoClaimEnabled, autoClaimInterval },
+          data: { name, description, captainId, memberIds, mode, autoClaimEnabled, autoClaimInterval, autoApproveTools },
           schema: TEAM_SCHEMA,
         }} onAction={onAiAction} />
         <div className="flex items-center gap-3">

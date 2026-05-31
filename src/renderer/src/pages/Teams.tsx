@@ -338,13 +338,14 @@ function TeamDetailView({
   const [mode, setMode] = useState(team?.mode || 'captain_distribute')
   const [autoClaimEnabled, setAutoClaimEnabled] = useState(team?.autoClaimEnabled ?? false)
   const [autoClaimInterval, setAutoClaimInterval] = useState(team?.autoClaimInterval ?? 60)
+  const [autoApproveTools, setAutoApproveTools] = useState(team?.autoApproveTools ?? false)
   const [saving, setSaving] = useState(false)
 
   const handleSubmit = async () => {
     if (!name.trim() || !description.trim()) return
     setSaving(true)
     try {
-      await onSave({ name: name.trim(), description: description.trim(), captainId: captainId || undefined, memberIds, mode, autoClaimEnabled, autoClaimInterval })
+      await onSave({ name: name.trim(), description: description.trim(), captainId: captainId || undefined, memberIds, mode, autoClaimEnabled, autoClaimInterval, autoApproveTools })
     } finally {
       setSaving(false)
     }
@@ -381,6 +382,7 @@ function TeamDetailView({
             mode={mode} setMode={setMode}
             autoClaimEnabled={autoClaimEnabled} setAutoClaimEnabled={setAutoClaimEnabled}
             autoClaimInterval={autoClaimInterval} setAutoClaimInterval={setAutoClaimInterval}
+            autoApproveTools={autoApproveTools} setAutoApproveTools={setAutoApproveTools}
             agents={agents}
             saving={saving}
             isCreate={!team}

@@ -10,6 +10,7 @@ export interface TeamAttributes {
   mode: string             // 'captain_distribute' | 'discuss' | 'pipeline'
   autoClaimEnabled?: boolean
   autoClaimInterval?: number
+  autoApproveTools?: boolean // 团队使用工具无需人工审批
   createdAt: Date
   updatedAt: Date
 }
@@ -31,6 +32,7 @@ export class TeamModel
   declare mode: string
   declare autoClaimEnabled?: boolean
   declare autoClaimInterval?: number
+  declare autoApproveTools?: boolean
   declare createdAt: Date
   declare updatedAt: Date
 }
@@ -71,6 +73,11 @@ TeamModel.init(
     autoClaimInterval: {
       type: DataTypes.INTEGER,
       defaultValue: 60,
+      allowNull: true,
+    },
+    autoApproveTools: {
+      type: DataTypes.BOOLEAN,
+      defaultValue: false,
       allowNull: true,
     },
     createdAt: {
