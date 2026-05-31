@@ -193,7 +193,7 @@ export const TEAMS_API_DESCRIPTION = `调用团队管理的 REST API。路径 {i
   pipeline          — 流水线依次处理，上一环节输出为下一环节输入
 
 GET  /api/teams                                  — 列表(updatedAt DESC)
-POST /api/teams                                  — 创建 {"name":"","description":"","captainId":"(队长id)","memberIds":["成员id数组"],"mode":"captain_distribute|discuss|pipeline","autoClaimEnabled":false,"autoClaimInterval":60}
+POST /api/teams                                  — 创建 {"name":"","description":"","captainId":"(队长id)","memberIds":["成员id数组"],"mode":"captain_distribute|discuss|pipeline","autoClaimEnabled":false,"autoClaimInterval":60,"autoApproveTools":false}
 GET  /api/teams/{id}                             — 详情
 PUT  /api/teams/{id}                             — 更新(同创建字段，部分更新)
 DEL  /api/teams/{id}                             — 删除
