@@ -2,7 +2,9 @@ import { useEffect, useMemo } from 'react'
 import type { Task } from '@renderer/types'
 import MarkdownPreview from '@renderer/components/MarkdownPreview'
 import SectionHeader from './SectionHeader'
+import StatusIcon from '@renderer/components/ui/StatusIcon'
 import { useTeamExecutionStore } from '@renderer/store/teamExecutionStore'
+import type { ExecutionEvent } from '@renderer/store/teamExecutionStore'
 
 interface TaskDetailRowProps {
   task: Task
@@ -143,6 +145,24 @@ interface MemberState {
   output?: string
 }
 
+function extractMemberId(e: ExecutionEvent): string {
+  return e.memberId || (e.data?.memberId as string) || ''
+}
+
+function extractMemberName(e: ExecutionEvent): string {
+  return e.memberName || (e.data?.memberName as string) || '?'
+}
+
+function extractRole(e: ExecutionEvent): 'captain' | 'member' {
+  const r = e.role || e.data?.role
+  return (r === 'captain' || r === 'member') ? r : 'member'
+}
+
+function extractStatus(e: ExecutionEvent): MemberState['status'] {
+  const s: string = e.data?.status || 'thinking'
+  return (s === 'thinking' || s === 'using_tool' || s === 'done' || s === 'error') ? s : 'thinking'
+}
+
 function TeamExecutionProgress({ executionId, teamId }: { executionId: string; teamId?: string }) {
   const storeEvents = useTeamExecutionStore(s => s.eventsByExecution[executionId])
   const teamEvents = useTeamExecutionStore(s => teamId ? s.eventsByTeam[teamId] : undefined)
@@ -151,8 +171,10 @@ function TeamExecutionProgress({ executionId, teamId }: { executionId: string; t
 
   // 首次挂载时从文件加载历史（如果 store 里还没有）
   useEffect(() => {
-    loadHistory(executionId)
-  }, [executionId, loadHistory])
+    if (teamId) {
+      loadHistory(teamId, executionId)
+    }
+  }, [teamId, executionId, loadHistory])
 
   // 从事件中提取成员最新状态
   const members = useMemo(() => {
@@ -160,12 +182,13 @@ function TeamExecutionProgress({ executionId, teamId }: { executionId: string; t
     const map = new Map<string, MemberState>()
     for (const e of events) {
       if (e.eventType === 'member_status' || e.eventType === 'member_output') {
-        map.set(e.memberId || e.data?.memberId, {
-          memberId: e.memberId || e.data?.memberId,
-          memberName: e.memberName || e.data?.memberName || '?',
-          role: (e.role || e.data?.role) as any,
-          status: (e.data?.status || 'thinking') as any,
-          toolName: e.data?.toolName,
+        const mId = extractMemberId(e)
+        map.set(mId, {
+          memberId: mId,
+          memberName: extractMemberName(e),
+          role: extractRole(e),
+          status: extractStatus(e),
+          toolName: e.data?.toolName as string | undefined,
           output: e.data?.output || e.data?.result,
         })
       }
@@ -190,15 +213,6 @@ function TeamExecutionProgress({ executionId, teamId }: { executionId: string; t
     )
   }
 
-  const statusIcon = (s: MemberState['status']) => {
-    switch (s) {
-      case 'thinking': return <span className="w-2 h-2 rounded-full bg-blue-400 animate-pulse inline-block" />
-      case 'using_tool': return <span className="text-amber-500">🔧</span>
-      case 'done': return <span className="text-emerald-500">✓</span>
-      case 'error': return <span className="text-red-500">✗</span>
-    }
-  }
-
   return (
     <div className="bg-white/60 dark:bg-gray-900/40 rounded-lg border border-blue-200/50 dark:border-blue-800/50 p-3">
       <div className="text-xs font-semibold text-blue-600 dark:text-blue-400 uppercase tracking-wider mb-2 flex items-center gap-1.5">
@@ -213,7 +227,9 @@ function TeamExecutionProgress({ executionId, teamId }: { executionId: string; t
       <div className="space-y-1.5">
         {members.map(m => (
           <div key={m.memberId} className="flex items-center gap-2 text-xs">
-            <span className="w-4 flex justify-center flex-shrink-0">{statusIcon(m.status)}</span>
+            <span className="w-4 flex justify-center flex-shrink-0">
+              <StatusIcon status={m.status} />
+            </span>
             <span className="font-medium text-gray-700 dark:text-gray-300 min-w-[60px]">{m.memberName}</span>
             <span className="text-gray-400 truncate">
               {m.status === 'thinking' && '思考中...'}

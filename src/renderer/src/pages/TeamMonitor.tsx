@@ -1,20 +1,10 @@
 import { useState, useEffect, useRef, useMemo, useCallback } from 'react'
 import MarkdownPreview from '@renderer/components/MarkdownPreview'
+import StatusIcon from '@renderer/components/ui/StatusIcon'
 import { useAppStore } from '@renderer/store/appStore'
 import { useTeamExecutionStore } from '@renderer/store/teamExecutionStore'
 import { teamExecutionApi } from '@renderer/lib/api'
-
-/* ---------- helpers ---------- */
-
-function statusIcon(status?: string) {
-  switch (status) {
-    case 'thinking': return <span className="w-2 h-2 rounded-full bg-blue-400 animate-pulse inline-block" />
-    case 'using_tool': return <span className="text-amber-500">🔧</span>
-    case 'done': return <span className="text-emerald-500">✓</span>
-    case 'error': return <span className="text-red-500">✗</span>
-    default: return null
-  }
-}
+import type { ExecutionEvent } from '@renderer/store/teamExecutionStore'
 
 /* ---------- main component ---------- */
 
@@ -23,18 +13,24 @@ export default function TeamMonitor() {
   const loadHistory = useTeamExecutionStore(s => s.loadHistory)
   const markToolApproved = useTeamExecutionStore(s => s.markToolApproved)
   const clearTeamEvents = useTeamExecutionStore(s => s.clearTeamEvents)
-  const eventsByTeam = useTeamExecutionStore(s => s.eventsByTeam)
   const msgEndRef = useRef<HTMLDivElement>(null)
   const [selectedTeamId, setSelectedTeamId] = useState<string | null>(null)
   const [historyList, setHistoryList] = useState<{ executionId: string; taskTitle?: string; lastEventAt: string; eventCount: number }[]>([])
   const historyLoadedRef = useRef<Set<string>>(new Set())
+  // 当前选中的历史 executionId（用于区分历史回看 vs 实时事件）
+  const viewingHistoryIdRef = useRef<string | null>(null)
 
   const selectedTeam = teams.find(t => t.id === selectedTeamId)
 
-  // 按 teamId 订阅事件（Zustand selector，Store 变了会重渲染）
-  const teamEvents = useMemo(() => selectedTeamId ? (eventsByTeam[selectedTeamId] || []) : [], [selectedTeamId, eventsByTeam])
+  // 细粒度 selector：只订阅选中团队的事件，避免全量订阅
+  const teamEvents = useTeamExecutionStore(
+    useCallback(s => (selectedTeamId ? s.eventsByTeam[selectedTeamId] ?? [] : []), [selectedTeamId]),
+  )
 
-  // 无活跃执行时加载历史列表（setState 在异步回调中，不触发级联渲染）
+  // 侧边栏列表需要所有团队的事件来判断运行状态（粗粒度订阅）
+  const allTeamEvents = useTeamExecutionStore(s => s.eventsByTeam)
+
+  // 无活跃执行时加载历史列表
   useEffect(() => {
     if (!selectedTeamId || teamEvents.length > 0) return
     let cancelled = false
@@ -44,35 +40,40 @@ export default function TeamMonitor() {
     return () => { cancelled = true }
   }, [selectedTeamId, teamEvents.length])
 
-  // 点击历史记录
+  // 点击历史记录：基于 executionId 控制标记，不再依赖 selectedTeamId 闭包
   const handleSelectHistory = useCallback((executionId: string) => {
-    loadHistory(executionId)
-    // 切到不同的 execution 时重置历史加载标记
-    historyLoadedRef.current.delete(selectedTeamId!)
-  }, [loadHistory, selectedTeamId])
+    if (!selectedTeamId) return
+    const key = `${selectedTeamId}:${executionId}`
+    if (!historyLoadedRef.current.has(key)) {
+      historyLoadedRef.current.add(key)
+      loadHistory(selectedTeamId, executionId)
+    }
+    viewingHistoryIdRef.current = executionId
+  }, [selectedTeamId, loadHistory])
 
-  // 从事件中提取执行概要
+  // 从事件中提取执行概要（类型安全）
   const execSummary = useMemo(() => {
     if (teamEvents.length === 0) return null
     const first = teamEvents[0]
     const last = teamEvents[teamEvents.length - 1]
     return {
       executionId: first.executionId,
-      taskTitle: (first as any).taskTitle || first.data?.taskTitle,
+      taskTitle: first.data?.taskTitle ?? first.data?.taskTitle ?? null,
       execStatus: last.eventType === 'execution_complete'
         ? (last.data?.status === 'completed' ? 'completed' as const : 'failed' as const)
         : 'running' as const,
     }
   }, [teamEvents])
 
-  // 选中团队时加载历史
+  // 选中团队时加载最近的执行历史
   useEffect(() => {
     if (!selectedTeamId) return
-    if (historyLoadedRef.current.has(selectedTeamId)) return
-    historyLoadedRef.current.add(selectedTeamId)
+    const loadKey = `lastExec:${selectedTeamId}`
+    if (historyLoadedRef.current.has(loadKey)) return
+    historyLoadedRef.current.add(loadKey)
     teamExecutionApi.getLastExecution(selectedTeamId).then(res => {
       if (res.executionId) {
-        loadHistory(res.executionId)
+        loadHistory(selectedTeamId, res.executionId)
       }
     }).catch(err => console.error('[TeamMonitor] error:', err))
   }, [selectedTeamId, loadHistory])
@@ -80,21 +81,24 @@ export default function TeamMonitor() {
   const pendingTaskCount = tasks.filter(t => t.status === 'pending').length
 
   // 组装消息列表
-  const messages = useMemo(() => teamEvents.map(e => ({
-    id: e.id || `${e.teamId || 'x'}-${e.eventType}-${e.createdAt}`,
-    type: e.eventType,
-    timestamp: new Date(e.createdAt).getTime(),
-    memberId: e.memberId,
-    memberName: e.memberName,
-    role: e.role,
-    status: e.data?.status,
-    toolName: e.data?.toolName,
-    toolArgs: e.data?.toolArgs,
-    output: e.data?.output || e.data?.result,
-    actionRequests: e.data?.actionRequests,
-    execStatus: e.data?.status,
-    error: e.data?.error,
-  })), [teamEvents])
+  const messages = useMemo(() => teamEvents.map((e: ExecutionEvent, idx: number) => {
+    const eventCreatedAt = e.createdAt || (e as any)._persistedAt || e.id || ''
+    return {
+      id: e.id || `${e.teamId || 'x'}-${e.eventType}-${eventCreatedAt}-${idx}`,
+      type: e.eventType,
+      timestamp: new Date(eventCreatedAt).getTime(),
+      memberId: e.memberId,
+      memberName: e.memberName,
+      role: e.role,
+      status: e.data?.status as string | undefined,
+      toolName: e.data?.toolName as string | undefined,
+      toolArgs: e.data?.toolArgs as Record<string, any> | undefined,
+      output: e.data?.output || e.data?.result,
+      actionRequests: e.data?.actionRequests as Array<{ name: string; args: Record<string, any>; description: string }> | undefined,
+      execStatus: e.data?.status as string | undefined,
+      error: e.data?.error as string | undefined,
+    }
+  }), [teamEvents])
 
   const handleApprove = useCallback(async (executionId: string, decision: 'approve' | 'reject', count: number = 1) => {
     try {
@@ -139,7 +143,7 @@ export default function TeamMonitor() {
 
         <nav className="flex-1 px-2 pt-3 pb-3 space-y-0.5 overflow-y-auto">
           {teams.map(team => {
-            const teamEvts = eventsByTeam[team.id] || []
+            const teamEvts = allTeamEvents[team.id] || [] // 使用全局 eventsByTeam 获取各自状态
             const lastEvt = teamEvts[teamEvts.length - 1]
             const isRunning = teamEvts.length > 0 && lastEvt?.eventType !== 'execution_complete'
             const isActive = selectedTeamId === team.id
@@ -149,8 +153,8 @@ export default function TeamMonitor() {
                 key={team.id}
                 onClick={() => setSelectedTeamId(team.id)}
                 className={`w-full flex items-center gap-2.5 px-2.5 py-2.5 text-sm rounded-lg transition-all duration-150 group relative ${isActive
-                    ? 'bg-blue-50/80 dark:bg-blue-500/10 text-blue-700 dark:text-blue-300 shadow-sm'
-                    : 'text-gray-700 dark:text-gray-300 bg-transparent hover:bg-gray-100 dark:hover:bg-gray-800/70'
+                  ? 'bg-blue-50/80 dark:bg-blue-500/10 text-blue-700 dark:text-blue-300 shadow-sm'
+                  : 'text-gray-700 dark:text-gray-300 bg-transparent hover:bg-gray-100 dark:hover:bg-gray-800/70'
                   }`}
               >
                 {isActive && (
@@ -158,10 +162,10 @@ export default function TeamMonitor() {
                 )}
                 <span
                   className={`flex items-center justify-center w-7 h-7 rounded-lg flex-shrink-0 text-md font-bold transition-all ${isRunning
-                      ? 'bg-gradient-to-br from-emerald-500 to-teal-600 text-white shadow-sm shadow-emerald-500/20'
-                      : teamEvts.length > 0
-                        ? 'bg-gray-400/70 dark:bg-gray-500/70 text-white'
-                        : 'bg-gray-200/70 dark:bg-gray-700/70 text-gray-500 dark:text-gray-400'
+                    ? 'bg-gradient-to-br from-emerald-500 to-teal-600 text-white shadow-sm shadow-emerald-500/20'
+                    : teamEvts.length > 0
+                      ? 'bg-gray-400/70 dark:bg-gray-500/70 text-white'
+                      : 'bg-gray-200/70 dark:bg-gray-700/70 text-gray-500 dark:text-gray-400'
                     }`}
                 >
                   {initial}
@@ -258,8 +262,8 @@ export default function TeamMonitor() {
               </div>
               {execSummary && (
                 <span className={`ml-auto text-xs font-medium px-2 py-0.5 rounded-full ${execSummary.execStatus === 'completed' ? 'bg-emerald-50 text-emerald-600 dark:bg-emerald-900/20 dark:text-emerald-400' :
-                    execSummary.execStatus === 'failed' ? 'bg-red-50 text-red-600 dark:bg-red-900/20 dark:text-red-400' :
-                      'bg-blue-50 text-blue-600 dark:bg-blue-900/20 dark:text-blue-400'
+                  execSummary.execStatus === 'failed' ? 'bg-red-50 text-red-600 dark:bg-red-900/20 dark:text-red-400' :
+                    'bg-blue-50 text-blue-600 dark:bg-blue-900/20 dark:text-blue-400'
                   }`}>
                   {execSummary.execStatus === 'completed' ? '已完成' : execSummary.execStatus === 'failed' ? '失败' : '运行中'}
                 </span>
@@ -277,7 +281,7 @@ export default function TeamMonitor() {
                       <div className="flex-1 min-w-0">
                         <div className="flex items-center gap-2">
                           <span className="font-medium text-gray-700 dark:text-gray-300 text-xs">{msg.memberName}</span>
-                          {statusIcon(msg.status)}
+                          <StatusIcon status={msg.status} />
                         </div>
                         {msg.status === 'thinking' && <p className="text-gray-400 text-xs mt-0.5">思考中...</p>}
                         {msg.status === 'using_tool' && (
@@ -301,8 +305,8 @@ export default function TeamMonitor() {
 
                   {msg.type === 'tool_call' && (
                     <div className={`p-3 rounded-lg border text-xs ${msg.actionRequests
-                        ? 'bg-amber-50 dark:bg-amber-900/10 border-amber-200 dark:border-amber-800/50'
-                        : 'bg-emerald-50 dark:bg-emerald-900/10 border-emerald-200 dark:border-emerald-800/50'
+                      ? 'bg-amber-50 dark:bg-amber-900/10 border-amber-200 dark:border-amber-800/50'
+                      : 'bg-emerald-50 dark:bg-emerald-900/10 border-emerald-200 dark:border-emerald-800/50'
                       }`}>
                       {msg.actionRequests ? (
                         <>
@@ -316,11 +320,11 @@ export default function TeamMonitor() {
                           ))}
                           <div className="flex gap-2 mt-2">
                             <button
-                              onClick={() => execSummary?.executionId && handleApprove(execSummary.executionId, 'approve', msg.actionRequests.length)}
+                              onClick={() => execSummary?.executionId && handleApprove(execSummary.executionId, 'approve', msg.actionRequests?.length || 0)}
                               className="px-3 py-1 text-xs font-medium rounded-md bg-emerald-50 text-emerald-600 hover:bg-emerald-100 border border-emerald-200 transition-colors"
                             >批准</button>
                             <button
-                              onClick={() => execSummary?.executionId && handleApprove(execSummary.executionId, 'reject', msg.actionRequests.length)}
+                              onClick={() => execSummary?.executionId && handleApprove(execSummary.executionId, 'reject', msg.actionRequests?.length || 0)}
                               className="px-3 py-1 text-xs font-medium rounded-md bg-red-50 text-red-600 hover:bg-red-100 border border-red-200 transition-colors"
                             >拒绝</button>
                           </div>
@@ -333,8 +337,8 @@ export default function TeamMonitor() {
 
                   {msg.type === 'execution_complete' && (
                     <div className={`p-3 rounded-lg border text-xs ${msg.execStatus === 'completed'
-                        ? 'bg-emerald-50 dark:bg-emerald-900/10 border-emerald-200 dark:border-emerald-800/50 text-emerald-700 dark:text-emerald-300'
-                        : 'bg-red-50 dark:bg-red-900/10 border-red-200 dark:border-red-800/50 text-red-700 dark:text-red-300'
+                      ? 'bg-emerald-50 dark:bg-emerald-900/10 border-emerald-200 dark:border-emerald-800/50 text-emerald-700 dark:text-emerald-300'
+                      : 'bg-red-50 dark:bg-red-900/10 border-red-200 dark:border-red-800/50 text-red-700 dark:text-red-300'
                       }`}>
                       <span className="font-semibold">
                         {msg.execStatus === 'completed' ? '✅ 任务执行完成' : '❌ 任务执行失败'}

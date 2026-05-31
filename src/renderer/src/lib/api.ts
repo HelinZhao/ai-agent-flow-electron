@@ -729,8 +729,8 @@ export const teamExecutionApi = {
     api.get(`/team-execution/history-by-team/${teamId}`),
 
   /** 获取指定 execution 的历史事件（通过文件 URL 直接读取解析） */
-  getHistory: async (executionId: string): Promise<{ events: any[] }> => {
-    const res = await api.get(`/team-execution/history/${executionId}`)
+  getHistory: async (teamId: string, executionId: string): Promise<{ events: any[] }> => {
+    const res = await api.get(`/team-execution/history/${teamId}/${executionId}`)
     if (!res.url) return { events: res.events || [] }
     const text = await fetch(`${API_BASE_URL}${res.url}`).then(r => r.text())
     const events = text.split('\n').filter(Boolean).map(line => {

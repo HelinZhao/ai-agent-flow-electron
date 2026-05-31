@@ -2,7 +2,11 @@ import { Router } from 'express'
 import path from 'path'
 import fs from 'fs'
 import { teamExecutionTracker } from '../utils/teamExecutionTracker'
-import { logPath, LOG_DIR, safeFileName, findLatestExecutionByTeamId, listExecutionsByTeamId } from '../utils/teamExecutionFileStore'
+import {
+  LOG_DIR, safeFileName,
+  findLatestExecutionByTeamId, listExecutionsByTeamId,
+  logFileUrl, logFileExists,
+} from '../utils/teamExecutionFileStore'
 
 const router = Router()
 
@@ -120,12 +124,15 @@ router.get('/pending-approvals', (_req, res) => {
 //  历史记录
 // ============================================================
 
-/** 获取日志文件 URL（前端拿到后直接 fetch 解析） */
-router.get('/history/:executionId', (req, res) => {
+/**
+ * 获取日志文件 URL（前端拿到后直接 fetch 解析）。
+ * URL 格式: /team-execution/files/<teamId>/<executionId>.jsonl
+ */
+router.get('/history/:teamId/:executionId', (req, res) => {
   try {
-    const fp = logPath(req.params.executionId)
-    if (!fs.existsSync(fp)) return res.json({ events: [] })
-    return res.json({ url: `/team-execution/files/${safeFileName(req.params.executionId)}.jsonl` })
+    const { teamId, executionId } = req.params
+    if (!logFileExists(teamId, executionId)) return res.json({ events: [] })
+    return res.json({ url: logFileUrl(teamId, executionId) })
   } catch {
     return res.status(500).json({ error: '获取历史记录失败' })
   }
@@ -152,13 +159,18 @@ router.get('/history-by-team/:teamId', (req, res) => {
   }
 })
 
-/** 流式返回 .jsonl 文件内容 */
-router.get('/files/:filename', (req, res) => {
-  const fp = path.join(LOG_DIR, req.params.filename)
+/**
+ * 流式返回 .jsonl 文件内容。
+ * URL 格式: /team-execution/files/<teamId>/<filename>.jsonl
+ * 安全性：验证路径以 LOG_DIR 为前缀。
+ */
+router.get('/files/:teamDir/:filename', (req, res) => {
+  const { teamDir, filename } = req.params
+  const fp = path.join(LOG_DIR, safeFileName(teamDir), safeFileName(filename))
   if (!fp.startsWith(LOG_DIR)) return res.status(403).json({ error: '非法路径' })
   if (!fs.existsSync(fp)) return res.status(404).json({ error: '文件不存在' })
   res.type('text/plain')
-  res.sendFile(fp)
+  return res.sendFile(fp)
 })
 
 export default router

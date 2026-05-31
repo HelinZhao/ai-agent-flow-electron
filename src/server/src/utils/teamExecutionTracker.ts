@@ -46,6 +46,11 @@ export interface ExecutionCompleteEvent {
 
 export type TeamExecutionEvent = MemberStatusEvent | MemberOutputEvent | ToolApprovalRequiredEvent | ExecutionCompleteEvent
 
+/** SSE 事件携带服务端生成的唯一 seq，供前端去重 */
+export interface SSEServerEvent extends TeamExecutionEvent {
+  _seq: number
+}
+
 interface SSEClient {
   res: any
 }
@@ -68,6 +73,8 @@ class TeamExecutionTracker {
   private autoApprovedTools = new Map<string, Set<string>>()
   /** executionId → { taskTitle, teamName, teamId } 的元信息 */
   private executionMeta = new Map<string, { taskTitle?: string; teamName?: string; teamId?: string }>()
+  /** 单调递增序列号，用于 SSE 事件唯一标识 */
+  private seqCounter = 0
 
   /** 注册全局 SSE 连接（接收所有 execution 的事件） */
   addGlobalSSEClient(client: SSEClient): void {
@@ -122,9 +129,15 @@ class TeamExecutionTracker {
     return this.executionMeta.get(executionId)
   }
 
-  /** 广播事件（推给 executionId 订阅者 + 全局订阅者） */
-  broadcast(executionId: string, event: TeamExecutionEvent): void {
-    const message = `data: ${JSON.stringify(event)}\n\n`
+  /** 生成唯一序列号 */
+  private nextSeq(): number {
+    return ++this.seqCounter
+  }
+
+  /** 广播事件（推给 executionId 订阅者 + 全局订阅者），附带 _seq */
+  private broadcast(executionId: string, event: TeamExecutionEvent): void {
+    const sseEvent: SSEServerEvent = { ...event, _seq: this.nextSeq() }
+    const message = `data: ${JSON.stringify(sseEvent)}\n\n`
     // 推给按 executionId 订阅的客户端
     const clients = this.sseClients.get(executionId)
     if (clients) {
@@ -138,12 +151,14 @@ class TeamExecutionTracker {
     }
   }
 
-  /** 追加事件到文件（不阻塞广播） */
+  /** 追加事件到文件（不阻塞广播）。每条事件带唯一 createdAt 用于前端去重。 */
   private persistEvent(executionId: string, eventType: TeamExecutionEvent['type'], extra: Record<string, any> = {}): void {
     const meta = this.executionMeta.get(executionId)
-    appendEvent(executionId, {
+    appendEvent(meta?.teamId, executionId, {
+      id: '', // 占位，实际用 createdAt 去重
       executionId,
       eventType,
+      createdAt: new Date().toISOString(),
       teamId: meta?.teamId,
       teamName: meta?.teamName,
       taskTitle: meta?.taskTitle,

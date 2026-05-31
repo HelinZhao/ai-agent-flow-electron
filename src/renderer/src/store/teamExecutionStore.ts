@@ -25,7 +25,7 @@ interface TeamExecutionState {
   init: () => void
   destroy: () => void
   getTeamEvents: (teamId: string) => ExecutionEvent[]
-  loadHistory: (executionId: string) => Promise<void>
+  loadHistory: (teamId: string, executionId: string) => Promise<void>
   markToolApproved: (executionId: string, teamId?: string) => void
   clearTeamEvents: (teamId: string) => void
 }
@@ -34,6 +34,69 @@ let globalSSE: EventSource | null = null
 let pollTimer: ReturnType<typeof setInterval> | null = null
 /** 记录已从文件加载过的 executionId */
 const historyLoadedFromFile = new Set<string>()
+
+/** 按 createdAt 升序排序的比较函数 */
+function eventTimeSorter(a: ExecutionEvent, b: ExecutionEvent): number {
+  const ta = new Date(a.createdAt || (a as any)._persistedAt || 0).getTime()
+  const tb = new Date(b.createdAt || (b as any)._persistedAt || 0).getTime()
+  return ta - tb
+}
+
+// ─── 辅助：同步追加事件到 eventsByExecution + eventsByTeam ───
+
+function appendToBothViews(
+  prev: TeamExecutionState,
+  exId: string,
+  entries: ExecutionEvent[],
+): Pick<TeamExecutionState, 'eventsByExecution' | 'eventsByTeam'> {
+  const newExec = { ...prev.eventsByExecution }
+  const newTeam = { ...prev.eventsByTeam }
+
+  /** 二分插入，按 createdAt 保持有序 */
+  function sortedPush(arr: ExecutionEvent[], entry: ExecutionEvent): ExecutionEvent[] {
+    const t = new Date(entry.createdAt || 0).getTime()
+    // 从后往前找插入点（大部分场景是追加到最后）
+    let i = arr.length
+    while (i > 0 && new Date(arr[i - 1].createdAt || 0).getTime() > t) i--
+    const copy = [...arr]
+    copy.splice(i, 0, entry)
+    return copy
+  }
+
+  for (const entry of entries) {
+    newExec[exId] = sortedPush(newExec[exId] || [], entry)
+    if (entry.teamId) {
+      newTeam[entry.teamId] = sortedPush(newTeam[entry.teamId] || [], entry)
+    }
+  }
+  return { eventsByExecution: newExec, eventsByTeam: newTeam }
+}
+
+/** 将 execution 中所有 tool_call 待审批事件标记为已审批 */
+function clearApprovalsInViews(
+  prev: TeamExecutionState,
+  executionId: string,
+  teamId?: string,
+): Pick<TeamExecutionState, 'eventsByExecution' | 'eventsByTeam'> {
+  const clearOne = (arr: ExecutionEvent[]) =>
+    arr.map(e =>
+      e.eventType === 'tool_call' && e.data?.actionRequests
+        ? { ...e, data: { ...e.data, actionRequests: undefined, approved: true } }
+        : e
+    )
+
+  const newExec = { ...prev.eventsByExecution }
+  if (newExec[executionId]) {
+    newExec[executionId] = clearOne(newExec[executionId])
+  }
+  const newTeam = { ...prev.eventsByTeam }
+  if (teamId && newTeam[teamId]) {
+    newTeam[teamId] = clearOne(newTeam[teamId])
+  }
+  return { eventsByExecution: newExec, eventsByTeam: newTeam }
+}
+
+// ─── Store ───
 
 export const useTeamExecutionStore = create<TeamExecutionState>((set, get) => ({
   eventsByExecution: {},
@@ -48,10 +111,10 @@ export const useTeamExecutionStore = create<TeamExecutionState>((set, get) => ({
     globalSSE = teamExecutionApi.subscribeAll((event) => {
       // 重连后的状态同步
       if (event.type === 'sync_state' && event.state) {
-        const synced: Record<string, any[]> = {}
+        const synced: Record<string, ExecutionEvent[]> = {}
         for (const p of event.state.pendingApprovals || []) {
-          const entry = {
-            id: `sync-${p.executionId}-${Date.now()}`,
+          const entry: ExecutionEvent = {
+            id: `sync-${p.executionId}-${p.teamId || 'x'}-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`,
             executionId: p.executionId,
             teamId: p.teamId,
             eventType: 'tool_call',
@@ -63,14 +126,15 @@ export const useTeamExecutionStore = create<TeamExecutionState>((set, get) => ({
         }
         if (Object.keys(synced).length > 0) {
           set(state => {
-            const newExec = { ...state.eventsByExecution }
-            const newTeam = { ...state.eventsByTeam }
+            let updated = { eventsByExecution: { ...state.eventsByExecution }, eventsByTeam: { ...state.eventsByTeam } }
             for (const [exId, entries] of Object.entries(synced)) {
-              newExec[exId] = [...(newExec[exId] || []), ...entries]
-              const tid = entries[0]?.teamId
-              if (tid) newTeam[tid] = [...(newTeam[tid] || []), ...entries]
+              updated = appendToBothViews(
+                { ...state, ...updated },
+                exId,
+                entries,
+              )
             }
-            return { eventsByExecution: newExec, eventsByTeam: newTeam }
+            return updated
           })
         }
         return
@@ -79,9 +143,8 @@ export const useTeamExecutionStore = create<TeamExecutionState>((set, get) => ({
       if (!event.type || event.type === 'connected' || !event.executionId) return
       const exId = event.executionId
       const tid = event.teamId
-      const store = get()
-      const entry = {
-        id: `${event.type}-${Date.now()}`,
+      const entry: ExecutionEvent = {
+        id: event._seq != null ? `sseq-${event._seq}` : `${event.type}-${Date.now()}`,
         executionId: exId,
         teamId: tid,
         eventType: event.type === 'tool_approval_required' ? 'tool_call' : event.type,
@@ -92,29 +155,19 @@ export const useTeamExecutionStore = create<TeamExecutionState>((set, get) => ({
         createdAt: new Date().toISOString(),
       }
 
-      const newExec = { ...store.eventsByExecution }
-      newExec[exId] = [...(newExec[exId] || []), entry]
+      set(state => {
+        const views = appendToBothViews(state, exId, [entry])
 
-      const newTeam = { ...store.eventsByTeam }
-      if (tid) newTeam[tid] = [...(newTeam[tid] || []), entry]
-
-      // 执行完成时自动清除该 execution 的待审批标记
-      if (event.type === 'execution_complete') {
-        newExec[exId] = newExec[exId].map(e =>
-          e.eventType === 'tool_call' && e.data?.actionRequests
-            ? { ...e, data: { ...e.data, actionRequests: undefined, approved: true } }
-            : e
-        )
-        if (tid) {
-          newTeam[tid] = newTeam[tid]!.map(e =>
-            e.eventType === 'tool_call' && e.data?.actionRequests
-              ? { ...e, data: { ...e.data, actionRequests: undefined, approved: true } }
-              : e
+        // 执行完成时自动清除该 execution 的待审批标记
+        if (event.type === 'execution_complete') {
+          return clearApprovalsInViews(
+            { ...state, ...views },
+            exId,
+            tid,
           )
         }
-      }
-
-      set({ eventsByExecution: newExec, eventsByTeam: newTeam })
+        return views
+      })
     })
 
     const poll = async () => {
@@ -156,54 +209,50 @@ export const useTeamExecutionStore = create<TeamExecutionState>((set, get) => ({
 
   /** 标记某 execution 的待审批事件为已处理 */
   markToolApproved: (executionId: string, teamId?: string) => {
-    set(state => {
-      const newExec = { ...state.eventsByExecution }
-      const exec = newExec[executionId]
-      if (exec) {
-        newExec[executionId] = exec.map(e =>
-          e.eventType === 'tool_call' && e.data?.actionRequests
-            ? { ...e, data: { ...e.data, actionRequests: undefined, approved: true } }
-            : e
-        )
-      }
-      const newTeam = { ...state.eventsByTeam }
-      if (teamId && newTeam[teamId]) {
-        newTeam[teamId] = newTeam[teamId].map(e =>
-          e.eventType === 'tool_call' && e.data?.actionRequests
-            ? { ...e, data: { ...e.data, actionRequests: undefined, approved: true } }
-            : e
-        )
-      }
-      return { eventsByExecution: newExec, eventsByTeam: newTeam }
-    })
+    set(state => clearApprovalsInViews(state, executionId, teamId))
   },
 
-  /** 记录已从文件加载过的 execution，避免重复请求 */
-  _historyLoaded: Set<string>,
-
-  loadHistory: async (executionId: string) => {
-    if (historyLoadedFromFile.has(executionId)) return
-    historyLoadedFromFile.add(executionId)
+  loadHistory: async (teamId: string, executionId: string) => {
+    const key = `${teamId}:${executionId}`
+    if (historyLoadedFromFile.has(key)) return
+    historyLoadedFromFile.add(key)
     const state = get()
     try {
-      const { events } = await teamExecutionApi.getHistory(executionId)
+      const { events } = await teamExecutionApi.getHistory(teamId, executionId)
       if (events.length > 0) {
-        // 合并历史事件到已有事件（sync_state 可能已写入待审批）
+        // 检查是否已有来自 SSE/sync_state 的当前待审批 tool_call
         const existing = state.eventsByExecution[executionId] || []
+        const hasLivePendingToolCall = existing.some(e => e.eventType === 'tool_call' && e.data?.actionRequests)
         const existingIds = new Set(existing.map(e => e.id))
-        const merged = [...existing, ...events.filter(e => !existingIds.has(e.id))]
-        const newExec = { ...state.eventsByExecution, [executionId]: merged }
-        const newTeam = { ...state.eventsByTeam }
-        for (const e of merged) {
-          if (e.teamId) {
-            const tid = e.teamId
-            const teamEvents = newTeam[tid] || []
-            // 用 executionId+eventType+createdAt 做去重 key（文件事件没有 id）
-            const key = e.id || `${e.executionId}-${e.eventType}-${e.createdAt}`
-            if (!teamEvents.some(t => (t.id || `${t.executionId}-${t.eventType}-${t.createdAt}`) === key)) {
-              newTeam[tid] = [...teamEvents, e]
+
+        // 规范化文件事件：旧格式没有 createdAt，用 _persistedAt 回退
+        const normalized = events
+          // 如果已有实时待审批条目，跳过文件中的旧 tool_call（它们是已解析的副本）
+          .filter(e => !(hasLivePendingToolCall && e.eventType === 'tool_call'))
+          .map(e => {
+            // 历史 tool_call 不再显示审批 UI
+            const isHistoricalToolCall = e.eventType === 'tool_call' && e.data?.actionRequests
+            return {
+              ...e,
+              createdAt: e.createdAt || (e as any)._persistedAt || new Date().toISOString(),
+              ...(isHistoricalToolCall
+                ? { data: { ...e.data, actionRequests: undefined, approved: true } }
+                : {}),
             }
-          }
+          })
+        // 使用 _seq 或 id 做去重
+        const merged = [...existing, ...normalized.filter(e => !existingIds.has(e.id))]
+        // 按时间正序排列（文件事件 + SSE 事件混合后必须重排序）
+        merged.sort(eventTimeSorter)
+        const newExec = { ...state.eventsByExecution, [executionId]: merged }
+        // 从排序后的 merged 重建相关团队的 eventsByTeam（其他团队事件保留），再统一按时间排序
+        const affectedTeams = new Set<string>()
+        for (const e of merged) if (e.teamId) affectedTeams.add(e.teamId)
+        const newTeam = { ...state.eventsByTeam }
+        for (const tid of affectedTeams) {
+          const teamEvents = merged.filter(e => e.teamId === tid)
+          const otherEvents = (newTeam[tid] || []).filter(e => e.executionId !== executionId)
+          newTeam[tid] = [...otherEvents, ...teamEvents].sort(eventTimeSorter)
         }
         set({ eventsByExecution: newExec, eventsByTeam: newTeam })
       }

@@ -10,34 +10,34 @@ interface ApprovalItem {
   actionRequests: { name: string; args: Record<string, any>; description: string }[]
 }
 
+/** 获取待审批列表，返回 { items, count } */
+async function fetchPendingApprovals(): Promise<{ items: ApprovalItem[]; count: number }> {
+  const data = await teamExecutionApi.getPendingApprovalDetails()
+  return { items: data.items, count: data.count }
+}
+
 export default function ToolApprovalSidebar() {
   const [open, setOpen] = useState(false)
   const [items, setItems] = useState<ApprovalItem[]>([])
   const [count, setCount] = useState(0)
 
-  // 轮询待审批列表
-  useEffect(() => {
-    const poll = async () => {
-      try {
-        const data = await teamExecutionApi.getPendingApprovalDetails()
-        setItems(data.items)
-        setCount(data.count)
-      } catch { /* ignore */ }
-    }
-    poll() // 立即执行一次
-    const timer = setInterval(poll, 3000)
-    return () => clearInterval(timer)
-  }, [])
-
   const markToolApproved = useTeamExecutionStore(s => s.markToolApproved)
 
+  // 统一的刷新函数（供 effect 和回调复用）
   const refresh = useCallback(async () => {
     try {
-      const data = await teamExecutionApi.getPendingApprovalDetails()
+      const data = await fetchPendingApprovals()
       setItems(data.items)
       setCount(data.count)
     } catch { /* ignore */ }
   }, [])
+
+  // 轮询待审批列表（effect 直接复用 refresh）
+  useEffect(() => {
+    const id = setTimeout(refresh, 0) // 初始加载（延时避免同步 setState 警告）
+    const timer = setInterval(refresh, 3000)
+    return () => { clearTimeout(id); clearInterval(timer) }
+  }, [refresh])
 
   const handleApprove = useCallback(async (executionId: string, teamId: string | undefined, decisions: { type: 'approve' | 'reject'; message?: string }[]) => {
     try {
@@ -49,8 +49,14 @@ export default function ToolApprovalSidebar() {
 
   const handleAutoApprove = useCallback(async (executionId: string, toolName: string, teamId: string | undefined) => {
     try {
+      // 先设置自动审批，再统一批准当前待审批项
       await teamExecutionApi.autoApprove(executionId, toolName)
-      await teamExecutionApi.approveTool(executionId, [{ type: 'approve' }])
+      // 再尝试批准——若 setAutoApprove 已自动 resolve 则返回 404，忽略即可
+      try {
+        await teamExecutionApi.approveTool(executionId, [{ type: 'approve' }])
+      } catch {
+        // autoApprove 可能已自动放行，忽略 404
+      }
       markToolApproved(executionId, teamId)
       refresh()
     } catch { /* ignore */ }
