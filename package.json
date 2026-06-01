@@ -21,7 +21,8 @@
     "build:unpack": "node scripts/download-model.mjs && npm run build && electron-builder --dir",
     "build:win": "node scripts/download-model.mjs && npm run build && electron-builder --win",
     "build:mac": "node scripts/download-model.mjs && electron-vite build && electron-builder --mac",
-    "build:linux": "node scripts/download-model.mjs && electron-vite build && electron-builder --linux"
+    "build:linux": "node scripts/download-model.mjs && electron-vite build && electron-builder --linux",
+    "build:linux:docker": "bash scripts/build-linux-docker.sh"
   },
   "dependencies": {
     "@elastic/elasticsearch": "^8.19.1",
