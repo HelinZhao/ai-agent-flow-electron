@@ -14,8 +14,13 @@ import { createFrontendActionTool, createGetContextTool } from '../tools/fronten
 import { ExecutionState, PASSTHROUGH_NODES, ExecutionTerminatedError, NodeExecutorDeps } from './executor/types'
 import { executeMonitoredNode } from './executor/nodes'
 import { mergeThreadAttachments } from './executor/helpers'
+import fs from 'fs'
+import path from 'path'
 
-const checkpointer = SqliteSaver.fromConnString(getUserDataDir(DB_FILENAME))
+// 确保 checkpoint 数据库目录存在
+const checkpointPath = getUserDataDir(DB_FILENAME)
+fs.mkdirSync(path.dirname(checkpointPath), { recursive: true })
+const checkpointer = SqliteSaver.fromConnString(checkpointPath)
 
 import { CHAT_MAX_HISTORY, CHAT_KEEP_LATEST } from '../config'
 
