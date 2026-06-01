@@ -1,4 +1,4 @@
-import { memo, useEffect, useState } from 'react'
+import { memo, useState } from 'react'
 import ExecutionResultTabs from './ExecutionResultTabs'
 import { WorkflowExecutionProgress, TokenUsageSummary } from '@renderer/types'
 import { tokenUsageApi } from '@renderer/lib/api'

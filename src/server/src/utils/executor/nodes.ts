@@ -162,7 +162,7 @@ async function executeNode(deps: NodeExecutorDeps, ctx: ExecCtx): Promise<Record
 // ============================================================
 
 // --- 技能 ---
-async function executeSkill(deps: NodeExecutorDeps, ctx: ExecCtx) {
+async function executeSkill(_: NodeExecutorDeps, ctx: ExecCtx) {
   const { node, input, llmConfig, conversationHistory, attachments } = ctx
   if (!node.data.config?.skillId) {
     return { output: input, metadata: { nodeId: node.id, type: 'skill', error: '未配置技能ID' } }
@@ -884,7 +884,7 @@ async function executeSleep(ctx: ExecCtx) {
 }
 
 // --- 代码 ---
-async function executeCode(deps: NodeExecutorDeps, ctx: ExecCtx) {
+async function executeCode(_: NodeExecutorDeps, ctx: ExecCtx) {
   const { node, input, params, nodeResults } = ctx
   const code = node.data.config?.code || ''
   if (!code.trim()) {

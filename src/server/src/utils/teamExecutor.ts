@@ -114,7 +114,7 @@ async function callMemberWithTracking(
         }
         tracker?.pushMemberStatus(execId, { memberId, memberName, role, status: 'using_tool', toolName: needApproval[0]?.name, toolArgs: needApproval[0]?.args })
         const filteredRequest = { actionRequests: needApproval, reviewConfigs: request.reviewConfigs.filter(rc => needApproval.some(a => a.name === rc.actionName)) }
-        return await tracker.registerPendingApproval(execId, filteredRequest)
+        return await tracker!.registerPendingApproval(execId, filteredRequest)
       }
     : undefined
 

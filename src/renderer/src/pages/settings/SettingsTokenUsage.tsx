@@ -30,7 +30,6 @@ const SettingsTokenUsage = () => {
   const totalPerModel = data.map(r => r.totalTokens)
   const promptPerModel = data.map(r => r.promptTokens)
   const completionPerModel = data.map(r => r.completionTokens)
-  const callsPerModel = data.map(r => r.callCount)
 
   const doughnutData = {
     labels,

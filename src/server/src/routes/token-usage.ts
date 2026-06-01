@@ -1,5 +1,4 @@
 import { Router } from 'express'
-import { Op } from 'sequelize'
 import { UsageLogModel } from '../models'
 
 const router = Router()

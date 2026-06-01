@@ -8,15 +8,18 @@ IMAGE="electronuserland/builder:20-wine"
 WORK_DIR="/project"
 
 # 构建 docker build 镜像缓存
-docker build \
-  -f - \
-  -t ai-agent-flow-builder \
-  - <<'DOCKERFILE'
+TMP_DOCKERFILE=$(mktemp /tmp/dockerfile-XXXXXX)
+cat > "$TMP_DOCKERFILE" <<'DOCKERFILE'
 FROM electronuserland/builder:20-wine
 RUN apt-get update && apt-get install -y --no-install-recommends \
   libarchive-tools \
   && rm -rf /var/lib/apt/lists/*
 DOCKERFILE
+docker build \
+  -f "$TMP_DOCKERFILE" \
+  -t ai-agent-flow-builder \
+  .
+rm -f "$TMP_DOCKERFILE"
 
 # 在容器中执行构建
 docker run --rm -ti \

@@ -50,10 +50,11 @@ async function readFileContent(filePath: string): Promise<string> {
     return await fs.readFile(filePath, 'utf-8')
   }
   if (ext === '.pdf') {
-    const pdfParse = (await import('pdf-parse')).default
+    const { PDFParse } = await import('pdf-parse')
     const buffer = await fs.readFile(filePath)
-    const data = await pdfParse(buffer)
-    return data.text
+    const parser = new PDFParse({ data: buffer })
+    const result = await parser.getText()
+    return result.text
   }
   if (ext === '.csv') {
     const text = await fs.readFile(filePath, 'utf-8')
