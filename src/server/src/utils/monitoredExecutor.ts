@@ -17,9 +17,33 @@ import { mergeThreadAttachments } from './executor/helpers'
 import fs from 'fs'
 import path from 'path'
 
-// 确保 checkpoint 数据库目录存在
+// 确保 checkpoint 数据库目录和表存在
+import Database from 'better-sqlite3'
+
 const checkpointPath = getUserDataDir(DB_FILENAME)
 fs.mkdirSync(path.dirname(checkpointPath), { recursive: true })
+
+// 手动建表（SqliteSaver.fromConnString 在部分版本下不自动建表）
+try {
+  const db = new Database(checkpointPath)
+  db.exec(`CREATE TABLE IF NOT EXISTS checkpoints (
+    thread_id TEXT NOT NULL, checkpoint_ns TEXT NOT NULL DEFAULT '',
+    checkpoint_id TEXT NOT NULL, parent_checkpoint_id TEXT,
+    type TEXT, checkpoint BLOB, metadata BLOB,
+    PRIMARY KEY (thread_id, checkpoint_ns, checkpoint_id)
+  )`)
+  db.exec(`CREATE TABLE IF NOT EXISTS writes (
+    thread_id TEXT NOT NULL, checkpoint_ns TEXT NOT NULL DEFAULT '',
+    checkpoint_id TEXT NOT NULL, task_id TEXT NOT NULL,
+    idx INTEGER NOT NULL, channel TEXT NOT NULL,
+    type TEXT, value BLOB,
+    PRIMARY KEY (thread_id, checkpoint_ns, checkpoint_id, task_id, idx)
+  )`)
+  db.close()
+} catch (e) {
+  console.error('[Checkpoint] 建表失败:', e)
+}
+
 const checkpointer = SqliteSaver.fromConnString(checkpointPath)
 
 import { CHAT_MAX_HISTORY, CHAT_KEEP_LATEST } from '../config'
