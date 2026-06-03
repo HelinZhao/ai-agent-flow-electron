@@ -369,13 +369,15 @@ export interface Task {
   id: string
   title: string
   description: string
-  status: 'pending' | 'assigned' | 'claimed' | 'completed' | 'failed'
+  status: 'draft' | 'pending' | 'assigned' | 'claimed' | 'pending_review' | 'completed' | 'failed'
   priority: number
   claimedBy?: string
   executionId?: string
   result?: string
   error?: string
   restartedFrom?: string
+  parentId?: string
+  reviewComment?: string
   claimedAt?: string
   completedAt?: string
   createdAt: string

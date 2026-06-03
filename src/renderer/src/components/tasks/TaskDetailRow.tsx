@@ -1,4 +1,4 @@
-import { useEffect, useMemo } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import type { Task } from '@renderer/types'
 import MarkdownPreview from '@renderer/components/MarkdownPreview'
 import SectionHeader from './SectionHeader'
@@ -10,7 +10,11 @@ interface TaskDetailRowProps {
   task: Task
   colSpan: number
   getTeamName: (id?: string) => string
+  getParentTask: (parentId?: string) => Task | undefined
+  allTasks: Task[]
   onCancel: (id: string) => void
+  onApprove: (id: string) => void
+  onReject: (id: string, comment?: string) => void
   onRestart: (id: string) => void
   onClose: () => void
 }
@@ -55,6 +59,26 @@ const IconTeam = (
 )
 
 /* ---------- helpers ---------- */
+
+const STATUS_LABEL: Record<string, string> = {
+  draft: '草稿',
+  pending: '待处理',
+  assigned: '已指派',
+  claimed: '处理中',
+  pending_review: '待验收',
+  completed: '已完成',
+  failed: '失败',
+}
+
+const STATUS_COLOR: Record<string, string> = {
+  draft: 'bg-gray-100 dark:bg-gray-700 text-gray-500 dark:text-gray-400 border-gray-200 dark:border-gray-600',
+  pending: 'bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-400 border-gray-200 dark:border-gray-600',
+  assigned: 'bg-indigo-50 dark:bg-indigo-900/20 text-indigo-600 dark:text-indigo-400 border-indigo-200 dark:border-indigo-800',
+  claimed: 'bg-blue-50 dark:bg-blue-900/20 text-blue-600 dark:text-blue-400 border-blue-200 dark:border-blue-800',
+  pending_review: 'bg-amber-50 dark:bg-amber-900/20 text-amber-600 dark:text-amber-400 border-amber-200 dark:border-amber-800',
+  completed: 'bg-emerald-50 dark:bg-emerald-900/20 text-emerald-600 dark:text-emerald-400 border-emerald-200 dark:border-emerald-800',
+  failed: 'bg-red-50 dark:bg-red-900/20 text-red-600 dark:text-red-400 border-red-200 dark:border-red-800',
+}
 
 const formatTime = (t?: string) =>
   t ? new Date(t).toLocaleString('zh-CN') : '-'
@@ -244,9 +268,16 @@ function TeamExecutionProgress({ executionId, teamId }: { executionId: string; t
 
 /* ---------- main component ---------- */
 
-export default function TaskDetailRow({ task, colSpan, getTeamName, onCancel, onRestart, onClose }: TaskDetailRowProps) {
-  const showCancel = task.status === 'claimed' || task.status === 'assigned'
-  const showRestart = task.status === 'completed' || task.status === 'failed'
+export default function TaskDetailRow({ task, colSpan, getTeamName, getParentTask, allTasks, onCancel, onApprove, onReject, onRestart, onClose }: TaskDetailRowProps) {
+  const showCancel = task.status === 'claimed' || task.status === 'assigned' || task.status === 'pending_review'
+  const showRestart = task.status === 'completed' || task.status === 'failed' || task.status === 'pending_review'
+  const showApproveReject = task.status === 'pending_review'
+  const [rejectComment, setRejectComment] = useState('')
+
+  const parentTask = useMemo(() => getParentTask(task.parentId), [task.parentId, getParentTask])
+
+  // 从 allTasks 中查找当前任务的子任务
+  const childTasks = useMemo(() => allTasks.filter(t => t.parentId === task.id), [allTasks, task.id])
 
   return (
     <tr className="bg-blue-50/40 dark:bg-blue-900/10 border-b border-gray-200 dark:border-gray-700">
@@ -254,6 +285,57 @@ export default function TaskDetailRow({ task, colSpan, getTeamName, onCancel, on
         <div className="space-y-4">
           {/* Restart badge */}
           <RestartBadge task={task} />
+
+          {/* ── Review comment banner ── */}
+          {task.reviewComment && (
+            <div className="p-3 bg-amber-50 dark:bg-amber-900/10 rounded-lg border border-amber-200 dark:border-amber-800/50 text-xs flex items-start gap-2">
+              <svg className="w-4 h-4 text-amber-500 mt-0.5 flex-shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                <path d="M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7" />
+                <path d="M18.5 2.5a2.121 2.121 0 013 3L12 15l-4 1 1-4 9.5-9.5z" />
+              </svg>
+              <div>
+                <span className="font-semibold text-amber-600 dark:text-amber-400">审核意见</span>
+                <p className="text-gray-600 dark:text-gray-400 mt-0.5 whitespace-pre-wrap">{task.reviewComment}</p>
+              </div>
+            </div>
+          )}
+
+          {/* ── Parent task reference ── */}
+          {parentTask && (
+            <div>
+              <SectionHeader icon={IconDescription} label="父任务" />
+              <div className="bg-white/60 dark:bg-gray-900/40 rounded-lg border border-gray-200 dark:border-gray-700/50 p-3.5 flex items-center gap-2">
+                <svg className="w-4 h-4 text-gray-400 flex-shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                  <path d="M7 7h10v10" />
+                  <path d="M7 17L17 7" />
+                </svg>
+                <span className="text-sm text-gray-700 dark:text-gray-300">{parentTask.title}</span>
+                <span className={`inline-flex items-center px-1.5 py-0.5 text-xs font-medium rounded-full border ${STATUS_COLOR[parentTask.status] || ''}`}>
+                  {STATUS_LABEL[parentTask.status] || parentTask.status}
+                </span>
+              </div>
+            </div>
+          )}
+
+          {/* ── Subtask list ── */}
+          {childTasks.length > 0 && (
+            <div>
+              <SectionHeader icon={IconDescription} label={`子任务（${childTasks.length}）`} />
+              <div className="bg-white/60 dark:bg-gray-900/40 rounded-lg border border-gray-200 dark:border-gray-700/50 p-3.5 space-y-1.5">
+                {childTasks.map(child => (
+                  <div key={child.id} className="flex items-center gap-2 text-sm">
+                    <svg className="w-3.5 h-3.5 text-gray-400 flex-shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                      <path d="M9 5l7 7-7 7" />
+                    </svg>
+                    <span className="text-gray-700 dark:text-gray-300">{child.title}</span>
+                    <span className={`inline-flex items-center px-1.5 py-0.5 text-xs font-medium rounded-full border ${STATUS_COLOR[child.status] || ''}`}>
+                      {STATUS_LABEL[child.status] || child.status}
+                    </span>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
 
           {/* ── Description ── */}
           <div>
@@ -266,7 +348,7 @@ export default function TaskDetailRow({ task, colSpan, getTeamName, onCancel, on
           </div>
 
           {/* ── Result ── */}
-          {task.status === 'completed' && task.result && (
+          {(task.status === 'pending_review' || task.status === 'completed') && task.result && (
             <div>
               <SectionHeader icon={IconResult} label="执行结果" color="text-emerald-600 dark:text-emerald-400" />
               <div className="bg-white/60 dark:bg-gray-900/40 rounded-lg border border-emerald-200/50 dark:border-emerald-800/50 p-3.5 resize-y overflow-auto min-h-[100px]">
@@ -300,8 +382,42 @@ export default function TaskDetailRow({ task, colSpan, getTeamName, onCancel, on
             </div>
 
             {/* Action buttons */}
-            {(showCancel || showRestart) && (
+            {(showCancel || showRestart || showApproveReject) && (
               <div className="flex flex-wrap gap-2">
+                {showApproveReject && (
+                  <>
+                    <button
+                      onClick={(e) => { e.stopPropagation(); onApprove(task.id) }}
+                      className="flex items-center justify-center gap-1.5 px-4 py-2 text-xs font-medium rounded-lg bg-emerald-50 dark:bg-emerald-900/20 text-emerald-600 dark:text-emerald-400 hover:bg-emerald-100 dark:hover:bg-emerald-900/40 border border-emerald-200 dark:border-emerald-800 transition-colors"
+                    >
+                      <svg className="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                        <polyline points="20 6 9 17 4 12" />
+                      </svg>
+                      <span>验收通过</span>
+                    </button>
+                    <button
+                      onClick={(e) => { e.stopPropagation(); onReject(task.id, rejectComment); setRejectComment('') }}
+                      className="flex items-center justify-center gap-1.5 px-4 py-2 text-xs font-medium rounded-lg bg-orange-50 dark:bg-orange-900/20 text-orange-600 dark:text-orange-400 hover:bg-orange-100 dark:hover:bg-orange-900/40 border border-orange-200 dark:border-orange-800 transition-colors"
+                    >
+                      <svg className="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                        <path d="M18.36 6.64a9 9 0 11-12.73 0" />
+                        <line x1="12" y1="2" x2="12" y2="12" />
+                      </svg>
+                      <span>驳回</span>
+                    </button>
+                  </>
+                )}
+                {showApproveReject && (
+                  <div className="w-full" onClick={e => e.stopPropagation()}>
+                    <textarea
+                      value={rejectComment}
+                      onChange={e => setRejectComment(e.target.value)}
+                      placeholder="修改意见（可选）— 团队重新执行时将看到此反馈"
+                      rows={2}
+                      className="w-full text-xs px-3 py-2 rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-300 placeholder-gray-400 focus:outline-none focus:ring-1 focus:ring-amber-400 resize-none"
+                    />
+                  </div>
+                )}
                 {showCancel && (
                   <button
                     onClick={(e) => { e.stopPropagation(); onCancel(task.id) }}

@@ -17,17 +17,21 @@ import type { FrontendAction } from '@renderer/lib/frontendActionBus'
 const PAGE_SIZE = 20
 
 const STATUS_LABEL: Record<string, string> = {
+  draft: '草稿',
   pending: '待处理',
   assigned: '已指派',
   claimed: '处理中',
+  pending_review: '待验收',
   completed: '已完成',
   failed: '失败',
 }
 
 const STATUS_COLOR: Record<string, string> = {
+  draft: 'bg-gray-100 dark:bg-gray-700 text-gray-500 dark:text-gray-400 border-gray-200 dark:border-gray-600',
   pending: 'bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-400 border-gray-200 dark:border-gray-600',
   assigned: 'bg-indigo-50 dark:bg-indigo-900/20 text-indigo-600 dark:text-indigo-400 border-indigo-200 dark:border-indigo-800',
   claimed: 'bg-blue-50 dark:bg-blue-900/20 text-blue-600 dark:text-blue-400 border-blue-200 dark:border-blue-800',
+  pending_review: 'bg-amber-50 dark:bg-amber-900/20 text-amber-600 dark:text-amber-400 border-amber-200 dark:border-amber-800',
   completed: 'bg-emerald-50 dark:bg-emerald-900/20 text-emerald-600 dark:text-emerald-400 border-emerald-200 dark:border-emerald-800',
   failed: 'bg-red-50 dark:bg-red-900/20 text-red-600 dark:text-red-400 border-red-200 dark:border-red-800',
 }
@@ -50,8 +54,11 @@ const COL_WIDTHS = {
 
 const FILTERS = [
   { value: '', label: '全部' },
+  { value: 'draft', label: '草稿' },
   { value: 'pending', label: '待处理' },
+  { value: 'assigned', label: '已指派' },
   { value: 'claimed', label: '处理中' },
+  { value: 'pending_review', label: '待验收' },
   { value: 'completed', label: '已完成' },
   { value: 'failed', label: '失败' },
 ]
@@ -59,6 +66,7 @@ const TASK_SCHEMA: Record<string, string> = {
   title: '任务标题',
   description: '任务描述，将作为团队执行的输入',
   priority: '优先级（0=低, 1=普通, 2=高, 3=紧急）',
+  status: '状态（draft=草稿, pending=待处理）',
 }
 export default function Tasks() {
   const { teams, tasks: allTasks } = useAppStore()
@@ -74,23 +82,28 @@ export default function Tasks() {
     title: string
     description: string
     priority: number
+    status: 'draft' | 'pending'
+    parentId?: string
   }
 
   const createForm = useForm<TaskFormData>({
-    defaultValues: { title: '', description: '', priority: 1 },
+    defaultValues: { title: '', description: '', priority: 1, status: 'pending' },
   })
 
   const editForm = useForm<TaskFormData>({
-    defaultValues: { title: '', description: '', priority: 1 },
+    defaultValues: { title: '', description: '', priority: 1, status: 'pending' },
   })
 
   const createTitle = useWatch({ control: createForm.control, name: 'title' })
   const createDescription = useWatch({ control: createForm.control, name: 'description' })
   const createPriority = useWatch({ control: createForm.control, name: 'priority' })
+  const createStatus = useWatch({ control: createForm.control, name: 'status' })
+  const createParentId = useWatch({ control: createForm.control, name: 'parentId' })
 
   const editTitle = useWatch({ control: editForm.control, name: 'title' })
   const editDescription = useWatch({ control: editForm.control, name: 'description' })
   const editPriority = useWatch({ control: editForm.control, name: 'priority' })
+  const editStatus = useWatch({ control: editForm.control, name: 'status' })
 
   const goToPage = (p: number) => { setPage(p); setExpandedId(null) }
 
@@ -106,7 +119,7 @@ export default function Tasks() {
   const tasks = filtered.slice((safePage - 1) * PAGE_SIZE, safePage * PAGE_SIZE)
 
   const handleCreate = createForm.handleSubmit(async (data) => {
-    await taskApi.create(data)
+    await taskApi.create({ title: data.title, description: data.description, priority: data.priority, status: data.status, parentId: data.parentId || undefined })
     createForm.reset()
     setShowCreate(false)
   })
@@ -122,9 +135,24 @@ export default function Tasks() {
     await taskApi.cancel(id)
   }
 
+  const handleApprove = async (id: string) => {
+    if (!confirm('确认验收通过？任务将标记为已完成。')) return
+    await taskApi.approve(id)
+  }
+
+  const handleReject = async (id: string, comment?: string) => {
+    if (!confirm('确认驳回？任务将打回待处理，可重新执行。')) return
+    await taskApi.reject(id, comment)
+  }
+
   const openEdit = (task: Task) => {
     setEditingTask(task)
-    editForm.reset({ title: task.title, description: task.description, priority: task.priority })
+    editForm.reset({
+      title: task.title,
+      description: task.description,
+      priority: task.priority,
+      status: (task.status === 'draft' || task.status === 'pending') ? task.status : 'pending',
+    })
     setEditError('')
   }
 
@@ -147,6 +175,7 @@ export default function Tasks() {
   }
 
   const getTeamName = (id?: string) => id ? teams.find(t => t.id === id)?.name || id : '-'
+  const getParentTask = (parentId?: string) => parentId ? allTasks.find(t => t.id === parentId) : undefined
 
   const formatTime = (t?: string) => t ? new Date(t).toLocaleString('zh-CN') : '-'
 
@@ -166,8 +195,11 @@ export default function Tasks() {
   const editSchema = useMemo(() => {
     if (!editingTask) return TASK_SCHEMA
     if (editingTask.status === 'assigned') return { title: TASK_SCHEMA.title } as Record<string, string>
-    if (editingTask.status === 'completed' || editingTask.status === 'failed') {
+    if (editingTask.status === 'pending_review' || editingTask.status === 'completed' || editingTask.status === 'failed') {
       return { title: TASK_SCHEMA.title, description: TASK_SCHEMA.description } as Record<string, string>
+    }
+    if (editingTask.status === 'draft' || editingTask.status === 'pending') {
+      return { ...TASK_SCHEMA }
     }
     return TASK_SCHEMA
   }, [editingTask])
@@ -272,7 +304,17 @@ export default function Tasks() {
                           </span>
                         </td>
                         <td className="px-4 py-3 font-medium text-gray-900 dark:text-white truncate max-w-[280px]">
-                          {task.title}
+                          <div className="flex items-center gap-1.5">
+                            {task.parentId && (
+                              <span className="flex-shrink-0 inline-flex items-center" title={getParentTask(task.parentId)?.title || '子任务'}>
+                                <svg className="w-3.5 h-3.5 text-gray-400 dark:text-gray-500" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                                  <path d="M7 7h10v10" />
+                                  <path d="M7 17L17 7" />
+                                </svg>
+                              </span>
+                            )}
+                            <span className="truncate">{task.title}</span>
+                          </div>
                         </td>
                         <td className="px-4 py-3 text-gray-700 dark:text-gray-400 hidden sm:table-cell text-xs truncate max-w-[120px]">
                           {getTeamName(task.claimedBy)}
@@ -294,7 +336,7 @@ export default function Tasks() {
                                 </svg>
                               </button>
                             )}
-                            {(task.status === 'claimed' || task.status === 'assigned') && (
+                            {(task.status === 'claimed' || task.status === 'assigned' || task.status === 'pending_review') && (
                               <button
                                 title="终止"
                                 onClick={(e) => { e.stopPropagation(); handleCancel(task.id) }}
@@ -305,6 +347,29 @@ export default function Tasks() {
                                   <line x1="4.93" y1="4.93" x2="19.07" y2="19.07" />
                                 </svg>
                               </button>
+                            )}
+                            {task.status === 'pending_review' && (
+                              <>
+                                <button
+                                  title="验收通过"
+                                  onClick={(e) => { e.stopPropagation(); handleApprove(task.id) }}
+                                  className="flex items-center justify-center w-7 h-7 rounded-lg bg-emerald-50 dark:bg-emerald-900/20 text-emerald-500 dark:text-emerald-400 hover:bg-emerald-100 dark:hover:bg-emerald-900/40 border border-emerald-200 dark:border-emerald-800 transition-colors"
+                                >
+                                  <svg className="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                                    <polyline points="20 6 9 17 4 12" />
+                                  </svg>
+                                </button>
+                                <button
+                                  title="驳回"
+                                  onClick={(e) => { e.stopPropagation(); handleReject(task.id) }}
+                                  className="flex items-center justify-center w-7 h-7 rounded-lg bg-orange-50 dark:bg-orange-900/20 text-orange-500 dark:text-orange-400 hover:bg-orange-100 dark:hover:bg-orange-900/40 border border-orange-200 dark:border-orange-800 transition-colors"
+                                >
+                                  <svg className="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                                    <path d="M18.36 6.64a9 9 0 11-12.73 0" />
+                                    <line x1="12" y1="2" x2="12" y2="12" />
+                                  </svg>
+                                </button>
+                              </>
                             )}
                             {task.status !== 'claimed' && (
                               <button
@@ -347,7 +412,11 @@ export default function Tasks() {
                           task={task}
                           colSpan={7}
                           getTeamName={getTeamName}
+                          getParentTask={getParentTask}
+                          allTasks={allTasks}
                           onCancel={handleCancel}
+                          onApprove={handleApprove}
+                          onReject={handleReject}
                           onRestart={(id) => taskApi.restart(id)}
                           onClose={() => toggleExpand(task.id)}
                         />
@@ -407,16 +476,44 @@ export default function Tasks() {
             <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5">描述 <span className="text-red-500">*</span></label>
             <CustomTextarea value={createDescription} onChange={e => createForm.setValue('description', e.target.value)} placeholder="任务描述，将被作为团队执行的输入" rows={3} size='sm' />
           </div>
+          <div className="flex gap-3">
+            <div className="flex-1">
+              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5">优先级</label>
+              <CustomSelect
+                value={String(createPriority)}
+                onChange={v => createForm.setValue('priority', Number(v))}
+                options={[
+                  { value: '0', label: '低' },
+                  { value: '1', label: '普通' },
+                  { value: '2', label: '高' },
+                  { value: '3', label: '紧急' },
+                ]}
+                size="sm"
+              />
+            </div>
+            <div className="flex-1">
+              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5">状态</label>
+              <CustomSelect
+                value={createStatus}
+                onChange={v => createForm.setValue('status', v as 'draft' | 'pending')}
+                options={[
+                  { value: 'pending', label: '待处理' },
+                  { value: 'draft', label: '草稿' },
+                ]}
+                size="sm"
+              />
+            </div>
+          </div>
           <div>
-            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5">优先级</label>
+            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5">父任务（可选）</label>
             <CustomSelect
-              value={String(createPriority)}
-              onChange={v => createForm.setValue('priority', Number(v))}
+              value={createParentId || ''}
+              onChange={v => createForm.setValue('parentId', v || undefined)}
               options={[
-                { value: '0', label: '低' },
-                { value: '1', label: '普通' },
-                { value: '2', label: '高' },
-                { value: '3', label: '紧急' },
+                { value: '', label: '无（顶级任务）' },
+                ...allTasks
+                  .filter(t => t.id !== '__new__' && t.status !== 'draft')
+                  .map(t => ({ value: t.id, label: `[${STATUS_LABEL[t.status] || t.status}] ${t.title}` })),
               ]}
               size="sm"
             />
@@ -472,25 +569,39 @@ export default function Tasks() {
             <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5">描述 <span className="text-red-500">*</span></label>
             <CustomTextarea value={editDescription} onChange={e => editForm.setValue('description', e.target.value)} placeholder="任务描述" rows={3} disabled={editingTask?.status === 'assigned'} />
           </div>
-          {editingTask?.status === 'pending' && (
-            <div>
-              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5">优先级</label>
-              <CustomSelect
-                value={String(editPriority)}
-                onChange={v => editForm.setValue('priority', Number(v))}
-                options={[
-                  { value: '0', label: '低' },
-                  { value: '1', label: '普通' },
-                  { value: '2', label: '高' },
-                  { value: '3', label: '紧急' },
-                ]}
-                size="sm"
-              />
+          {(editingTask?.status === 'pending' || editingTask?.status === 'draft') && (
+            <div className="flex gap-3">
+              <div className="flex-1">
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5">优先级</label>
+                <CustomSelect
+                  value={String(editPriority)}
+                  onChange={v => editForm.setValue('priority', Number(v))}
+                  options={[
+                    { value: '0', label: '低' },
+                    { value: '1', label: '普通' },
+                    { value: '2', label: '高' },
+                    { value: '3', label: '紧急' },
+                  ]}
+                  size="sm"
+                />
+              </div>
+              <div className="flex-1">
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5">状态</label>
+                <CustomSelect
+                  value={editStatus}
+                  onChange={v => editForm.setValue('status', v as 'draft' | 'pending')}
+                  options={[
+                    { value: 'pending', label: '待处理' },
+                    { value: 'draft', label: '草稿' },
+                  ]}
+                  size="sm"
+                />
+              </div>
             </div>
           )}
-          {editingTask && editingTask.status !== 'pending' && (
+          {editingTask && editingTask.status !== 'pending' && editingTask.status !== 'draft' && (
             <p className="text-xs text-gray-400 dark:text-gray-500">
-              {editingTask.status === 'assigned' ? '任务已指派，仅可修改标题。' : '任务已结束，仅可修改标题和描述。'}
+              {editingTask.status === 'assigned' ? '任务已指派，仅可修改标题。' : '仅可修改标题和描述。'}
             </p>
           )}
         </div>

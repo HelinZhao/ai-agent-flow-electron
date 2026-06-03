@@ -455,7 +455,7 @@ async function executeTeam(deps: NodeExecutorDeps, ctx: ExecCtx) {
   }
 }
 
-// --- taskPool 节点（发布任务到任务池） ---
+	// --- taskPool 节点（发布任务到任务池） ---
 async function executeTaskPool(deps: NodeExecutorDeps, ctx: ExecCtx) {
   const { node, input, params, nodeResults, workflowEnvVars, variables } = ctx
   const { TaskModel } = await import('../../models')
@@ -463,6 +463,7 @@ async function executeTaskPool(deps: NodeExecutorDeps, ctx: ExecCtx) {
   const titleTemplate = (node.data.config?.title as string) || ''
   const descTemplate = (node.data.config?.description as string) || ''
   const priority = (node.data.config?.priority ?? 1) as number
+  const taskStatus = (node.data.config?.status === 'draft' ? 'draft' : 'pending') as string
 
   try {
     // 解析模板（支持 {{$input}} 和工作流变量）
@@ -477,7 +478,7 @@ async function executeTaskPool(deps: NodeExecutorDeps, ctx: ExecCtx) {
       title: String(title).trim() || '来自工作流的任务',
       description: String(description).trim() || '无描述',
       priority,
-      status: 'pending',
+      status: taskStatus,
     } as any)
 
     const execState = deps.executionStates.get(ctx.executionId)
@@ -491,7 +492,7 @@ async function executeTaskPool(deps: NodeExecutorDeps, ctx: ExecCtx) {
 
     return {
       output: `任务已发布: ${task.title}`,
-      metadata: { nodeId: node.id, type: 'taskPool', taskId: task.id, taskTitle: task.title, taskPriority: priority, label: node.data?.label },
+      metadata: { nodeId: node.id, type: 'taskPool', taskId: task.id, taskTitle: task.title, taskPriority: priority, taskStatus, label: node.data?.label },
     }
   } catch (error) {
     if (error instanceof ExecutionTerminatedError) throw error

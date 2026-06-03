@@ -5,13 +5,15 @@ export interface TaskAttributes {
   id: string
   title: string
   description: string
-  status: string          // pending | claimed | completed | failed
+  status: string          // draft | pending | assigned | claimed | completed | failed
   priority: number        // 0=low 1=normal 2=high 3=urgent
   claimedBy?: string      // Team ID
   executionId?: string    // 关联的执行 ID
   result?: string         // 成功输出
   error?: string          // 失败消息
   restartedFrom?: string  // 重启前的执行快照（JSON）
+  parentId?: string       // 父任务 ID（子任务）
+  reviewComment?: string  // 审核意见（驳回时填写）
   claimedAt?: Date
   completedAt?: Date
   createdAt: Date
@@ -38,6 +40,8 @@ export class TaskModel
   declare error?: string
   declare restartedFrom?: string
   declare claimedAt?: Date
+  declare parentId?: string
+  declare reviewComment?: string
   declare completedAt?: Date
   declare createdAt: Date
   declare updatedAt: Date
@@ -83,6 +87,14 @@ TaskModel.init(
       allowNull: true,
     },
     restartedFrom: {
+      type: DataTypes.TEXT,
+      allowNull: true,
+    },
+    parentId: {
+      type: DataTypes.UUID,
+      allowNull: true,
+    },
+    reviewComment: {
       type: DataTypes.TEXT,
       allowNull: true,
     },

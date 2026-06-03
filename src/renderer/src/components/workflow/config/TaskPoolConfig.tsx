@@ -1,4 +1,4 @@
-import CustomInput from '../../ui/CustomInput'
+	import CustomInput from '../../ui/CustomInput'
 import CustomTextarea from '../../ui/CustomTextarea'
 import CustomSelect from '../../ui/CustomSelect'
 
@@ -40,19 +40,33 @@ export default function TaskPoolConfig({ config, onConfigChange }: TaskPoolConfi
         </p>
       </div>
 
-      <div>
-        <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5">优先级</label>
-        <CustomSelect
-          value={String(config.priority ?? 1)}
-          onChange={(v) => onConfigChange({ ...config, priority: Number(v) })}
-          options={[
-            { value: '0', label: '低' },
-            { value: '1', label: '普通' },
-            { value: '2', label: '高' },
-            { value: '3', label: '紧急' },
-          ]}
-          size="sm"
-        />
+      <div className="flex gap-3">
+        <div className="flex-1">
+          <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5">优先级</label>
+          <CustomSelect
+            value={String(config.priority ?? 1)}
+            onChange={(v) => onConfigChange({ ...config, priority: Number(v) })}
+            options={[
+              { value: '0', label: '低' },
+              { value: '1', label: '普通' },
+              { value: '2', label: '高' },
+              { value: '3', label: '紧急' },
+            ]}
+            size="sm"
+          />
+        </div>
+        <div className="flex-1">
+          <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5">状态</label>
+          <CustomSelect
+            value={config.status || 'pending'}
+            onChange={(v) => onConfigChange({ ...config, status: v })}
+            options={[
+              { value: 'pending', label: '待处理' },
+              { value: 'draft', label: '草稿' },
+            ]}
+            size="sm"
+          />
+        </div>
       </div>
     </div>
   )

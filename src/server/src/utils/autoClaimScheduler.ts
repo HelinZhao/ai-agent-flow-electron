@@ -1,3 +1,4 @@
+import { Op } from 'sequelize'
 import { TeamModel, LLMConfigModel, TaskModel } from '../models'
 import { executeTeamStandalone } from './teamExecutor'
 import { changeNotifier } from './dataChangeNotifier'
@@ -44,10 +45,29 @@ async function tick(): Promise<void> {
   for (const team of idleTeams) {
     if (busyTeams.has(team.id)) continue
 
-    const task = await TaskModel.findOne({
-      where: { status: 'pending' },
-      order: [['priority', 'DESC'], ['createdAt', 'ASC']],
+    // 优先认领该团队之前驳回的任务（保留 claimedBy），没有则取普通待办
+    let task = await TaskModel.findOne({
+      where: { status: 'pending', claimedBy: team.id },
+      order: [['priority', 'DESC'], ['updatedAt', 'ASC']],
     })
+    if (!task) {
+      task = await TaskModel.findOne({
+        where: { status: 'pending', claimedBy: null },
+        order: [['priority', 'DESC'], ['createdAt', 'ASC']],
+      })
+    }
+    if (!task) {
+      // 兜底：其他团队驳回超过 5 分钟无人处理的，任何空闲团队可认领
+      const fiveMinAgo = new Date(Date.now() - 5 * 60 * 1000)
+      task = await TaskModel.findOne({
+        where: {
+          status: 'pending',
+          claimedBy: { [Op.ne]: null },
+          updatedAt: { [Op.lt]: fiveMinAgo },
+        },
+        order: [['priority', 'DESC'], ['updatedAt', 'ASC']],
+      })
+    }
     if (!task) break // 没有待办任务了
 
     // 原子认领
@@ -141,13 +161,13 @@ async function executeTask(task: any, teamId: string, llmConfig: LLMConfig, sign
     )
   } else {
     await TaskModel.update(
-      { status: 'completed', result: result.output, completedAt: new Date() },
+      { status: 'pending_review', result: result.output, completedAt: new Date() },
       { where: { id: task.id } },
     )
   }
   changeNotifier.emitChange('tasks')
 
-  console.log(`[Scheduler] 团队完成任务: ${task.title}`)
+  console.log(`[Scheduler] 团队完成任务，进入待验收: ${task.title}`)
 }
 
 export function startAutoClaimScheduler(): void {

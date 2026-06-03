@@ -202,17 +202,23 @@ POST /api/team-chat-monitor                      — 直聊执行 {"teamId":"","
 
 export const TASKS_API_DESCRIPTION = `调用任务池管理的 REST API。路径 {id} 用实际值替换。
 
-任务状态流转: pending → assigned(已指派给团队) → claimed(执行中) → completed/failed
-              pending可直接被调度器认领，也可手动指派给指定团队
+任务状态流转:
+  draft(草稿) ↔ pending(待处理) → assigned(已指派) → claimed(执行中) → pending_review(待验收) → completed(已完成)
+                                                                                        ↘ failed(失败)
+  draft 不可认领/指派；pending 可被调度器认领或手动指派；
+  pending_review 由用户手动验收通过→completed，或驳回→pending 重新执行
 
-GET    /api/tasks                                 — 列表(?status=pending|assigned|claimed|completed|failed&page=1&pageSize=20&sortBy=createdAt&sortOrder=desc) 返回 {tasks[],total,page,pageSize,totalPages}
-POST   /api/tasks                                 — 创建 {"title":"","description":"","priority":0|1|2|3}
-GET    /api/tasks/{id}                            — 详情
-PUT    /api/tasks/{id}                            — 更新(仅pending可修改，title/description/priority)
-DEL    /api/tasks/{id}                            — 删除
-POST   /api/tasks/claim-next                      — 调度器认领下一个待办 {"claimedBy":"团队id","executionId":"调度id"} 返回 {claimed:bool,task}
-POST   /api/tasks/{id}/assign                     — 指派给团队 {"teamId":""} 仅pending可指派，状态→assigned
-POST   /api/tasks/{id}/complete                   — 完成任务 {"result":"执行结果输出"} 状态→completed
-POST   /api/tasks/{id}/fail                       — 标记失败 {"error":"错误信息"} 状态→failed
-POST   /api/tasks/{id}/restart                    — 重启(仅completed/failed)，保存快照(restartedFrom)后回退为pending
-POST   /api/tasks/{id}/cancel                     — 终止(仅claimed/assigned)，中断LLM请求并回退为pending`
+GET    /api/tasks                                                   — 列表(?status=draft|pending|assigned|claimed|pending_review|completed|failed) 返回 Task[]
+POST   /api/tasks                                                   — 创建 {"title":"","description":"","priority":0|1|2|3,"status":"pending|draft","parentId":"父任务id(可选)"} 默认 status=pending
+GET    /api/tasks/{id}                                              — 详情
+PUT    /api/tasks/{id}                                              — 更新(draft/pending 可改全部含status，pending_review/completed/failed 仅 title/description，assigned 仅 title)
+DEL    /api/tasks/{id}                                              — 删除
+GET    /api/tasks/{id}/subtasks                                     — 获取子任务列表
+POST   /api/tasks/claim-next                                        — 调度器认领下一个待办 {"claimedBy":"团队id","executionId":"调度id"} 返回 {claimed:bool,task} 跳过草稿
+POST   /api/tasks/{id}/assign                                       — 指派给团队 {"teamId":""} 仅 pending 可指派，状态→assigned
+POST   /api/tasks/{id}/complete                                     — 完成任务（agent 执行完后进入 pending_review 而非直接 completed）
+POST   /api/tasks/{id}/approve                                      — 验收通过（pending_review → completed）
+POST   /api/tasks/{id}/reject                                       — 驳回 {"comment":"修改意见(可选)"} pending_review → pending，追加意见到描述后重新执行
+POST   /api/tasks/{id}/fail                                         — 标记失败 {"error":"错误信息"} 状态→failed
+POST   /api/tasks/{id}/restart                                      — 重启(仅 completed/failed/pending_review)，保存快照后回退为 pending
+POST   /api/tasks/{id}/cancel                                       — 终止(仅 claimed/assigned/pending_review)，中断 LLM 请求并标记为 failed`

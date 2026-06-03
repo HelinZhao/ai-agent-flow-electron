@@ -650,10 +650,11 @@ export const taskApi = {
   getAll: (status?: string): Promise<Task[]> =>
     api.get('/tasks' + (status ? `?status=${status}` : '')),
   getById: (id: string): Promise<Task> => api.get(`/tasks/${id}`),
-  create: (data: { title: string; description: string; priority?: number }): Promise<Task> =>
+  create: (data: { title: string; description: string; priority?: number; status?: string; parentId?: string }): Promise<Task> =>
     api.post('/tasks', data),
   update: (id: string, data: Partial<Task>): Promise<Task> => api.put(`/tasks/${id}`, data),
   delete: (id: string): Promise<void> => api.delete(`/tasks/${id}`),
+  getSubtasks: (id: string): Promise<Task[]> => api.get(`/tasks/${id}/subtasks`),
   claimNext: (claimedBy?: string, executionId?: string): Promise<{ claimed: boolean; task: Task | null }> =>
     api.post('/tasks/claim-next', { claimedBy, executionId }),
   complete: (id: string, result: string): Promise<Task> =>
@@ -666,6 +667,10 @@ export const taskApi = {
     api.post(`/tasks/${id}/cancel`),
   assign: (id: string, teamId: string): Promise<Task> =>
     api.post(`/tasks/${id}/assign`, { teamId }),
+  approve: (id: string): Promise<Task> =>
+    api.post(`/tasks/${id}/approve`),
+  reject: (id: string, comment?: string): Promise<Task> =>
+    api.post(`/tasks/${id}/reject`, { comment }),
 }
 
 export const teamChatMonitor = (data: {

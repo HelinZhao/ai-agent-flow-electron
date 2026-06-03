@@ -177,6 +177,14 @@ async function migrateTaskColumns(): Promise<void> {
       await sequelize.query('ALTER TABLE tasks ADD COLUMN restartedFrom TEXT;')
       console.log('[Migration] tasks.restartedFrom column added')
     }
+    if (!table.parentId) {
+      await sequelize.query('ALTER TABLE tasks ADD COLUMN parentId TEXT;')
+      console.log('[Migration] tasks.parentId column added')
+    }
+    if (!table.reviewComment) {
+      await sequelize.query('ALTER TABLE tasks ADD COLUMN reviewComment TEXT;')
+      console.log('[Migration] tasks.reviewComment column added')
+    }
   } catch { /* empty */ }
 }
 
