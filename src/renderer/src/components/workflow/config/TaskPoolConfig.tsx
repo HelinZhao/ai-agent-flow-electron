@@ -1,6 +1,7 @@
-	import CustomInput from '../../ui/CustomInput'
+import CustomInput from '../../ui/CustomInput'
 import CustomTextarea from '../../ui/CustomTextarea'
 import CustomSelect from '../../ui/CustomSelect'
+import { useAppStore } from '@renderer/store/appStore'
 
 interface TaskPoolConfigProps {
   config: Record<string, any>
@@ -8,6 +9,8 @@ interface TaskPoolConfigProps {
 }
 
 export default function TaskPoolConfig({ config, onConfigChange }: TaskPoolConfigProps) {
+  const projects = useAppStore(s => s.projects)
+
   return (
     <div className="space-y-4">
       <div>
@@ -67,6 +70,19 @@ export default function TaskPoolConfig({ config, onConfigChange }: TaskPoolConfi
             size="sm"
           />
         </div>
+      </div>
+
+      <div>
+        <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5">项目（可选）</label>
+        <CustomSelect
+          value={config.projectId || ''}
+          onChange={(v) => onConfigChange({ ...config, projectId: v || '' })}
+          options={[
+            { value: '', label: '无' },
+            ...projects.map(p => ({ value: p.id, label: p.name })),
+          ]}
+          size="sm"
+        />
       </div>
     </div>
   )

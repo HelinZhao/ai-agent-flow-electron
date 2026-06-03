@@ -11,6 +11,12 @@ const api = {
   dialog: {
     showSave: (options: { defaultPath?: string; filters?: { name: string; extensions: string[] }[] }) =>
       ipcRenderer.invoke('dialog:showSave', options),
+    showOpen: () =>
+      ipcRenderer.invoke('dialog:showOpen'),
+  },
+  // Shell 操作
+  shell: {
+    openPath: (filePath: string) => ipcRenderer.invoke('shell:openPath', filePath),
   },
   // 服务器控制API
   server: {

@@ -1,5 +1,4 @@
-import { Op } from 'sequelize'
-import { TeamModel, LLMConfigModel, TaskModel } from '../models'
+import { TeamModel, LLMConfigModel, TaskModel, ProjectModel } from '../models'
 import { executeTeamStandalone } from './teamExecutor'
 import { changeNotifier } from './dataChangeNotifier'
 import { teamExecutionTracker } from './teamExecutionTracker'
@@ -45,29 +44,11 @@ async function tick(): Promise<void> {
   for (const team of idleTeams) {
     if (busyTeams.has(team.id)) continue
 
-    // 优先认领该团队之前驳回的任务（保留 claimedBy），没有则取普通待办
-    let task = await TaskModel.findOne({
-      where: { status: 'pending', claimedBy: team.id },
-      order: [['priority', 'DESC'], ['updatedAt', 'ASC']],
+    // 取优先级最高、创建最早的待办任务
+    const task = await TaskModel.findOne({
+      where: { status: 'pending' },
+      order: [['priority', 'DESC'], ['createdAt', 'ASC']],
     })
-    if (!task) {
-      task = await TaskModel.findOne({
-        where: { status: 'pending', claimedBy: null },
-        order: [['priority', 'DESC'], ['createdAt', 'ASC']],
-      })
-    }
-    if (!task) {
-      // 兜底：其他团队驳回超过 5 分钟无人处理的，任何空闲团队可认领
-      const fiveMinAgo = new Date(Date.now() - 5 * 60 * 1000)
-      task = await TaskModel.findOne({
-        where: {
-          status: 'pending',
-          claimedBy: { [Op.ne]: null },
-          updatedAt: { [Op.lt]: fiveMinAgo },
-        },
-        order: [['priority', 'DESC'], ['updatedAt', 'ASC']],
-      })
-    }
     if (!task) break // 没有待办任务了
 
     // 原子认领
@@ -124,9 +105,19 @@ async function executeTask(task: any, teamId: string, llmConfig: LLMConfig, sign
 
   const team = await TeamModel.findByPk(teamId)
 
+  // 若任务关联了项目，查询工作目录并传递给执行器
+  let workingDirectory: string | undefined
+  if (task.projectId) {
+    const project = await ProjectModel.findByPk(task.projectId)
+    if (project) {
+      workingDirectory = project.workDir
+    }
+  }
+
   const result = await executeTeamStandalone({
     teamId,
     taskDescription: task.description,
+    workingDirectory,
     llmConfig,
     executionId,
     nodeId: 'scheduler',

@@ -235,6 +235,20 @@ app.whenReady().then(() => {
     return result.canceled ? null : result.filePath
   })
 
+  // 原生文件夹选择对话框
+  ipcMain.handle('dialog:showOpen', async () => {
+    const win = BrowserWindow.getAllWindows()[0]
+    const result = await dialog.showOpenDialog(win, {
+      properties: ['openDirectory'],
+    })
+    return result.canceled ? null : result.filePaths[0] || null
+  })
+
+  // 在文件管理器中打开路径
+  ipcMain.handle('shell:openPath', async (_, filePath: string) => {
+    return await shell.openPath(filePath)
+  })
+
   // 写入文件
   ipcMain.handle('file:write', async (_, filePath: string, data: string) => {
     return new Promise<{ success: boolean; error?: string }>((resolve) => {

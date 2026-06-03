@@ -433,6 +433,7 @@ export function TaskPoolNode({ data, selected }: { data: any; selected: boolean 
   const priorityLabel = ['低', '普通', '高', '紧急'][priority] || '普通'
   const taskStatus = data.config?.status || 'pending'
   const statusLabel = taskStatus === 'draft' ? '草稿' : '待处理'
+  const projectId = data.config?.projectId
   return (
     <div className={`node-taskpool group relative px-4 py-3 min-w-[160px] ${nodeBg(def)} rounded-lg transition-shadowduration-300 ${nodeBorder(def)} ${selected ? nodeRing(def) : 'hover:shadow-glow-md dark:hover:shadow-glow-md-w'}`}>
       <Handle type="target" position={targetPos} className={handleClass(def)} />
@@ -448,6 +449,7 @@ export function TaskPoolNode({ data, selected }: { data: any; selected: boolean 
             {hasTitle ? `标题模板: ${data.config.title.substring(0, 16)}${data.config.title.length > 16 ? '…' : ''}` : '使用上游输入'}
             <span className="ml-2 text-[10px] opacity-60">{priorityLabel}优先级</span>
             {taskStatus === 'draft' && <span className="ml-2 text-[10px] text-gray-400">草稿</span>}
+            {projectId && <span className="ml-2 text-[10px] text-blue-400">项目</span>}
           </div>
         </div>
       </div>

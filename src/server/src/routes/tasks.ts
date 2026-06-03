@@ -1,5 +1,5 @@
 import { Router } from 'express'
-import { TaskModel } from '../models'
+import { TaskModel, TeamModel } from '../models'
 import { changeNotifier } from '../utils/dataChangeNotifier'
 import { freeTeam, cancelExecution } from '../utils/autoClaimScheduler'
 import { teamExecutionTracker } from '../utils/teamExecutionTracker'
@@ -21,7 +21,7 @@ router.get('/', async (_req, res) => {
 // 创建
 router.post('/', async (req, res) => {
   try {
-    const { title, description, priority, status, parentId } = req.body
+    const { title, description, priority, status, parentId, projectId } = req.body
     if (!title || !description) {
       return res.status(400).json({ error: '标题和描述不能为空' })
     }
@@ -31,6 +31,7 @@ router.post('/', async (req, res) => {
       priority: priority ?? 1,
       status: taskStatus,
       parentId: parentId || undefined,
+      projectId: projectId || undefined,
     } as any)
     changeNotifier.emitChange('tasks')
     return res.status(201).json(task)
@@ -56,7 +57,7 @@ router.put('/:id', async (req, res) => {
     const task = await TaskModel.findByPk(req.params.id)
     if (!task) return res.status(404).json({ error: '任务不存在' })
 
-    const { title, description, priority, status } = req.body
+    const { title, description, priority, status, projectId } = req.body
     const updates: Record<string, any> = {}
 
     switch (task.status) {
@@ -66,6 +67,7 @@ router.put('/:id', async (req, res) => {
         if (description !== undefined) updates.description = description
         if (priority !== undefined) updates.priority = priority
         if (status !== undefined && (status === 'draft' || status === 'pending')) updates.status = status
+        if (projectId !== undefined) updates.projectId = projectId || null
         if (Object.keys(updates).length === 0) return res.json(task)
         const [affected] = await TaskModel.update(updates, { where: { id: task.id, status: 'draft' } })
         if (affected === 0) return res.status(409).json({ error: '任务状态已变更，请刷新后重试' })
@@ -79,6 +81,7 @@ router.put('/:id', async (req, res) => {
         if (description !== undefined) updates.description = description
         if (priority !== undefined) updates.priority = priority
         if (status !== undefined && (status === 'draft' || status === 'pending')) updates.status = status
+        if (projectId !== undefined) updates.projectId = projectId || null
         if (Object.keys(updates).length === 0) return res.json(task)
         const [affected] = await TaskModel.update(updates, { where: { id: task.id, status: 'pending' } })
         if (affected === 0) return res.status(409).json({ error: '任务状态已变更，请刷新后重试' })
@@ -226,7 +229,7 @@ router.post('/:id/approve', async (req, res) => {
   }
 })
 
-// 驳回（待验收 → 待处理，释放团队，追加审核意见到描述以便新一轮执行参考）
+// 驳回（待验收 → 已指派，自动派回原团队重新执行）
 router.post('/:id/reject', async (req, res) => {
   try {
     const task = await TaskModel.findByPk(req.params.id)
@@ -243,15 +246,27 @@ router.post('/:id/reject', async (req, res) => {
       ? `\n\n【审核意见】\n${comment}`
       : ''
 
-    task.status = 'pending'
-    task.description = task.description + reviewBlock
-    task.reviewComment = comment || ''
-    // 保留 claimedBy（原团队），调度器优先派回原团队
-    task.executionId = ''
-    task.claimedAt = undefined
-    task.completedAt = undefined
+    // 检查原团队是否还存在
+    const teamExists = oldClaimedBy ? await TeamModel.findByPk(oldClaimedBy) : null
+
+    if (oldClaimedBy && !teamExists) {
+      // 原团队已删除 → 标记为失败
+      task.status = 'failed'
+      task.description = task.description + reviewBlock
+      task.reviewComment = comment || ''
+      task.error = '原团队已删除，无法重新执行'
+      task.completedAt = new Date()
+    } else {
+      // 原团队存在 → 直接设为 assigned，调度器下一 tick 立即执行
+      task.status = 'assigned'
+      task.description = task.description + reviewBlock
+      task.reviewComment = comment || ''
+      task.executionId = `reject-${oldClaimedBy}-${Date.now()}`
+      task.claimedAt = new Date()
+      task.completedAt = undefined
+    }
     await task.save()
-    // 释放团队忙碌状态，但不清除 claimedBy，调度器会优先匹配
+    // 释放团队忙碌状态
     freeTeam(oldClaimedBy)
     changeNotifier.emitChange('tasks')
     return res.json(task)

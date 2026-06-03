@@ -1,6 +1,6 @@
 import { EventEmitter } from 'events'
 
-export type ResourceType = 'workflows' | 'agents' | 'skills' | 'teams' | 'knowledge-base' | 'llm-config' | 'triggers' | 'mcp-servers' | 'environment-variables' | 'tasks'
+export type ResourceType = 'workflows' | 'agents' | 'skills' | 'teams' | 'knowledge-base' | 'llm-config' | 'triggers' | 'mcp-servers' | 'environment-variables' | 'tasks' | 'projects'
 
 class DataChangeNotifier extends EventEmitter {
   emitChange(resource: ResourceType) {

@@ -69,7 +69,7 @@ const TASK_SCHEMA: Record<string, string> = {
   status: '状态（draft=草稿, pending=待处理）',
 }
 export default function Tasks() {
-  const { teams, tasks: allTasks } = useAppStore()
+  const { teams, projects, tasks: allTasks } = useAppStore()
   const [statusFilter, setStatusFilter] = useState<string>('')
   const [page, setPage] = useState(1)
   const [showCreate, setShowCreate] = useState(false)
@@ -84,6 +84,7 @@ export default function Tasks() {
     priority: number
     status: 'draft' | 'pending'
     parentId?: string
+    projectId?: string
   }
 
   const createForm = useForm<TaskFormData>({
@@ -99,11 +100,13 @@ export default function Tasks() {
   const createPriority = useWatch({ control: createForm.control, name: 'priority' })
   const createStatus = useWatch({ control: createForm.control, name: 'status' })
   const createParentId = useWatch({ control: createForm.control, name: 'parentId' })
+  const createProjectId = useWatch({ control: createForm.control, name: 'projectId' })
 
   const editTitle = useWatch({ control: editForm.control, name: 'title' })
   const editDescription = useWatch({ control: editForm.control, name: 'description' })
   const editPriority = useWatch({ control: editForm.control, name: 'priority' })
   const editStatus = useWatch({ control: editForm.control, name: 'status' })
+  const editProjectId = useWatch({ control: editForm.control, name: 'projectId' })
 
   const goToPage = (p: number) => { setPage(p); setExpandedId(null) }
 
@@ -152,6 +155,7 @@ export default function Tasks() {
       description: task.description,
       priority: task.priority,
       status: (task.status === 'draft' || task.status === 'pending') ? task.status : 'pending',
+      projectId: task.projectId || undefined,
     })
     setEditError('')
   }
@@ -176,6 +180,7 @@ export default function Tasks() {
 
   const getTeamName = (id?: string) => id ? teams.find(t => t.id === id)?.name || id : '-'
   const getParentTask = (parentId?: string) => parentId ? allTasks.find(t => t.id === parentId) : undefined
+  const getProject = (projectId?: string) => projectId ? projects.find(p => p.id === projectId) : undefined
 
   const formatTime = (t?: string) => t ? new Date(t).toLocaleString('zh-CN') : '-'
 
@@ -314,6 +319,14 @@ export default function Tasks() {
                               </span>
                             )}
                             <span className="truncate">{task.title}</span>
+                            {task.projectId && getProject(task.projectId) && (
+                              <span className="flex-shrink-0 inline-flex items-center gap-1 px-1.5 py-0.5 text-[10px] font-medium rounded bg-blue-50 dark:bg-blue-900/20 text-blue-500 dark:text-blue-400 border border-blue-200 dark:border-blue-800 ml-1">
+                                <svg className="w-2.5 h-2.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                                  <path d="M22 19a2 2 0 01-2 2H4a2 2 0 01-2-2V5a2 2 0 012-2h5l2 3h9a2 2 0 012 2z" />
+                                </svg>
+                                {getProject(task.projectId)?.name}
+                              </span>
+                            )}
                           </div>
                         </td>
                         <td className="px-4 py-3 text-gray-700 dark:text-gray-400 hidden sm:table-cell text-xs truncate max-w-[120px]">
@@ -413,6 +426,8 @@ export default function Tasks() {
                           colSpan={7}
                           getTeamName={getTeamName}
                           getParentTask={getParentTask}
+                          getProject={getProject}
+                          projects={projects}
                           allTasks={allTasks}
                           onCancel={handleCancel}
                           onApprove={handleApprove}
@@ -518,6 +533,26 @@ export default function Tasks() {
               size="sm"
             />
           </div>
+          {/* 仅顶级任务可选项目 */}
+          {!createParentId && (
+            <div>
+              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5">项目（可选）</label>
+              <CustomSelect
+                value={createProjectId || ''}
+                onChange={v => createForm.setValue('projectId', v || undefined)}
+                options={[
+                  { value: '', label: '无' },
+                  ...projects.map(p => ({ value: p.id, label: p.name })),
+                ]}
+                size="sm"
+              />
+              {createProjectId && getProject(createProjectId) && (
+                <p className="text-xs text-gray-400 mt-1">
+                  工作目录: {getProject(createProjectId)?.workDir}
+                </p>
+              )}
+            </div>
+          )}
         </div>
       </Modal>
 
@@ -597,6 +632,20 @@ export default function Tasks() {
                   size="sm"
                 />
               </div>
+            </div>
+          )}
+          {editingTask && (editingTask.status === 'pending' || editingTask.status === 'draft') && !editingTask.parentId && (
+            <div>
+              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5">项目（可选）</label>
+              <CustomSelect
+                value={editProjectId || ''}
+                onChange={v => editForm.setValue('projectId', v || undefined)}
+                options={[
+                  { value: '', label: '无' },
+                  ...projects.map(p => ({ value: p.id, label: p.name })),
+                ]}
+                size="sm"
+              />
             </div>
           )}
           {editingTask && editingTask.status !== 'pending' && editingTask.status !== 'draft' && (

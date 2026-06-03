@@ -5,12 +5,15 @@ import SectionHeader from './SectionHeader'
 import StatusIcon from '@renderer/components/ui/StatusIcon'
 import { useTeamExecutionStore } from '@renderer/store/teamExecutionStore'
 import type { ExecutionEvent } from '@renderer/store/teamExecutionStore'
+import type { Project } from '@renderer/types'
 
 interface TaskDetailRowProps {
   task: Task
   colSpan: number
   getTeamName: (id?: string) => string
   getParentTask: (parentId?: string) => Task | undefined
+  getProject: (projectId?: string) => Project | undefined
+  projects: Project[]
   allTasks: Task[]
   onCancel: (id: string) => void
   onApprove: (id: string) => void
@@ -39,6 +42,12 @@ const IconError = (
     <circle cx="12" cy="12" r="10" />
     <line x1="12" y1="8" x2="12" y2="12" />
     <line x1="12" y1="16" x2="12.01" y2="16" />
+  </svg>
+)
+
+const IconFolder = (
+  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+    <path d="M22 19a2 2 0 01-2 2H4a2 2 0 01-2-2V5a2 2 0 012-2h5l2 3h9a2 2 0 012 2z" />
   </svg>
 )
 
@@ -158,6 +167,42 @@ function ExecutionIdCard({ task }: { task: Task }) {
   )
 }
 
+function ProjectCard({ task, getProject }: { task: Task; getProject: (projectId?: string) => Project | undefined }) {
+  const project = getProject(task.projectId)
+  if (!project) return null
+
+  const handleOpenDir = async () => {
+    try {
+      await window.api.shell.openPath(project.workDir)
+    } catch { /* ignore */ }
+  }
+
+  return (
+    <div className="bg-white/60 dark:bg-gray-900/40 rounded-lg border border-gray-200 dark:border-gray-700/50 p-3.5">
+      <SectionHeader icon={IconFolder} label="项目" />
+      <div className="text-xs font-medium text-gray-700 dark:text-gray-300 truncate">
+        {project.name}
+      </div>
+      <div className="flex items-center gap-1 mt-1">
+        <span className="text-[10px] text-gray-400 dark:text-gray-500 truncate flex-1" title={project.workDir}>
+          {project.workDir}
+        </span>
+        <button
+          onClick={handleOpenDir}
+          title="打开目录"
+          className="flex-shrink-0 p-0.5 rounded hover:bg-gray-200 dark:hover:bg-gray-700 text-gray-400 hover:text-blue-500 transition-colors"
+        >
+          <svg className="w-3 h-3" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+            <path d="M18 13v6a2 2 0 01-2 2H5a2 2 0 01-2-2V8a2 2 0 012-2h6" />
+            <polyline points="15 3 21 3 21 9" />
+            <line x1="10" y1="14" x2="21" y2="3" />
+          </svg>
+        </button>
+      </div>
+    </div>
+  )
+}
+
 /* ---------- Team execution progress (compact) ---------- */
 
 interface MemberState {
@@ -268,7 +313,7 @@ function TeamExecutionProgress({ executionId, teamId }: { executionId: string; t
 
 /* ---------- main component ---------- */
 
-export default function TaskDetailRow({ task, colSpan, getTeamName, getParentTask, allTasks, onCancel, onApprove, onReject, onRestart, onClose }: TaskDetailRowProps) {
+export default function TaskDetailRow({ task, colSpan, getTeamName, getParentTask, getProject, projects, allTasks, onCancel, onApprove, onReject, onRestart, onClose }: TaskDetailRowProps) {
   const showCancel = task.status === 'claimed' || task.status === 'assigned' || task.status === 'pending_review'
   const showRestart = task.status === 'completed' || task.status === 'failed' || task.status === 'pending_review'
   const showApproveReject = task.status === 'pending_review'
@@ -375,9 +420,10 @@ export default function TaskDetailRow({ task, colSpan, getTeamName, getParentTas
           {/* ── Bottom row: metadata cards + actions ── */}
           <div className="flex flex-col gap-3">
             {/* Meta cards: responsive grid, auto-fit columns */}
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
               <TimelineCard task={task} />
               <TeamCard task={task} getTeamName={getTeamName} />
+              <ProjectCard task={task} getProject={getProject} />
               <ExecutionIdCard task={task} />
             </div>
 

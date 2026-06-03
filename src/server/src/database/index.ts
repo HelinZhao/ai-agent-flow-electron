@@ -185,6 +185,10 @@ async function migrateTaskColumns(): Promise<void> {
       await sequelize.query('ALTER TABLE tasks ADD COLUMN reviewComment TEXT;')
       console.log('[Migration] tasks.reviewComment column added')
     }
+    if (!table.projectId) {
+      await sequelize.query('ALTER TABLE tasks ADD COLUMN projectId TEXT;')
+      console.log('[Migration] tasks.projectId column added')
+    }
   } catch { /* empty */ }
 }
 

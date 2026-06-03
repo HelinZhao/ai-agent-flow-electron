@@ -222,3 +222,11 @@ POST   /api/tasks/{id}/reject                                       — 驳回 {
 POST   /api/tasks/{id}/fail                                         — 标记失败 {"error":"错误信息"} 状态→failed
 POST   /api/tasks/{id}/restart                                      — 重启(仅 completed/failed/pending_review)，保存快照后回退为 pending
 POST   /api/tasks/{id}/cancel                                       — 终止(仅 claimed/assigned/pending_review)，中断 LLM 请求并标记为 failed`
+
+export const PROJECTS_API_DESCRIPTION = `项目管理 REST API。路径 {id} 用实际值替换。
+
+GET    /api/projects                  — 列表 返回 Project[]
+POST   /api/projects                  — 创建 {"name":"","description":"","workDir":""}
+GET    /api/projects/{id}             — 详情
+PUT    /api/projects/{id}             — 更新 {"name":"","description":"","workDir":""}
+DEL    /api/projects/{id}             — 删除（不级联删除关联任务）`

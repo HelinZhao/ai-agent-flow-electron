@@ -464,6 +464,7 @@ async function executeTaskPool(deps: NodeExecutorDeps, ctx: ExecCtx) {
   const descTemplate = (node.data.config?.description as string) || ''
   const priority = (node.data.config?.priority ?? 1) as number
   const taskStatus = (node.data.config?.status === 'draft' ? 'draft' : 'pending') as string
+  const projectId = (node.data.config?.projectId as string) || undefined
 
   try {
     // 解析模板（支持 {{$input}} 和工作流变量）
@@ -479,6 +480,7 @@ async function executeTaskPool(deps: NodeExecutorDeps, ctx: ExecCtx) {
       description: String(description).trim() || '无描述',
       priority,
       status: taskStatus,
+      projectId,
     } as any)
 
     const execState = deps.executionStates.get(ctx.executionId)

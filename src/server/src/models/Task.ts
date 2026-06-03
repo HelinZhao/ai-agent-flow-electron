@@ -14,6 +14,7 @@ export interface TaskAttributes {
   restartedFrom?: string  // 重启前的执行快照（JSON）
   parentId?: string       // 父任务 ID（子任务）
   reviewComment?: string  // 审核意见（驳回时填写）
+  projectId?: string      // 关联的项目 ID
   claimedAt?: Date
   completedAt?: Date
   createdAt: Date
@@ -42,6 +43,7 @@ export class TaskModel
   declare claimedAt?: Date
   declare parentId?: string
   declare reviewComment?: string
+  declare projectId?: string
   declare completedAt?: Date
   declare createdAt: Date
   declare updatedAt: Date
@@ -96,6 +98,10 @@ TaskModel.init(
     },
     reviewComment: {
       type: DataTypes.TEXT,
+      allowNull: true,
+    },
+    projectId: {
+      type: DataTypes.UUID,
       allowNull: true,
     },
     claimedAt: {

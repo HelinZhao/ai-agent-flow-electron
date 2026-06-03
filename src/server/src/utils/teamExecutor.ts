@@ -26,6 +26,8 @@ export interface TeamExecParams {
   taskTitle?: string
   /** 团队配置：使用工具无需审批，自动放行 */
   autoApproveTools?: boolean
+  /** 项目工作目录（task 关联 project 时传入） */
+  workingDirectory?: string
 }
 
 // ============================================================
@@ -482,6 +484,12 @@ export async function executeTeamStandalone(params: TeamExecParams): Promise<{
     : memberIds
   const agents = await AgentModel.findAll({ where: { id: allAgentIds } })
   const agentMap = new Map(agents.map(a => [a.id, a]))
+
+  // 若有工作目录，注入到 taskDescription 中，所有模式都能感知
+  if (params.workingDirectory) {
+    params.taskDescription += `\n\n【工作目录】\n${params.workingDirectory}`
+    params.logCallback?.(`工作目录: ${params.workingDirectory}`)
+  }
 
   params.logCallback?.(`团队「${team.name}」开始执行，模式: ${team.mode}，成员: ${memberIds.length} 人`)
 

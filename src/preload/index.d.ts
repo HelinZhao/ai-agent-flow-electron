@@ -75,6 +75,11 @@ interface FileAPI {
 
 interface DialogAPI {
   showSave: (options?: { defaultPath?: string; filters?: { name: string; extensions: string[] }[] }) => Promise<string | null>
+  showOpen: () => Promise<string | null>
+}
+
+interface ShellAPI {
+  openPath: (filePath: string) => Promise<string>
 }
 
 interface CustomAPI {
@@ -85,6 +90,7 @@ interface CustomAPI {
   app: AppAPI
   file: FileAPI
   dialog: DialogAPI
+  shell: ShellAPI
   system: SystemAPI
   git: GitAPI
 }

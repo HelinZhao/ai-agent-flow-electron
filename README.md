@@ -41,7 +41,7 @@ AI Agent Flow Electron 是一个基于 Electron + React + TypeScript 的**桌面
 
 ### 🔧 工具调用与 HITL 审批
 - LLM 自主调用文件读写、命令执行、HTTP 请求等工具
-- LLM 节点可调内部 API（工作流/Agent/技能/知识库/系统配置 CRUD）
+- LLM 节点可调内部 API（工作流/Agent/技能/知识库/项目/系统配置 CRUD）
 - 危险操作需人工审批确认，支持会话级放权
 
 ### ⏰ 触发器模块
@@ -56,6 +56,8 @@ AI Agent Flow Electron 是一个基于 Electron + React + TypeScript 的**桌面
 - **LLM 缓存** — 自研 TTL 缓存，相同 Prompt 10 分钟内命中缓存，节省 API 费用
 - **表达式系统** — {{$input}}、{{$params.xxx}}、{{$nodes["id"].output}}、{{$env.xxx}}、{{$global.xxx}}、{{$now}} 等内置变量，所有模板字段通用
 - **环境变量管理** — 工作流级 {{$env.xxx}} + 全局级 {{$global.xxx}}，双层隔离，设置页面可视化 CRUD
+- **项目模块** — 创建项目绑定本地工作目录，任务关联后 Agent 执行时自动注入目录上下文，一键打开文件管理器
+- **任务池** — 完整状态流转（草稿→待处理→已指派→执行中→待验收→已完成），子任务层级、驳回审核意见、自动重派团队
 - **SSE 实时同步** — 多窗口间数据变更自动同步
 - **🤖 系统 AI 助手** — 悬浮式全局 AI 助手，可拖拽移动，随时对话，支持工具调用和 HITL 审批
 - **深色/浅色主题** — 统一的主题切换，节点颜色双模式一致
@@ -269,18 +271,32 @@ ai-agent-flow-electron/
 | POST | `/api/team-chat-monitor` | 直聊执行团队 |
 
 ### 任务池
+任务完整状态流转：`draft ↔ pending → assigned → claimed → pending_review → completed`，驳回自动重派原团队
+
 | 方法 | 路径 | 说明 |
 |------|------|------|
-| GET | `/api/tasks` | 获取所有任务 |
-| POST | `/api/tasks` | 创建任务 |
+| GET | `/api/tasks` | 获取所有任务（?status= 筛选） |
+| POST | `/api/tasks` | 创建任务（支持 status/parentId/projectId） |
 | GET | `/api/tasks/:id` | 获取单个任务 |
 | PUT | `/api/tasks/:id` | 更新任务（按状态限制可编辑字段） |
 | DELETE | `/api/tasks/:id` | 删除任务 |
+| GET | `/api/tasks/:id/subtasks` | 获取子任务列表 |
 | POST | `/api/tasks/:id/assign` | 指派给团队 |
-| POST | `/api/tasks/:id/complete` | 完成任务 |
+| POST | `/api/tasks/:id/complete` | 完成任务（进入待验收） |
+| POST | `/api/tasks/:id/approve` | 验收通过（待验收 → 已完成） |
+| POST | `/api/tasks/:id/reject` | 驳回（带审核意见，自动重派原团队） |
 | POST | `/api/tasks/:id/fail` | 标记失败 |
 | POST | `/api/tasks/:id/restart` | 重启任务 |
 | POST | `/api/tasks/:id/cancel` | 终止执行中的任务 |
+
+### 项目
+| 方法 | 路径 | 说明 |
+|------|------|------|
+| GET | `/api/projects` | 获取所有项目 |
+| POST | `/api/projects` | 创建项目（name/workDir 必填） |
+| GET | `/api/projects/:id` | 获取单个项目 |
+| PUT | `/api/projects/:id` | 更新项目 |
+| DELETE | `/api/projects/:id` | 删除项目（不级联关联任务） |
 
 ### 技能
 | 方法 | 路径 | 说明 |
@@ -420,6 +436,17 @@ this.app.use('/api/new-route', newRouter)
 ---
 
 ## 更新日志
+
+### v2.3.0
+
+- **项目模块**：新增项目管理页面，创建项目绑定本地工作目录，一键打开文件管理器
+- **任务关联项目**：顶级任务可选关联项目，Agent 执行时自动注入工作目录到上下文
+- **待验收状态**：Agent 执行完后进入 pending_review，用户审查执行结果后手动验收通过或驳回
+- **驳回审核意见**：支持填写修改意见，驳回后追加到描述并自动指派回原团队重新执行
+- **草稿状态**：任务可设为草稿，草稿任务不可被认领或指派
+- **子任务功能**：支持父子任务层级，详情展示父子关系树
+- **任务池节点配置**：工作流任务池节点支持选择状态和项目
+- **文件夹选择器**：新增系统原生目录选择对话框 IPC
 
 ### v2.2.0
 

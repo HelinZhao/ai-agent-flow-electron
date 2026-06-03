@@ -123,12 +123,19 @@ export const TicketIcon: React.FC<IconProps> = ({ className }) => (
   </IconWrapper>
 )
 
+export const FolderIcon: React.FC<IconProps> = ({ className }) => (
+  <IconWrapper className={className}>
+    <path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z" />
+  </IconWrapper>
+)
+
 // eslint-disable-next-line react-refresh/only-export-components
 export const navIconMap = {
   chat: ChatIcon,
   workflow: WorkflowIcon,
   agent: AgentIcon,
   team: TeamIcon,
+  project: FolderIcon,
   skills: SkillsIcon,
   knowledge: KnowledgeIcon,
   triggers: TriggersIcon,

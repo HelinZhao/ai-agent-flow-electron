@@ -47,6 +47,8 @@ export const NODE_CONFIG_SCHEMAS: Record<string, Record<string, string>> = {
     title: '任务标题模板，支持 {{$input}} 和工作流变量。留空使用上游输入',
     description: '任务描述模板，支持 {{$input}} 和工作流变量。留空使用上游输入',
     priority: '优先级: 0=低, 1=普通, 2=高, 3=紧急',
+    status: '状态: pending=待处理, draft=草稿',
+    projectId: '关联的项目 ID，任务执行时将使用项目的工作目录',
   },
   database: {
     dbType: '数据库类型：sqlite / postgres / mysql / mssql / mongodb / redis',

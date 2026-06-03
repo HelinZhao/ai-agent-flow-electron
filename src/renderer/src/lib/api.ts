@@ -17,7 +17,8 @@ import {
   Template,
   TokenUsageItem,
   TokenUsageSummary,
-  ModelTokenUsage
+  ModelTokenUsage,
+  Project
 } from '@renderer/types'
 import { API_BASE_URL, POLL_MAX_ATTEMPTS, POLL_INTERVAL } from '@renderer/config'
 
@@ -671,6 +672,16 @@ export const taskApi = {
     api.post(`/tasks/${id}/approve`),
   reject: (id: string, comment?: string): Promise<Task> =>
     api.post(`/tasks/${id}/reject`, { comment }),
+}
+
+export const projectApi = {
+  getAll: (): Promise<Project[]> =>
+    api.get('/projects'),
+  getById: (id: string): Promise<Project> => api.get(`/projects/${id}`),
+  create: (data: { name: string; description: string; workDir: string }): Promise<Project> =>
+    api.post('/projects', data),
+  update: (id: string, data: Partial<Project>): Promise<Project> => api.put(`/projects/${id}`, data),
+  delete: (id: string): Promise<void> => api.delete(`/projects/${id}`),
 }
 
 export const teamChatMonitor = (data: {

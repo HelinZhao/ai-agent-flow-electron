@@ -17,7 +17,7 @@ export const API_CONTENT_TYPE = 'application/json'
 // ========== 应用信息 ==========
 
 /** 应用版本号 */
-export const APP_VERSION = '1.7.0'
+export const APP_VERSION = '2.3.0'
 
 /** 应用名称 */
 export const APP_NAME = 'Agent Flow'
@@ -283,6 +283,7 @@ export const TOOL_DEFINITIONS: ToolDef[] = [
   { id: 'agentsSkillsApi', label: 'Agent/技能API', description: '管理 Agent 和技能（CRUD）' },
   { id: 'teamsApi', label: '团队API', description: '调用团队管理接口，管理 Agent 团队及其协作模式' },
   { id: 'tasksApi', label: '任务API', description: '调用任务池管理接口，创建、指派、终止任务' },
+  { id: 'projectsApi', label: '项目API', description: '调用项目管理接口，管理项目工作目录' },
   { id: 'knowledgeApi', label: '知识库API', description: '管理知识库和 RAG 检索' },
   { id: 'configApi', label: '系统配置API', description: 'LLM 配置、触发器、系统设置' },
   { id: 'readSkill', label: '读取技能', description: '读取指定技能的完整内容' },

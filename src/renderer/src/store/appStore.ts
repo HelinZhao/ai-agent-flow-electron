@@ -1,10 +1,10 @@
 import { create } from 'zustand'
 import { persist } from 'zustand/middleware'
 import debounce from 'lodash/debounce'
-import { Workflow, Skill, Agent, Team, Task, LLMConfig, KnowledgeBase, Trigger, EnvVar, Template } from '@renderer/types'
+import { Workflow, Skill, Agent, Team, Task, LLMConfig, KnowledgeBase, Trigger, EnvVar, Template, Project } from '@renderer/types'
 import type { McpServer } from '@renderer/lib/mcpApi'
 import { mcpApi } from '@renderer/lib/mcpApi'
-import { workflowApi, skillApi, agentApi, teamApi, taskApi, llmConfigApi, knowledgeBaseApi, triggerApi, envVarApi, templateApi, waitForServer } from '@renderer/lib/api'
+import { workflowApi, skillApi, agentApi, teamApi, taskApi, llmConfigApi, knowledgeBaseApi, triggerApi, envVarApi, templateApi, projectApi, waitForServer } from '@renderer/lib/api'
 import { STORAGE_KEY, STORAGE_PERSIST_FIELDS, API_BASE_URL } from '@renderer/config'
 import { gitWriteEntity } from '@renderer/lib/gitWriteEntity'
 
@@ -84,6 +84,14 @@ interface AppState {
   setEnvVars: (vars: EnvVar[]) => void
   fetchEnvVars: () => Promise<void>
 
+  // Projects
+  projects: Project[]
+  setProjects: (projects: Project[]) => void
+  fetchProjects: () => Promise<void>
+  addProject: (data: Omit<Project, 'id' | 'createdAt' | 'updatedAt'>) => Promise<void>
+  updateProject: (id: string, updates: Partial<Project>) => Promise<void>
+  deleteProject: (id: string) => Promise<void>
+
   // SSE 事件流
   eventSource: EventSource | null
   connectEventStream: () => void
@@ -118,6 +126,7 @@ export const useAppStore = create<AppState>()(
       templates: [],
       mcpServers: [],
       envVars: [],
+      projects: [],
       currentPage: '/',
       loading: false,
       error: null,
@@ -132,13 +141,14 @@ export const useAppStore = create<AppState>()(
           await waitForServer()
 
           // 并行加载所有数据
-          const [workflowsRes, skillsRes, agentsRes, triggersRes, teamsRes, tasksRes] = await Promise.all([
+          const [workflowsRes, skillsRes, agentsRes, triggersRes, teamsRes, tasksRes, projectsRes] = await Promise.all([
             workflowApi.getAll().catch(() => [] as Workflow[]),
             skillApi.getAll().catch(() => [] as Skill[]),
             agentApi.getAll().catch(() => [] as Agent[]),
             triggerApi.getAll().catch(() => [] as Trigger[]),
             teamApi.getAll().catch(() => [] as Team[]),
             taskApi.getAll().catch(() => [] as Task[]),
+            projectApi.getAll().catch(() => [] as Project[]),
           ])
 
           set({ workflows: workflowsRes || [] })
@@ -147,6 +157,7 @@ export const useAppStore = create<AppState>()(
           set({ triggers: triggersRes || [] })
           set({ teams: teamsRes || [] })
           set({ tasks: tasksRes || [] })
+          set({ projects: projectsRes || [] })
 
           // 加载知识库和LLM配置
           await Promise.all([
@@ -215,6 +226,41 @@ export const useAppStore = create<AppState>()(
       fetchEnvVars: async () => {
         const vars = await envVarApi.getAll().catch(() => [] as EnvVar[])
         set({ envVars: vars })
+      },
+      setProjects: (projects: Project[]) => set({ projects }),
+      fetchProjects: async () => {
+        const projects = await projectApi.getAll().catch(() => [] as Project[])
+        set({ projects })
+      },
+      addProject: async (data) => {
+        const state = get()
+        try {
+          const newProject = await projectApi.create(data)
+          set({ projects: [newProject, ...state.projects] })
+        } catch (error) {
+          console.error('创建项目失败:', error)
+          throw error
+        }
+      },
+      updateProject: async (id, updates) => {
+        const state = get()
+        try {
+          const updated = await projectApi.update(id, updates)
+          set({ projects: state.projects.map(p => p.id === id ? updated : p) })
+        } catch (error) {
+          console.error('更新项目失败:', error)
+          throw error
+        }
+      },
+      deleteProject: async (id) => {
+        const state = get()
+        try {
+          await projectApi.delete(id)
+          set({ projects: state.projects.filter(p => p.id !== id) })
+        } catch (error) {
+          console.error('删除项目失败:', error)
+          throw error
+        }
       },
       addWorkflow: async (workflow) => {
         const state = get()
@@ -734,6 +780,11 @@ export const useAppStore = create<AppState>()(
                   case 'tasks': {
                     const tasks = await taskApi.getAll().catch(() => [] as Task[])
                     set({ tasks })
+                    break
+                  }
+                  case 'projects': {
+                    const projects = await projectApi.getAll().catch(() => [] as Project[])
+                    set({ projects })
                     break
                   }
                 }

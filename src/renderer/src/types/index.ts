@@ -336,6 +336,16 @@ export interface Template {
   updatedAt: string
 }
 
+// 项目类型
+export interface Project {
+  id: string
+  name: string
+  description: string
+  workDir: string
+  createdAt: string
+  updatedAt: string
+}
+
 // 环境变量类型
 export interface EnvVar {
   id: string
@@ -378,6 +388,7 @@ export interface Task {
   restartedFrom?: string
   parentId?: string
   reviewComment?: string
+  projectId?: string
   claimedAt?: string
   completedAt?: string
   createdAt: string
