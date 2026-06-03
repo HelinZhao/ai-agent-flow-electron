@@ -4,7 +4,7 @@ import { executeApiCall } from '../api'
 import { executeCliCommand, executeCliTemplate } from '../cli'
 import { retrieveContext } from '../knowledge'
 import { mcpConnectionManager } from '../../mcp'
-import { safeJsonParse, buildSkillsContext } from '../shared'
+import { safeJsonParse, buildSkillsContext, sleep } from '../shared'
 import { DANGEROUS_TOOLS } from '../../config'
 import type { Workflow } from '../../types'
 import type { DatabaseConfig } from '../database'
@@ -879,7 +879,7 @@ async function executeText(deps: NodeExecutorDeps, ctx: ExecCtx) {
 async function executeSleep(ctx: ExecCtx) {
   const { node, input } = ctx
   const sleepMs = Math.max(0, node.data.config?.sleepMs ?? 1000)
-  if (sleepMs > 0) await new Promise(resolve => setTimeout(resolve, sleepMs))
+  if (sleepMs > 0) await sleep(sleepMs)
   return { output: input, metadata: { nodeId: node.id, label: node.data?.label, type: 'sleep', sleepMs } }
 }
 

@@ -347,6 +347,7 @@ export function useConversation() {
       if (!result.success) console.error('清空对话记录文件失败:', result.error)
     } catch { /* ignore */ }
 
+    setAutoApprovedTools(new Set())
     conversationsRef.current[agent.id] = []
     displayStartRef.current = 0
     setMessages([])

@@ -3,6 +3,8 @@ import { Worker } from 'worker_threads'
 import { SkillModel } from '../models'
 import { HumanMessage } from 'langchain'
 
+export const sleep = (ms: number) => new Promise(resolve => setTimeout(resolve, ms))
+
 export function isVisionModel(model: string): boolean {
   const lowerModel = model.toLowerCase()
   return VISION_MODEL_PATTERNS.some((pattern) => lowerModel.includes(pattern))
@@ -12,7 +14,6 @@ export interface SkillsContextResult {
   skillsContext: string
   enabledTools: string[]
 }
-
 /**
  * 根据技能 ID 列表构建技能上下文提示词，并自动注入 readSkill 工具。
  * 在 agent 对话、LLM 节点、触发器等多个调用点复用。

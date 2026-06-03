@@ -1,13 +1,13 @@
-import { BaseMessage, HumanMessage, AIMessage } from '@langchain/core/messages'
+import { BaseMessage, HumanMessage, AIMessage, RemoveMessage } from '@langchain/core/messages'
 import { LLMConfig, TokenUsage } from '../types'
 import { ChatOpenAI } from '@langchain/openai'
-import { createAgent, humanInTheLoopMiddleware } from "langchain"
-import { BaseCheckpointSaver, MemorySaver } from "@langchain/langgraph"
+import { AgentMiddleware, createAgent, createMiddleware, humanInTheLoopMiddleware } from "langchain"
+import { BaseCheckpointSaver, MemorySaver, REMOVE_ALL_MESSAGES } from "@langchain/langgraph"
 import { Command } from "@langchain/langgraph"
 import { getToolsByIds } from '../tools'
 import { llmCache } from './llmCache'
-import { HITLRequest, HITLResponse, CallLLMOptions } from './hitl'
-import { AttachmentPayload, isVisionModel } from './shared'
+import { CallLLMOptions } from './hitl'
+import { AttachmentPayload, isVisionModel, sleep } from './shared'
 import { loadAttachmentAsDataUrl } from './file'
 import { PROVIDER_DEFAULT_BASE_URLS, DEFAULT_TEMPERATURE, DEFAULT_MAX_TOKENS, MIN_MAX_TOKENS_WITH_TOOLS, LLM_MAX_RETRIES, LLM_SDK_MAX_RETRIES, LLM_RETRY_BASE_DELAY, LLM_RETRY_MAX_DELAY, LANGGRAPH_RECURSION_LIMIT_WITH_TOOLS, LANGGRAPH_RECURSION_LIMIT_NO_TOOLS, DANGEROUS_TOOLS, CHAT_MAX_HISTORY } from '../config'
 import { getCachedProxyConfig, getProxyFetch } from './proxy'
@@ -43,35 +43,27 @@ const isRetryableError = (error: any): boolean => {
   return /429|rate.?limit|quota|exceeded|connection.?error|ECONNRESET|ECONNREFUSED|ETIMEDOUT|fetch.?failed/i.test(msg)
 }
 
-const sleep = (ms: number) => new Promise(resolve => setTimeout(resolve, ms))
-
-/** 对话历史压缩：超过 CHAT_MAX_HISTORY 条时摘要旧消息并重建 checkpoint */
-async function compressConversation(
-  llm: ChatOpenAI,
-  checkpointer: BaseCheckpointSaver,
-  allMessages: BaseMessage[],
-  threadId: string,
-): Promise<void> {
-  const summarizeCount = Math.floor(allMessages.length * 0.3)
-  const toSummarize = allMessages.slice(0, summarizeCount)
-  const recentMsgs = allMessages.slice(summarizeCount)
-  const text = toSummarize
-    .map((m: any) => `[${m._getType?.() || 'message'}] ${typeof m.content === 'string' ? m.content.slice(0, 500) : '(非文本)'}`)
-    .join('\n')
-  try {
-    const summaryResp = await llm.invoke([
-      new HumanMessage(`请用中文将以下对话压缩为一段简洁的摘要，保留关键决策、结论和用户意图（不超过 300 字）：\n\n${text}`),
-    ])
-    const summary = summaryResp.content.toString()
-    await checkpointer.deleteThread(threadId)
-    const newAgent = createAgent({ model: llm, tools: [], checkpointer })
-    await newAgent.invoke(
-      { messages: [new AIMessage(`【历史摘要】\n${summary}`), ...recentMsgs] },
-      { configurable: { thread_id: threadId }, recursionLimit: LANGGRAPH_RECURSION_LIMIT_NO_TOOLS },
-    )
-  } catch (e) {
-    console.warn('[LLM] 历史压缩失败，跳过:', (e as Error).message)
-  }
+/** 超过 CHAT_MAX_HISTORY 条时压缩旧消息（LangGraph 中间件，自动同步 checkpoint） */
+function createTrimConversation(llm: ChatOpenAI) {
+  return createMiddleware({
+    name: "TrimConversation",
+    beforeModel: async (state: { messages: BaseMessage[] }) => {
+      if (!state.messages || state.messages.length <= CHAT_MAX_HISTORY) return
+      const keepCount = Math.floor(state.messages.length * 0.7)
+      const toSummarize = state.messages.slice(0, state.messages.length - keepCount)
+      const recentMsgs = state.messages.slice(-keepCount)
+      const text = toSummarize
+        .map((m: any) => `[${m._getType?.() || 'message'}] ${typeof m.content === 'string' ? m.content.slice(0, 500) : '(非文本)'}`)
+        .join('\n')
+      try {
+        const resp = await llm.invoke([new HumanMessage(`请用中文将以下对话压缩为一段简洁的摘要，保留关键决策、结论和用户意图（不超过 300 字）：\n\n${text}`)])
+        const summary = resp.content.toString()
+        return { messages: [new RemoveMessage({ id: REMOVE_ALL_MESSAGES }), new AIMessage(`【历史摘要】\n${summary}`), ...recentMsgs] }
+      } catch {
+        return { messages: [new RemoveMessage({ id: REMOVE_ALL_MESSAGES }), ...recentMsgs] }
+      }
+    },
+  })
 }
 
 function extractTokenUsage(msg: any): TokenUsage | undefined {
@@ -106,215 +98,122 @@ export const callLLM = async (ctx: CallLLMCtx): Promise<{ content: string; token
   throw lastError!
 }
 
+// ============================================================
+//  执行路径
+// ============================================================
+
 const callLLMOnce = async (ctx: CallLLMCtx): Promise<{ content: string; tokenUsage?: TokenUsage }> => {
-  const {
-    prompt, llmConfig, conversationHistory = [], enabledTools = [], attempt = 1,
-    options, attachments, extraTools = [], checkpointer, threadId,
-  } = ctx
+  const { prompt, conversationHistory = [], enabledTools = [], attempt = 1,
+    options, extraTools = [], checkpointer, threadId } = ctx
   const hasTools = enabledTools.length > 0 || (extraTools?.length ?? 0) > 0
-  const effectiveMaxTokens = hasTools
-    ? Math.max(llmConfig.maxTokens || DEFAULT_MAX_TOKENS, MIN_MAX_TOKENS_WITH_TOOLS)
-    : (llmConfig.maxTokens || DEFAULT_MAX_TOKENS)
+  const useHITL = hasTools && enabledTools.some(t => DANGEROUS_TOOLS.includes(t)) && !!options?.approvalCallback
 
-  // 加载代理配置，若开启则使用代理 fetch
-  const proxyConfig = await getCachedProxyConfig()
-  const proxyFetch = getProxyFetch(proxyConfig)
-  const llmOptions: ConstructorParameters<typeof ChatOpenAI>[0] = {
-    model: llmConfig.model,
-    temperature: llmConfig.temperature || DEFAULT_TEMPERATURE,
-    maxTokens: effectiveMaxTokens,
-    maxRetries: LLM_SDK_MAX_RETRIES,
-    apiKey: llmConfig.apiKey,
-    configuration: {
-      baseURL: getLLMEndpoint(llmConfig),
-      ...(proxyFetch !== fetch ? { fetch: proxyFetch } : {}),
-    },
-    ...(options?.cache ? { cache: llmCache } : {}),
-  }
-  const llm = new ChatOpenAI(llmOptions)
-
-  let tools = getToolsByIds(enabledTools)
-  if (extraTools?.length) {
-    tools = [...tools, ...extraTools]
-  }
-
-  // 构建 HITL 中间件：危险工具需要审批，安全工具自动放行
-  const needsApproval = enabledTools.some(t => DANGEROUS_TOOLS.includes(t))
-  const useHITL = hasTools && needsApproval && options?.approvalCallback
-
-  // 构建消息（公共逻辑，直接调用和 agent 路径共用）
-  const lastContent = conversationHistory[conversationHistory.length - 1]?.content
-  const lastContentStr = typeof lastContent === 'string'
-    ? lastContent
-    : Array.isArray(lastContent)
-      ? lastContent.filter((p: any) => p.type === 'text').map((p: any) => p.text || '').join('\n')
-      : ''
-
-  const imageAttachments = attachments?.filter(att => att.category === 'image') || []
-  const supportsVision = isVisionModel(llmConfig.model)
-  const imageDataUrls: Map<string, string> = new Map()
-  for (const att of imageAttachments) {
-    if (att.dataUrl) {
-      imageDataUrls.set(att.id, att.dataUrl)
-    } else if (att.filePath) {
-      try {
-        const dataUrl = await loadAttachmentAsDataUrl(att.filePath, att.type)
-        imageDataUrls.set(att.id, dataUrl)
-      } catch (error) {
-        console.error(`[LLM Agent] 读取图片附件 ${att.name} 失败:`, error)
-      }
-    }
-  }
-
-  const hasImages = imageDataUrls.size > 0 && supportsVision
-
-  if (hasImages) {
-    console.log(`[LLM Agent] 模型 ${llmConfig.model} 支持vision，注入${imageDataUrls.size}张图片`)
-  } else if (imageAttachments.length > 0) {
-    const imageNames = imageAttachments.map(att => att.name).join('、')
-    throw new Error(
-      `当前配置的模型「${llmConfig.model}」不支持图像识别，无法处理图片附件（${imageNames}）。` +
-      `请更换支持多模态的模型（如 gpt-4o、claude-3.5-sonnet、gemini-pro-vision 等）后再试。`
-    )
-  }
-
-  const userMessage = hasImages
-    ? new HumanMessage({
-      content: [
-        { type: 'text', text: prompt },
-        ...imageAttachments
-          .filter(att => imageDataUrls.has(att.id))
-          .map(att => ({
-            type: 'image_url' as const,
-            image_url: { url: imageDataUrls.get(att.id)! }
-          }))
-      ]
-    })
-    : new HumanMessage(prompt)
-
-  // 有 checkpointer 时只传当前消息，agent 会从 DB 自动加载历史
+  const llm = await _buildLLM(ctx)
+  const tools = [...getToolsByIds(enabledTools), ...(extraTools || [])]
+  const userMessage = await _buildUserMessage(ctx)
   const messages = checkpointer && threadId
     ? [userMessage]
-    : prompt !== lastContentStr
+    : prompt !== String(conversationHistory[conversationHistory.length - 1]?.content || "")
       ? [...conversationHistory, userMessage]
       : conversationHistory
 
-  if (attempt > 1) console.log(`[LLM Agent] 第${attempt}次重试开始`)
+  if (attempt > 1) console.log("[LLM Agent] 第" + attempt + "次重试开始")
 
-  // 无工具且无 HITL 时直接调用模型
+  if (checkpointer && threadId) return _execAgent(llm, tools, messages, hasTools, useHITL, enabledTools, options, checkpointer, threadId)
   if (!hasTools && !useHITL) {
-    // 有 checkpointer 时走 agent 路径实现持久化记忆
-    if (checkpointer && threadId) {
-      const agent = createAgent({ model: llm, tools: [], checkpointer })
-      const result = await agent.invoke({ messages }, {
-        configurable: { thread_id: threadId },
-        recursionLimit: LANGGRAPH_RECURSION_LIMIT_NO_TOOLS,
-      })
-      const lastMsg = result.messages[result.messages.length - 1]
-      const resultContent = lastMsg.content.toString()
-      const tokenUsage = extractTokenUsage(lastMsg)
-
-      if (result.messages.length > CHAT_MAX_HISTORY) {
-        await compressConversation(llm, checkpointer, result.messages, threadId)
-      }
-
-      return { content: resultContent, tokenUsage }
-    }
-    const response = await llm.invoke(messages, { signal: options?.signal }) as AIMessage
-    return { content: response.content.toString(), tokenUsage: extractTokenUsage(response) }
+    const r = await llm.invoke(messages, { signal: options?.signal })
+    return { content: r.content.toString(), tokenUsage: extractTokenUsage(r) }
   }
+  return _execAgent(llm, tools, messages, hasTools, useHITL, enabledTools, options)
+}
 
-  // 有工具或 HITL 时走 createAgent 路径
-  const interruptOn: Record<string, boolean> = {}
+/** 构建 LLM 实例（含代理、缓存） */
+async function _buildLLM(ctx: CallLLMCtx): Promise<ChatOpenAI> {
+  const { llmConfig, options } = ctx
+  const hasTools = (ctx.enabledTools?.length ?? 0) > 0 || (ctx.extraTools?.length ?? 0) > 0
+  const proxyConfig = await getCachedProxyConfig()
+  const proxyFetch = getProxyFetch(proxyConfig)
+  return new ChatOpenAI({
+    model: llmConfig.model, temperature: llmConfig.temperature || DEFAULT_TEMPERATURE,
+    maxTokens: hasTools ? Math.max(llmConfig.maxTokens || DEFAULT_MAX_TOKENS, MIN_MAX_TOKENS_WITH_TOOLS) : (llmConfig.maxTokens || DEFAULT_MAX_TOKENS),
+    maxRetries: LLM_SDK_MAX_RETRIES, apiKey: llmConfig.apiKey,
+    configuration: { baseURL: getLLMEndpoint(llmConfig), ...(proxyFetch !== fetch ? { fetch: proxyFetch } : {}) },
+    ...(options?.cache ? { cache: llmCache } : {}),
+  })
+}
+
+/** 构建用户消息（支持纯文本和 vision 图片） */
+async function _buildUserMessage(ctx: CallLLMCtx): Promise<HumanMessage> {
+  const { prompt, llmConfig, attachments } = ctx
+  const supportsVision = isVisionModel(llmConfig.model)
+  const imageAttachments = attachments?.filter(a => a.category === "image") || []
+  const imageDataUrls: Map<string, string> = new Map()
+  for (const att of imageAttachments) {
+    if (att.dataUrl) imageDataUrls.set(att.id, att.dataUrl)
+    else if (att.filePath) {
+      try { imageDataUrls.set(att.id, await loadAttachmentAsDataUrl(att.filePath, att.type)) }
+      catch (e) { console.error("[LLM] 读图失败:", e) }
+    }
+  }
+  if (imageAttachments.length > 0 && !supportsVision)
+    throw new Error("当前配置的模型不支持图像识别，无法处理图片附件")
+  if (imageDataUrls.size === 0 || !supportsVision) return new HumanMessage(prompt)
+  return new HumanMessage({
+    content: [{ type: "text", text: prompt },
+    ...imageAttachments.filter(a => imageDataUrls.has(a.id)).map(a => ({
+      type: "image_url" as const, image_url: { url: imageDataUrls.get(a.id)! }
+    }))],
+  })
+}
+
+/** 统一的 agent 执行（支持 SQLite / MemorySaver checkpointer、工具、HITL、流式） */
+async function _execAgent(
+  llm: ChatOpenAI, tools: any[], messages: BaseMessage[],
+  hasTools: boolean, useHITL: boolean, enabledTools: string[], options?: CallLLMOptions,
+  checkpointer?: BaseCheckpointSaver, threadId?: string,
+): Promise<{ content: string; tokenUsage?: TokenUsage }> {
+  // 中间件：checkpointer 路径带历史压缩，HITL 路径带审批拦截
+  const mw: AgentMiddleware[] = checkpointer ? [createTrimConversation(llm)] : []
   if (useHITL) {
-    for (const toolId of enabledTools) {
-      // 危险工具拦截，安全工具自动放行
-      interruptOn[toolId] = DANGEROUS_TOOLS.includes(toolId)
-    }
+    const io: Record<string, boolean> = {}
+    for (const t of enabledTools) io[t] = DANGEROUS_TOOLS.includes(t)
+    mw.push(humanInTheLoopMiddleware({ interruptOn: io }))
   }
+  const cp = checkpointer || (useHITL ? new MemorySaver() : undefined)
+  const agent = createAgent({ model: llm, tools, checkpointer: cp, middleware: mw })
+  const rl = hasTools ? LANGGRAPH_RECURSION_LIMIT_WITH_TOOLS : LANGGRAPH_RECURSION_LIMIT_NO_TOOLS
+  const tid = threadId || "thread-" + crypto.randomUUID()
 
-  const memoryCheckpointer = useHITL ? new MemorySaver() : undefined
-  const hitlThreadId = `thread-${Date.now()}`
-
-  const agent = createAgent({
-    model: llm,
-    tools,
-    middleware: useHITL ? [humanInTheLoopMiddleware({ interruptOn })] : [],
-    checkpointer: memoryCheckpointer,
-  });
-
-  const recursionLimit = hasTools ? LANGGRAPH_RECURSION_LIMIT_WITH_TOOLS : LANGGRAPH_RECURSION_LIMIT_NO_TOOLS
-
-  // HITL 模式：invoke + 检查 interrupt + 等待审批 + resume 循环
+  // HITL 模式：agent.invoke → 工具被拦截 → 等待用户审批 → resume 继续
   if (useHITL) {
-    let stepCount = 0
-    let result: any = await agent.invoke({ messages }, {
-      configurable: { thread_id: hitlThreadId },
-      recursionLimit,
-      signal: options?.signal,
-    })
-
-    while (result.__interrupt__ && result.__interrupt__.length > 0) {
-      // 提取 HITL 请求信息
-      const interruptValue = result.__interrupt__[0].value as HITLRequest
-      stepCount++
-      for (const action of interruptValue.actionRequests) {
-        console.log(`[LLM Agent] 步骤${stepCount} - 等待审批: ${action.name}(${JSON.stringify(action.args).substring(0, 300)})`)
-      }
-
-      // 调用审批回调，等待用户决策
-      const hitlResponse: HITLResponse = await options!.approvalCallback!(interruptValue)
-
-      // 用用户决策 resume agent
-      console.log(`[LLM Agent] 审批结果: ${hitlResponse.decisions.map(d => d.type).join(',')}`)
-      result = await agent.invoke(new Command({ resume: hitlResponse }), {
-        configurable: { thread_id: hitlThreadId },
-        recursionLimit,
-        signal: options?.signal,
-      })
-
-      // 解析 resume 后的中间步骤（工具执行结果）
-      const lastMsg = result.messages?.[result.messages.length - 1]
-      if (lastMsg) {
-        stepCount++
-        if (lastMsg.content && typeof lastMsg.content === 'string') {
-          console.log(`[LLM Agent] 步骤${stepCount} - 模型输出: ${lastMsg.content.substring(0, 200)}${lastMsg.content.length > 200 ? '...' : ''}`)
-        }
-      }
+    let result: any = await agent.invoke({ messages }, { configurable: { thread_id: tid }, recursionLimit: rl, signal: options?.signal })
+    while (result.__interrupt__?.length > 0) {
+      // 等待用户审批（前端 SSE 弹窗 → 用户点允许/拒绝）
+      const resp = await options!.approvalCallback!(result.__interrupt__[0].value)
+      result = await agent.invoke(new Command({ resume: resp }), { configurable: { thread_id: tid }, recursionLimit: rl, signal: options?.signal })
     }
-
-    const lastMsg = result.messages?.[result.messages.length - 1]
-    const finalContent = lastMsg?.content?.toString() || ''
-    if (!finalContent) {
-      console.log(`[LLM Agent] agent 返回内容为空，可能因递归限制(${recursionLimit})或步数不足被截断`)
-    }
-    console.log(`[LLM Agent] 执行完成，共${stepCount}步`)
-    return { content: finalContent, tokenUsage: extractTokenUsage(lastMsg) }
+    const lm = result.messages?.[result.messages.length - 1]
+    return { content: lm?.content?.toString() || "", tokenUsage: extractTokenUsage(lm) }
   }
 
-  // 无 HITL：stream 模式追踪每一步
+  // 有工具：stream 模式追踪每一步
   if (hasTools) {
-    let lastAgentMsg: any = null
-    let stepCount = 0
-    const stream = await agent.stream({ messages }, { recursionLimit, signal: options?.signal })
-
+    let lastMsg: any = null; let step = 0
+    const stream = await agent.stream({ messages }, { recursionLimit: rl })
     for await (const rawChunk of stream) {
-      const chunk = rawChunk as any
-      for (const [nodeName, nodeState] of Object.entries<any>(chunk)) {
+      for (const [nodeName, nodeState] of Object.entries<any>(rawChunk)) {
         if (nodeName === "model_request") {
-          const msgs = nodeState?.messages
-          const msg = Array.isArray(msgs) ? msgs[msgs.length - 1] : undefined
+          const msgs = nodeState?.messages; const msg = Array.isArray(msgs) ? msgs[msgs.length - 1] : undefined
           if (msg?.content !== undefined || msg?.tool_calls?.length) {
-            stepCount++; lastAgentMsg = msg
+            step++; lastMsg = msg
             if (msg.content && typeof msg.content === "string")
-              console.log(`[LLM Agent] 步骤${stepCount} - 模型输出: ${msg.content.substring(0, 200)}${msg.content.length > 200 ? "..." : ""}`)
+              console.log(`[LLM Agent] 步骤${step} - 模型输出: ${msg.content.substring(0, 200)}${msg.content.length > 200 ? "..." : ""}`)
             if (msg?.tool_calls?.length)
               for (const tc of msg.tool_calls)
-                console.log(`[LLM Agent] 步骤${stepCount} - 调用工具: ${tc.name}(${JSON.stringify(tc.args).substring(0, 300)})`)
+                console.log(`[LLM Agent] 步骤${step} - 调用工具: ${tc.name}(${JSON.stringify(tc.args).substring(0, 300)})`)
           }
         } else if (nodeName === "tools") {
-          const msgs = nodeState?.messages
-          const msg = Array.isArray(msgs) ? msgs[msgs.length - 1] : undefined
+          const msgs = nodeState?.messages; const msg = Array.isArray(msgs) ? msgs[msgs.length - 1] : undefined
           if (msg?.content) {
             const resultStr = typeof msg.content === "string" ? msg.content : JSON.stringify(msg.content)
             console.log(`[LLM Agent] 工具结果 (${msg.name || "unknown"}): ${resultStr.substring(0, 300)}${resultStr.length > 300 ? "..." : ""}`)
@@ -322,41 +221,29 @@ const callLLMOnce = async (ctx: CallLLMCtx): Promise<{ content: string; tokenUsa
         }
       }
     }
-    const finalContent = lastAgentMsg?.content?.toString() || ''
-    if (!finalContent) {
-      console.log(`[LLM Agent] agent 返回内容为空，可能因递归限制(${recursionLimit})或步数不足被截断`)
-    }
-    console.log(`[LLM Agent] 执行完成，共${stepCount}步`)
-    return { content: finalContent, tokenUsage: extractTokenUsage(lastAgentMsg) }
+    return { content: lastMsg?.content?.toString() || "", tokenUsage: extractTokenUsage(lastMsg) }
   }
 
-  // 无工具时直接 invoke
-  const response = await agent.invoke({ messages }, { recursionLimit, signal: options?.signal });
-  const lastMsg = response.messages[response.messages.length - 1]
-  return { content: lastMsg.content.toString(), tokenUsage: extractTokenUsage(lastMsg) }
+  // 无工具：直接 invoke
+  const r = await agent.invoke({ messages }, { recursionLimit: rl, signal: options?.signal })
+  const lm = r.messages[r.messages.length - 1]
+  return { content: lm.content.toString(), tokenUsage: extractTokenUsage(lm) }
 }
 
-/** 调用 LLM 并记录 token 用量到 usage_logs 表 */
 export async function callLLMWithTracking(ctx: CallLLMCtx): Promise<string> {
   const { executionId = '', nodeId, llmConfig } = ctx
   const provider = llmConfig.provider
   const model = llmConfig.model
   const { content, tokenUsage } = await callLLM(ctx)
   if (tokenUsage) {
-    try {
-      const { UsageLogModel } = await import('../models')
-      await UsageLogModel.create({
-        executionId,
-        nodeId,
-        provider,
-        model,
+    import('../models').then(({ UsageLogModel }) => {
+      UsageLogModel.create({
+        executionId, nodeId, provider, model,
         promptTokens: tokenUsage.promptTokens,
         completionTokens: tokenUsage.completionTokens,
         totalTokens: tokenUsage.totalTokens,
-      })
-    } catch (err) {
-      console.error('[TokenUsage] 记录失败:', err)
-    }
+      }).catch(err => console.error('[TokenUsage] 记录失败:', err))
+    }).catch(() => { })
   }
   return content
 }
