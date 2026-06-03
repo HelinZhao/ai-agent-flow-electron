@@ -2,15 +2,32 @@ import { BaseMessage, HumanMessage, AIMessage } from '@langchain/core/messages'
 import { LLMConfig, TokenUsage } from '../types'
 import { ChatOpenAI } from '@langchain/openai'
 import { createAgent, humanInTheLoopMiddleware } from "langchain"
-import { MemorySaver } from "@langchain/langgraph"
+import { BaseCheckpointSaver, MemorySaver } from "@langchain/langgraph"
 import { Command } from "@langchain/langgraph"
 import { getToolsByIds } from '../tools'
 import { llmCache } from './llmCache'
 import { HITLRequest, HITLResponse, CallLLMOptions } from './hitl'
 import { AttachmentPayload, isVisionModel } from './shared'
 import { loadAttachmentAsDataUrl } from './file'
-import { PROVIDER_DEFAULT_BASE_URLS, DEFAULT_TEMPERATURE, DEFAULT_MAX_TOKENS, MIN_MAX_TOKENS_WITH_TOOLS, LLM_MAX_RETRIES, LLM_SDK_MAX_RETRIES, LLM_RETRY_BASE_DELAY, LLM_RETRY_MAX_DELAY, LANGGRAPH_RECURSION_LIMIT_WITH_TOOLS, LANGGRAPH_RECURSION_LIMIT_NO_TOOLS, DANGEROUS_TOOLS } from '../config'
+import { PROVIDER_DEFAULT_BASE_URLS, DEFAULT_TEMPERATURE, DEFAULT_MAX_TOKENS, MIN_MAX_TOKENS_WITH_TOOLS, LLM_MAX_RETRIES, LLM_SDK_MAX_RETRIES, LLM_RETRY_BASE_DELAY, LLM_RETRY_MAX_DELAY, LANGGRAPH_RECURSION_LIMIT_WITH_TOOLS, LANGGRAPH_RECURSION_LIMIT_NO_TOOLS, DANGEROUS_TOOLS, CHAT_MAX_HISTORY } from '../config'
 import { getCachedProxyConfig, getProxyFetch } from './proxy'
+
+export interface CallLLMCtx {
+  prompt: string
+  llmConfig: LLMConfig
+  conversationHistory?: BaseMessage[]
+  enabledTools?: string[]
+  options?: CallLLMOptions
+  attachments?: AttachmentPayload[]
+  extraTools?: any[]
+  checkpointer?: BaseCheckpointSaver
+  threadId?: string
+  /** 以下用于 token 用量记录 */
+  executionId?: string
+  nodeId?: string
+  /** 内部使用：重试次数 */
+  attempt?: number
+}
 
 export const getLLMEndpoint = (llmConfig: LLMConfig): string => {
   const defaultUrl = PROVIDER_DEFAULT_BASE_URLS[llmConfig.provider]
@@ -28,6 +45,35 @@ const isRetryableError = (error: any): boolean => {
 
 const sleep = (ms: number) => new Promise(resolve => setTimeout(resolve, ms))
 
+/** 对话历史压缩：超过 CHAT_MAX_HISTORY 条时摘要旧消息并重建 checkpoint */
+async function compressConversation(
+  llm: ChatOpenAI,
+  checkpointer: BaseCheckpointSaver,
+  allMessages: BaseMessage[],
+  threadId: string,
+): Promise<void> {
+  const summarizeCount = Math.floor(allMessages.length * 0.3)
+  const toSummarize = allMessages.slice(0, summarizeCount)
+  const recentMsgs = allMessages.slice(summarizeCount)
+  const text = toSummarize
+    .map((m: any) => `[${m._getType?.() || 'message'}] ${typeof m.content === 'string' ? m.content.slice(0, 500) : '(非文本)'}`)
+    .join('\n')
+  try {
+    const summaryResp = await llm.invoke([
+      new HumanMessage(`请用中文将以下对话压缩为一段简洁的摘要，保留关键决策、结论和用户意图（不超过 300 字）：\n\n${text}`),
+    ])
+    const summary = summaryResp.content.toString()
+    await checkpointer.deleteThread(threadId)
+    const newAgent = createAgent({ model: llm, tools: [], checkpointer })
+    await newAgent.invoke(
+      { messages: [new AIMessage(`【历史摘要】\n${summary}`), ...recentMsgs] },
+      { configurable: { thread_id: threadId }, recursionLimit: LANGGRAPH_RECURSION_LIMIT_NO_TOOLS },
+    )
+  } catch (e) {
+    console.warn('[LLM] 历史压缩失败，跳过:', (e as Error).message)
+  }
+}
+
 function extractTokenUsage(msg: any): TokenUsage | undefined {
   const meta = msg?.usage_metadata
   if (meta?.input_tokens !== undefined || meta?.output_tokens !== undefined) {
@@ -40,27 +86,18 @@ function extractTokenUsage(msg: any): TokenUsage | undefined {
   return undefined
 }
 
-export const callLLM = async (
-  prompt: string,
-  llmConfig: LLMConfig,
-  conversationHistory: BaseMessage[] = [],
-  enabledTools: string[] = [],
-  options?: CallLLMOptions,
-  attachments?: AttachmentPayload[],
-  extraTools?: any[]
-): Promise<{ content: string; tokenUsage?: TokenUsage }> => {
+export const callLLM = async (ctx: CallLLMCtx): Promise<{ content: string; tokenUsage?: TokenUsage }> => {
   const maxAttempts = LLM_MAX_RETRIES
   let lastError: Error | null = null
 
   for (let attempt = 1; attempt <= maxAttempts; attempt++) {
     try {
-      return await callLLMOnce(prompt, llmConfig, conversationHistory, enabledTools, attempt, options, attachments, extraTools) as any
+      return await callLLMOnce({ ...ctx, attempt }) as any
     } catch (error) {
       lastError = error instanceof Error ? error : new Error(String(error))
       if (!isRetryableError(lastError) || attempt >= maxAttempts) {
         throw lastError
       }
-      // 429 限流需要更长等待，指数退避
       const waitSeconds = Math.min(LLM_RETRY_BASE_DELAY * Math.pow(2, attempt - 1), LLM_RETRY_MAX_DELAY)
       console.log(`[LLM Agent] 第${attempt}次执行失败(${lastError.message})，${waitSeconds}秒后重试...`)
       await sleep(waitSeconds * 1000)
@@ -69,16 +106,11 @@ export const callLLM = async (
   throw lastError!
 }
 
-const callLLMOnce = async (
-  prompt: string,
-  llmConfig: LLMConfig,
-  conversationHistory: BaseMessage[],
-  enabledTools: string[],
-  attempt: number,
-  options?: CallLLMOptions,
-  attachments?: AttachmentPayload[],
-  extraTools?: any[]
-): Promise<{ content: string; tokenUsage?: TokenUsage }> => {
+const callLLMOnce = async (ctx: CallLLMCtx): Promise<{ content: string; tokenUsage?: TokenUsage }> => {
+  const {
+    prompt, llmConfig, conversationHistory = [], enabledTools = [], attempt = 1,
+    options, attachments, extraTools = [], checkpointer, threadId,
+  } = ctx
   const hasTools = enabledTools.length > 0 || (extraTools?.length ?? 0) > 0
   const effectiveMaxTokens = hasTools
     ? Math.max(llmConfig.maxTokens || DEFAULT_MAX_TOKENS, MIN_MAX_TOKENS_WITH_TOOLS)
@@ -160,14 +192,34 @@ const callLLMOnce = async (
     })
     : new HumanMessage(prompt)
 
-  const messages = prompt !== lastContentStr
-    ? [...conversationHistory, userMessage]
-    : conversationHistory
+  // 有 checkpointer 时只传当前消息，agent 会从 DB 自动加载历史
+  const messages = checkpointer && threadId
+    ? [userMessage]
+    : prompt !== lastContentStr
+      ? [...conversationHistory, userMessage]
+      : conversationHistory
 
   if (attempt > 1) console.log(`[LLM Agent] 第${attempt}次重试开始`)
 
-  // 无工具且无 HITL 时直接调用模型，绕过 createAgent 避免 LangGraph 注入动态元数据破坏缓存
+  // 无工具且无 HITL 时直接调用模型
   if (!hasTools && !useHITL) {
+    // 有 checkpointer 时走 agent 路径实现持久化记忆
+    if (checkpointer && threadId) {
+      const agent = createAgent({ model: llm, tools: [], checkpointer })
+      const result = await agent.invoke({ messages }, {
+        configurable: { thread_id: threadId },
+        recursionLimit: LANGGRAPH_RECURSION_LIMIT_NO_TOOLS,
+      })
+      const lastMsg = result.messages[result.messages.length - 1]
+      const resultContent = lastMsg.content.toString()
+      const tokenUsage = extractTokenUsage(lastMsg)
+
+      if (result.messages.length > CHAT_MAX_HISTORY) {
+        await compressConversation(llm, checkpointer, result.messages, threadId)
+      }
+
+      return { content: resultContent, tokenUsage }
+    }
     const response = await llm.invoke(messages, { signal: options?.signal }) as AIMessage
     return { content: response.content.toString(), tokenUsage: extractTokenUsage(response) }
   }
@@ -181,14 +233,14 @@ const callLLMOnce = async (
     }
   }
 
-  const checkpointer = useHITL ? new MemorySaver() : undefined
-  const threadId = `thread-${Date.now()}`
+  const memoryCheckpointer = useHITL ? new MemorySaver() : undefined
+  const hitlThreadId = `thread-${Date.now()}`
 
   const agent = createAgent({
     model: llm,
     tools,
     middleware: useHITL ? [humanInTheLoopMiddleware({ interruptOn })] : [],
-    checkpointer,
+    checkpointer: memoryCheckpointer,
   });
 
   const recursionLimit = hasTools ? LANGGRAPH_RECURSION_LIMIT_WITH_TOOLS : LANGGRAPH_RECURSION_LIMIT_NO_TOOLS
@@ -197,7 +249,7 @@ const callLLMOnce = async (
   if (useHITL) {
     let stepCount = 0
     let result: any = await agent.invoke({ messages }, {
-      configurable: { thread_id: threadId },
+      configurable: { thread_id: hitlThreadId },
       recursionLimit,
       signal: options?.signal,
     })
@@ -216,7 +268,7 @@ const callLLMOnce = async (
       // 用用户决策 resume agent
       console.log(`[LLM Agent] 审批结果: ${hitlResponse.decisions.map(d => d.type).join(',')}`)
       result = await agent.invoke(new Command({ resume: hitlResponse }), {
-        configurable: { thread_id: threadId },
+        configurable: { thread_id: hitlThreadId },
         recursionLimit,
         signal: options?.signal,
       })
@@ -285,20 +337,11 @@ const callLLMOnce = async (
 }
 
 /** 调用 LLM 并记录 token 用量到 usage_logs 表 */
-export async function callLLMWithTracking(
-  executionId: string,
-  nodeId: string | undefined,
-  provider: string,
-  model: string,
-  prompt: string,
-  llmConfig: LLMConfig,
-  conversationHistory?: BaseMessage[],
-  enabledTools?: string[],
-  options?: CallLLMOptions,
-  attachments?: AttachmentPayload[],
-  extraTools?: any[],
-): Promise<string> {
-  const { content, tokenUsage } = await callLLM(prompt, llmConfig, conversationHistory, enabledTools, options, attachments, extraTools)
+export async function callLLMWithTracking(ctx: CallLLMCtx): Promise<string> {
+  const { executionId = '', nodeId, llmConfig } = ctx
+  const provider = llmConfig.provider
+  const model = llmConfig.model
+  const { content, tokenUsage } = await callLLM(ctx)
   if (tokenUsage) {
     try {
       const { UsageLogModel } = await import('../models')

@@ -174,7 +174,7 @@ async function executeSkill(_: NodeExecutorDeps, ctx: ExecCtx) {
     }
     const skillContent = `${skill.name}\n\n描述: ${skill.description}\n\n内容: ${skill.content}`
     const prompt = `${skillContent}\n\n当前用户输入: ${input}\n\n请根据以上技能内容处理用户输入，只返回处理后的结果，不要重复用户输入的内容。如果只是传递信息，请简洁地总结或转换，避免重复。`
-    const result = await callLLMWithTracking(ctx.executionId, ctx.node.id, llmConfig.provider, llmConfig.model, prompt, llmConfig, conversationHistory, [], undefined, attachments)
+    const result = await callLLMWithTracking({ executionId: ctx.executionId, nodeId: ctx.node.id, llmConfig, prompt, conversationHistory, attachments })
     return { output: result, metadata: { nodeId: node.id, label: node.data?.label, type: 'skill', skillId: node.data.config.skillId, skillName: skill.name } }
   } catch (error) {
     const errorMsg = error instanceof Error ? error.message : '技能执行失败'
@@ -241,7 +241,7 @@ async function executeApi(deps: NodeExecutorDeps, ctx: ExecCtx) {
 
     const apiResult = await executeApiCall(resolvedApiConfig)
     const processPrompt = `请处理以下API调用结果，并结合原始输入给出最终答案:\n\n原始输入: ${input}\n\nAPI结果: ${JSON.stringify(apiResult, null, 2)}`
-    const result = await callLLMWithTracking(ctx.executionId, ctx.node.id, llmConfig.provider, llmConfig.model, processPrompt, llmConfig)
+    const result = await callLLMWithTracking({ executionId: ctx.executionId, nodeId: ctx.node.id, llmConfig, prompt: processPrompt })
 
     return { output: result, metadata: { nodeId: node.id, label: node.data?.label, type: 'api', apiUrl: node.data.config.apiConfig.url, apiResult } }
   } catch (error) {
@@ -648,7 +648,7 @@ async function executeLLM(deps: NodeExecutorDeps, ctx: ExecCtx) {
         }
       : {}
 
-    const result = await callLLMWithTracking(executionId, node.id, llmConfig.provider, llmConfig.model, promptWithSkills, llmConfig, conversationHistory, allEnabledTools, { ...options, cache: node.data.config?.enableCache ?? false }, attachments)
+    const result = await callLLMWithTracking({ executionId, nodeId: node.id, llmConfig, prompt: promptWithSkills, conversationHistory, enabledTools: allEnabledTools, options: { ...options, cache: node.data.config?.enableCache ?? false }, attachments })
     return { output: result, metadata: { nodeId: node.id, label: node.data?.label, type: 'llm', prompt: promptTemplate, variables: variablesMap } }
   } catch (error) {
     if (error instanceof ExecutionTerminatedError) throw error
@@ -702,7 +702,7 @@ async function executeCli(deps: NodeExecutorDeps, ctx: ExecCtx) {
       const processPrompt = cliConfig.llmProcessPrompt
         ? cliConfig.llmProcessPrompt.replace(/\{\{output\}\}/g, rawOutput)
         : `请分析以下命令输出并提取关键信息:\n\n${rawOutput}`
-      const llmResult = await callLLMWithTracking(ctx.executionId, ctx.node.id, llmConfig.provider, llmConfig.model, processPrompt, llmConfig)
+      const llmResult = await callLLMWithTracking({ executionId: ctx.executionId, nodeId: ctx.node.id, llmConfig, prompt: processPrompt })
       return { output: llmResult, metadata: { nodeId: node.id, label: node.data?.label, type: 'cli', command: executedCommand, rawOutput, exitCode: result.exitCode, outputMode: 'llm_process' } }
     }
 

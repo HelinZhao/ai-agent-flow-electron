@@ -66,12 +66,7 @@ async function callAgent(
     finalTools = updatedTools
   }
 
-  return await callLLMWithTracking(
-    executionId, nodeId,
-    agentLlmConfig.provider, agentLlmConfig.model,
-    finalPrompt, agentLlmConfig,
-    undefined, finalTools, { signal, approvalCallback }, undefined,
-  )
+  return await callLLMWithTracking({ executionId, nodeId, llmConfig: agentLlmConfig, prompt: finalPrompt, enabledTools: finalTools, options: { signal, approvalCallback } })
 }
 
 function buildMemberListText(agentMap: Map<string, any>, memberIds: string[]): string {

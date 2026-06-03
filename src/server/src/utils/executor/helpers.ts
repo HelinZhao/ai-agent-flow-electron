@@ -193,7 +193,7 @@ ${conditionText}
 5. 返回格式必须严格：要么是条件的序号，要么是"null"
 
 请严格按照以上规则进行评估，只输出结果：`
-    const { content: result } = await callLLM(prompt, llmConfig, undefined, undefined, { cache: true })
+    const { content: result } = await callLLM({ prompt, llmConfig, options: { cache: true } })
     const cleanResult = result.trim().replace(/[\s\n\r.,，。!！?？;；]/g, '')
     const isValidResult = !Number.isNaN(Number(cleanResult))
     return isValidResult ? branches[Number(cleanResult) - 1].id : 'null'

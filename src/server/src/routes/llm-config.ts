@@ -233,7 +233,7 @@ router.post('/test-connection', async (req, res) => {
       apiKey
     }
 
-    const { content: result } = await callLLM('请回复"测试成功', llmConfig)
+    const { content: result } = await callLLM({ prompt: '请回复"测试成功', llmConfig })
     if (result) {
       return res.status(200).json({
         success: true,
