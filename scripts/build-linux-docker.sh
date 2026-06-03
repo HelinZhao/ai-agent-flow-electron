@@ -4,16 +4,19 @@ set -e
 
 WORK_DIR="/project"
 
-docker build \
-  -f - \
-  -t ai-agent-flow-builder \
-  - <<'DOCKERFILE'
+TMP_DOCKERFILE=$(mktemp /tmp/dockerfile-XXXXXX)
+cat > "$TMP_DOCKERFILE" <<'DOCKERFILE'
 FROM electronuserland/builder:20-wine
 
 # 安装 Rust（lancedb 需要从源码编译）
 RUN curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y
 ENV PATH="/root/.cargo/bin:${PATH}"
 DOCKERFILE
+docker build \
+  -f "$TMP_DOCKERFILE" \
+  -t ai-agent-flow-builder \
+  .
+rm -f "$TMP_DOCKERFILE"
 
 docker run --rm -ti \
   -v "$(pwd):$WORK_DIR" \
@@ -22,6 +25,7 @@ docker run --rm -ti \
   ai-agent-flow-builder \
   bash -c '
     set -e
+    rm -rf node_modules
     npm install --build-from-source
     node scripts/download-model.mjs
     npm run build
