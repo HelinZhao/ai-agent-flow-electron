@@ -166,6 +166,20 @@ async function _buildUserMessage(ctx: CallLLMCtx): Promise<HumanMessage> {
   })
 }
 
+/** 从 invoke 结果中提取并打印工具调用 */
+function _logToolCalls(result: any, prefix: string): void {
+  const msgs = result?.messages || []
+  for (const m of msgs) {
+    if (m?.tool_calls?.length) {
+      for (const tc of m.tool_calls)
+        console.log(`[LLM Agent] ${prefix} 调用工具: ${tc.name}(${JSON.stringify(tc.args).substring(0, 300)})`)
+    }
+    if (m?.content && typeof m.content === 'string' && msgs.indexOf(m) === msgs.length - 1) {
+      console.log(`[LLM Agent] ${prefix} 模型回复: ${m.content.substring(0, 200)}${m.content.length > 200 ? '...' : ''}`)
+    }
+  }
+}
+
 /** 统一的 agent 执行（支持 SQLite / MemorySaver checkpointer、工具、HITL、流式） */
 async function _execAgent(
   llm: ChatOpenAI, tools: any[], messages: BaseMessage[],
@@ -186,11 +200,18 @@ async function _execAgent(
 
   // HITL 模式：agent.invoke → 工具被拦截 → 等待用户审批 → resume 继续
   if (useHITL) {
+    let stepCount = 0
     let result: any = await agent.invoke({ messages }, { configurable: { thread_id: tid }, recursionLimit: rl, signal: options?.signal })
+    // 打印本次 invoke 中的所有工具调用
+    _logToolCalls(result, '')
     while (result.__interrupt__?.length > 0) {
+      stepCount++
+      for (const action of result.__interrupt__[0].value.actionRequests)
+        console.log(`[LLM Agent] 步骤${stepCount} - 等待审批: ${action.name}(${JSON.stringify(action.args).substring(0, 300)})`)
       // 等待用户审批（前端 SSE 弹窗 → 用户点允许/拒绝）
       const resp = await options!.approvalCallback!(result.__interrupt__[0].value)
       result = await agent.invoke(new Command({ resume: resp }), { configurable: { thread_id: tid }, recursionLimit: rl, signal: options?.signal })
+      _logToolCalls(result, '审批后')
     }
     const lm = result.messages?.[result.messages.length - 1]
     return { content: lm?.content?.toString() || "", tokenUsage: extractTokenUsage(lm) }
