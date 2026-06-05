@@ -21,7 +21,7 @@ export const API_CONTENT_TYPE = 'application/json'
 // ========== 应用信息 ==========
 
 /** 应用版本号 */
-export const APP_VERSION = '2.3.0'
+export const APP_VERSION = '2.4.0'
 
 /** 应用名称 */
 export const APP_NAME = 'Agent Flow'

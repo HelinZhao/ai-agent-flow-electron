@@ -22,7 +22,9 @@ AI Agent Flow Electron 是一个基于 Electron + React + TypeScript 的**桌面
 
 ### 🤖 多 Agent 系统
 - 创建标准 Agent（绑定技能/工具）和工作流 Agent（关联子工作流）
+- 支持自定义头像上传（JPG/PNG/GIF，本地化存储于 userData/avatars/）
 - 多轮对话上下文记忆，支持文件附件传输
+- 对话列表右键菜单：顶置 Agent（持久化排序）和新建对话
 - 无工作流时自动降级为 LLM 对话
 
 ### 🔄 可视化工作流
@@ -56,7 +58,7 @@ AI Agent Flow Electron 是一个基于 Electron + React + TypeScript 的**桌面
 - **LLM 缓存** — 自研 TTL 缓存，相同 Prompt 10 分钟内命中缓存，节省 API 费用
 - **表达式系统** — {{$input}}、{{$params.xxx}}、{{$nodes["id"].output}}、{{$env.xxx}}、{{$global.xxx}}、{{$now}} 等内置变量，所有模板字段通用
 - **环境变量管理** — 工作流级 {{$env.xxx}} + 全局级 {{$global.xxx}}，双层隔离，设置页面可视化 CRUD
-- **项目模块** — 创建项目绑定本地工作目录，任务关联后 Agent 执行时自动注入目录上下文，一键打开文件管理器
+- **项目模块** — 创建项目绑定本地工作目录，任务关联后 Agent 执行时自动注入目录上下文，一键打开文件管理器。卡片风格统一靛蓝/紫色主题。
 - **任务池** — 完整状态流转（草稿→待处理→已指派→执行中→待验收→已完成），子任务层级、驳回审核意见、自动重派团队
 - **SSE 实时同步** — 多窗口间数据变更自动同步
 - **🤖 系统 AI 助手** — 悬浮式全局 AI 助手，可拖拽移动，随时对话，支持工具调用和 HITL 审批
@@ -194,11 +196,12 @@ npm run download-model
 ai-agent-flow-electron/
 ├── src/
 │   ├── main/                    # Electron 主进程
+│   │   └── ipc/                 # IPC 处理程序（chatRecord/avatar 等）
 │   ├── preload/                 # 预加载桥接脚本
 │   ├── renderer/                # 渲染进程 (React)
 │   │   ├── assets/              # 样式、图片等静态资源
 │   │   ├── components/
-│   │   │   ├── ui/              # 通用组件 (Button/Modal/Pagination/Select...)
+│   │   │   ├── ui/              # 通用组件 (Button/Modal/Pagination/Select/Avatar...)
 │   │   │   ├── layout/          # 布局组件 (Sidebar/Nav/WindowControls)
 │   │   │   ├── workflow/        # 工作流相关组件 (节点配置面板/节点渲染)
 │   │   │   ├── agents/          # Agent 表单和详情
@@ -259,6 +262,12 @@ ai-agent-flow-electron/
 | POST | `/api/agents` | 创建 Agent |
 | PUT | `/api/agents/:id` | 更新 Agent |
 | DELETE | `/api/agents/:id` | 删除 Agent |
+
+### 静态资源
+| 方法 | 路径 | 说明 |
+|------|------|------|
+| GET | `/api/attachments/:id/:filename` | 附件文件（对话上传的文件） |
+| GET | `/api/avatars/:filename` | Agent 头像图片（支持 1 年浏览器缓存） |
 
 ### 团队
 | 方法 | 路径 | 说明 |
@@ -403,11 +412,15 @@ interface LLMConfig {
 interface Agent {
   id: string
   name: string
+  description: string
+  instructions: string
   type: 'standard' | 'workflow'
-  systemPrompt?: string
   skillIds?: string[]
-  tools?: string[]
+  enabledTools?: string[]
   workflowId?: string
+  llmConfigId?: string
+  avatarUrl?: string       // 头像 URL（/api/avatars/uuid.ext 或 data: URL）
+  isSystem?: boolean
   createdAt: Date
   updatedAt: Date
 }
@@ -436,6 +449,13 @@ this.app.use('/api/new-route', newRouter)
 ---
 
 ## 更新日志
+
+### v2.4.0
+
+- **Agent 头像系统**：新增头像上传（CustomFileUpload + IPC 写入 userData/avatars/ 目录），Express 头像服务路由（`/api/avatars/:filename`），Avatar 通用组件（自动补全 URL / 彩色首字母 / emoji 兜底 / 圆方形状配置）
+- **Chat 页 AI 列表右键菜单**：新增顶置 Agent（持久化排序，已顶置排前面）和新对话（清空记忆 + 切换选中）
+- **项目卡片风格对齐团队页**：蓝色/青色主题改为靛蓝/紫色，操作按钮改为右上角浮动面板，新增右下角 Chevron 箭头，改用 ResponsiveGrid 布局
+- **Avatar 组件抽取**：统一 AgentListSidebar/AgentDetail/AgentCard/ChatMessage 四处的头像渲染
 
 ### v2.3.0
 

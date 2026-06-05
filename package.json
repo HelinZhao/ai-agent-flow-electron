@@ -1,6 +1,6 @@
 {
   "name": "ai-agent-flow-electron",
-  "version": "2.3.0",
+  "version": "2.4.0",
   "type": "module",
   "description": "An Electron application with React and TypeScript",
   "license": "Anti-Commercial",
