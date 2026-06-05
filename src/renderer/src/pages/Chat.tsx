@@ -11,7 +11,7 @@ import CustomButton from '@renderer/components/ui/CustomButton';
 import CustomInput from '@renderer/components/ui/CustomInput';
 
 export default function Chat(): React.JSX.Element {
-  const { agents, activeLLMConfig } = useAppStore();
+  const { agents, activeLLMConfig, pinnedAgentIds, togglePinAgent } = useAppStore();
   const [searchTerm, setSearchTerm] = useState('');
   const [showSearch, setShowSearch] = useState(false);
   const [messageSearch, setMessageSearch] = useState('');
@@ -33,7 +33,7 @@ export default function Chat(): React.JSX.Element {
     pendingApproval,
     sentHistory,
     sendMessage, handleApprove, handleAutoApprove, handleTerminate,
-    startNewChat, clearCurrentchatRecord, regenerate,
+    startNewChat, startNewChatForAgent, clearCurrentchatRecord, regenerate,
     loadMoreMessages, hasMoreMessages,
     messagesEndRef: convMessagesEndRef,
     searchAllMessages,
@@ -197,6 +197,9 @@ export default function Chat(): React.JSX.Element {
           searchTerm={searchTerm}
           onSearchChange={setSearchTerm}
           onSelectAgent={setSelectedAgent}
+          onTogglePin={togglePinAgent}
+          onNewChat={(agent) => startNewChatForAgent(agent)}
+          pinnedAgentIds={pinnedAgentIds}
           draftAgentIds={draftAgentIds}
           unreadAgentIds={unreadAgentIds}
           pendingAgentIds={pendingAgentIds}

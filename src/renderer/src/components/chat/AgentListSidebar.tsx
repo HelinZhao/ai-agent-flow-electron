@@ -1,4 +1,5 @@
-import React from 'react'
+import React, { useState, useRef, useEffect } from 'react'
+import { createPortal } from 'react-dom'
 import { Agent } from '@renderer/types'
 import CustomInput from '@renderer/components/ui/CustomInput'
 
@@ -8,6 +9,9 @@ interface AgentListSidebarProps {
   searchTerm: string
   onSearchChange: (value: string) => void
   onSelectAgent: (agent: Agent) => void
+  onTogglePin?: (agentId: string) => void
+  onNewChat?: (agent: Agent) => void
+  pinnedAgentIds?: string[]
   draftAgentIds?: Set<string>
   unreadAgentIds?: Set<string>
   pendingAgentIds?: Set<string>
@@ -38,11 +42,38 @@ export default function AgentListSidebar({
   searchTerm,
   onSearchChange,
   onSelectAgent,
+  onTogglePin,
+  onNewChat,
+  pinnedAgentIds,
   draftAgentIds,
   unreadAgentIds,
   pendingAgentIds,
 }: AgentListSidebarProps): React.JSX.Element {
-  const filteredAgents = agents.filter(agent =>
+  const [contextMenu, setContextMenu] = useState<{ x: number; y: number; agent: Agent } | null>(null)
+  const menuRef = useRef<HTMLDivElement>(null)
+
+  // 点击/右键别处关闭菜单
+  useEffect(() => {
+    if (!contextMenu) return
+    const handleClose = () => setContextMenu(null)
+    document.addEventListener('click', handleClose)
+    document.addEventListener('contextmenu', handleClose)
+    return () => {
+      document.removeEventListener('click', handleClose)
+      document.removeEventListener('contextmenu', handleClose)
+    }
+  }, [contextMenu])
+
+  const isPinned = (id: string) => pinnedAgentIds?.includes(id) ?? false
+
+  // 排序：已顶置的 Agent 排在前面
+  const sortedAgents = [...agents].sort((a, b) => {
+    const aPinned = isPinned(a.id) ? 1 : 0
+    const bPinned = isPinned(b.id) ? 1 : 0
+    return bPinned - aPinned
+  })
+
+  const filteredAgents = sortedAgents.filter(agent =>
     agent.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
     (agent.description && agent.description.toLowerCase().includes(searchTerm.toLowerCase()))
   )
@@ -95,6 +126,11 @@ export default function AgentListSidebar({
                   : 'text-gray-700 dark:text-gray-300 bg-transparent hover:bg-gray-100 dark:hover:bg-gray-800/70'
                 }`}
               onClick={() => onSelectAgent(agent)}
+              onContextMenu={(e) => {
+                e.preventDefault()
+                e.stopPropagation()
+                setContextMenu({ x: e.clientX, y: e.clientY, agent })
+              }}
             >
               {isActive && (
                 <span className="absolute left-0 top-1/2 -translate-y-1/2 w-0.5 h-4 bg-blue-600 dark:bg-blue-400 rounded-full" />
@@ -111,6 +147,11 @@ export default function AgentListSidebar({
               <div className="text-left min-w-0 flex-1 relative">
                 <div className="text-sm font-medium truncate leading-tight flex items-center gap-1.5">
                   {agent.name}
+                  {isPinned(agent.id) && (
+                    <svg className="w-3 h-3 text-amber-500 shrink-0 rotate-45" viewBox="0 0 24 24" fill="currentColor" stroke="none">
+                      <path d="M16 12V4h1V2H7v2h1v8l-2 2v2h5.2v6h1.6v-6H18v-2l-2-2z" />
+                    </svg>
+                  )}
                   {agent.isSystem && (
                     <span className="inline-flex items-center px-1 py-0.5 text-[9px] font-medium rounded-full bg-amber-100 dark:bg-amber-900/30 text-amber-700 dark:text-amber-300 border border-amber-200 dark:border-amber-700 leading-none">
                       系统
@@ -167,6 +208,51 @@ export default function AgentListSidebar({
           </div>
         )}
       </nav>
+
+      {/* 右键菜单 */}
+      {contextMenu && createPortal(
+        <div
+          ref={menuRef}
+          className="fixed bg-white dark:bg-gray-800 rounded-lg shadow-xl border border-gray-200 dark:border-gray-600 py-1 z-50 min-w-[140px]"
+          style={{ left: contextMenu.x, top: contextMenu.y }}
+          onClick={(e) => e.stopPropagation()}
+        >
+          <button
+            onClick={() => { onTogglePin?.(contextMenu.agent.id); setContextMenu(null) }}
+            className="w-full px-3 py-2 text-left text-sm flex items-center gap-2 hover:bg-gray-50 dark:hover:bg-gray-700 text-gray-700 dark:text-gray-300 transition-colors"
+          >
+            {isPinned(contextMenu.agent.id) ? (
+              <>
+                <svg className="w-4 h-4 text-amber-500" viewBox="0 0 24 24" fill="currentColor" stroke="none">
+                  <path d="M16 12V4h1V2H7v2h1v8l-2 2v2h5.2v6h1.6v-6H18v-2l-2-2z" />
+                </svg>
+                取消顶置
+              </>
+            ) : (
+              <>
+                <svg className="w-4 h-4 text-gray-400" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <path d="M12 2v10l4 4" />
+                  <path d="M12 12l-4 4" />
+                  <path d="M4 22h16" />
+                </svg>
+                顶置 Agent
+              </>
+            )}
+          </button>
+          <div className="border-t border-gray-200 dark:border-gray-600 my-1" />
+          <button
+            onClick={() => { onNewChat?.(contextMenu.agent); setContextMenu(null) }}
+            className="w-full px-3 py-2 text-left text-sm flex items-center gap-2 hover:bg-gray-50 dark:hover:bg-gray-700 text-gray-700 dark:text-gray-300 transition-colors"
+          >
+            <svg className="w-4 h-4 text-gray-400" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <path d="M12 5v14" />
+              <path d="M5 12h14" />
+            </svg>
+            新对话
+          </button>
+        </div>,
+        document.body
+      )}
     </div>
   )
 }

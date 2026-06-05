@@ -19,6 +19,7 @@ interface AppState {
   currentPage: string
   loading: boolean
   error: string | null
+  pinnedAgentIds: string[]
 
   // 初始化数据
   initialize: () => Promise<void>
@@ -28,6 +29,7 @@ interface AppState {
   updateWorkflow: (id: string, updates: Partial<Workflow>) => Promise<void>
   deleteWorkflow: (id: string) => Promise<void>
   setCurrentPage: (page: string) => void
+  togglePinAgent: (agentId: string) => void
 
   // Skill actions
   addSkill: (skill: Omit<Skill, 'id' | 'createdAt' | 'updatedAt'>) => Promise<void>
@@ -128,6 +130,7 @@ export const useAppStore = create<AppState>()(
       envVars: [],
       projects: [],
       currentPage: '/',
+      pinnedAgentIds: [],
       loading: false,
       error: null,
 
@@ -326,6 +329,16 @@ export const useAppStore = create<AppState>()(
 
       setCurrentPage: (page) => {
         set({ currentPage: page })
+      },
+
+      togglePinAgent: (agentId: string) => {
+        const state = get()
+        const { pinnedAgentIds } = state
+        if (pinnedAgentIds.includes(agentId)) {
+          set({ pinnedAgentIds: pinnedAgentIds.filter(id => id !== agentId) })
+        } else {
+          set({ pinnedAgentIds: [...pinnedAgentIds, agentId] })
+        }
       },
 
       addSkill: async (skill) => {

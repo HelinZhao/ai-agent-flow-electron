@@ -332,6 +332,27 @@ export function useConversation() {
     setPendingApproval(null)
   }, [currentExecutionId])
 
+  // 从右键菜单开始新对话：先清空目标Agent的记录再切换过去
+  const startNewChatForAgent = useCallback(async (agent: Agent) => {
+    if (!window.confirm(
+      `确定要开始新对话吗？\n\n这将清除与 ${agent.name} 的所有对话记录，同时清除AI的记忆（包括之前的对话上下文）。此操作不可恢复。`,
+    )) return false
+
+    try { await workflowExecutionApi.deleteThread(agent.id) } catch { /* ignore */ }
+    try {
+      const result = await chatRecordApi.deleteRecord(agent.id)
+      if (!result.success) console.error('清空对话记录文件失败:', result.error)
+    } catch { /* ignore */ }
+
+    setAutoApprovedTools(new Set())
+    conversationsRef.current[agent.id] = []
+    displayStartRef.current = 0
+
+    // 切换到该 Agent（会从 conversationsRef 中加载空数组）
+    switchAgent(agent)
+    return true
+  }, [switchAgent])
+
   const startNewChat = useCallback(async () => {
     const agent = selectedAgent
     if (!agent) return
@@ -420,7 +441,7 @@ export function useConversation() {
     pendingApproval, autoApprovedTools, setAutoApprovedTools,
     sentHistory,
     sendMessage, handleApprove, handleAutoApprove, handleTerminate,
-    startNewChat, clearCurrentchatRecord, regenerate,
+    startNewChat, startNewChatForAgent, clearCurrentchatRecord, regenerate,
     loadMoreMessages, hasMoreMessages,
     scrollToBottom, messagesEndRef, searchAllMessages,
   }
