@@ -26,12 +26,18 @@ router.post('/', async (req, res) => {
       return res.status(400).json({ error: '标题和描述不能为空' })
     }
     const taskStatus = (status === 'draft' || status === 'pending') ? status : 'pending'
+    // 子任务继承父任务的 projectId
+    let resolvedProjectId = projectId || undefined
+    if (parentId && !resolvedProjectId) {
+      const parent = await TaskModel.findByPk(parentId)
+      if (parent?.projectId) resolvedProjectId = parent.projectId
+    }
     const task = await TaskModel.create({
       title, description,
       priority: priority ?? 1,
       status: taskStatus,
       parentId: parentId || undefined,
-      projectId: projectId || undefined,
+      projectId: resolvedProjectId,
     } as any)
     changeNotifier.emitChange('tasks')
     return res.status(201).json(task)

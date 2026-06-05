@@ -71,6 +71,7 @@ interface GitAPI {
 
 interface FileAPI {
   write: (filePath: string, data: string) => Promise<{ success: boolean; error?: string }>
+  exists: (filePath: string) => Promise<boolean>
 }
 
 interface DialogAPI {

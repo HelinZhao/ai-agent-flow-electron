@@ -249,6 +249,11 @@ app.whenReady().then(() => {
     return await shell.openPath(filePath)
   })
 
+  // 检查文件/目录是否存在
+  ipcMain.handle('file:exists', async (_, filePath: string) => {
+    return existsSync(filePath)
+  })
+
   // 写入文件
   ipcMain.handle('file:write', async (_, filePath: string, data: string) => {
     return new Promise<{ success: boolean; error?: string }>((resolve) => {

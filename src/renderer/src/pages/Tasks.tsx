@@ -122,7 +122,13 @@ export default function Tasks() {
   const tasks = filtered.slice((safePage - 1) * PAGE_SIZE, safePage * PAGE_SIZE)
 
   const handleCreate = createForm.handleSubmit(async (data) => {
-    await taskApi.create({ title: data.title, description: data.description, priority: data.priority, status: data.status, parentId: data.parentId || undefined })
+    // 子任务继承父任务的 projectId
+    let projectId = data.projectId
+    if (data.parentId && !projectId) {
+      const parent = allTasks.find(t => t.id === data.parentId)
+      if (parent?.projectId) projectId = parent.projectId
+    }
+    await taskApi.create({ title: data.title, description: data.description, priority: data.priority, status: data.status, parentId: data.parentId || undefined, projectId: projectId || undefined })
     createForm.reset()
     setShowCreate(false)
   })

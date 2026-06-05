@@ -6,6 +6,7 @@ const api = {
   // 文件操作
   file: {
     write: (filePath: string, data: string) => ipcRenderer.invoke('file:write', filePath, data),
+    exists: (filePath: string) => ipcRenderer.invoke('file:exists', filePath),
   },
   // 文件对话框
   dialog: {
