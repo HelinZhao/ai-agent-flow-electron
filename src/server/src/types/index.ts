@@ -84,6 +84,7 @@ export interface Agent {
   enabledTools?: string[]
   workflowId?: string
   llmConfigId?: string
+  avatarUrl?: string
   createdAt: Date
   updatedAt: Date
 }

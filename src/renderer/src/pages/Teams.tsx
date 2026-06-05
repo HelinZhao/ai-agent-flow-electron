@@ -265,7 +265,7 @@ export default function Teams() {
       </div>
 
       {/* Cards / Empty state */}
-      {filteredTeams.length > 0 ? (
+      {filteredTeams.length === 0 ? (
         <ResponsiveGrid>
           {filteredTeams.map(team => (
             <TeamCard
@@ -292,7 +292,7 @@ export default function Teams() {
           ) : (
             <>
               <div className="flex items-center justify-center w-20 h-20 rounded-2xl bg-gradient-to-br from-indigo-100 to-purple-100 dark:from-indigo-900/30 dark:to-purple-900/30 mb-6">
-                <span className="text-4xl">👥</span>
+                <TeamIcon className='w-10 h-10'/>
               </div>
               <h3 className="text-xl font-semibold text-gray-900 dark:text-white mb-2">
                 还没有团队

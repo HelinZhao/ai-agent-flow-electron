@@ -100,6 +100,11 @@ async function migrateAgentColumns(): Promise<void> {
       await sequelize.query(`ALTER TABLE agents ADD COLUMN llmConfigId INTEGER DEFAULT 0;`)
       console.log('[Migration] llmConfigId 列添加成功')
     }
+    if (!tableInfo.avatarUrl) {
+      console.log('[Migration] agents 表缺少 avatarUrl 列，执行迁移...')
+      await sequelize.query(`ALTER TABLE agents ADD COLUMN avatarUrl TEXT;`)
+      console.log('[Migration] avatarUrl 列添加成功')
+    }
   } catch (error) {
     console.log('[Migration] 跳过 agents isSystem 列迁移:', (error as Error).message)
   }

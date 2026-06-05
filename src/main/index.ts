@@ -5,6 +5,7 @@ import { electronApp, optimizer, is } from '@electron-toolkit/utils'
 import icon from '../../resources/icon.png?asset'
 import { LocalServer } from '../server/src'
 import { setupChatRecordIPC } from './ipc/chatRecord'
+import { setupAvatarIPC } from './ipc/avatar'
 import dotenv from 'dotenv'
 import os from 'os'
 import {
@@ -118,6 +119,7 @@ app.whenReady().then(() => {
 
   // 设置IPC处理程序
   setupChatRecordIPC()
+  setupAvatarIPC()
 
   // 为Windows设置应用程序用户模型ID
   electronApp.setAppUserModelId('com.electron')

@@ -15,21 +15,23 @@ interface LayoutProps {
 }
 const isElectron = Boolean(window.electron || window.api)
 
-const MainArea = memo(({ currentPage, children, navItems }: {
+const MainArea = memo(function MainArea({ currentPage, children, navItems }: {
   currentPage: string
   children: React.ReactNode
   navItems: { path: string; label: string; icon: React.ReactNode, page: React.ReactNode }[]
-}) => (
-  <main className="flex-1 overflow-auto relative">
-    <div className="absolute inset-0 bg-grid-pattern opacity-5 dark:opacity-10"></div>
-    {children}
-    {navItems.map((item) => (
-      <div key={item.path} className={`relative z-10 h-full ${currentPage === item.path ? '' : 'hidden'}`}>
-        {item.page}
-      </div>
-    ))}
-  </main>
-))
+}) {
+  return (
+    <main className="flex-1 overflow-auto relative">
+      <div className="absolute inset-0 bg-grid-pattern opacity-5 dark:opacity-10"></div>
+      {children}
+      {navItems.map((item) => (
+        <div key={item.path} className={`relative z-10 h-full ${currentPage === item.path ? '' : 'hidden'}`}>
+          {item.page}
+        </div>
+      ))}
+    </main>
+  );
+})
 
 const Layout: React.FC<LayoutProps> = ({ navItems, currentPage, onNavigate, children }) => {
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false)

@@ -8,6 +8,11 @@ interface ServerAPI {
   status: () => Promise<{ running: boolean; port: number | null; url: string | null }>
 }
 
+interface AvatarAPI {
+  save: (dataUrl: string) => Promise<{ success: boolean; urlPath?: string; error?: string }>
+  delete: (urlPath: string) => Promise<{ success: boolean; error?: string }>
+}
+
 interface ChatRecordAPI {
   saveRecord: (agentId: string, agentName: string, messages: any[]) => Promise<any>
   loadRecord: (agentId: string) => Promise<any>
@@ -85,6 +90,7 @@ interface ShellAPI {
 
 interface CustomAPI {
   server: ServerAPI
+  avatar: AvatarAPI
   chatRecord: ChatRecordAPI
   notify: NotifyAPI
   window: WindowAPI

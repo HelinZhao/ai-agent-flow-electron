@@ -10,6 +10,7 @@ import CustomInput from '@renderer/components/ui/CustomInput';
 import CustomTextarea from '@renderer/components/ui/CustomTextarea';
 import CustomSelect from '@renderer/components/ui/CustomSelect';
 import CustomButton from '@renderer/components/ui/CustomButton';
+import CustomFileUpload from '@renderer/components/ui/CustomFileUpload';
 import ItemPickerModal from '@renderer/components/ui/ItemPickerModal';
 import AiAssistButton from '@renderer/components/AiAssistButton';
 import type { FrontendAction } from '@renderer/lib/frontendActionBus';
@@ -26,6 +27,7 @@ export interface AgentFormData {
   enabledTools: string[]
   workflowId: string
   llmConfigId: string
+  avatarUrl: string
 }
 
 interface AgentFormProps {
@@ -79,6 +81,7 @@ export default function AgentForm({ agent, skills, workflows, onSave, onCancel, 
           enabledTools: agent.enabledTools || [],
           workflowId: agent.workflowId || '',
           llmConfigId: agent.llmConfigId || '',
+          avatarUrl: agent.avatarUrl || '',
         }
       : {
           name: '',
@@ -89,6 +92,7 @@ export default function AgentForm({ agent, skills, workflows, onSave, onCancel, 
           enabledTools: [],
           workflowId: '',
           llmConfigId: '',
+          avatarUrl: '',
         },
   );
   const [isLoading, setIsLoading] = useState(false);
@@ -134,6 +138,7 @@ export default function AgentForm({ agent, skills, workflows, onSave, onCancel, 
   const AGENT_SCHEMA: Record<string, string> = {
     name: 'Agent 名称',
     description: 'Agent 描述',
+    avatarUrl: '头像图片 URL',
     instructions: '系统提示词，定义 Agent 的行为和角色',
     type: '类型，standard 为标准 Agent，workflow 为工作流 Agent',
     skillIds: '绑定的技能 ID 数组',
@@ -177,6 +182,59 @@ export default function AgentForm({ agent, skills, workflows, onSave, onCancel, 
                     placeholder="简要描述这个 Agent 的用途"
                     rows={2}
                   />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5">头像（可选）</label>
+                  <div className="flex items-center gap-4">
+                    {/* 头像预览 */}
+                    <div className="flex-shrink-0 w-14 h-14 rounded-xl overflow-hidden border border-gray-200 dark:border-gray-600 bg-gray-50 dark:bg-gray-800 flex items-center justify-center">
+                      {formData.avatarUrl ? (
+                        <img src={formData.avatarUrl} alt="头像" className="w-full h-full object-cover" />
+                      ) : (
+                        <svg className="w-6 h-6 text-gray-300 dark:text-gray-600" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5">
+                          <path d="M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z" />
+                        </svg>
+                      )}
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <CustomFileUpload
+                        accept="image/*"
+                        onChange={async (e) => {
+                          const file = e.target.files?.[0]
+                          if (!file) return
+                          try {
+                            const dataUrl = await new Promise<string>((resolve, reject) => {
+                              const reader = new FileReader()
+                              reader.onload = () => resolve(reader.result as string)
+                              reader.onerror = () => reject(reader.error)
+                              reader.readAsDataURL(file)
+                            })
+                            updateField({ avatarUrl: dataUrl })
+                          } catch (err) {
+                            console.error('读取头像文件失败:', err)
+                          }
+                          e.target.value = ''
+                        }}
+                        size="sm"
+                        variant="secondary"
+                      >
+                        上传图片
+                      </CustomFileUpload>
+                      {formData.avatarUrl && (
+                        <button
+                          type="button"
+                          onClick={() => updateField({ avatarUrl: '' })}
+                          className="flex items-center justify-center w-8 h-8 rounded-lg text-gray-400 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors"
+                          title="移除头像"
+                        >
+                          <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                            <path d="M3 6h18" /><path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6" /><path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2" />
+                          </svg>
+                        </button>
+                      )}
+                    </div>
+                  </div>
+                  <p className="text-xs text-gray-400 dark:text-gray-500 mt-1">支持 JPG、PNG、GIF 等常见图片格式，建议使用正方形图片</p>
                 </div>
               </div>
             </section>

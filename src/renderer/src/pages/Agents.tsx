@@ -3,6 +3,7 @@ import { useAppStore } from '@renderer/store/appStore';
 import { Agent } from '@renderer/types';
 import CustomInput from '@renderer/components/ui/CustomInput';
 import CustomButton from '@renderer/components/ui/CustomButton';
+import Avatar from '@renderer/components/ui/Avatar';
 import ResponsiveGrid from '@renderer/components/ui/ResponsiveGrid';
 import AgentForm, { AgentFormData } from '@renderer/components/agents/AgentForm';
 import AgentDetail from '@renderer/components/agents/AgentDetail';
@@ -45,9 +46,13 @@ const AgentCard = React.memo(function AgentCard({
         {/* Header */}
         <div className="flex items-start justify-between mb-2">
           <div className="flex items-center gap-2.5 min-w-0">
-            <div className={`flex items-center justify-center w-9 h-9 rounded-lg ${isSystem ? 'bg-gradient-to-br from-amber-50 to-orange-50 dark:from-amber-900/30 dark:to-orange-900/30' : 'bg-gradient-to-br from-blue-50 to-purple-50 dark:from-blue-900/30 dark:to-purple-900/30'} flex-shrink-0`}>
-              <span className="text-base">{isSystem ? '✨' : '🤖'}</span>
-            </div>
+            <Avatar
+              src={agent.avatarUrl}
+              name={agent.name}
+              size="md"
+              isSystem={isSystem}
+              fallbackIcon={isSystem ? '✨' : '🤖'}
+            />
             <div className="min-w-0">
               <h4 className="text-sm font-semibold text-gray-900 dark:text-white truncate">
                 {agent.name}
@@ -186,11 +191,24 @@ export default function Agents(): React.JSX.Element {
       return
     }
 
+    // 如果是 base64 data URL，先通过 IPC 保存到磁盘
+    let avatarUrl = formData.avatarUrl
+    if (avatarUrl && avatarUrl.startsWith('data:')) {
+      const result = await window.api.avatar.save(avatarUrl)
+      if (result.success && result.urlPath) {
+        avatarUrl = result.urlPath
+      } else {
+        console.error('头像上传失败:', result.error)
+        avatarUrl = ''
+      }
+    }
+
     const payload = {
       name: formData.name,
       description: formData.description,
       instructions: formData.instructions,
       type: formData.type,
+      avatarUrl: avatarUrl || undefined,
       llmConfigId: formData.llmConfigId || undefined,
       ...(formData.type === 'standard'
         ? { skillIds: formData.skillIds, enabledTools: formData.enabledTools }

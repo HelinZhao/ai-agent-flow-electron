@@ -2,6 +2,7 @@ import React, { useState, useRef, useEffect } from 'react'
 import { createPortal } from 'react-dom'
 import { Agent } from '@renderer/types'
 import CustomInput from '@renderer/components/ui/CustomInput'
+import Avatar from '@renderer/components/ui/Avatar'
 
 interface AgentListSidebarProps {
   agents: Agent[]
@@ -15,25 +16,6 @@ interface AgentListSidebarProps {
   draftAgentIds?: Set<string>
   unreadAgentIds?: Set<string>
   pendingAgentIds?: Set<string>
-}
-
-const AGENT_COLORS: { bg: string; muted: string }[] = [
-  { bg: 'linear-gradient(135deg, #3b82f6, #2563eb)', muted: '#3b82f6' },
-  { bg: 'linear-gradient(135deg, #8b5cf6, #7c3aed)', muted: '#8b5cf6' },
-  { bg: 'linear-gradient(135deg, #10b981, #059669)', muted: '#10b981' },
-  { bg: 'linear-gradient(135deg, #f59e0b, #d97706)', muted: '#f59e0b' },
-  { bg: 'linear-gradient(135deg, #f43f5e, #e11d48)', muted: '#f43f5e' },
-  { bg: 'linear-gradient(135deg, #06b6d4, #0891b2)', muted: '#06b6d4' },
-  { bg: 'linear-gradient(135deg, #f97316, #ea580c)', muted: '#f97316' },
-  { bg: 'linear-gradient(135deg, #ec4899, #db2777)', muted: '#ec4899' },
-]
-
-function getAgentColor(name: string) {
-  let hash = 0
-  for (let i = 0; i < name.length; i++) {
-    hash = name.charCodeAt(i) + ((hash << 5) - hash)
-  }
-  return AGENT_COLORS[Math.abs(hash) % AGENT_COLORS.length]
 }
 
 export default function AgentListSidebar({
@@ -116,14 +98,12 @@ export default function AgentListSidebar({
       <nav className="flex-1 px-2 pt-3 pb-3 space-y-0.5 overflow-y-auto">
         {filteredAgents.map(agent => {
           const isActive = selectedAgent?.id === agent.id
-          const color = getAgentColor(agent.name)
-          const initial = agent.name.charAt(0).toUpperCase()
           return (
             <button
               key={agent.id}
               className={`w-full flex items-center gap-2.5 px-2.5 py-2.5 text-sm rounded-lg transition-all duration-150 group relative ${isActive
-                  ? 'bg-blue-50/80 dark:bg-blue-500/10 text-blue-700 dark:text-blue-300 shadow-sm'
-                  : 'text-gray-700 dark:text-gray-300 bg-transparent hover:bg-gray-100 dark:hover:bg-gray-800/70'
+                ? 'bg-blue-50/80 dark:bg-blue-500/10 text-blue-700 dark:text-blue-300 shadow-sm'
+                : 'text-gray-700 dark:text-gray-300 bg-transparent hover:bg-gray-100 dark:hover:bg-gray-800/70'
                 }`}
               onClick={() => onSelectAgent(agent)}
               onContextMenu={(e) => {
@@ -136,22 +116,16 @@ export default function AgentListSidebar({
                 <span className="absolute left-0 top-1/2 -translate-y-1/2 w-0.5 h-4 bg-blue-600 dark:bg-blue-400 rounded-full" />
               )}
               {/* 头像 */}
-              <span
-                className="flex items-center justify-center w-7 h-7 rounded-lg flex-shrink-0 text-md font-bold transition-all"
-                style={{ background: isActive ? color.bg : `${color.muted}33` }}
-              >
-                <span className={isActive ? 'text-white' : 'text-gray-600 dark:text-gray-300 transition-colors'}>
-                  {initial}
-                </span>
-              </span>
+              <Avatar
+                src={agent.avatarUrl}
+                name={agent.name}
+                size="sm"
+                active={isActive}
+                className="[&:not(:has(img))]:!text-md [&:not(:has(img))]:!font-bold"
+              />
               <div className="text-left min-w-0 flex-1 relative">
                 <div className="text-sm font-medium truncate leading-tight flex items-center gap-1.5">
                   {agent.name}
-                  {isPinned(agent.id) && (
-                    <svg className="w-3 h-3 text-amber-500 shrink-0 rotate-45" viewBox="0 0 24 24" fill="currentColor" stroke="none">
-                      <path d="M16 12V4h1V2H7v2h1v8l-2 2v2h5.2v6h1.6v-6H18v-2l-2-2z" />
-                    </svg>
-                  )}
                   {agent.isSystem && (
                     <span className="inline-flex items-center px-1 py-0.5 text-[9px] font-medium rounded-full bg-amber-100 dark:bg-amber-900/30 text-amber-700 dark:text-amber-300 border border-amber-200 dark:border-amber-700 leading-none">
                       系统
@@ -176,6 +150,12 @@ export default function AgentListSidebar({
                   </div>
                 )}
               </div>
+              {/* 顶置图标 - 右上角 */}
+              {isPinned(agent.id) && (
+                <svg className="absolute top-2 right-2 w-3 h-3 text-amber-400 rotate-45" viewBox="0 0 24 24" fill="currentColor" stroke="none">
+                  <path d="M16 12V4h1V2H7v2h1v8l-2 2v2h5.2v6h1.6v-6H18v-2l-2-2z" />
+                </svg>
+              )}
             </button>
           )
         })}
@@ -230,10 +210,8 @@ export default function AgentListSidebar({
               </>
             ) : (
               <>
-                <svg className="w-4 h-4 text-gray-400" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                  <path d="M12 2v10l4 4" />
-                  <path d="M12 12l-4 4" />
-                  <path d="M4 22h16" />
+                <svg className="w-3 h-3 text-amber-500 shrink-0 rotate-45" viewBox="0 0 24 24" fill="currentColor" stroke="none">
+                  <path d="M16 12V4h1V2H7v2h1v8l-2 2v2h5.2v6h1.6v-6H18v-2l-2-2z" />
                 </svg>
                 顶置 Agent
               </>

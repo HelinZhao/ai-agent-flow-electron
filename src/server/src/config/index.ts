@@ -31,6 +31,9 @@ export const UPLOAD_DIR = '/uploads'
 /** 附件存储目录（相对于 resourcesDir） */
 export const ATTACHMENT_DIR = '/attachments'
 
+/** 头像存储目录 */
+export const AVATAR_DIR = '/avatars'
+
 // ========== LLM 默认参数 ==========
 
 /** 默认 LLM 温度参数 */

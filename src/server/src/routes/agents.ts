@@ -37,7 +37,7 @@ router.get('/', async (req, res) => {
 // 创建智能体
 router.post('/', async (req, res) => {
   try {
-    const { name, description, instructions, type, skillIds, enabledTools, workflowId, llmConfigId } = req.body
+    const { name, description, instructions, type, skillIds, enabledTools, workflowId, llmConfigId, avatarUrl } = req.body
 
     if (!name || !description || !instructions) {
       return res.status(400).json({ error: '名称、描述和指令不能为空' })
@@ -51,7 +51,8 @@ router.post('/', async (req, res) => {
       skillIds: skillIds ? JSON.stringify(skillIds) : undefined,
       enabledTools: enabledTools ? JSON.stringify(enabledTools) : undefined,
       workflowId: type === 'workflow' ? workflowId : undefined,
-      llmConfigId
+      llmConfigId,
+      avatarUrl
     })
 
     return res.status(201).json(formatAgent(agent.toJSON()))
@@ -82,7 +83,7 @@ router.get('/:id', async (req, res) => {
 router.put('/:id', async (req, res) => {
   try {
     const { id } = req.params
-    const { name, description, instructions, type, skillIds, enabledTools, workflowId, llmConfigId } = req.body
+    const { name, description, instructions, type, skillIds, enabledTools, workflowId, llmConfigId, avatarUrl } = req.body
 
     const agent = await AgentModel.findByPk(id)
     if (!agent) {
@@ -108,6 +109,7 @@ router.put('/:id', async (req, res) => {
     if (description !== undefined) updateData.description = description
     if (instructions !== undefined) updateData.instructions = instructions
     if (type !== undefined) updateData.type = type
+    if (avatarUrl !== undefined) updateData.avatarUrl = avatarUrl || null
     if (skillIds !== undefined) updateData.skillIds = skillIds ? JSON.stringify(skillIds) : null
     if (enabledTools !== undefined) updateData.enabledTools = enabledTools ? JSON.stringify(enabledTools) : null
     if (workflowId !== undefined) updateData.workflowId = type === 'workflow' ? workflowId : null

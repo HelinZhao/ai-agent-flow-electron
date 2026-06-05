@@ -29,6 +29,7 @@ import {
   SERVER_PORT,
   BODY_SIZE_LIMIT,
   ATTACHMENT_DIR,
+  AVATAR_DIR,
   ATTACHMENT_CONTENT_TYPES,
   API_VERSION,
   API_DISPLAY_NAME,
@@ -221,6 +222,25 @@ export class LocalServer {
         res.end(data)
       } catch {
         res.status(404).json({ error: '附件文件不存在' })
+      }
+    })
+
+    // 头像文件服务：/api/avatars/:filename
+    this.app.get('/api/avatars/:filename', async (req, res) => {
+      const { filename } = req.params
+      if (filename.includes('..') || filename.includes('/')) {
+        return res.status(400).json({ error: '非法的文件名' })
+      }
+      const filePath = path.resolve(getUserDataDir(AVATAR_DIR), filename)
+
+      try {
+        const data = await fs.readFile(filePath)
+        const ext = path.extname(filename).toLowerCase()
+        res.setHeader('Content-Type', ATTACHMENT_CONTENT_TYPES[ext] || 'application/octet-stream')
+        res.setHeader('Cache-Control', 'public, max-age=31536000')
+        res.end(data)
+      } catch {
+        res.status(404).json({ error: '头像文件不存在' })
       }
     })
 

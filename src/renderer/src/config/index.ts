@@ -4,12 +4,16 @@
  */
 
 // ========== API 连接 ==========
+export const HOSTNAME = window.location.hostname
+
+/** 后端服务端口 */
+export const SERVER_PORT = 3100
 
 /** 后端服务地址 */
-export const API_BASE_URL = 'http://localhost:3100/api'
+export const API_BASE_URL = `http://${HOSTNAME}:${SERVER_PORT}/api`
 
 /** 后端服务根地址（不带 /api 前缀，用于附件 URL 等） */
-export const SERVER_BASE_URL = 'http://localhost:3100'
+export const SERVER_BASE_URL = `http://${HOSTNAME}:${SERVER_PORT}`
 
 /** 默认请求 Content-Type */
 export const API_CONTENT_TYPE = 'application/json'
@@ -266,7 +270,7 @@ export const CRON_PRESETS = [
 ]
 
 /** Webhook 基础 URL */
-export const WEBHOOK_BASE_URL = 'http://localhost:3100/webhook'
+export const WEBHOOK_BASE_URL = `http://${HOSTNAME}:${SERVER_PORT}/webhook`
 
 // ========== 工具定义（ID → 中文标签映射） ==========
 

@@ -101,6 +101,7 @@ export interface Agent {
   workflowId?: string
   llmConfigId?: string
   isSystem?: boolean
+  avatarUrl?: string
   createdAt: Date
   updatedAt: Date
 }

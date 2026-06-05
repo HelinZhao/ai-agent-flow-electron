@@ -11,6 +11,7 @@ export interface AgentAttributes {
   enabledTools?: string
   workflowId?: string
   llmConfigId?: string
+  avatarUrl?: string
   isSystem?: boolean
   createdAt: Date
   updatedAt: Date
@@ -34,6 +35,7 @@ export class AgentModel
   declare enabledTools?: string
   declare workflowId?: string
   declare llmConfigId?: string
+  declare avatarUrl?: string
   declare isSystem?: boolean
   declare createdAt: Date
   declare updatedAt: Date
@@ -76,6 +78,10 @@ AgentModel.init(
     },
     llmConfigId: {
       type: DataTypes.UUID,
+      allowNull: true
+    },
+    avatarUrl: {
+      type: DataTypes.STRING,
       allowNull: true
     },
     isSystem: {

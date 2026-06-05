@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { Agent, Skill } from '@renderer/types';
 import { TOOL_LABEL_MAP } from '@renderer/config';
+import Avatar from '@renderer/components/ui/Avatar';
 import MarkdownPreview from '@renderer/components/MarkdownPreview';
 import { mcpApi } from '@renderer/lib/mcpApi';
 import GitHistoryForEntity from '@renderer/components/git/GitHistoryForEntity';
@@ -65,9 +66,13 @@ export default function AgentDetail({ agent, skills, workflowName, llmConfigName
       <div className={`relative overflow-hidden rounded-xl border border-gray-200/50 dark:border-gray-700/50 p-6 mb-6 ${isSystem ? 'bg-gradient-to-br from-amber-500/10 via-transparent to-orange-500/10 dark:from-amber-500/5 dark:to-orange-500/5' : 'bg-gradient-to-br from-blue-500/10 via-transparent to-purple-500/10 dark:from-blue-500/5 dark:to-purple-500/5'}`}>
         <div className="flex items-start justify-between">
           <div className="flex items-start gap-4">
-            <div className={`flex items-center justify-center w-14 h-14 rounded-xl shadow-lg flex-shrink-0 ${isSystem ? 'bg-gradient-to-br from-amber-400 to-orange-500' : 'bg-gradient-to-br from-blue-500 to-purple-600'}`}>
-              <span className="text-2xl text-white">{isSystem ? '✨' : '🤖'}</span>
-            </div>
+            <Avatar
+              src={agent.avatarUrl}
+              name={agent.name}
+              size="lg"
+              isSystem={isSystem}
+              fallbackIcon={isSystem ? '✨' : '🤖'}
+            />
             <div>
               <div className="flex items-center gap-2 mb-1">
                 <h2 className="text-xl font-bold text-gray-900 dark:text-white">{agent.name}</h2>

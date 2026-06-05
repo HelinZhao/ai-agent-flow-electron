@@ -25,6 +25,11 @@ const api = {
     stop: () => ipcRenderer.invoke('server:stop'),
     status: () => ipcRenderer.invoke('server:status')
   },
+  // 头像API
+  avatar: {
+    save: (dataUrl: string) => ipcRenderer.invoke('avatar:save', dataUrl),
+    delete: (urlPath: string) => ipcRenderer.invoke('avatar:delete', urlPath),
+  },
   // 对话记录API
   chatRecord: {
     saveRecord: (agentId: string, agentName: string, messages: any[]) =>
