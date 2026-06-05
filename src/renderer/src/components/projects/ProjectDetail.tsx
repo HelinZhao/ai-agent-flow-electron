@@ -8,7 +8,7 @@ const STATUS_LABEL: Record<string, string> = {
 }
 const STATUS_COLOR: Record<string, string> = {
   draft: 'bg-gray-100 dark:bg-gray-700 text-gray-500 dark:text-gray-400 border-gray-200 dark:border-gray-600',
-  pending: 'bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-400 border-gray-200 dark:border-gray-600',
+  pending: 'bg-sky-50 dark:bg-sky-900/20 text-sky-600 dark:text-sky-400 border-sky-200 dark:border-sky-800',
   assigned: 'bg-indigo-50 dark:bg-indigo-900/20 text-indigo-600 dark:text-indigo-400 border-indigo-200 dark:border-indigo-800',
   claimed: 'bg-blue-50 dark:bg-blue-900/20 text-blue-600 dark:text-blue-400 border-blue-200 dark:border-blue-800',
   pending_review: 'bg-amber-50 dark:bg-amber-900/20 text-amber-600 dark:text-amber-400 border-amber-200 dark:border-amber-800',
@@ -16,7 +16,7 @@ const STATUS_COLOR: Record<string, string> = {
   failed: 'bg-red-50 dark:bg-red-900/20 text-red-600 dark:text-red-400 border-red-200 dark:border-red-800',
 }
 const STATUS_BAR_COLOR: Record<string, string> = {
-  pending: 'bg-gray-400', assigned: 'bg-indigo-400', claimed: 'bg-blue-400',
+  pending: 'bg-sky-400', assigned: 'bg-indigo-400', claimed: 'bg-blue-400',
   pending_review: 'bg-amber-400', completed: 'bg-emerald-400', failed: 'bg-red-400', draft: 'bg-gray-300',
 }
 

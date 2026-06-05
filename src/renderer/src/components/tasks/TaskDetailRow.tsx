@@ -3,6 +3,7 @@ import type { Task } from '@renderer/types'
 import MarkdownPreview from '@renderer/components/MarkdownPreview'
 import SectionHeader from './SectionHeader'
 import StatusIcon from '@renderer/components/ui/StatusIcon'
+import CopyButton from '@renderer/components/ui/CopyButton'
 import { useTeamExecutionStore } from '@renderer/store/teamExecutionStore'
 import type { ExecutionEvent } from '@renderer/store/teamExecutionStore'
 import type { Project } from '@renderer/types'
@@ -81,7 +82,7 @@ const STATUS_LABEL: Record<string, string> = {
 
 const STATUS_COLOR: Record<string, string> = {
   draft: 'bg-gray-100 dark:bg-gray-700 text-gray-500 dark:text-gray-400 border-gray-200 dark:border-gray-600',
-  pending: 'bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-400 border-gray-200 dark:border-gray-600',
+  pending: 'bg-sky-50 dark:bg-sky-900/20 text-sky-600 dark:text-sky-400 border-sky-200 dark:border-sky-800',
   assigned: 'bg-indigo-50 dark:bg-indigo-900/20 text-indigo-600 dark:text-indigo-400 border-indigo-200 dark:border-indigo-800',
   claimed: 'bg-blue-50 dark:bg-blue-900/20 text-blue-600 dark:text-blue-400 border-blue-200 dark:border-blue-800',
   pending_review: 'bg-amber-50 dark:bg-amber-900/20 text-amber-600 dark:text-amber-400 border-amber-200 dark:border-amber-800',
@@ -160,8 +161,11 @@ function ExecutionIdCard({ task }: { task: Task }) {
   return (
     <div className="bg-white/60 dark:bg-gray-900/40 rounded-lg border border-gray-200 dark:border-gray-700/50 p-3.5">
       <SectionHeader icon={IconResult} label="执行 ID" />
-      <div className="text-[10px] text-gray-600 dark:text-gray-400 font-mono truncate" title={task.executionId}>
-        {task.executionId}
+      <div className="flex items-center gap-1">
+        <span className="text-xs text-gray-600 dark:text-gray-400 font-mono truncate flex-1" title={task.executionId}>
+          {task.executionId}
+        </span>
+        <CopyButton text={task.executionId} />
       </div>
     </div>
   )
@@ -184,7 +188,7 @@ function ProjectCard({ task, getProject }: { task: Task; getProject: (projectId?
         {project.name}
       </div>
       <div className="flex items-center gap-1 mt-1">
-        <span className="text-[10px] text-gray-400 dark:text-gray-500 truncate flex-1" title={project.workDir}>
+        <span className="text-xs text-gray-400 dark:text-gray-500 truncate flex-1" title={project.workDir}>
           {project.workDir}
         </span>
         <button
@@ -313,7 +317,7 @@ function TeamExecutionProgress({ executionId, teamId }: { executionId: string; t
 
 /* ---------- main component ---------- */
 
-export default function TaskDetailRow({ task, colSpan, getTeamName, getParentTask, getProject, projects, allTasks, onCancel, onApprove, onReject, onRestart, onClose }: TaskDetailRowProps) {
+export default function TaskDetailRow({ task, colSpan, getTeamName, getParentTask, getProject, allTasks, onCancel, onApprove, onReject, onRestart, onClose }: TaskDetailRowProps) {
   const showCancel = task.status === 'claimed' || task.status === 'assigned' || task.status === 'pending_review'
   const showRestart = task.status === 'completed' || task.status === 'failed' || task.status === 'pending_review'
   const showApproveReject = task.status === 'pending_review'

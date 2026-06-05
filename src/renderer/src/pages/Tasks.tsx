@@ -28,7 +28,7 @@ const STATUS_LABEL: Record<string, string> = {
 
 const STATUS_COLOR: Record<string, string> = {
   draft: 'bg-gray-100 dark:bg-gray-700 text-gray-500 dark:text-gray-400 border-gray-200 dark:border-gray-600',
-  pending: 'bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-400 border-gray-200 dark:border-gray-600',
+  pending: 'bg-sky-50 dark:bg-sky-900/20 text-sky-600 dark:text-sky-400 border-sky-200 dark:border-sky-800',
   assigned: 'bg-indigo-50 dark:bg-indigo-900/20 text-indigo-600 dark:text-indigo-400 border-indigo-200 dark:border-indigo-800',
   claimed: 'bg-blue-50 dark:bg-blue-900/20 text-blue-600 dark:text-blue-400 border-blue-200 dark:border-blue-800',
   pending_review: 'bg-amber-50 dark:bg-amber-900/20 text-amber-600 dark:text-amber-400 border-amber-200 dark:border-amber-800',
@@ -71,6 +71,7 @@ const TASK_SCHEMA: Record<string, string> = {
 export default function Tasks() {
   const { teams, projects, tasks: allTasks } = useAppStore()
   const [statusFilter, setStatusFilter] = useState<string>('')
+  const [priorityFilter, setPriorityFilter] = useState<number | ''>('')
   const [page, setPage] = useState(1)
   const [showCreate, setShowCreate] = useState(false)
   const [expandedId, setExpandedId] = useState<string | null>(null)
@@ -115,7 +116,9 @@ export default function Tasks() {
     setPage(1)
   }
 
-  const filtered = (statusFilter ? allTasks.filter(t => t.status === statusFilter) : allTasks)
+  const filtered = allTasks
+    .filter(t => !statusFilter || t.status === statusFilter)
+    .filter(t => priorityFilter === '' || t.priority === priorityFilter)
     .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())
   const totalPages = Math.max(1, Math.ceil(filtered.length / PAGE_SIZE))
   const safePage = Math.min(page, totalPages)
@@ -247,6 +250,19 @@ export default function Tasks() {
             {s.label}
           </CustomButton>
         ))}
+        <CustomSelect
+          value={String(priorityFilter)}
+          onChange={v => setPriorityFilter(v === '' ? '' : Number(v))}
+          options={[
+            { value: '', label: '全部优先级' },
+            { value: '0', label: '低' },
+            { value: '1', label: '普通' },
+            { value: '2', label: '高' },
+            { value: '3', label: '紧急' },
+          ]}
+          size="sm"
+          className="ml-auto w-[130px]"
+        />
       </div>
 
       {/* Table area */}
@@ -297,7 +313,7 @@ export default function Tasks() {
                 </thead>
                 <tbody className="divide-y divide-gray-200 dark:divide-gray-700">
                   {tasks.map(task => (
-                      <Fragment key={task.id}>
+                    <Fragment key={task.id}>
                       {/* Main row */}
                       <tr
                         className={`hover:bg-gray-50/80 dark:hover:bg-gray-800/30 cursor-pointer transition-colors even:bg-gray-50/40 dark:even:bg-gray-800/20 ${expandedId === task.id ? '!bg-blue-100 dark:!bg-blue-900/20' : ''
@@ -317,16 +333,17 @@ export default function Tasks() {
                         <td className="px-4 py-3 font-medium text-gray-900 dark:text-white truncate max-w-[280px]">
                           <div className="flex items-center gap-1.5">
                             {task.parentId && (
-                              <span className="flex-shrink-0 inline-flex items-center" title={getParentTask(task.parentId)?.title || '子任务'}>
-                                <svg className="w-3.5 h-3.5 text-gray-400 dark:text-gray-500" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                                  <path d="M7 7h10v10" />
-                                  <path d="M7 17L17 7" />
-                                </svg>
+                              <span className="flex-shrink-0 inline-flex items-center justify-center w-5 h-5 rounded-full bg-blue-500 text-white text-[11px] font-bold leading-none" title={`${getParentTask(task.parentId)?.title || '未知'} 的子任务`}>
+                                子
                               </span>
                             )}
                             <span className="truncate">{task.title}</span>
                             {task.projectId && getProject(task.projectId) && (
-                              <span className="flex-shrink-0 inline-flex items-center gap-1 px-1.5 py-0.5 text-[10px] font-medium rounded bg-blue-50 dark:bg-blue-900/20 text-blue-500 dark:text-blue-400 border border-blue-200 dark:border-blue-800 ml-1">
+                              <span
+                                onClick={(e) => { e.stopPropagation(); window.api.shell.openPath(getProject(task.projectId)!.workDir) }}
+                                title={`打开目录: ${getProject(task.projectId)?.workDir}`}
+                                className="flex-shrink-0 inline-flex items-center gap-1 px-1.5 py-0.5 text-[10px] font-medium rounded bg-blue-50 dark:bg-blue-900/20 text-blue-500 dark:text-blue-400 border border-blue-200 dark:border-blue-800 ml-1 cursor-pointer hover:bg-blue-100 dark:hover:bg-blue-900/40 transition-colors"
+                              >
                                 <svg className="w-2.5 h-2.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
                                   <path d="M22 19a2 2 0 01-2 2H4a2 2 0 01-2-2V5a2 2 0 012-2h5l2 3h9a2 2 0 012 2z" />
                                 </svg>

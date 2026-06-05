@@ -651,7 +651,7 @@ export const taskApi = {
   getAll: (status?: string): Promise<Task[]> =>
     api.get('/tasks' + (status ? `?status=${status}` : '')),
   getById: (id: string): Promise<Task> => api.get(`/tasks/${id}`),
-  create: (data: { title: string; description: string; priority?: number; status?: string; parentId?: string }): Promise<Task> =>
+  create: (data: { title: string; description: string; priority?: number; status?: string; parentId?: string; projectId?: string }): Promise<Task> =>
     api.post('/tasks', data),
   update: (id: string, data: Partial<Task>): Promise<Task> => api.put(`/tasks/${id}`, data),
   delete: (id: string): Promise<void> => api.delete(`/tasks/${id}`),

@@ -176,7 +176,7 @@ const CustomSelect: React.FC<CustomSelectProps> = ({
   const triggerClasses = isBorderless
     ? `${variantClasses.borderless} ${sizeClasses[size]} rounded-md ${isOpen ? borderlessFocusClasses : ''}`
     : `
-      relative flex items-center justify-between w-full
+      relative flex items-center justify-between
       ${formClasses.select.base}
       ${formClasses.select.background}
       ${!disabled ? formClasses.select.normal : formClasses.select.disabled}
@@ -250,7 +250,7 @@ const CustomSelect: React.FC<CustomSelectProps> = ({
   return (
     <>
         <div
-          className={`${triggerClasses} cursor-pointer flex items-center justify-between w-full ${className}`}
+          className={`${triggerClasses} cursor-pointer flex items-center justify-between ${className}`}
           onClick={handleToggle}
           onKeyDown={handleKeyDown}
           tabIndex={disabled ? -1 : 0}
