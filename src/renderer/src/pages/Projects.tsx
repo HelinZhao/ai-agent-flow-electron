@@ -4,6 +4,7 @@ import CustomButton from '@renderer/components/ui/CustomButton'
 import CustomInput from '@renderer/components/ui/CustomInput'
 import CustomTextarea from '@renderer/components/ui/CustomTextarea'
 import Modal from '@renderer/components/ui/Modal'
+import ResponsiveGrid from '@renderer/components/ui/ResponsiveGrid'
 import ProjectCard from '@renderer/components/projects/ProjectCard'
 import ProjectDetail from '@renderer/components/projects/ProjectDetail'
 import type { Project } from '@renderer/types'
@@ -60,8 +61,8 @@ export default function Projects() {
       onClose={() => setEditingProject(null)}
       title={
         <div className="flex items-center gap-3">
-          <div className="flex items-center justify-center w-8 h-8 rounded-lg bg-gradient-to-br from-blue-100 to-cyan-100 dark:from-blue-900/30 dark:to-cyan-900/30">
-            <svg className="w-4 h-4 text-blue-600 dark:text-blue-400" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+          <div className="flex items-center justify-center w-8 h-8 rounded-lg bg-gradient-to-br from-indigo-100 to-purple-100 dark:from-indigo-900/30 dark:to-purple-900/30">
+            <svg className="w-4 h-4 text-indigo-600 dark:text-indigo-400" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
               <path d="M22 19a2 2 0 01-2 2H4a2 2 0 01-2-2V5a2 2 0 012-2h5l2 3h9a2 2 0 012 2z" />
             </svg>
           </div>
@@ -113,7 +114,7 @@ export default function Projects() {
     <div className="px-6 py-4 h-full flex flex-col">
       <div className="flex justify-between items-start mb-6">
         <div>
-          <h1 className="text-xl font-bold bg-gradient-to-r from-blue-600 to-cyan-600 bg-clip-text text-transparent">项目</h1>
+          <h1 className="text-xl font-bold bg-gradient-to-r from-indigo-600 to-purple-600 bg-clip-text text-transparent">项目</h1>
           <p className="text-sm text-gray-700 dark:text-gray-400 mt-1">
             管理项目工作目录，任务可关联项目并使用其工作目录作为执行上下文
           </p>
@@ -126,8 +127,8 @@ export default function Projects() {
 
       {projects.length === 0 ? (
         <div className="flex-1 flex flex-col items-center justify-center text-gray-400 dark:text-gray-500">
-          <div className="flex items-center justify-center w-20 h-20 rounded-2xl bg-gradient-to-br from-blue-100 to-cyan-100 dark:from-blue-900/30 dark:to-cyan-900/30 mb-6">
-            <svg className="w-10 h-10 text-blue-600 dark:text-blue-400" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5">
+          <div className="flex items-center justify-center w-20 h-20 rounded-2xl bg-gradient-to-br from-indigo-100 to-purple-100 dark:from-indigo-900/30 dark:to-purple-900/30 mb-6">
+            <svg className="w-10 h-10 text-indigo-600 dark:text-indigo-400" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5">
               <path d="M22 19a2 2 0 01-2 2H4a2 2 0 01-2-2V5a2 2 0 012-2h5l2 3h9a2 2 0 012 2z" />
             </svg>
           </div>
@@ -135,16 +136,16 @@ export default function Projects() {
           <p className="text-sm text-gray-700 dark:text-gray-400 mb-6">
             创建项目并设置工作目录，任务执行时将以此目录作为上下文
           </p>
-          <button onClick={openCreate} className="px-6 py-3 bg-gradient-to-r from-blue-500 to-cyan-600 text-white rounded-xl hover:from-blue-600 hover:to-cyan-700 transition-all duration-200 shadow-lg font-medium">
+          <button onClick={openCreate} className="px-6 py-3 bg-gradient-to-r from-indigo-500 to-purple-600 text-white rounded-xl hover:from-indigo-600 hover:to-purple-700 transition-all duration-200 shadow-lg font-medium">
             创建第一个项目
           </button>
         </div>
       ) : (
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+        <ResponsiveGrid>
           {projects.map(p => (
             <ProjectCard key={p.id} project={p} onSelect={setSelectedProject} onEdit={openEdit} onDelete={handleDelete} />
           ))}
-        </div>
+        </ResponsiveGrid>
       )}
 
       <Modal
@@ -152,8 +153,8 @@ export default function Projects() {
         onClose={() => { setShowCreate(false); resetForm() }}
         title={
           <div className="flex items-center gap-3">
-            <div className="flex items-center justify-center w-8 h-8 rounded-lg bg-gradient-to-br from-blue-100 to-cyan-100 dark:from-blue-900/30 dark:to-cyan-900/30">
-              <svg className="w-4 h-4 text-blue-600 dark:text-blue-400" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+            <div className="flex items-center justify-center w-8 h-8 rounded-lg bg-gradient-to-br from-indigo-100 to-purple-100 dark:from-indigo-900/30 dark:to-purple-900/30">
+              <svg className="w-4 h-4 text-indigo-600 dark:text-indigo-400" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
                 <path d="M22 19a2 2 0 01-2 2H4a2 2 0 01-2-2V5a2 2 0 012-2h5l2 3h9a2 2 0 012 2z" />
               </svg>
             </div>

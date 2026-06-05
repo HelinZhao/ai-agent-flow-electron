@@ -52,6 +52,11 @@ const COL_WIDTHS = {
   chevron: 'w-5',
 } as const
 
+const STATUS_DOT_COLOR: Record<string, string> = {
+  draft: 'bg-gray-300', pending: 'bg-sky-400', assigned: 'bg-indigo-400',
+  claimed: 'bg-blue-400', pending_review: 'bg-amber-400', completed: 'bg-emerald-400', failed: 'bg-red-400',
+}
+
 const FILTERS = [
   { value: '', label: '全部' },
   { value: 'draft', label: '草稿' },
@@ -247,7 +252,14 @@ export default function Tasks() {
             variant={statusFilter === s.value ? 'primary' : 'ghost'}
             size="sm"
           >
-            {s.label}
+            {s.value ? (
+              <span className="flex items-center gap-1.5">
+                <span className={`w-2 h-2 rounded-full ${STATUS_DOT_COLOR[s.value] || 'bg-gray-300'}`} />
+                {s.label}
+              </span>
+            ) : (
+              s.label
+            )}
           </CustomButton>
         ))}
         <CustomSelect

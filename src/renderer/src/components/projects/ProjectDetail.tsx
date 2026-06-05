@@ -6,15 +6,6 @@ const STATUS_LABEL: Record<string, string> = {
   draft: '草稿', pending: '待处理', assigned: '已指派',
   claimed: '处理中', pending_review: '待验收', completed: '已完成', failed: '失败',
 }
-const STATUS_COLOR: Record<string, string> = {
-  draft: 'bg-gray-100 dark:bg-gray-700 text-gray-500 dark:text-gray-400 border-gray-200 dark:border-gray-600',
-  pending: 'bg-sky-50 dark:bg-sky-900/20 text-sky-600 dark:text-sky-400 border-sky-200 dark:border-sky-800',
-  assigned: 'bg-indigo-50 dark:bg-indigo-900/20 text-indigo-600 dark:text-indigo-400 border-indigo-200 dark:border-indigo-800',
-  claimed: 'bg-blue-50 dark:bg-blue-900/20 text-blue-600 dark:text-blue-400 border-blue-200 dark:border-blue-800',
-  pending_review: 'bg-amber-50 dark:bg-amber-900/20 text-amber-600 dark:text-amber-400 border-amber-200 dark:border-amber-800',
-  completed: 'bg-emerald-50 dark:bg-emerald-900/20 text-emerald-600 dark:text-emerald-400 border-emerald-200 dark:border-emerald-800',
-  failed: 'bg-red-50 dark:bg-red-900/20 text-red-600 dark:text-red-400 border-red-200 dark:border-red-800',
-}
 const STATUS_BAR_COLOR: Record<string, string> = {
   pending: 'bg-sky-400', assigned: 'bg-indigo-400', claimed: 'bg-blue-400',
   pending_review: 'bg-amber-400', completed: 'bg-emerald-400', failed: 'bg-red-400', draft: 'bg-gray-300',
@@ -46,9 +37,7 @@ function TaskTreeNode({ task, allChildTasks, depth = 0 }: { task: Task; allChild
             </svg>
           ) : null}
         </span>
-        <span className={`inline-flex items-center px-1.5 py-0.5 text-xs font-medium rounded-full border flex-shrink-0 ${STATUS_COLOR[task.status] || ''}`}>
-          {STATUS_LABEL[task.status] || task.status}
-        </span>
+        <span className={`flex-shrink-0 w-2 h-2 rounded-full ${STATUS_BAR_COLOR[task.status] || 'bg-gray-300'}`} title={STATUS_LABEL[task.status] || task.status} />
         <span className="text-sm text-gray-900 dark:text-white truncate flex-1">{task.title}</span>
       </div>
       {hasChildren && expanded && children.map(child => (
@@ -117,11 +106,14 @@ export default function ProjectDetail({
 
   return (
     <div className="flex flex-col h-full gap-3">
-      {/* Header row */}
+      {/* 标题行 */}
       <div className="flex items-start gap-3">
-        <button onClick={onBack} className="flex items-center justify-center w-8 h-8 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-800 text-gray-500 dark:text-gray-400 transition-colors flex-shrink-0 mt-1" title="返回">
+        <button
+          onClick={onBack}
+          className="flex items-center justify-center w-8 h-8 rounded-lg text-gray-500 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors"
+        >
           <svg className="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-            <path d="M19 12H5m7-7l-7 7 7 7" />
+            <path d="M15 19l-7-7 7-7" />
           </svg>
         </button>
         <div className="flex-1 min-w-0">
@@ -129,52 +121,45 @@ export default function ProjectDetail({
             <h1 className="text-xl font-bold bg-gradient-to-r from-blue-600 to-cyan-600 bg-clip-text text-transparent truncate">
               {project.name}
             </h1>
-            <button onClick={handleOpenDir} title="打开工作目录" className="flex items-center gap-1 px-2 py-1 text-xs rounded-lg bg-blue-50 dark:bg-blue-900/20 text-blue-600 dark:text-blue-400 hover:bg-blue-100 dark:hover:bg-blue-900/40 border border-blue-200 dark:border-blue-800 transition-colors flex-shrink-0">
-              <svg className="w-3 h-3" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                <path d="M18 13v6a2 2 0 01-2 2H5a2 2 0 01-2-2V8a2 2 0 012-2h6" />
-                <polyline points="15 3 21 3 21 9" />
-                <line x1="10" y1="14" x2="21" y2="3" />
-              </svg>
-              打开目录
-            </button>
           </div>
-          <div className="flex items-center gap-2 mt-1 flex-wrap">
-            <p className="text-xs text-gray-500 dark:text-gray-400 truncate">{project.description || '暂无描述'}</p>
-            <span className="text-xs text-gray-400 dark:text-gray-500">·</span>
-            <span className="text-xs text-gray-400 dark:text-gray-500 font-mono truncate max-w-[200px]" title={project.workDir}>{project.workDir}</span>
-            {/* 目录状态 */}
-            {dirExists === true && <span className="text-xs text-emerald-500 flex-shrink-0">✓ 目录正常</span>}
-            {dirExists === false && <span className="text-xs text-red-500 flex-shrink-0">✗ 目录不存在</span>}
-            <span className="text-xs text-gray-400 dark:text-gray-500">·</span>
-            <span className="text-xs text-gray-400 dark:text-gray-500">{totalTasks} 个任务</span>
-          </div>
+          <p className="text-xs text-gray-500 dark:text-gray-400 truncate">{project.description || '暂无描述'}</p>
         </div>
-        <CustomButton onClick={() => onEdit(project)} variant="secondary" size="sm" className="flex-shrink-0">编辑项目</CustomButton>
+        <div className="flex items-center gap-2 flex-shrink-0">
+          <CustomButton onClick={handleOpenDir} variant="primary" size="sm">
+            <svg className="w-3 h-3" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+              <path d="M18 13v6a2 2 0 01-2 2H5a2 2 0 01-2-2V8a2 2 0 012-2h6" />
+              <polyline points="15 3 21 3 21 9" />
+              <line x1="10" y1="14" x2="21" y2="3" />
+            </svg>
+            <span>打开目录</span>
+          </CustomButton>
+          <CustomButton onClick={() => onEdit(project)} variant="secondary" size="sm">编辑项目</CustomButton>
+        </div>
       </div>
-
-      {/* 状态分布图 */}
-      {totalTasks > 0 && (
-        <div className="flex items-center gap-3 flex-wrap px-1">
-          <div className="flex h-2 rounded-full overflow-hidden flex-1 min-w-[120px] max-w-[300px] bg-gray-100 dark:bg-gray-800">
-            {STATUS_ORDER.filter(s => statusCounts[s]).map(s => (
-              <div
-                key={s}
-                className={`${STATUS_BAR_COLOR[s] || 'bg-gray-300'} transition-all`}
-                style={{ width: `${(statusCounts[s] / totalTasks) * 100}%` }}
-                title={`${STATUS_LABEL[s]}: ${statusCounts[s]}`}
-              />
-            ))}
-          </div>
-          <div className="flex items-center gap-2.5 flex-wrap text-[10px]">
-            {STATUS_ORDER.filter(s => statusCounts[s]).map(s => (
-              <span key={s} className="flex items-center gap-1 text-gray-600 dark:text-gray-400">
-                <span className={`w-2 h-2 rounded-full ${STATUS_BAR_COLOR[s] || 'bg-gray-300'}`} />
-                {STATUS_LABEL[s]} {statusCounts[s]}
-              </span>
-            ))}
-          </div>
-        </div>
-      )}
+      <div className="flex items-center gap-3">
+        {/* 目录状态 */}
+        {dirExists === true && <span className="text-xs text-emerald-500">✓ 目录正常</span>}
+        {dirExists === false && <span className="text-xs text-red-500">✗ 目录不存在</span>}
+        <span className="text-xs text-gray-400 dark:text-gray-500 font-mono truncate max-w-[200px]" title={project.workDir}>{project.workDir}</span>
+        <div className="mx-1 h-3 border-l border-gray-300 dark:border-gray-600" />
+        {/* 状态行 分布图 */}
+        {totalTasks > 0 && (
+          <>
+            <span className="text-[10px] text-gray-400 dark:text-gray-500 font-medium uppercase tracking-wider">状态分布</span>
+            <div className="flex h-2 rounded-full overflow-hidden w-[160px] bg-gray-100 dark:bg-gray-800">
+              {STATUS_ORDER.map(s => (
+                <div
+                  key={s}
+                  className={`${STATUS_BAR_COLOR[s] || 'bg-gray-300'} transition-all`}
+                  style={{ width: `${(statusCounts[s] || 0) / totalTasks * 100}%` }}
+                  title={`${STATUS_LABEL[s]}: ${statusCounts[s] || 0}`}
+                />
+              ))}
+            </div>
+            <span className="text-xs text-gray-400 dark:text-gray-500">{totalTasks} 个任务</span>
+          </>
+        )}
+      </div>
 
       <div className="flex flex-1 min-h-0 gap-3">
         {/* 任务树 */}
@@ -186,13 +171,19 @@ export default function ProjectDetail({
                 <button
                   key={f.value}
                   onClick={() => setStatusFilter(f.value)}
-                  className={`px-2 py-1 text-xs font-medium rounded-lg whitespace-nowrap transition-colors ${
-                    statusFilter === f.value
-                      ? 'bg-blue-100 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400'
-                      : 'text-gray-500 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-800'
-                  }`}
+                  className={`px-2 py-1 text-xs font-medium rounded-lg whitespace-nowrap transition-colors ${statusFilter === f.value
+                    ? 'bg-blue-100 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400'
+                    : 'text-gray-500 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-800'
+                    }`}
                 >
-                  {f.label}
+                  {f.value ? (
+                    <span className="flex items-center gap-1.5">
+                      <span className={`w-2 h-2 rounded-full ${STATUS_BAR_COLOR[f.value] || 'bg-gray-300'}`} />
+                      {f.label}
+                    </span>
+                  ) : (
+                    f.label
+                  )}
                 </button>
               ))}
             </div>
