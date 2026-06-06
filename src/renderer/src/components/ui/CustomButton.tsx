@@ -1,7 +1,7 @@
 import React from 'react';
 
 export interface CustomButtonProps extends React.ButtonHTMLAttributes<HTMLButtonElement> {
-  variant?: 'primary' | 'secondary' | 'success' | 'danger' | 'warning' | 'ghost';
+  variant?: 'primary' | 'secondary' | 'success' | 'danger' | 'warning' | 'ghost' | 'text' | 'link';
   size?: 'xs' | 'sm' | 'md' | 'lg' | 'xl';
   fullWidth?: boolean;
   loading?: boolean;
@@ -32,7 +32,9 @@ const CustomButton: React.FC<CustomButtonProps> = ({
     success: 'bg-gradient-to-r from-green-500 to-green-600 text-white hover:from-green-600 hover:to-green-700 shadow-lg hover:shadow-xl',
     danger: 'bg-gradient-to-r from-red-500 to-red-600 text-white hover:from-red-600 hover:to-red-700 shadow-lg hover:shadow-xl',
     warning: 'bg-gradient-to-r from-yellow-500 to-yellow-600 text-white hover:from-yellow-600 hover:to-yellow-700 shadow-lg hover:shadow-xl',
-    ghost: 'text-gray-700 dark:text-gray-300 hover:bg-gray-50/50 dark:hover:bg-gray-700/50'
+    ghost: 'text-gray-700 dark:text-gray-300 hover:bg-gray-50/50 dark:hover:bg-gray-700/50',
+    text: 'text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white hover:bg-gray-100/50 dark:hover:bg-gray-700/30',
+    link: 'text-blue-600 dark:text-blue-400 hover:text-blue-800 dark:hover:text-blue-300 underline underline-offset-2 hover:bg-transparent',
   };
 
   const baseClasses = `

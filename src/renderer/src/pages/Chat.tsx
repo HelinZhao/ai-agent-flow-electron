@@ -188,15 +188,18 @@ export default function Chat(): React.JSX.Element {
                   </svg>
                 </CustomButton>
               )}
-              <CustomButton variant="secondary" size="xs" onClick={startNewChat}>
-                <span>✨</span> 新对话
-              </CustomButton>
-              <CustomButton variant="danger" size="xs" onClick={clearCurrentchatRecord}>
-                <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                  <path d="M3 6h18" /><path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6" />
-                  <path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2" />
+              <CustomButton variant="secondary" size="xs" onClick={startNewChat} title="新对话">
+                <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <path d="M12 5v14" /><path d="M5 12h14" />
                 </svg>
-                对话记录
+              </CustomButton>
+              <CustomButton variant="secondary" size="xs" onClick={clearCurrentchatRecord} title="清空对话记录">
+                <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z" />
+                  <path d="M14 2v6h6" />
+                  <path d="M9 15l6-6" />
+                  <path d="M15 15l-6-6" />
+                </svg>
               </CustomButton>
             </div>
           )}
@@ -385,7 +388,7 @@ export default function Chat(): React.JSX.Element {
                 {/* 可缩放区域：上下文栏 + 输入框 */}
                 <div ref={inputWrapperRef} className="shrink-0 flex flex-col" style={{ height: inputHeight, minHeight: 120 }}>
                   <div className="flex items-center gap-2 px-4 py-1.5 border-t border-gray-200 dark:border-gray-700/50 bg-gray-50/30 dark:bg-gray-800/20">
-                    <CustomFileUpload onChange={handleFileSelect} multiple size="xs" variant="ghost">
+                    <CustomFileUpload onChange={handleFileSelect} multiple size="xs" variant="text">
                       附件
                     </CustomFileUpload>
                     <span className="text-gray-200 dark:text-gray-600">|</span>

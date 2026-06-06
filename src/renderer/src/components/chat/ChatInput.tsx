@@ -64,9 +64,9 @@ export default function ChatInput({
   }
 
   return (
-    <div className="px-4 pb-4 shrink-0 flex flex-col min-h-0 flex-1">
+    <div className="px-4 pb-3 shrink-0 flex flex-col min-h-0 flex-1">
       <div className="bg-white dark:bg-gray-700/80 rounded-2xl border border-gray-200/50 dark:border-gray-600/40 overflow-hidden shadow-sm flex flex-col flex-1 min-h-0">
-        <div className="px-4 pt-3.5 pb-0 flex-1 flex flex-col min-h-0 relative">
+        <div className="p-2.5 pb-0 flex-1 flex flex-col min-h-0 relative">
           <AttachmentPreview
             attachments={attachments}
             onRemove={(id) => onAttachmentsChange(attachments.filter((a) => a.id !== id))}
@@ -90,7 +90,7 @@ export default function ChatInput({
         </div>
 
         <div className="flex items-center justify-between px-3 pb-2.5 pt-1 shrink-0">
-          <div className="flex items-center gap-3 text-[11px] text-gray-400 dark:text-gray-500">
+          <div className="flex items-center gap-3 text-[11px] text-gray-500 dark:text-gray-400">
             <div className="flex items-center gap-1">
               <kbd className="px-1 py-0.5 bg-gray-100 dark:bg-gray-600/60 rounded text-[10px] font-medium">Enter</kbd>
               <span>发送</span>

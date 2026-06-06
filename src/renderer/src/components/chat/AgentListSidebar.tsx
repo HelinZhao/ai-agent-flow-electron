@@ -119,7 +119,7 @@ export default function AgentListSidebar({
               <Avatar
                 src={agent.avatarUrl}
                 name={agent.name}
-                size="md"
+                size="sm"
                 active={isActive}
                 isSystem={agent.isSystem}
                 fallbackIcon={agent.isSystem ? '✨' : undefined}
