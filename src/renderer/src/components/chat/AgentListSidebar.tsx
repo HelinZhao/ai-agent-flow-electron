@@ -119,9 +119,10 @@ export default function AgentListSidebar({
               <Avatar
                 src={agent.avatarUrl}
                 name={agent.name}
-                size="sm"
+                size="md"
                 active={isActive}
-                className="[&:not(:has(img))]:!text-md [&:not(:has(img))]:!font-bold"
+                isSystem={agent.isSystem}
+                fallbackIcon={agent.isSystem ? '✨' : undefined}
               />
               <div className="text-left min-w-0 flex-1 relative">
                 <div className="text-sm font-medium truncate leading-tight flex items-center gap-1.5">

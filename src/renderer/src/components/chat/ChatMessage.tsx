@@ -17,6 +17,7 @@ interface ChatMessageProps {
   onAttachmentClick: (att: AttachmentMetadata) => void
   isLastAgent?: boolean
   onRegenerate?: () => void
+  isSystem?: boolean
 }
 
 import CopyButton from '../ui/CopyButton'
@@ -28,6 +29,7 @@ const ChatMessage = React.memo(function ChatMessage({
   onAttachmentClick,
   isLastAgent,
   onRegenerate,
+  isSystem
 }: ChatMessageProps) {
   const isUser = message.sender === 'user'
   const userAvatar = useSettingsStore((s) => s.userAvatar)
@@ -55,9 +57,10 @@ const ChatMessage = React.memo(function ChatMessage({
             src={agentAvatarUrl}
             name={agentName}
             size="md"
-            fallbackIcon="🤖"
             className="mt-0.5 shadow-sm"
             shape="circle"
+            isSystem={isSystem}
+            fallbackIcon={isSystem ? '✨' : undefined}  
           />
         )}
 

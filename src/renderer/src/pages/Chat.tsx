@@ -295,6 +295,7 @@ export default function Chat(): React.JSX.Element {
                             message={message}
                             agentName={selectedAgent!.name}
                             agentAvatarUrl={selectedAgent!.avatarUrl}
+                            isSystem={selectedAgent!.isSystem}
                             onAttachmentClick={handleAttachmentClick}
                             isLastAgent={idx === lastAgentIdx}
                             onRegenerate={idx === lastAgentIdx ? () => regenerate(agents, activeLLMConfig) : undefined}

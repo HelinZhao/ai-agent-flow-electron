@@ -6,6 +6,7 @@ export interface PickerItem {
   id: string
   label: string
   description?: string
+  icon?: React.ReactNode
 }
 
 interface ItemPickerModalProps {
@@ -20,11 +21,10 @@ interface ItemPickerModalProps {
 function CheckCircle({ checked }: { checked: boolean }) {
   return (
     <div
-      className={`flex items-center justify-center w-5 h-5 rounded-full border-2 transition-all duration-200 ${
-        checked
-          ? 'bg-blue-500 border-blue-500'
-          : 'border-gray-300 dark:border-gray-500 group-hover/item:border-gray-400 dark:group-hover/item:border-gray-400'
-      }`}
+      className={`flex items-center justify-center w-5 h-5 rounded-full border-2 transition-all duration-200 ${checked
+        ? 'bg-blue-500 border-blue-500'
+        : 'border-gray-300 dark:border-gray-500 group-hover/item:border-gray-400 dark:group-hover/item:border-gray-400'
+        }`}
     >
       {checked && (
         <svg className="w-2.5 h-2.5 text-white" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="4">
@@ -48,10 +48,11 @@ export default function ItemPickerModal({
 
   useEffect(() => {
     if (open) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect
       setLocalSelected(selected);
       setSearch('');
     }
-  }, [open]);
+  }, [open, selected]);
 
   const filtered = useMemo(
     () =>
@@ -170,20 +171,20 @@ export default function ItemPickerModal({
               {enabled && (
                 <div className="absolute left-0 top-2 bottom-2 w-0.5 bg-blue-500 rounded-full" />
               )}
-              <div
-                className={`flex items-center justify-center w-9 h-9 rounded-lg flex-shrink-0 transition-colors ${
-                  enabled
+              {item.icon ?? (
+                <div
+                  className={`flex items-center justify-center w-9 h-9 rounded-lg flex-shrink-0 transition-colors ${enabled
                     ? 'bg-blue-500 text-white'
                     : 'bg-gray-100 dark:bg-gray-700 text-gray-400 dark:text-gray-500 group-hover/item:bg-gray-200 dark:group-hover/item:bg-gray-600'
-                }`}
-              >
-                <span className="text-sm font-semibold">{firstChar}</span>
-              </div>
+                    }`}
+                >
+                  <span className="text-sm font-semibold">{firstChar}</span>
+                </div>
+              )}
               <div className="min-w-0 flex-1">
                 <div
-                  className={`text-sm font-medium transition-colors ${
-                    enabled ? 'text-blue-700 dark:text-blue-300' : 'text-gray-900 dark:text-white'
-                  }`}
+                  className={`text-sm font-medium transition-colors ${enabled ? 'text-blue-700 dark:text-blue-300' : 'text-gray-900 dark:text-white'
+                    }`}
                 >
                   {item.label}
                 </div>

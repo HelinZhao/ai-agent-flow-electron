@@ -51,7 +51,7 @@ const AgentCard = React.memo(function AgentCard({
               name={agent.name}
               size="md"
               isSystem={isSystem}
-              fallbackIcon={isSystem ? '✨' : '🤖'}
+              fallbackIcon={isSystem ? '✨' : undefined}
             />
             <div className="min-w-0">
               <h4 className="text-sm font-semibold text-gray-900 dark:text-white truncate">

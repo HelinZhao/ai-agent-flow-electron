@@ -6,6 +6,7 @@ import CustomButton from '@renderer/components/ui/CustomButton';
 import ItemPickerModal from '@renderer/components/ui/ItemPickerModal';
 import AiAssistButton from '@renderer/components/AiAssistButton';
 import type { FrontendAction } from '@renderer/lib/frontendActionBus';
+import Avatar from '../ui/Avatar';
 
 export interface TeamFormData {
   name: string
@@ -27,7 +28,7 @@ interface TeamFormProps {
   autoClaimEnabled: boolean; setAutoClaimEnabled: (v: boolean) => void
   autoClaimInterval: number; setAutoClaimInterval: (v: number) => void
   autoApproveTools: boolean; setAutoApproveTools: (v: boolean) => void
-  agents: { id: string; name: string }[]
+  agents: { id: string; name: string; avatarUrl?: string }[]
   saving: boolean; isCreate: boolean
   teamId?: string
   onSubmit: () => void; onCancel: () => void
@@ -120,18 +121,16 @@ export default function TeamForm({
               key={opt.value}
               type="button"
               onClick={() => setMode(opt.value)}
-              className={`relative p-4 rounded-xl border-2 text-left transition-all duration-200 ${
-                mode === opt.value
+              className={`relative p-4 rounded-xl border-2 text-left transition-all duration-200 ${mode === opt.value
                   ? 'border-indigo-500 bg-indigo-50/60 dark:bg-indigo-900/20 shadow-sm'
                   : 'border-gray-200 dark:border-gray-700 hover:border-gray-300 dark:hover:border-gray-600 bg-white dark:bg-gray-800/50'
-              }`}
+                }`}
             >
               <div className="flex items-start gap-3">
-                <div className={`flex items-center justify-center w-10 h-10 rounded-lg flex-shrink-0 ${
-                  mode === opt.value
+                <div className={`flex items-center justify-center w-10 h-10 rounded-lg flex-shrink-0 ${mode === opt.value
                     ? 'bg-indigo-500 text-white'
                     : 'bg-gray-100 dark:bg-gray-700'
-                }`}>
+                  }`}>
                   <span className="text-lg">{opt.icon}</span>
                 </div>
                 <div>
@@ -223,7 +222,9 @@ export default function TeamForm({
       <ItemPickerModal
         open={pickerOpen}
         title="选择成员"
-        items={agents.map(a => ({ id: a.id, label: a.name, description: '' }))}
+        items={agents.map(a => ({
+          id: a.id, label: a.name, description: '', icon: <Avatar src={a.avatarUrl} name={a.name} size="md" />
+        }))}
         selected={memberIds}
         onApply={(ids) => { setMemberIds(ids); setPickerOpen(false) }}
         onClose={() => setPickerOpen(false)}
