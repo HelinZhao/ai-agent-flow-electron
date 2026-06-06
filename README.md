@@ -113,6 +113,35 @@ npm run lint           # 代码检查
 npm run typecheck      # 类型检查
 ```
 
+### 原生模块编译
+
+`better-sqlite3` 等原生模块依赖 `node-gyp` 编译。若安装时提示缺少 Python 或 C++ 构建工具，请根据系统安装对应环境：
+
+**Windows**
+```bash
+# 以管理员身份运行 PowerShell，安装 Visual Studio Build Tools
+npm install --global windows-build-tools
+```
+或安装 [Visual Studio Community](https://visualstudio.microsoft.com/)（勾选**使用 C++ 的桌面开发**工作负载）。
+
+**macOS**
+```bash
+xcode-select --install
+```
+
+**Linux (Ubuntu/Debian)**
+```bash
+sudo apt-get install python3 make g++
+```
+
+> 安装完成后清理缓存并重试：
+> ```bash
+> rm -rf node_modules
+> npm install
+> ```
+
+> **提示**：`npm install` 的 `postinstall` 脚本会自动执行 `electron-builder install-app-deps` 来重新编译原生模块。
+
 ---
 
 ## 构建
