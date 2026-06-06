@@ -222,19 +222,19 @@ export default function SystemAssistantChat() {
   }, [currentExecutionId])
 
   const handleChoiceSubmit = useCallback(async (response: { selectedValue?: string; selectedLabel?: string; selectedValues?: string[]; selectedLabels?: string[]; cancelled?: boolean }) => {
-    if (!currentExecutionId) return
+    if (!currentExecutionId) { setPendingChoice(null); return }
     try {
       await workflowExecutionApi.submitWorkflowChoice(currentExecutionId, response)
-      setPendingChoice(null)
-    } catch { /* ignore */ }
+    } catch (e) { console.error('[Choice] 提交失败:', e) }
+    setPendingChoice(null)
   }, [currentExecutionId])
 
   const handleChoiceCancel = useCallback(async () => {
-    if (!currentExecutionId) return
+    if (!currentExecutionId) { setPendingChoice(null); return }
     try {
       await workflowExecutionApi.submitWorkflowChoice(currentExecutionId, { cancelled: true })
-      setPendingChoice(null)
-    } catch { /* ignore */ }
+    } catch (e) { console.error('[Choice] 取消失败:', e) }
+    setPendingChoice(null)
   }, [currentExecutionId])
 
   const handleNewChat = useCallback(async () => {

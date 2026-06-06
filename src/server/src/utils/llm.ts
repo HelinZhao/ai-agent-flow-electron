@@ -186,14 +186,59 @@ function _logToolCalls(result: any, prefix: string): void {
   }
 }
 
+/**
+ * 中间件：清理 checkpointer 恢复的孤立 tool_call
+ * 重启后 checkpointer 中可能残留 AIMessage.tool_calls 但无对应 ToolMessage
+ * 若不清理会导致 LangGraph 报 INVALID_TOOL_RESULTS 错误
+ */
+function createCleanOrphanedToolCalls() {
+  return createMiddleware({
+    name: "CleanOrphanedToolCalls",
+    beforeModel: async (state: { messages: BaseMessage[] }) => {
+      if (!state.messages || state.messages.length === 0) return
+
+      // 找出所有实际存在的 tool 消息的 tool_call_id
+      const respondedIds = new Set<string>()
+      for (const msg of state.messages) {
+        if (msg._getType() === 'tool' && (msg as any).tool_call_id) {
+          respondedIds.add((msg as any).tool_call_id)
+        }
+      }
+
+      // 清理无对应 tool 响应的 tool_calls
+      let changed = false
+      const cleaned = state.messages.map(msg => {
+        if (msg._getType() !== 'ai') return msg
+        const ai = msg as AIMessage
+        if (!ai.tool_calls || ai.tool_calls.length === 0) return msg
+
+        const valid = ai.tool_calls.filter(tc => respondedIds.has(tc.id!))
+        if (valid.length === ai.tool_calls.length) return msg
+
+        changed = true
+        console.log(`[LLM] 清理 ${ai.tool_calls.length - valid.length} 个孤立 tool_call`)
+        if (valid.length === 0 && !ai.content) {
+          // 全部被清理且无文本内容 → 整条删除
+          return new RemoveMessage({ id: ai.id || '' })
+        }
+        // 保留有效的 tool_calls
+        return new AIMessage({ content: ai.content, tool_calls: valid, id: ai.id })
+      })
+
+      if (changed) return { messages: cleaned }
+    },
+  })
+}
+
 /** 统一的 agent 执行（支持 SQLite / MemorySaver checkpointer、工具、HITL、流式） */
 async function _execAgent(
   llm: ChatOpenAI, tools: any[], messages: BaseMessage[],
   hasTools: boolean, useHITL: boolean, enabledTools: string[], options?: CallLLMOptions,
   checkpointer?: BaseCheckpointSaver, threadId?: string,
 ): Promise<{ content: string; tokenUsage?: TokenUsage }> {
-  // 中间件：checkpointer 路径带历史压缩，HITL 路径带审批拦截
-  const mw: AgentMiddleware[] = checkpointer ? [createTrimConversation(llm)] : []
+  // 中间件：清理孤立 tool_call + 历史压缩 + HITL 审批
+  const mw: AgentMiddleware[] = [createCleanOrphanedToolCalls()]
+  if (checkpointer) mw.push(createTrimConversation(llm))
   if (useHITL) {
     const io: Record<string, boolean> = {}
     for (const t of enabledTools) io[t] = DANGEROUS_TOOLS.includes(t)

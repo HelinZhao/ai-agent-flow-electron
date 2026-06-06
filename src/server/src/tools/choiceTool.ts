@@ -6,8 +6,13 @@ import { ChoiceRequest, ChoiceResponse } from '../utils/hitl'
 export function createAskUserChoiceTool(choiceCallback: (req: ChoiceRequest) => Promise<ChoiceResponse>) {
   return tool(
     async ({ question, options, allowMultiSelect }: { question: string; options: { label: string; value: string; description?: string }[]; allowMultiSelect?: boolean }) => {
-      const response = await choiceCallback({ question, options, allowMultiSelect })
-      return JSON.stringify(response)
+      try {
+        const response = await choiceCallback({ question, options, allowMultiSelect })
+        return JSON.stringify(response)
+      } catch {
+        // 用户取消/执行终止等情况下，返回取消信号给 LLM，而不是抛异常导致 INVALID_TOOL_RESULTS
+        return JSON.stringify({ cancelled: true })
+      }
     },
     {
       name: 'askUserChoice',

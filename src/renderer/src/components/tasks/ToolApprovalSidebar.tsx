@@ -52,8 +52,8 @@ export default function ToolApprovalSidebar() {
   const handleChoiceSubmit = useCallback(async (executionId: string, response: { selectedValue?: string; selectedLabel?: string; selectedValues?: string[]; selectedLabels?: string[]; cancelled?: boolean }) => {
     try {
       await teamExecutionApi.submitChoice(executionId, response)
-      markChoiceSubmitted(executionId)
-    } catch { /* ignore */ }
+    } catch (e) { console.error('[Choice] 提交失败:', e) }
+    markChoiceSubmitted(executionId)
   }, [markChoiceSubmitted])
 
   if (totalCount === 0 && !open) return null
