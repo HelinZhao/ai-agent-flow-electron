@@ -32,19 +32,19 @@ const TeamMonitor = lazy(() => import("./TeamMonitor"));
 const Marketplace = lazy(() => import("./Marketplace"));
 
 const navItems = [
-  { path: '/chat', label: 'AI对话', icon: <ChatIcon />, page: <Chat />, group: '核心', keepAlive: true },
-  { path: '/', label: '工作流', icon: <WorkflowIcon />, page: <Workflow />, group: '核心', keepAlive: true },
+  { path: '/chat', label: 'AI对话', icon: <ChatIcon />, page: <Chat />, group: '核心' },
+  { path: '/', label: '工作流', icon: <WorkflowIcon />, page: <Workflow />, group: '核心' },
   { path: '/agents', label: 'Agent', icon: <AgentIcon />, page: <Agents />, group: '核心' },
   { path: '/teams', label: '团队', icon: <TeamIcon />, page: <Teams />, group: '核心' },
-  { path: '/tasks', label: '任务池', icon: <TicketIcon />, page: <Tasks />, group: '核心', keepAlive: true },
+  { path: '/tasks', label: '任务池', icon: <TicketIcon />, page: <Tasks />, group: '核心' },
   { path: '/projects', label: '项目', icon: <FolderIcon />, page: <Projects />, group: '核心' },
   { path: '/skills', label: '技能', icon: <SkillsIcon />, page: <Skills />, group: '能力' },
-  { path: '/knowledge', label: '知识库', icon: <KnowledgeIcon />, page: <Knowledge />, group: '能力', keepAlive: true },
+  { path: '/knowledge', label: '知识库', icon: <KnowledgeIcon />, page: <Knowledge />, group: '能力' },
   { path: '/triggers', label: '触发器', icon: <TriggersIcon />, page: <Triggers />, group: '能力' },
   { path: '/mcp', label: 'MCP服务', icon: <McpIcon />, page: <McpServers />, group: '能力' },
   { path: '/marketplace', label: '模板市场', icon: <MarketplaceIcon />, page: <Marketplace />, group: '资源' },
-  { path: '/monitor', label: '执行监控', icon: <MonitorIcon />, page: <ExecutionMonitor />, group: '运维', keepAlive: true },
-  { path: '/team-monitor', label: '团队执行', icon: <TeamIcon />, page: <TeamMonitor />, group: '运维', keepAlive: true },
+  { path: '/monitor', label: '执行监控', icon: <MonitorIcon />, page: <ExecutionMonitor />, group: '运维' },
+  { path: '/team-monitor', label: '团队执行', icon: <TeamIcon />, page: <TeamMonitor />, group: '运维' },
   { path: '/settings', label: '设置', icon: <SettingsIcon />, page: <Settings />, group: '系统' },
   { path: '/logs', label: '日志', icon: <LogsIcon />, page: <Logs />, group: '系统' }
 ]

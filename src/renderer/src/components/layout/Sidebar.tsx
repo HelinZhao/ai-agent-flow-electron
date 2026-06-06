@@ -5,7 +5,6 @@ interface NavItem {
   label: string
   icon: React.ReactNode
   group?: string
-  keepAlive?: boolean
 }
 
 interface SidebarProps {

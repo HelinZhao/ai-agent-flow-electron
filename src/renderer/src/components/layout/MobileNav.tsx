@@ -6,7 +6,6 @@ interface NavItem {
   path: string
   label: string
   icon: React.ReactNode
-  keepAlive?: boolean
 }
 
 interface MobileNavProps {

@@ -11,7 +11,7 @@ interface LayoutProps {
   children: React.ReactNode
   currentPage: string
   onNavigate: (page: string) => void
-  navItems: { path: string; label: string; icon: React.ReactNode, page: React.ReactNode, keepAlive?: boolean }[]
+  navItems: { path: string; label: string; icon: React.ReactNode, page: React.ReactNode }[]
 }
 const isElectron = Boolean(window.electron || window.api)
 
@@ -24,60 +24,24 @@ const PAGE_LOADING = (
   </div>
 )
 
-
 const MainArea = memo(function MainArea({ currentPage, children, navItems }: {
   currentPage: string
   children: React.ReactNode
-  navItems: { path: string; label: string; icon: React.ReactNode, page: React.ReactNode, keepAlive?: boolean }[]
+  navItems: { path: string; label: string; icon: React.ReactNode, page: React.ReactNode }[]
 }) {
-  // Keep-Alive: 白名单页面（keepAlive: true）首次访问后缓存 DOM，切换回来时瞬间恢复状态
-  // 非白名单页面（配置/日志等）用完即卸载，节省内存
-  // 使用 React 官方推荐的 render-phase 派生 state 模式
-  const [cachedPaths, setCachedPaths] = useState(() => {
-    return navItems.find(i => i.path === currentPage)?.keepAlive ? new Set([currentPage]) : new Set<string>()
-  })
-  const [prevPage, setPrevPage] = useState(currentPage)
-
-  if (currentPage !== prevPage) {
-    setPrevPage(currentPage)
-    const isKeepAlive = navItems.find(i => i.path === currentPage)?.keepAlive
-    if (isKeepAlive && !cachedPaths.has(currentPage)) {
-      setCachedPaths(prev => {
-        if (prev.has(currentPage)) return prev
-        const next = new Set(prev)
-        next.add(currentPage)
-        if (next.size > 5) {
-          const first = next.values().next().value as string | undefined
-          if (first && first !== currentPage) next.delete(first)
-        }
-        return next
-      })
-    }
-  }
-
-  const currentItem = navItems.find(i => i.path === currentPage)
-  const currentKeepAlive = currentItem?.keepAlive
-
   return (
     <main className="flex-1 overflow-auto relative">
       <div className="absolute inset-0 bg-grid-pattern opacity-5 dark:opacity-10"></div>
       {children}
       <Suspense fallback={PAGE_LOADING}>
         {/* 白名单页面：缓存的全部渲染，非当前页 hidden */}
-        {Array.from(cachedPaths).map(path => {
-          const item = navItems.find(i => i.path === path)
+        {navItems.map(item => {
           return item ? (
-            <div key={path} className={`relative z-10 h-full${path === currentPage ? '' : ' hidden'}`}>
+            <div key={item.path} className={`relative z-10 h-full${item.path === currentPage ? '' : ' hidden'}`}>
               {item.page}
             </div>
           ) : null
         })}
-        {/* 非白名单页面：条件渲染，用完即卸载 */}
-        {!currentKeepAlive && (
-          <div className="relative z-10 h-full">
-            {currentItem?.page}
-          </div>
-        )}
       </Suspense>
     </main>
   );
