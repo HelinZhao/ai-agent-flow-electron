@@ -22,6 +22,7 @@ interface ExecutionResultTabsProps {
 // 节点结果项（可展开）
 export const NodeResultItem: React.FC<{ node: NodeExecutionResult }> = ({ node }) => {
   const [expanded, setExpanded] = useState(false)
+  const [showResultJson, setShowResultJson] = useState(false)
   const statusStyle: Record<string, { color: string; text: string }> = {
     completed: { color: 'text-green-600 bg-green-50 dark:bg-green-900/20', text: '已完成' },
     failed: { color: 'text-red-600 bg-red-50 dark:bg-red-900/20', text: '失败' },
@@ -75,6 +76,22 @@ export const NodeResultItem: React.FC<{ node: NodeExecutionResult }> = ({ node }
           {hasParams && <DataSection title="入参" content={JSON.stringify(node.params, null, 2)} />}
           {hasVariables && <DataSection title="变量" content={JSON.stringify(node.variables, null, 2)} />}
           {node.output && <DataSection title="输出" content={typeof node.output === 'string' ? node.output : JSON.stringify(node.output, null, 2)} />}
+          <div>
+            <button
+              onClick={() => setShowResultJson(!showResultJson)}
+              className="flex items-center gap-1 text-xs text-blue-500 hover:text-blue-700 transition-colors"
+            >
+              <svg className={`w-3 h-3 transition-transform ${showResultJson ? 'rotate-90' : ''}`} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                <path d="M9 18l6-6-6-6" />
+              </svg>
+              查看 Result JSON
+            </button>
+            {showResultJson && (
+              <pre className="mt-1 p-2 bg-gray-50 dark:bg-gray-900/30 rounded-lg border border-gray-100 dark:border-gray-700/30 text-xs font-mono text-gray-700 dark:text-gray-300 whitespace-pre-wrap break-words max-h-96 overflow-auto">
+                {JSON.stringify(node, null, 2)}
+              </pre>
+            )}
+          </div>
         </div>
       )}
     </div>

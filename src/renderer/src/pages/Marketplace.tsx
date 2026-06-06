@@ -58,7 +58,7 @@ export default function Marketplace(): React.JSX.Element {
     setImporting(true)
     try {
       const content = JSON.parse(t.content)
-      await addAgent({ name: t.name, description: t.description, instructions: content.instructions || '', type: content.type || 'assistant', skillIds: content.skillIds || [], enabledTools: content.enabledTools || [] })
+      await addAgent({ name: t.name, description: t.description, instructions: content.instructions || '', type: content.type || 'standard', skillIds: content.skillIds || [], enabledTools: content.enabledTools || [] })
       setSelected(null)
     } catch (e: any) {
       alert('导入失败: ' + (e?.response?.data?.error || e.message))

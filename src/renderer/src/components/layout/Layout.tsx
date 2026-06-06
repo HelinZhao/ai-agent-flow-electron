@@ -1,4 +1,4 @@
-import { useState, memo } from 'react'
+import { useState, memo, Suspense } from 'react'
 import ThemeToggle from './ThemeToggle'
 import LLMConfigSwitcher from './LLMConfigSwitcher'
 import Sidebar from './Sidebar'
@@ -11,29 +11,79 @@ interface LayoutProps {
   children: React.ReactNode
   currentPage: string
   onNavigate: (page: string) => void
-  navItems: { path: string; label: string; icon: React.ReactNode, page: React.ReactNode }[]
+  navItems: { path: string; label: string; icon: React.ReactNode, page: React.ReactNode, keepAlive?: boolean }[]
 }
 const isElectron = Boolean(window.electron || window.api)
+
+const PAGE_LOADING = (
+  <div className="flex items-center justify-center h-full">
+    <div className="flex items-center gap-2 text-gray-400 dark:text-gray-500 text-sm">
+      <div className="w-4 h-4 border-2 border-blue-400 border-t-transparent rounded-full animate-spin" />
+      加载中...
+    </div>
+  </div>
+)
+
 
 const MainArea = memo(function MainArea({ currentPage, children, navItems }: {
   currentPage: string
   children: React.ReactNode
-  navItems: { path: string; label: string; icon: React.ReactNode, page: React.ReactNode }[]
+  navItems: { path: string; label: string; icon: React.ReactNode, page: React.ReactNode, keepAlive?: boolean }[]
 }) {
+  // Keep-Alive: 白名单页面（keepAlive: true）首次访问后缓存 DOM，切换回来时瞬间恢复状态
+  // 非白名单页面（配置/日志等）用完即卸载，节省内存
+  // 使用 React 官方推荐的 render-phase 派生 state 模式
+  const [cachedPaths, setCachedPaths] = useState(() => {
+    return navItems.find(i => i.path === currentPage)?.keepAlive ? new Set([currentPage]) : new Set<string>()
+  })
+  const [prevPage, setPrevPage] = useState(currentPage)
+
+  if (currentPage !== prevPage) {
+    setPrevPage(currentPage)
+    const isKeepAlive = navItems.find(i => i.path === currentPage)?.keepAlive
+    if (isKeepAlive && !cachedPaths.has(currentPage)) {
+      setCachedPaths(prev => {
+        if (prev.has(currentPage)) return prev
+        const next = new Set(prev)
+        next.add(currentPage)
+        if (next.size > 5) {
+          const first = next.values().next().value as string | undefined
+          if (first && first !== currentPage) next.delete(first)
+        }
+        return next
+      })
+    }
+  }
+
+  const currentItem = navItems.find(i => i.path === currentPage)
+  const currentKeepAlive = currentItem?.keepAlive
+
   return (
     <main className="flex-1 overflow-auto relative">
       <div className="absolute inset-0 bg-grid-pattern opacity-5 dark:opacity-10"></div>
       {children}
-      {navItems.map((item) => (
-        <div key={item.path} className={`relative z-10 h-full ${currentPage === item.path ? '' : 'hidden'}`}>
-          {item.page}
-        </div>
-      ))}
+      <Suspense fallback={PAGE_LOADING}>
+        {/* 白名单页面：缓存的全部渲染，非当前页 hidden */}
+        {Array.from(cachedPaths).map(path => {
+          const item = navItems.find(i => i.path === path)
+          return item ? (
+            <div key={path} className={`relative z-10 h-full${path === currentPage ? '' : ' hidden'}`}>
+              {item.page}
+            </div>
+          ) : null
+        })}
+        {/* 非白名单页面：条件渲染，用完即卸载 */}
+        {!currentKeepAlive && (
+          <div className="relative z-10 h-full">
+            {currentItem?.page}
+          </div>
+        )}
+      </Suspense>
     </main>
   );
 })
 
-const Layout: React.FC<LayoutProps> = ({ navItems, currentPage, onNavigate, children }) => {
+const Layout = memo(function Layout({ navItems, currentPage, onNavigate, children }: LayoutProps) {
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false)
   const toggleSidebar = () => setSidebarCollapsed(v => !v)
 
@@ -79,6 +129,6 @@ const Layout: React.FC<LayoutProps> = ({ navItems, currentPage, onNavigate, chil
       <Footer collapsed={sidebarCollapsed} onToggleCollapse={toggleSidebar} />
     </div>
   )
-}
+})
 
 export default Layout

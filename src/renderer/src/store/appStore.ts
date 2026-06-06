@@ -16,7 +16,6 @@ interface AppState {
   tasks: Task[]
   llmConfigs: LLMConfig[]
   activeLLMConfig: LLMConfig | null
-  currentPage: string
   loading: boolean
   error: string | null
   pinnedAgentIds: string[]
@@ -25,10 +24,6 @@ interface AppState {
   initialize: () => Promise<void>
 
   // Workflow actions
-  addWorkflow: (workflow: Omit<Workflow, 'id' | 'createdAt' | 'updatedAt'>) => Promise<Workflow>
-  updateWorkflow: (id: string, updates: Partial<Workflow>) => Promise<void>
-  deleteWorkflow: (id: string) => Promise<void>
-  setCurrentPage: (page: string) => void
   togglePinAgent: (agentId: string) => void
 
   // Skill actions
@@ -129,7 +124,6 @@ export const useAppStore = create<AppState>()(
       mcpServers: [],
       envVars: [],
       projects: [],
-      currentPage: '/',
       pinnedAgentIds: [],
       loading: false,
       error: null,
@@ -325,10 +319,6 @@ export const useAppStore = create<AppState>()(
         } finally {
           state.setLoading(false)
         }
-      },
-
-      setCurrentPage: (page) => {
-        set({ currentPage: page })
       },
 
       togglePinAgent: (agentId: string) => {
@@ -582,7 +572,7 @@ export const useAppStore = create<AppState>()(
           const updatedConfigs = state.llmConfigs.map((config) => ({
             ...config,
             isActive: config.id === id
-          }), { name: "workflow-storage", partialize: (state) => ({ currentPage: state.currentPage }), })
+          }))
 
           set({
             llmConfigs: updatedConfigs,

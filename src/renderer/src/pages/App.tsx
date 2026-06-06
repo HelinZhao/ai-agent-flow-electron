@@ -3,25 +3,11 @@ import Layout from "@renderer/components/layout/Layout";
 import '@renderer/assets/react-flow-custom.css';
 import '@renderer/assets/iconfont.css';
 import { useAppStore } from "@renderer/store/appStore";
-import { useEffect, useState } from "react";
+import { usePageStore } from "@renderer/store/pageStore";
+import { lazy, useEffect, useState } from "react";
 import { ollamaApi } from "@renderer/lib/api";
 import OllamaInstallDialog from "@renderer/components/OllamaInstallDialog";
 import ModelDownloadDialog from "@renderer/components/ModelDownloadDialog";
-import Workflow from "./Workflow";
-import Skills from "./Skills";
-import Settings from "./Settings";
-import Agents from "./Agents";
-import Chat from "./Chat";
-import Logs from "./Logs";
-import ExecutionMonitor from "./ExecutionMonitor";
-import Triggers from "./Triggers";
-import Knowledge from "./Knowledge";
-import McpServers from "./McpServers";
-import Teams from "./Teams";
-import Tasks from "./Tasks";
-import Projects from "./Projects";
-import TeamMonitor from "./TeamMonitor";
-import Marketplace from "./Marketplace";
 import ToastContainer from '@renderer/components/ui/toast/ToastContainer';
 import ToolApprovalSidebar from '@renderer/components/tasks/ToolApprovalSidebar';
 import { useTeamExecutionStore } from '@renderer/store/teamExecutionStore';
@@ -30,20 +16,36 @@ import {
   TriggersIcon, McpIcon, MarketplaceIcon, MonitorIcon, SettingsIcon, LogsIcon, TicketIcon, FolderIcon
 } from '@renderer/components/icons/NavIcons';
 
+const Workflow = lazy(() => import("./Workflow"));
+const Skills = lazy(() => import("./Skills"));
+const Settings = lazy(() => import("./Settings"));
+const Agents = lazy(() => import("./Agents"));
+const Chat = lazy(() => import("./Chat"));
+const Logs = lazy(() => import("./Logs"));
+const ExecutionMonitor = lazy(() => import("./ExecutionMonitor"));
+const Triggers = lazy(() => import("./Triggers"));
+const Knowledge = lazy(() => import("./Knowledge"));
+const McpServers = lazy(() => import("./McpServers"));
+const Teams = lazy(() => import("./Teams"));
+const Tasks = lazy(() => import("./Tasks"));
+const Projects = lazy(() => import("./Projects"));
+const TeamMonitor = lazy(() => import("./TeamMonitor"));
+const Marketplace = lazy(() => import("./Marketplace"));
+
 const navItems = [
-  { path: '/chat', label: 'AI对话', icon: <ChatIcon />, page: <Chat />, group: '核心' },
-  { path: '/', label: '工作流', icon: <WorkflowIcon />, page: <Workflow />, group: '核心' },
+  { path: '/chat', label: 'AI对话', icon: <ChatIcon />, page: <Chat />, group: '核心', keepAlive: true },
+  { path: '/', label: '工作流', icon: <WorkflowIcon />, page: <Workflow />, group: '核心', keepAlive: true },
   { path: '/agents', label: 'Agent', icon: <AgentIcon />, page: <Agents />, group: '核心' },
   { path: '/teams', label: '团队', icon: <TeamIcon />, page: <Teams />, group: '核心' },
-  { path: '/tasks', label: '任务池', icon: <TicketIcon />, page: <Tasks />, group: '核心' },
+  { path: '/tasks', label: '任务池', icon: <TicketIcon />, page: <Tasks />, group: '核心', keepAlive: true },
   { path: '/projects', label: '项目', icon: <FolderIcon />, page: <Projects />, group: '核心' },
   { path: '/skills', label: '技能', icon: <SkillsIcon />, page: <Skills />, group: '能力' },
-  { path: '/knowledge', label: '知识库', icon: <KnowledgeIcon />, page: <Knowledge />, group: '能力' },
+  { path: '/knowledge', label: '知识库', icon: <KnowledgeIcon />, page: <Knowledge />, group: '能力', keepAlive: true },
   { path: '/triggers', label: '触发器', icon: <TriggersIcon />, page: <Triggers />, group: '能力' },
   { path: '/mcp', label: 'MCP服务', icon: <McpIcon />, page: <McpServers />, group: '能力' },
   { path: '/marketplace', label: '模板市场', icon: <MarketplaceIcon />, page: <Marketplace />, group: '资源' },
-  { path: '/monitor', label: '执行监控', icon: <MonitorIcon />, page: <ExecutionMonitor />, group: '运维' },
-  { path: '/team-monitor', label: '团队执行', icon: <TeamIcon />, page: <TeamMonitor />, group: '运维' },
+  { path: '/monitor', label: '执行监控', icon: <MonitorIcon />, page: <ExecutionMonitor />, group: '运维', keepAlive: true },
+  { path: '/team-monitor', label: '团队执行', icon: <TeamIcon />, page: <TeamMonitor />, group: '运维', keepAlive: true },
   { path: '/settings', label: '设置', icon: <SettingsIcon />, page: <Settings />, group: '系统' },
   { path: '/logs', label: '日志', icon: <LogsIcon />, page: <Logs />, group: '系统' }
 ]
@@ -52,8 +54,8 @@ let init = false
 
 export default function App(): React.JSX.Element {
   const initialize = useAppStore(state => state.initialize);
-  const currentPage = useAppStore(state => state.currentPage);
-  const setCurrentPage = useAppStore(state => state.setCurrentPage);
+  const currentPage = usePageStore(state => state.currentPage);
+  const setCurrentPage = usePageStore(state => state.setCurrentPage);
   const error = useAppStore(state => state.error);
   const [initializing, setInitializing] = useState(true);
   const [showModelDialog, setShowModelDialog] = useState(false);

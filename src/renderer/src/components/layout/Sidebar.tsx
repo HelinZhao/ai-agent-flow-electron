@@ -1,10 +1,11 @@
-import { useRef } from 'react'
+import { memo, useRef } from 'react'
 
 interface NavItem {
   path: string
   label: string
   icon: React.ReactNode
   group?: string
+  keepAlive?: boolean
 }
 
 interface SidebarProps {
@@ -60,7 +61,7 @@ const Sidebar: React.FC<SidebarProps> = ({ currentPage, onNavigate, navItems, co
                       onClick={() => onNavigate(item.path)}
                       onMouseEnter={(e) => showTooltip(item.label, e.currentTarget)}
                       onMouseLeave={hideTooltip}
-                      className={`flex items-center h-10 rounded-xl transition-all duration-200 focus:outline-none px-1.5 space-x-3 flex-shrink-0 w-full
+                      className={`flex items-center h-10 rounded-xl transition-[background-color] duration-200 focus:outline-none px-1.5 space-x-3 flex-shrink-0 w-full
                         ${currentPage === item.path
                           ? 'bg-gradient-to-r from-blue-500 to-purple-600 text-white shadow-lg'
                           : 'text-gray-600 dark:text-gray-300 hover:text-blue-600 dark:hover:text-blue-400 hover:bg-gray-100/80 dark:hover:bg-gray-700/50'
@@ -92,4 +93,4 @@ const Sidebar: React.FC<SidebarProps> = ({ currentPage, onNavigate, navItems, co
   )
 }
 
-export default Sidebar
+export default memo(Sidebar)

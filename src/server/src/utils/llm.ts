@@ -197,7 +197,7 @@ async function _execAgent(
   const agent = createAgent({ model: llm, tools, checkpointer: cp, middleware: mw })
   const rl = hasTools ? LANGGRAPH_RECURSION_LIMIT_WITH_TOOLS : LANGGRAPH_RECURSION_LIMIT_NO_TOOLS
   const tid = threadId || "thread-" + crypto.randomUUID()
-
+  console.log(`[LLM Agent] 执行开始，线程ID: ${tid}, 是否使用工具: ${hasTools}, 是否HITL: ${useHITL}`)
   // HITL 模式：agent.invoke → 工具被拦截 → 等待用户审批 → resume 继续
   if (useHITL) {
     let stepCount = 0
@@ -220,7 +220,7 @@ async function _execAgent(
   // 有工具：stream 模式追踪每一步
   if (hasTools) {
     let lastMsg: any = null; let step = 0
-    const stream = await agent.stream({ messages }, { recursionLimit: rl })
+    const stream = await agent.stream({ messages }, { configurable: { thread_id: tid }, recursionLimit: rl })
     for await (const rawChunk of stream) {
       for (const [nodeName, nodeState] of Object.entries<any>(rawChunk)) {
         if (nodeName === "model_request") {
@@ -246,7 +246,7 @@ async function _execAgent(
   }
 
   // 无工具：直接 invoke
-  const r = await agent.invoke({ messages }, { recursionLimit: rl, signal: options?.signal })
+  const r = await agent.invoke({ messages }, { configurable: { thread_id: tid }, recursionLimit: rl, signal: options?.signal })
   const lm = r.messages[r.messages.length - 1]
   return { content: lm.content.toString(), tokenUsage: extractTokenUsage(lm) }
 }

@@ -485,6 +485,11 @@ this.app.use('/api/new-route', newRouter)
 - **Chat 页 AI 列表右键菜单**：新增顶置 Agent（持久化排序，已顶置排前面）和新对话（清空记忆 + 切换选中）
 - **项目卡片风格对齐团队页**：蓝色/青色主题改为靛蓝/紫色，操作按钮改为右上角浮动面板，新增右下角 Chevron 箭头，改用 ResponsiveGrid 布局
 - **Avatar 组件抽取**：统一 AgentListSidebar/AgentDetail/AgentCard/ChatMessage 四处的头像渲染
+- **导航性能优化**：页面改用 React.lazy 懒加载 + Keep-Alive 缓存白名单（工作区页面保活，配置页用完即卸载），Layout/MainArea/Sidebar 加 memo 减少级联重渲染
+- **currentPage 独立存储**：拆出 pageStore，不再走大 Store 的 persist 中间件，避免每次切换页面触发全量序列化开销
+- **执行结果节点展示**：NodeResultItem 新增「查看 Result JSON」调试功能
+- **模板导入类型修复**：Marketplace 导入 Agent 时 type 默认值从 `assistant` 改为 `standard`
+- **LLM agent.stream 补传 thread_id**：非 HITL 路径的 `agent.stream()` 缺失 `configurable: { thread_id }`，导致已有线程 checkpoint 写入时报 Missing thread_id
 
 ### v2.3.0
 
