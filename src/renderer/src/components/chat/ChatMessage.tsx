@@ -3,6 +3,7 @@ import { ChatMessage as ChatMessageType, AttachmentMetadata } from '@renderer/ty
 import MarkdownPreview from '@renderer/components/MarkdownPreview'
 import Avatar from '@renderer/components/ui/Avatar'
 import AttachmentDisplay from '@renderer/components/chat/AttachmentDisplay'
+import { useSettingsStore } from '@renderer/store/settingsStore'
 
 function formatTime(timestamp: string): string {
   const date = new Date(timestamp)
@@ -29,6 +30,7 @@ const ChatMessage = React.memo(function ChatMessage({
   onRegenerate,
 }: ChatMessageProps) {
   const isUser = message.sender === 'user'
+  const userAvatar = useSettingsStore((s) => s.userAvatar)
 
   return (
     <div className={`flex ${isUser ? 'justify-end' : 'justify-start'} group`}>
@@ -36,8 +38,9 @@ const ChatMessage = React.memo(function ChatMessage({
         {/* 头像 */}
         {isUser ? (
           <Avatar
+            src={userAvatar || null}
             name={'User'}
-            size="sm"
+            size="md"
             fallbackIcon={
               <svg className="w-3.5 h-3.5 text-white" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                 <path d="M20 21v-2a4 4 0 00-4-4H8a4 4 0 00-4 4v2" />
@@ -51,7 +54,7 @@ const ChatMessage = React.memo(function ChatMessage({
           <Avatar
             src={agentAvatarUrl}
             name={agentName}
-            size="sm"
+            size="md"
             fallbackIcon="🤖"
             className="mt-0.5 shadow-sm"
             shape="circle"

@@ -10,12 +10,14 @@ interface SettingsState {
   autoStart: boolean
   showSystemAssistant: boolean
   gitEnabled: boolean
+  userAvatar: string
   setLayoutDirection: (dir: LayoutDirection) => void
   setAutoSave: (on: boolean) => void
   setAutoSaveInterval: (sec: number) => void
   setAutoStart: (on: boolean) => void
   setShowSystemAssistant: (on: boolean) => void
   setGitEnabled: (on: boolean) => void
+  setUserAvatar: (url: string) => void
   reset: () => void
 }
 
@@ -26,6 +28,7 @@ const DEFAULTS = {
   autoStart: false,
   showSystemAssistant: true,
   gitEnabled: false,
+  userAvatar: '',
 }
 
 export const useSettingsStore = create<SettingsState>()(
@@ -39,6 +42,7 @@ export const useSettingsStore = create<SettingsState>()(
       setAutoStart: (autoStart) => set({ autoStart }),
       setShowSystemAssistant: (showSystemAssistant) => set({ showSystemAssistant }),
       setGitEnabled: (gitEnabled) => set({ gitEnabled }),
+      setUserAvatar: (userAvatar) => set({ userAvatar }),
       reset: () => set(DEFAULTS),
     }),
     {

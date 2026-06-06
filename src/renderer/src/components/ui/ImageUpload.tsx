@@ -166,7 +166,13 @@ export interface ImageUploadProps {
   /** 组件名称（用于空状态首字母兜底） */
   name?: string
 }
-
+const SIZE_MAP: Record<string, { size: string; icon: string; initial: string; round: string }> = {
+  xs: { size: 'w-6 h-6', icon: 'text-xs', initial: 'text-xs', round: 'rounded-lg' },
+  sm: { size: 'w-7 h-7', icon: 'text-sm', initial: 'text-sm', round: 'rounded-xl' },
+  md: { size: 'w-9 h-9', icon: 'text-base', initial: 'text-base', round: 'rounded-lg' },
+  lg: { size: 'w-14 h-14', icon: 'text-2xl', initial: 'text-xl', round: 'rounded-xl' },
+  xl: { size: 'w-16 h-16', icon: 'text-3xl', initial: 'text-2xl', round: 'rounded-xxl' },
+}
 /**
  * 集成图片上传组件
  * - 点击「上传图片」选择文件 → 弹出裁剪框（圆形/方形）→ 确认后显示预览
@@ -232,7 +238,7 @@ export default function ImageUpload({
         </ImagePreview>
       ) : (
         <CustomFileUpload accept="image/*" onChange={handleFileSelect} size="sm" variant="ghost" icon={false} buttonClassName="!p-0">
-          <div className="h-16 w-16 flex flex-col items-center justify-center gap-1 rounded-lg border-2 border-dashed border-gray-300 dark:border-gray-600 text-gray-500 hover:border-gray-400 dark:hover:border-gray-500 transition-colors cursor-pointer">
+          <div className={`${SIZE_MAP[size]?.size} flex flex-col items-center justify-center gap-1 rounded-lg border-2 border-dashed border-gray-300 dark:border-gray-600 text-gray-500 hover:border-gray-400 dark:hover:border-gray-500 transition-colors cursor-pointer`}>
             <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
               <path d="M12 5v14M5 12h14" />
             </svg>

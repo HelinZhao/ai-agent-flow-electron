@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react'
 import CustomButton from '@renderer/components/ui/CustomButton'
 import CustomSwitch from '@renderer/components/ui/CustomSwitch'
+import ImageUpload from '@renderer/components/ui/ImageUpload'
 import MessageBanner from '@renderer/components/ui/MessageBanner'
 import { useSettingsStore } from '@renderer/store/settingsStore'
 
@@ -11,18 +12,17 @@ export default function SettingsGeneral() {
     autoSaveInterval, setAutoSaveInterval,
     autoStart, setAutoStart,
     showSystemAssistant, setShowSystemAssistant,
+    userAvatar, setUserAvatar,
     reset,
   } = useSettingsStore()
   const [message, setMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null)
 
-  // 页面加载时从主进程同步开机自启状态
+  // 页面加载时同步开机自启状态
   useEffect(() => {
     window.api?.app.getAutoStart().then((enabled) => {
       setAutoStart(enabled)
-    }).catch(() => {
-      // 忽略错误，使用 store 中的默认值
-    })
-  }, [])
+    }).catch(() => {})
+  }, [setAutoStart])
 
   const handleReset = () => {
     reset()
@@ -53,6 +53,45 @@ export default function SettingsGeneral() {
       {message && (
         <MessageBanner type={message.type} text={message.text} onClose={() => setMessage(null)} autoCloseMs={2000} />
       )}
+
+      {/* 用户头像 */}
+      <div className="rounded-xl border border-gray-200 dark:border-gray-700 overflow-hidden flex justify-between px-5 py-4 ">
+        <div className="flex items-center justify-between">
+          <div>
+            <p className="text-sm font-semibold text-gray-900 dark:text-white">用户头像</p>
+            <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">设置个人头像，用于界面中的用户标识展示</p>
+          </div>
+        </div>
+          <ImageUpload
+            value={userAvatar}
+            onChange={async (dataUrl) => {
+              if (!dataUrl) {
+                // 移除头像
+                if (userAvatar) window.api.avatar.delete(userAvatar)
+                setUserAvatar('')
+                return
+              }
+              // 保存新头像到文件，得到 URL 路径
+              const res = await window.api.avatar.save(dataUrl)
+              if (res.success && res.urlPath) {
+                // 删除旧头像文件
+                if (userAvatar) window.api.avatar.delete(userAvatar)
+                setUserAvatar(res.urlPath)
+                setMessage({ type: 'success', text: '头像已更新' })
+              } else {
+                setMessage({ type: 'error', text: '头像保存失败' })
+              }
+            }}
+            size="lg"
+            fallbackIcon={
+              <svg className="w-6 h-6" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5">
+                <path d="M20 21v-2a4 4 0 00-4-4H8a4 4 0 00-4 4v2" />
+                <circle cx="12" cy="7" r="4" />
+              </svg>
+            }
+            name="User"
+          />
+      </div>
 
       <div className="rounded-xl border border-gray-200 dark:border-gray-700 overflow-hidden">
         <div className="px-5 py-4 border-b border-gray-100 dark:border-gray-700/50 flex items-center justify-between">

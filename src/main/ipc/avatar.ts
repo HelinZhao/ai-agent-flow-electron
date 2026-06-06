@@ -1,11 +1,14 @@
 import { ipcMain, app } from 'electron'
-import { join, extname } from 'path'
+import { join } from 'path'
 import { writeFile, unlink, mkdir } from 'fs/promises'
 import { existsSync } from 'fs'
 import { v4 as uuidv4 } from 'uuid'
 
 /** 头像存储根目录（相对于 userData） */
 const AVATAR_SUBDIR = 'avatars'
+
+/** 用户头像固定文件名 */
+const USER_AVATAR_FILENAME = 'avatar_user.png'
 
 function getAvatarDir(): string {
   const base = app.isPackaged
@@ -65,4 +68,5 @@ export function setupAvatarIPC(): void {
       return { success: false, error: (error as Error).message }
     }
   })
+
 }
