@@ -29,6 +29,7 @@ interface AppState {
 
   // Workflow actions
   togglePinAgent: (agentId: string) => void
+  addWorkflow: (workflow: Omit<Workflow, 'id' | 'createdAt' | 'updatedAt'>) => Promise<Workflow>
 
   // Skill actions
   addSkill: (skill: Omit<Skill, 'id' | 'createdAt' | 'updatedAt'>) => Promise<void>

@@ -21,11 +21,22 @@ interface PendingApprovalInfo {
   teamId?: string
 }
 
+interface PendingChoiceInfo {
+  question: string
+  options: { label: string; value: string; description?: string }[]
+  allowMultiSelect?: boolean
+  taskTitle?: string
+  teamName?: string
+  teamId?: string
+}
+
 interface TeamExecutionState {
   /** 唯一数据源：按 executionId 缓存事件 */
   eventsByExecution: Record<string, ExecutionEvent[]>
   /** sync_state 标记的当前待审批（叠加层，不替代事件自身的 actionRequests） */
   pendingApprovalByExecution: Record<string, PendingApprovalInfo>
+  /** 当前待用户选择的请求 */
+  pendingChoiceByExecution: Record<string, PendingChoiceInfo>
   /** 当前活跃执行所属的 teamId 列表（由 sync_state + SSE 维护，侧边栏判断实时状态） */
   activeTeamIds: string[]
   initialized: boolean
@@ -37,6 +48,8 @@ interface TeamExecutionState {
   loadHistory: (teamId: string, executionId: string) => Promise<void>
   /** 清除待审批标记，同时标记 tool_call 为已处理（结果已写入文件） */
   markToolApproved: (executionId: string, status?: 'approved' | 'rejected') => void
+  /** 清除待选择标记 */
+  markChoiceSubmitted: (executionId: string) => void
   clearTeamEvents: (teamId: string) => void
 }
 
@@ -86,6 +99,7 @@ function clearApprovalsInEvents(events: ExecutionEvent[]): ExecutionEvent[] {
 export const useTeamExecutionStore = create<TeamExecutionState>((set, get) => ({
   eventsByExecution: {},
   pendingApprovalByExecution: {},
+  pendingChoiceByExecution: {},
   activeTeamIds: [],
   initialized: false,
 
@@ -138,6 +152,7 @@ export const useTeamExecutionStore = create<TeamExecutionState>((set, get) => ({
           [exId]: [...events, entry],
         }
         let newPending = state.pendingApprovalByExecution
+        let newChoice = state.pendingChoiceByExecution
         let newActiveTeams = state.activeTeamIds
         const tid = entry.teamId
 
@@ -149,10 +164,12 @@ export const useTeamExecutionStore = create<TeamExecutionState>((set, get) => ({
           }
         }
 
-        // execution_complete：清理待审批标记 + 检查 team 是否还有其它活跃执行
+        // execution_complete：清理待审批和待选择标记 + 检查 team 是否还有其它活跃执行
         if (event.type === 'execution_complete') {
           newPending = { ...newPending }
           delete newPending[exId]
+          newChoice = { ...newChoice }
+          delete newChoice[exId]
           newExec[exId] = clearApprovalsInEvents(newExec[exId])
           if (tid) {
             // 检查同 team 的其他 execution 的最后一条事件是否不是 execution_complete（而非历史中的任一条）
@@ -173,7 +190,12 @@ export const useTeamExecutionStore = create<TeamExecutionState>((set, get) => ({
           newPending = { ...newPending, [exId]: { actionRequests: event.actionRequests, teamId: event.teamId, taskTitle: event.taskTitle, teamName: event.teamName } }
         }
 
-        return { eventsByExecution: newExec, pendingApprovalByExecution: newPending, activeTeamIds: newActiveTeams }
+        // user_choice_required：更新 pendingChoiceByExecution
+        if (event.type === 'user_choice_required') {
+          newChoice = { ...newChoice, [exId]: { question: event.question, options: event.options, allowMultiSelect: event.allowMultiSelect, teamId: event.teamId, taskTitle: event.taskTitle, teamName: event.teamName } }
+        }
+
+        return { eventsByExecution: newExec, pendingApprovalByExecution: newPending, pendingChoiceByExecution: newChoice, activeTeamIds: newActiveTeams }
       })
     })
 
@@ -225,6 +247,15 @@ export const useTeamExecutionStore = create<TeamExecutionState>((set, get) => ({
           [executionId]: markToolCalls(events, status),
         },
       }
+    })
+  },
+
+  /** 清除待选择标记 */
+  markChoiceSubmitted: (executionId: string) => {
+    set(state => {
+      const newChoice = { ...state.pendingChoiceByExecution }
+      delete newChoice[executionId]
+      return { pendingChoiceByExecution: newChoice }
     })
   },
 

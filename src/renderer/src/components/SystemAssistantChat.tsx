@@ -5,10 +5,10 @@ import { useSettingsStore } from '@renderer/store/settingsStore'
 import { workflowExecutionApi } from '@renderer/lib/api'
 import { frontendActionBus } from '@renderer/lib/frontendActionBus'
 import { chatRecordApi } from '@renderer/lib/chatRecord'
-import type { ChatMessage as ChatMessageType, ToolApprovalRequest } from '@renderer/types'
-import { TOOL_LABEL_MAP } from '@renderer/config'
-import CustomButton from '@renderer/components/ui/CustomButton'
+import type { ChatMessage as ChatMessageType, ToolApprovalRequest, UserChoiceOption } from '@renderer/types'
 import MarkdownPreview from '@renderer/components/MarkdownPreview'
+import ChoiceCard from '@renderer/components/ui/ChoiceCard'
+import ApprovalCard from '@renderer/components/ui/ApprovalCard'
 
 const SYSTEM_AGENT_ID = '00000000-0000-0000-0000-000000000001'
 const SYSTEM_AGENT_NAME = '布丁'
@@ -24,6 +24,7 @@ export default function SystemAssistantChat() {
   const [input, setInput] = useState('')
   const [loading, setLoading] = useState(false)
   const [pendingApproval, setPendingApproval] = useState<ToolApprovalRequest | null>(null)
+  const [pendingChoice, setPendingChoice] = useState<{ question: string; options: UserChoiceOption[]; allowMultiSelect?: boolean } | null>(null)
   const [autoApprovedTools, setAutoApprovedTools] = useState<Set<string>>(new Set())
   const [currentExecutionId, setCurrentExecutionId] = useState<string | null>(null)
   const autoApprovedRef = useRef<Set<string>>(new Set())
@@ -170,6 +171,8 @@ export default function SystemAssistantChat() {
             }
           } else if (progress.type === 'node_update') {
             setPendingApproval(null)
+          } else if (progress.type === 'user_choice_required') {
+            setPendingChoice({ question: progress.question, options: progress.options, allowMultiSelect: progress.allowMultiSelect })
           } else if (progress.type === 'frontend_action') {
             frontendActionBus.dispatch(progress)
           }
@@ -218,16 +221,38 @@ export default function SystemAssistantChat() {
     } catch { /* ignore */ }
   }, [currentExecutionId])
 
+  const handleChoiceSubmit = useCallback(async (response: { selectedValue?: string; selectedLabel?: string; selectedValues?: string[]; selectedLabels?: string[]; cancelled?: boolean }) => {
+    if (!currentExecutionId) return
+    try {
+      await workflowExecutionApi.submitWorkflowChoice(currentExecutionId, response)
+      setPendingChoice(null)
+    } catch { /* ignore */ }
+  }, [currentExecutionId])
+
+  const handleChoiceCancel = useCallback(async () => {
+    if (!currentExecutionId) return
+    try {
+      await workflowExecutionApi.submitWorkflowChoice(currentExecutionId, { cancelled: true })
+      setPendingChoice(null)
+    } catch { /* ignore */ }
+  }, [currentExecutionId])
+
   const handleNewChat = useCallback(async () => {
     if (messages.length === 0) return
     if (!window.confirm('确定要清空布丁的对话记录吗？')) return
     const agent = systemAgent || agents.find(a => a.id === SYSTEM_AGENT_ID || a.name === SYSTEM_AGENT_NAME)
     if (agent) {
+      if (currentExecutionId) {
+        try { await workflowExecutionApi.stopExecution(currentExecutionId) } catch { /* ignore */ }
+      }
       await chatRecordApi.deleteRecord(agent.id).catch(() => {})
       await workflowExecutionApi.deleteThread(agent.id).catch(() => {})
     }
+    setCurrentExecutionId(null)
+    setPendingApproval(null)
+    setPendingChoice(null)
     setMessages([])
-  }, [messages, systemAgent, agents])
+  }, [messages, systemAgent, agents, currentExecutionId])
 
   const handleKeyDown = (e: React.KeyboardEvent) => {
     if (e.key === 'Enter' && !e.shiftKey) {
@@ -305,7 +330,7 @@ export default function SystemAssistantChat() {
                 </div>
               </div>
             ))}
-            {loading && !pendingApproval && (
+            {loading && !pendingApproval && !pendingChoice && (
               <div className="flex justify-start">
                 <div className="px-3 py-2 rounded-xl bg-gray-100 dark:bg-gray-700 rounded-bl-md">
                   <div className="flex gap-1">
@@ -319,28 +344,26 @@ export default function SystemAssistantChat() {
             {pendingApproval && (
               <div className="flex justify-start">
                 <div className="bg-amber-50 dark:bg-amber-900/10 border border-amber-200 dark:border-amber-700 px-3 py-2.5 rounded-xl rounded-bl-md text-xs w-full">
-                  <div className="font-semibold text-amber-700 dark:text-amber-300 mb-2 flex items-center gap-1.5">
-                    <span className="w-1.5 h-1.5 bg-amber-400 rounded-full animate-pulse" />
-                    工具调用需要审批
-                  </div>
-                  <div className="space-y-1.5 mb-2">
-                    {pendingApproval.actionRequests.map((action, i) => (
-                      <div key={i} className="bg-white dark:bg-gray-700/50 rounded-lg p-2 border border-amber-100 dark:border-amber-800/30">
-                        <div className="font-medium text-gray-800 dark:text-gray-200">{TOOL_LABEL_MAP[action.name] || action.name}</div>
-                        <div className="text-gray-500 dark:text-gray-400 mt-1 max-h-[60px] overflow-auto font-mono text-[10px]">
-                          {JSON.stringify(action.args, null, 2)}
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                  <div className="flex flex-wrap items-center gap-1.5">
-                    <CustomButton onClick={() => handleApprove(true)} variant="primary" size="xs">允许</CustomButton>
-                    <CustomButton onClick={() => handleApprove(false)} variant="danger" size="xs">拒绝</CustomButton>
-                    <CustomButton onClick={() => {
-                      const uniqueTools = new Set(pendingApproval.actionRequests.map(a => a.name))
-                      uniqueTools.forEach(name => handleAutoApprove(name))
-                    }} variant="secondary" size="xs">本会话允许</CustomButton>
-                  </div>
+                  <ApprovalCard
+                    actionRequests={pendingApproval.actionRequests}
+                    showAutoApprove
+                    onApprove={() => handleApprove(true)}
+                    onReject={() => handleApprove(false)}
+                    onAutoApprove={(toolName) => handleAutoApprove(toolName)}
+                  />
+                </div>
+              </div>
+            )}
+            {pendingChoice && !pendingApproval && (
+              <div className="flex justify-start">
+                <div className="bg-blue-50 dark:bg-blue-900/10 border border-blue-200 dark:border-blue-700 px-3 py-2.5 rounded-xl rounded-bl-md text-xs w-full">
+                  <ChoiceCard
+                    question={pendingChoice.question}
+                    options={pendingChoice.options}
+                    allowMultiSelect={pendingChoice.allowMultiSelect}
+                    onSubmit={(resp) => handleChoiceSubmit(resp)}
+                    onCancel={() => handleChoiceCancel()}
+                  />
                 </div>
               </div>
             )}

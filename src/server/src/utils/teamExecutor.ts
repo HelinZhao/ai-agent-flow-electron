@@ -53,6 +53,7 @@ async function callAgent(
   executionId: string, nodeId: string, llmConfig: LLMConfig,
   agent: any, prompt: string, signal?: AbortSignal,
   approvalCallback?: CallLLMOptions['approvalCallback'],
+  choiceCallback?: CallLLMOptions['choiceCallback'],
 ): Promise<string> {
   const agentLlmConfig = await resolveAgentLlmConfig(agent, llmConfig)
 
@@ -68,7 +69,7 @@ async function callAgent(
     finalTools = updatedTools
   }
 
-  return await callLLMWithTracking({ executionId, nodeId, llmConfig: agentLlmConfig, prompt: finalPrompt, enabledTools: finalTools, options: { signal, approvalCallback } })
+  return await callLLMWithTracking({ executionId, nodeId, llmConfig: agentLlmConfig, prompt: finalPrompt, enabledTools: finalTools, options: { signal, approvalCallback, choiceCallback } })
 }
 
 function buildMemberListText(agentMap: Map<string, any>, memberIds: string[]): string {

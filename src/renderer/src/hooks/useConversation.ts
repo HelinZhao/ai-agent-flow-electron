@@ -1,5 +1,5 @@
 import { useState, useRef, useCallback, useMemo, useEffect } from 'react'
-import { Agent, AttachmentMetadata, ChatRecord, ToolApprovalRequest } from '@renderer/types'
+import { Agent, AttachmentMetadata, ChatRecord, ToolApprovalRequest, UserChoiceRequest } from '@renderer/types'
 import type { ChatMessage as ChatMessageType } from '@renderer/types'
 import { chatRecordApi } from '@renderer/lib/chatRecord'
 import { workflowExecutionApi } from '@renderer/lib/api'
@@ -19,6 +19,7 @@ export function useConversation() {
   const [isLoadingHistory, setIsLoadingHistory] = useState(false)
   const [currentExecutionId, setCurrentExecutionId] = useState<string | null>(null)
   const [pendingApproval, setPendingApproval] = useState<ToolApprovalRequest | null>(null)
+  const [pendingChoice, setPendingChoice] = useState<UserChoiceRequest & { executionId?: string } | null>(null)
   const [autoApprovedTools, setAutoApprovedTools] = useState<Set<string>>(new Set())
   const [unreadAgentIds, setUnreadAgentIds] = useState<Set<string>>(new Set())
   const [pendingAgentIds, setPendingAgentIds] = useState<Set<string>>(new Set())
@@ -31,13 +32,16 @@ export function useConversation() {
   const sentHistoryRef = useRef<Record<string, string[]>>({})
   const unreadRef = useRef<Set<string>>(new Set())
   const pendingApprovalRef = useRef<Record<string, ToolApprovalRequest | null>>({})
+  const pendingChoiceRef = useRef<Record<string, UserChoiceRequest | null>>({})
   const messagesEndRef = useRef<HTMLDivElement>(null)
   // SSE 回调里需要最新值，用 ref 避免闭包陈旧
   const autoApprovedRef = useRef<Set<string>>(new Set())
   autoApprovedRef.current = autoApprovedTools
-  // switchAgent 有 [] 依赖，闭包里的 pendingApproval 永远是初始 null，必须用 ref 读取最新值
+  // switchAgent 有 [] 依赖，闭包里的 pendingApproval/pendingChoice 永远是初始 null，必须用 ref 读取最新值
   const latestPendingApprovalRef = useRef<ToolApprovalRequest | null>(null)
   latestPendingApprovalRef.current = pendingApproval
+  const latestPendingChoiceRef = useRef<UserChoiceRequest | null>(null)
+  latestPendingChoiceRef.current = pendingChoice
   // 主动终止标记，避免 sendMessage 的 catch 产生错误回复
   const terminatingRef = useRef(false)
   // 分页：对话窗口中起始消息在完整数组中的索引
@@ -109,11 +113,17 @@ export function useConversation() {
       } else {
         delete pendingApprovalRef.current[prevId]
       }
+      if (latestPendingChoiceRef.current) {
+        pendingChoiceRef.current[prevId] = latestPendingChoiceRef.current
+      } else {
+        delete pendingChoiceRef.current[prevId]
+      }
     }
 
     setIsLoading(false)
     setCurrentExecutionId(null)
     setPendingApproval(null)
+    setPendingChoice(null)
     activeAgentRef.current = agent.id
 
     // 恢复目标 Agent 的草稿
@@ -140,11 +150,16 @@ export function useConversation() {
     setIsLoading(hasPending)
     if (hasPending) setCurrentExecutionId(pendingExecutionsRef.current[agent.id])
 
-    // 恢复待审批状态
+    // 恢复待审批和待选择状态
     if (agent.id in pendingApprovalRef.current) {
       const saved = pendingApprovalRef.current[agent.id]
       delete pendingApprovalRef.current[agent.id]
       if (saved) setPendingApproval(saved)
+    }
+    if (agent.id in pendingChoiceRef.current) {
+      const saved = pendingChoiceRef.current[agent.id]
+      delete pendingChoiceRef.current[agent.id]
+      if (saved) setPendingChoice(saved)
     }
   }, []) // eslint-disable-line react-hooks/exhaustive-deps
   // 故意省略依赖：switchAgent 只用 ref 读取最新值，不需要重建
@@ -254,6 +269,9 @@ export function useConversation() {
             }
           } else if (progress.type === 'node_update') {
             setPendingApproval(null)
+          } else if (progress.type === 'user_choice_required') {
+            setPendingChoice({ question: progress.question, options: progress.options, allowMultiSelect: progress.allowMultiSelect })
+            scrollToBottom()
           } else if (progress.type === 'frontend_action') {
             frontendActionBus.dispatch(progress)
           }
@@ -283,10 +301,12 @@ export function useConversation() {
     } finally {
       delete pendingExecutionsRef.current[currentAgentId]
       delete pendingApprovalRef.current[currentAgentId]
+      delete pendingChoiceRef.current[currentAgentId]
       syncPending(pendingExecutionsRef.current, setPendingAgentIds)
       if (activeAgentRef.current === currentAgentId) {
         setIsLoading(false)
         setCurrentExecutionId(null)
+        setPendingChoice(null)
       }
     }
   }, [selectedAgent, messages, autoApprovedTools, scrollToBottom, finalizeResponse])
@@ -314,6 +334,22 @@ export function useConversation() {
     } catch { /* ignore */ }
   }, [currentExecutionId])
 
+  const handleChoiceSubmit = useCallback(async (response: { selectedValue?: string; selectedLabel?: string; selectedValues?: string[]; selectedLabels?: string[]; cancelled?: boolean }) => {
+    if (!currentExecutionId) return
+    try {
+      await workflowExecutionApi.submitWorkflowChoice(currentExecutionId, response)
+      setPendingChoice(null)
+    } catch { /* ignore */ }
+  }, [currentExecutionId])
+
+  const handleChoiceCancel = useCallback(async () => {
+    if (!currentExecutionId) return
+    try {
+      await workflowExecutionApi.submitWorkflowChoice(currentExecutionId, { cancelled: true })
+      setPendingChoice(null)
+    } catch { /* ignore */ }
+  }, [currentExecutionId])
+
   const handleTerminate = useCallback(async () => {
     if (!currentExecutionId) return
     terminatingRef.current = true
@@ -325,11 +361,13 @@ export function useConversation() {
     if (agentId) {
       delete pendingExecutionsRef.current[agentId]
       delete pendingApprovalRef.current[agentId]
+      delete pendingChoiceRef.current[agentId]
       syncPending(pendingExecutionsRef.current, setPendingAgentIds)
     }
     setIsLoading(false)
     setCurrentExecutionId(null)
     setPendingApproval(null)
+    setPendingChoice(null)
   }, [currentExecutionId])
 
   // 从右键菜单开始新对话：先清空目标Agent的记录再切换过去
@@ -337,6 +375,15 @@ export function useConversation() {
     if (!window.confirm(
       `确定要开始新对话吗？\n\n这将清除与 ${agent.name} 的所有对话记录，同时清除AI的记忆（包括之前的对话上下文）。此操作不可恢复。`,
     )) return false
+
+    // 先终止正在执行的对话，避免服务器端 Promise 悬挂
+    const runningExecId = pendingExecutionsRef.current[agent.id]
+    if (runningExecId) {
+      try { await workflowExecutionApi.stopExecution(runningExecId) } catch { /* ignore */ }
+      delete pendingExecutionsRef.current[agent.id]
+      delete pendingApprovalRef.current[agent.id]
+      delete pendingChoiceRef.current[agent.id]
+    }
 
     try { await workflowExecutionApi.deleteThread(agent.id) } catch { /* ignore */ }
     try {
@@ -362,6 +409,15 @@ export function useConversation() {
       `确定要开始新对话吗？\n\n这将清除与 ${agent.name} 的所有对话记录，同时清除AI的记忆（包括之前的对话上下文）。此操作不可恢复。`,
     )) return
 
+    // 先终止正在执行的对话，避免服务器端 Promise 悬挂
+    const runningExecId = pendingExecutionsRef.current[agent.id]
+    if (runningExecId) {
+      try { await workflowExecutionApi.stopExecution(runningExecId) } catch { /* ignore */ }
+      delete pendingExecutionsRef.current[agent.id]
+      delete pendingApprovalRef.current[agent.id]
+      delete pendingChoiceRef.current[agent.id]
+    }
+
     try { await workflowExecutionApi.deleteThread(agent.id) } catch { /* ignore */ }
     try {
       const result = await chatRecordApi.deleteRecord(agent.id)
@@ -369,6 +425,10 @@ export function useConversation() {
     } catch { /* ignore */ }
 
     setAutoApprovedTools(new Set())
+    setCurrentExecutionId(null)
+    setPendingApproval(null)
+    setPendingChoice(null)
+    setIsLoading(false)
     conversationsRef.current[agent.id] = []
     displayStartRef.current = 0
     setMessages([])
@@ -438,11 +498,12 @@ export function useConversation() {
     messages, inputMessage, setInputMessage, pendingAttachments, setPendingAttachments,
     draftAgentIds, unreadAgentIds, pendingAgentIds,
     isLoading, isLoadingHistory, currentExecutionId,
-    pendingApproval, autoApprovedTools, setAutoApprovedTools,
+    pendingApproval, pendingChoice, autoApprovedTools, setAutoApprovedTools,
     sentHistory,
-    sendMessage, handleApprove, handleAutoApprove, handleTerminate,
+    sendMessage, handleApprove, handleAutoApprove, handleChoiceSubmit, handleChoiceCancel, handleTerminate,
     startNewChat, startNewChatForAgent, clearCurrentchatRecord, regenerate,
     loadMoreMessages, hasMoreMessages,
+    reloadChatRecord: loadchatRecord,
     scrollToBottom, messagesEndRef, searchAllMessages,
   }
 }

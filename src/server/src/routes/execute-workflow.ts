@@ -4,6 +4,7 @@ import { AgentModel, WorkflowModel, LLMConfigModel } from '../models'
 import { MonitoredLangGraphExecutor } from '../utils/monitoredExecutor'
 import { WORKFLOW_POLL_MAX_ATTEMPTS, WORKFLOW_POLL_INTERVAL } from '../config'
 import { safeJsonParse, buildSkillsContext } from '../utils/shared'
+import type { ChoiceResponse } from '../utils/hitl'
 
 const router = Router()
 
@@ -329,6 +330,33 @@ router.post('/approve-tool/:executionId', async (req, res) => {
     console.error('审批工具调用错误:', error)
     return res.status(500).json({
       error: error instanceof Error ? error.message : '审批工具调用失败'
+    })
+  }
+})
+
+// 用户提交选择（单选/多选/取消）
+router.post('/submit-choice/:executionId', async (req, res) => {
+  try {
+    const { executionId } = req.params
+    const { selectedValue, selectedLabel, selectedValues, selectedLabels, cancelled } = req.body
+
+    const response: ChoiceResponse = cancelled
+      ? { cancelled: true }
+      : selectedValues
+        ? { selectedValues, selectedLabels }
+        : { selectedValue: selectedValue!, selectedLabel: selectedLabel || selectedValue }
+
+    const success = monitoredExecutor.submitChoice(executionId, response)
+
+    if (!success) {
+      return res.status(404).json({ error: 'No pending choice found for this execution' })
+    }
+
+    return res.status(200).json({ success: true, message: '选择已提交' })
+  } catch (error) {
+    console.error('提交选择错误:', error)
+    return res.status(500).json({
+      error: error instanceof Error ? error.message : '提交选择失败'
     })
   }
 })

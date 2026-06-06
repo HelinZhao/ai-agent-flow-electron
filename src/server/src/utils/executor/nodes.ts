@@ -9,7 +9,7 @@ import { DANGEROUS_TOOLS } from '../../config'
 import type { Workflow } from '../../types'
 import type { DatabaseConfig } from '../database'
 import type { CallLLMOptions } from '../hitl'
-import type { HITLRequest, HITLDecision, HITLResponse } from '../hitl'
+import type { HITLRequest, HITLDecision, HITLResponse, ChoiceRequest, ChoiceResponse } from '../hitl'
 import type { ExecCtx, NodeExecutorDeps } from './types'
 import { ExecutionTerminatedError } from './types'
 import { resolveParams, resolveNodeRefs, buildNodeContext, parseInputAsArray, evaluateBranches, resolveNodeParams } from './helpers'
@@ -390,7 +390,7 @@ async function executeAgent(deps: NodeExecutorDeps, ctx: ExecCtx) {
     deps.executionStates.set(subExecutionId, {
       executionId: subExecutionId, workflow: workflowObj, status: 'running', startTime: new Date(),
       nodeResults: new Map(), progress: 0, logs: [], agentId: agent.id, threadId: undefined,
-      autoApprovedToolTypes: inheritedAutoApprove, pendingApproval: null, attachments: undefined,
+      autoApprovedToolTypes: inheritedAutoApprove, pendingApproval: null, pendingChoice: null, attachments: undefined,
     })
 
     deps.agentCallStack.add(targetAgentId)
@@ -541,7 +541,7 @@ async function executeSubWorkflow(deps: NodeExecutorDeps, ctx: ExecCtx) {
     deps.executionStates.set(subExecutionId, {
       executionId: subExecutionId, workflow: workflowObj, status: 'running', startTime: new Date(),
       nodeResults: new Map(), progress: 0, logs: [], agentId: undefined, threadId: undefined,
-      autoApprovedToolTypes: inheritedAutoApprove, pendingApproval: null, attachments: undefined,
+      autoApprovedToolTypes: inheritedAutoApprove, pendingApproval: null, pendingChoice: null, attachments: undefined,
       params: resolvedChildParams,
     })
 
@@ -614,8 +614,17 @@ async function executeLLM(deps: NodeExecutorDeps, ctx: ExecCtx) {
 
     // HITL
     const hasDangerousTools = allEnabledTools.some((t: string) => DANGEROUS_TOOLS.includes(t))
-    const options: CallLLMOptions = hasDangerousTools
-      ? {
+    const choiceCallback = async (request: ChoiceRequest): Promise<ChoiceResponse> => {
+      const execState = deps.executionStates.get(executionId)
+      if (!execState || execState.status !== 'running') throw new ExecutionTerminatedError()
+      const choicePromise = new Promise<ChoiceResponse>((resolve, reject) => { execState.pendingChoice = { resolve, reject, request } })
+      deps.broadcastToSSEClients(executionId, { type: 'user_choice_required', executionId, question: request.question, options: request.options, allowMultiSelect: request.allowMultiSelect })
+      return await choicePromise
+    }
+    const options: CallLLMOptions = {
+      choiceCallback,
+      ...(hasDangerousTools
+        ? {
           approvalCallback: async (request: HITLRequest): Promise<HITLResponse> => {
             const execState = deps.executionStates.get(executionId)
             if (!execState || execState.status !== 'running') {
@@ -649,7 +658,8 @@ async function executeLLM(deps: NodeExecutorDeps, ctx: ExecCtx) {
             return { decisions }
           },
         }
-      : {}
+        : {}),
+    }
 
     const result = await callLLMWithTracking({ executionId, nodeId: node.id, llmConfig, prompt: promptWithSkills, conversationHistory, enabledTools: allEnabledTools, options: { ...options, cache: node.data.config?.enableCache ?? false }, attachments })
     return { output: result, metadata: { nodeId: node.id, label: node.data?.label, type: 'llm', prompt: promptTemplate, variables: variablesMap } }
@@ -840,7 +850,7 @@ async function executeSplit(deps: NodeExecutorDeps, ctx: ExecCtx) {
       deps.executionStates.set(subExecutionId, {
         executionId: subExecutionId, workflow: workflowObj, status: 'running', startTime: new Date(),
         nodeResults: new Map(), progress: 0, logs: [],
-        autoApprovedToolTypes: inheritedAutoApprove, pendingApproval: null, attachments: undefined,
+        autoApprovedToolTypes: inheritedAutoApprove, pendingApproval: null, pendingChoice: null, attachments: undefined,
         params: resolvedParams,
       })
 
@@ -949,7 +959,7 @@ async function executeLoop(deps: NodeExecutorDeps, ctx: ExecCtx) {
       deps.executionStates.set(subExecutionId, {
         executionId: subExecutionId, workflow: workflowObj, status: 'running', startTime: new Date(),
         nodeResults: new Map(), progress: 0, logs: [],
-        autoApprovedToolTypes: inheritedAutoApprove, pendingApproval: null, attachments: undefined,
+        autoApprovedToolTypes: inheritedAutoApprove, pendingApproval: null, pendingChoice: null, attachments: undefined,
         params: resolvedParams,
       })
 

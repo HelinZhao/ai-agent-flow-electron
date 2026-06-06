@@ -45,6 +45,7 @@ AI Agent Flow Electron 是一个基于 Electron + React + TypeScript 的**桌面
 - LLM 自主调用文件读写、命令执行、HTTP 请求等工具
 - LLM 节点可调内部 API（工作流/Agent/技能/知识库/项目/系统配置 CRUD）
 - 危险操作需人工审批确认，支持会话级放权
+- **交互式用户选择** — LLM 可通过 `askUserChoice` 工具向用户提出选项（单选/多选），等待用户决策后继续执行，流程中断期间展示选择 UI
 
 ### ⏰ 触发器模块
 - **Cron 定时触发** — 可视化 Cron 表达式编辑器，支持 Quartz 格式（秒级精度），含预设模板
@@ -385,6 +386,7 @@ ai-agent-flow-electron/
 | GET | `/api/execute-workflow/progress/:id` | 获取执行进度 |
 | POST | `/api/execute-workflow/stop/:id` | 停止执行 |
 | POST | `/api/execute-workflow/approve-tool/:id` | 审批工具调用 |
+| POST | `/api/execute-workflow/submit-choice/:id` | 提交用户选择（单选/多选/取消） |
 
 ### 日志
 | 方法 | 路径 | 说明 |
@@ -479,13 +481,25 @@ this.app.use('/api/new-route', newRouter)
 
 ## 更新日志
 
+### v2.5.0
+
+- **交互式用户选择工具**：LLM 可通过 `askUserChoice` 工具向用户提问并等待选择，支持单选/多选/取消三种模式
+- **选择 UI**：Chat 页面和系统助手（布丁）均支持选项展示，多选显示 checkbox，单选显示 radio，含确认/取消按钮
+- **askUserChoice 工具自动注入**：交互式对话中自动可用，LLM 调用后 Promise 阻塞等待用户决策，取消时返回 `{"cancelled":true}`
+- **多选支持**：LLM 设置 `allowMultiSelect=true` 后用户可勾选多个选项，工具返回 `{"selectedValues":[...]}`
+- **中断清理**：清空记忆/终止执行时正确 reject 待处理的 Choice Promise，避免服务端悬挂
+- **提交选择 API**：`POST /execute-workflow/submit-choice/:id` 和 `POST /team-execution/submit-choice/:id` 支持单选/多选/取消三种请求体
+- **ChoiceCard/ApprovalCard 组件抽取**：从 4 处重复 UI 提取为通用组件（`components/ui/ChoiceCard.tsx` + `components/ui/ApprovalCard.tsx`），采用 React state 替代 DOM 查询，单选/多选/审批样式统一管理
+- **团队执行页选择支持**：TeamMonitor 执行消息流和 ToolApprovalSidebar 悬浮面板均支持 choice 交互
+- **Chat 页面切回自动刷新**：从其他页面切回 Chat 时自动重载对话记录
+
 ### v2.4.0
 
 - **Agent 头像系统**：新增头像上传（CustomFileUpload + IPC 写入 userData/avatars/ 目录），Express 头像服务路由（`/api/avatars/:filename`），Avatar 通用组件（自动补全 URL / 彩色首字母 / emoji 兜底 / 圆方形状配置）
 - **Chat 页 AI 列表右键菜单**：新增顶置 Agent（持久化排序，已顶置排前面）和新对话（清空记忆 + 切换选中）
 - **项目卡片风格对齐团队页**：蓝色/青色主题改为靛蓝/紫色，操作按钮改为右上角浮动面板，新增右下角 Chevron 箭头，改用 ResponsiveGrid 布局
 - **Avatar 组件抽取**：统一 AgentListSidebar/AgentDetail/AgentCard/ChatMessage 四处的头像渲染
-- **导航性能优化**：页面改用 React.lazy 懒加载 + Keep-Alive 缓存白名单（工作区页面保活，配置页用完即卸载），Layout/MainArea/Sidebar 加 memo 减少级联重渲染
+- **导航性能优化**：页面改用 React.lazy 懒加载，Layout/MainArea/Sidebar 加 memo 减少级联重渲染
 - **currentPage 独立存储**：拆出 pageStore，不再走大 Store 的 persist 中间件，避免每次切换页面触发全量序列化开销
 - **执行结果节点展示**：NodeResultItem 新增「查看 Result JSON」调试功能
 - **模板导入类型修复**：Marketplace 导入 Agent 时 type 默认值从 `assistant` 改为 `standard`

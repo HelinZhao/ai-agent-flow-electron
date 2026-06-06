@@ -1,17 +1,20 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { useAppStore } from '@renderer/store/appStore';
-import { AttachmentMetadata } from '@renderer/types';
+import { Agent, AttachmentMetadata } from '@renderer/types';
 import { AttachmentData, processFileAttachment, formatFileSize } from '@renderer/lib/attachmentUtils';
-import { SERVER_BASE_URL, TOOL_LABEL_MAP } from '@renderer/config';
+import { SERVER_BASE_URL } from '@renderer/config';
 import { useConversation } from '@renderer/hooks/useConversation';
 import AgentListSidebar from '@renderer/components/chat/AgentListSidebar';
 import ChatMessage from '@renderer/components/chat/ChatMessage';
 import ChatInput from '@renderer/components/chat/ChatInput';
 import CustomButton from '@renderer/components/ui/CustomButton';
 import CustomInput from '@renderer/components/ui/CustomInput';
+import Avatar from '@renderer/components/ui/Avatar';
+import ChoiceCard from '@renderer/components/ui/ChoiceCard';
+import ApprovalCard from '@renderer/components/ui/ApprovalCard';
 
 export default function Chat(): React.JSX.Element {
-  const { agents, activeLLMConfig, pinnedAgentIds, togglePinAgent } = useAppStore();
+  const { agents, activeLLMConfig, pinnedAgentIds, togglePinAgent, currentPage } = useAppStore();
   const [searchTerm, setSearchTerm] = useState('');
   const [showSearch, setShowSearch] = useState(false);
   const [messageSearch, setMessageSearch] = useState('');
@@ -30,14 +33,23 @@ export default function Chat(): React.JSX.Element {
     messages, inputMessage, setInputMessage, pendingAttachments, setPendingAttachments,
     draftAgentIds, unreadAgentIds, pendingAgentIds,
     isLoading, isLoadingHistory,
-    pendingApproval,
+    pendingApproval, pendingChoice,
     sentHistory,
-    sendMessage, handleApprove, handleAutoApprove, handleTerminate,
+    sendMessage, handleApprove, handleAutoApprove, handleChoiceSubmit, handleChoiceCancel, handleTerminate,
     startNewChat, startNewChatForAgent, clearCurrentchatRecord, regenerate,
     loadMoreMessages, hasMoreMessages,
+    reloadChatRecord,
     messagesEndRef: convMessagesEndRef,
     searchAllMessages,
   } = conv
+
+  // 切回 chat 页时重新加载对话记录（可能在其他页面有数据变更）
+  useEffect(() => {
+    if (currentPage === '/chat' && selectedAgent) {
+      reloadChatRecord(selectedAgent.id)
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [currentPage])
 
   // 输入框拖拽缩放
   const handleResizeStart = (e: React.MouseEvent): void => {
@@ -305,10 +317,10 @@ export default function Chat(): React.JSX.Element {
                     )
                   })()}
 
-                  {isLoading && !pendingApproval && (
+                  {isLoading && !pendingApproval && !pendingChoice && (
                     <div className="flex justify-start">
                       <div className="flex items-start gap-2.5 max-w-3xl">
-                        <div className="w-7 h-7 bg-gradient-to-br from-blue-500 to-purple-500 rounded-xl flex items-center justify-center text-sm flex-shrink-0 mt-0.5 shadow-sm">🤖</div>
+                        <AgentAvatar agent={selectedAgent!} />
                         <div className="bg-white dark:bg-gray-700/80 border border-gray-200/50 dark:border-gray-600/40 px-4 py-3 rounded-2xl rounded-bl-md shadow-sm">
                           <div className="flex items-center gap-3">
                             <div className="flex gap-1">
@@ -326,30 +338,32 @@ export default function Chat(): React.JSX.Element {
                   {pendingApproval && (
                     <div className="flex justify-start">
                       <div className="flex items-start gap-2.5 max-w-[80%]">
-                        <div className="w-7 h-7 bg-gradient-to-br from-orange-500 to-red-500 rounded-xl flex items-center justify-center text-sm flex-shrink-0 mt-0.5 shadow-sm">⚠️</div>
+                        <AgentAvatar agent={selectedAgent!} />
                         <div className="bg-white dark:bg-gray-700/80 border border-orange-200/60 dark:border-orange-600/40 px-4 py-3 rounded-2xl rounded-bl-md shadow-sm">
-                          <div className="text-xs font-semibold text-gray-800 dark:text-gray-200 mb-2.5 flex items-center gap-1.5">
-                            <span className="w-1.5 h-1.5 bg-orange-400 rounded-full animate-pulse" />
-                            工具调用需要审批
-                          </div>
-                          <div className="space-y-1.5 mb-3">
-                            {pendingApproval!.actionRequests.map((action, i) => (
-                              <div key={i} className="bg-gray-50/80 dark:bg-gray-600/40 rounded-lg p-2.5 text-xs border border-gray-100 dark:border-gray-600/30">
-                                <div className="font-medium text-gray-800 dark:text-gray-200">{TOOL_LABEL_MAP[action.name] || action.name}</div>
-                                <div className="text-gray-500 dark:text-gray-400 mt-1 max-h-[80px] overflow-auto font-mono text-[10px]">
-                                  {JSON.stringify(action.args, null, 2)}
-                                </div>
-                              </div>
-                            ))}
-                          </div>
-                          <div className="flex flex-wrap items-center gap-1.5">
-                            <CustomButton onClick={() => handleApprove(true)} variant="primary" size="xs">允许</CustomButton>
-                            <CustomButton onClick={() => handleApprove(false)} variant="danger" size="xs">拒绝</CustomButton>
-                            <CustomButton onClick={() => {
-                              const uniqueTools = new Set(pendingApproval!.actionRequests.map(a => a.name))
-                              uniqueTools.forEach(name => handleAutoApprove(name))
-                            }} variant="secondary" size="xs">本会话允许</CustomButton>
-                          </div>
+                          <ApprovalCard
+                            actionRequests={pendingApproval.actionRequests}
+                            showAutoApprove
+                            onApprove={() => handleApprove(true)}
+                            onReject={() => handleApprove(false)}
+                            onAutoApprove={(toolName) => handleAutoApprove(toolName)}
+                          />
+                        </div>
+                      </div>
+                    </div>
+                  )}
+
+                  {pendingChoice && !pendingApproval && (
+                    <div className="flex justify-start">
+                      <div className="flex items-start gap-2.5 max-w-[80%]">
+                        <AgentAvatar agent={selectedAgent!} />
+                        <div className="bg-white dark:bg-gray-700/80 border border-blue-200/60 dark:border-blue-600/40 px-4 py-3 rounded-2xl rounded-bl-md shadow-sm">
+                          <ChoiceCard
+                            question={pendingChoice.question}
+                            options={pendingChoice.options}
+                            allowMultiSelect={pendingChoice.allowMultiSelect}
+                            onSubmit={(resp) => handleChoiceSubmit(resp)}
+                            onCancel={() => handleChoiceCancel()}
+                          />
                         </div>
                       </div>
                     </div>
@@ -407,3 +421,16 @@ export default function Chat(): React.JSX.Element {
     </div>
   );
 }
+const AgentAvatar: React.FC<{ agent: Agent }> = ({ agent }) => {
+  return (
+    <Avatar
+      src={agent.avatarUrl}
+      name={agent.name}
+      size="md"
+      className="shadow-sm"
+      shape="circle"
+      isSystem={agent.isSystem}
+      fallbackIcon={agent.isSystem ? '✨' : undefined}
+    />
+  )
+}   

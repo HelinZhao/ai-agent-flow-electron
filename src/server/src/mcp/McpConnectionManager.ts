@@ -196,7 +196,7 @@ export class McpConnectionManager {
       conn.connected = false
       conn.error = error instanceof Error ? error.message : String(error)
       // 清理连接
-      try { transport.close() } catch { }
+      try { transport.close() } catch { /* empty */ }
       this.connections.delete(serverId)
       this.removeTools(serverId)
 
@@ -229,10 +229,10 @@ export class McpConnectionManager {
       conn.connected = false
       try {
         await conn.transport.close()
-      } catch { }
+      } catch { /* empty */ }
       try {
         await conn.client.close()
-      } catch { }
+      } catch { /* empty */ }
       this.connections.delete(serverId)
     }
 
@@ -565,7 +565,7 @@ export class McpConnectionManager {
         }
       }
       await McpServerModel.update(updateData, { where: { id: serverId } })
-    } catch { }
+    } catch { /* empty */ }
   }
 
   /**

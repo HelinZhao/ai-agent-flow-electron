@@ -2,7 +2,7 @@ import { Workflow, LLMConfig, WorkflowBranch } from '../types'
 import { StateGraph, Annotation, START, END, CompiledStateGraph, interrupt, Command } from '@langchain/langgraph'
 import { BaseMessage, AIMessage } from '@langchain/core/messages'
 import { callLLMWithTracking } from './llm'
-import { HITLRequest, HITLResponse, HITLDecision, CallLLMOptions } from './hitl'
+import { HITLRequest, HITLResponse, HITLDecision, ChoiceRequest, ChoiceResponse, CallLLMOptions } from './hitl'
 import { getUserDataDir, saveAttachmentToDisk } from './file'
 import { AttachmentPayload, buildHumanMessage } from './shared'
 import { v4 as uuidv4 } from 'uuid'
@@ -102,6 +102,7 @@ export class MonitoredLangGraphExecutor {
       threadId: effectiveThreadId,
       autoApprovedToolTypes: new Set<string>(autoApprovedTools || []),
       pendingApproval: null,
+      pendingChoice: null,
       attachments: [],
       params,
       variables: {},
@@ -491,6 +492,7 @@ export class MonitoredLangGraphExecutor {
       console.log(`[LLM Agent] 执行已被用户终止 (${id})`)
       state.abortController?.abort()
       state.pendingApproval?.reject(new ExecutionTerminatedError())
+      state.pendingChoice?.reject(new ExecutionTerminatedError())
     }
     stopOne(executionId)
     for (const [id] of this.executionStates) {
@@ -594,6 +596,15 @@ export class MonitoredLangGraphExecutor {
     return true
   }
 
+  submitChoice(executionId: string, response: ChoiceResponse): boolean {
+    const execState = this.executionStates.get(executionId)
+    if (!execState || !execState.pendingChoice) return false
+    const { resolve } = execState.pendingChoice
+    execState.pendingChoice = null
+    resolve(response)
+    return true
+  }
+
   setAutoApprove(executionId: string, toolName: string): boolean {
     const execState = this.executionStates.get(executionId)
     if (!execState) return false
@@ -642,7 +653,7 @@ export class MonitoredLangGraphExecutor {
       logs: [{ timestamp: new Date(), level: 'info', message: `开始直接对话: ${agent.name}` }],
       agentId: agent.id, threadId: effectiveThreadId,
       autoApprovedToolTypes: new Set<string>(autoApprovedTools || []),
-      pendingApproval: null, attachments: [], variables: {},
+      pendingApproval: null, pendingChoice: null, attachments: [], variables: {},
     }
 
     let diskAttachments: AttachmentPayload[] | undefined
@@ -678,25 +689,36 @@ export class MonitoredLangGraphExecutor {
       if (skillsContext) prompt = `【技能参考】\n${skillsContext}\n\n${prompt}`
       prompt += `\n\n用户输入: ${input}`
 
+const choiceCallback = async (request: ChoiceRequest): Promise<ChoiceResponse> => {
+        const execState = this.executionStates.get(executionId)
+        if (!execState || execState.status !== 'running') throw new ExecutionTerminatedError()
+        const choicePromise = new Promise<ChoiceResponse>((resolve, reject) => { execState.pendingChoice = { resolve, reject, request } })
+        this.broadcastToSSEClients(executionId, { type: 'user_choice_required', executionId, question: request.question, options: request.options, allowMultiSelect: request.allowMultiSelect })
+        return await choicePromise
+      }
+
       const hasDangerousTools = (enabledTools || []).some((t: string) => DANGEROUS_TOOLS.includes(t))
-      const llmOptions: CallLLMOptions = hasDangerousTools
-        ? {
-          approvalCallback: async (request: HITLRequest): Promise<HITLResponse> => {
-            const execState = this.executionStates.get(executionId)
-            if (!execState || execState.status !== 'running') throw new ExecutionTerminatedError()
-            const needApproval = request.actionRequests.filter(a => !execState.autoApprovedToolTypes.has(a.name))
-            if (needApproval.length === 0) return { decisions: request.actionRequests.map(() => ({ type: 'approve' })) }
-            const approvalPromise = new Promise<HITLResponse>((resolve, reject) => { execState.pendingApproval = { resolve, reject, request } })
-            this.broadcastToSSEClients(executionId, { type: 'tool_approval_required', executionId, actionRequests: needApproval, reviewConfigs: request.reviewConfigs.filter(rc => needApproval.some(a => a.name === rc.actionName)) })
-            const userResponse = await approvalPromise
-            const decisions: HITLDecision[] = request.actionRequests.map(action => {
-              if (execState.autoApprovedToolTypes.has(action.name)) return { type: 'approve' }
-              return userResponse.decisions.find(d => d.type !== 'approve' || needApproval.some(a => a.name === action.name)) || { type: 'approve' }
-            })
-            return { decisions }
+      const llmOptions: CallLLMOptions = {
+        choiceCallback,
+        ...(hasDangerousTools
+          ? {
+            approvalCallback: async (request: HITLRequest): Promise<HITLResponse> => {
+              const execState = this.executionStates.get(executionId)
+              if (!execState || execState.status !== 'running') throw new ExecutionTerminatedError()
+              const needApproval = request.actionRequests.filter(a => !execState.autoApprovedToolTypes.has(a.name))
+              if (needApproval.length === 0) return { decisions: request.actionRequests.map(() => ({ type: 'approve' })) }
+              const approvalPromise = new Promise<HITLResponse>((resolve, reject) => { execState.pendingApproval = { resolve, reject, request } })
+              this.broadcastToSSEClients(executionId, { type: 'tool_approval_required', executionId, actionRequests: needApproval, reviewConfigs: request.reviewConfigs.filter(rc => needApproval.some(a => a.name === rc.actionName)) })
+              const userResponse = await approvalPromise
+              const decisions: HITLDecision[] = request.actionRequests.map(action => {
+                if (execState.autoApprovedToolTypes.has(action.name)) return { type: 'approve' }
+                return userResponse.decisions.find(d => d.type !== 'approve' || needApproval.some(a => a.name === action.name)) || { type: 'approve' }
+              })
+              return { decisions }
+            }
           }
-        }
-        : {}
+          : {}),
+      }
 
       const extraTools: any[] = []
       if (agent.id === '00000000-0000-0000-0000-000000000001') {

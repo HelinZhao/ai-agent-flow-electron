@@ -5,6 +5,7 @@ import { AgentMiddleware, createAgent, createMiddleware, humanInTheLoopMiddlewar
 import { BaseCheckpointSaver, MemorySaver, REMOVE_ALL_MESSAGES } from "@langchain/langgraph"
 import { Command } from "@langchain/langgraph"
 import { getToolsByIds } from '../tools'
+import { createAskUserChoiceTool } from '../tools/choiceTool'
 import { llmCache } from './llmCache'
 import { CallLLMOptions } from './hitl'
 import { AttachmentPayload, isVisionModel, sleep } from './shared'
@@ -104,12 +105,17 @@ export const callLLM = async (ctx: CallLLMCtx): Promise<{ content: string; token
 
 const callLLMOnce = async (ctx: CallLLMCtx): Promise<{ content: string; tokenUsage?: TokenUsage }> => {
   const { prompt, conversationHistory = [], enabledTools = [], attempt = 1,
-    options, extraTools = [], checkpointer, threadId } = ctx
-  const hasTools = enabledTools.length > 0 || (extraTools?.length ?? 0) > 0
+    options, extraTools: ctxExtraTools = [], checkpointer, threadId } = ctx
+  // 有 choiceCallback 时自动注入选择工具
+  const extraTools = [...ctxExtraTools]
+  if (options?.choiceCallback) {
+    extraTools.push(createAskUserChoiceTool(options.choiceCallback))
+  }
+  const hasTools = enabledTools.length > 0 || extraTools.length > 0
   const useHITL = hasTools && enabledTools.some(t => DANGEROUS_TOOLS.includes(t)) && !!options?.approvalCallback
 
   const llm = await _buildLLM(ctx)
-  const tools = [...getToolsByIds(enabledTools), ...(extraTools || [])]
+  const tools = [...getToolsByIds(enabledTools), ...extraTools]
   const userMessage = await _buildUserMessage(ctx)
   const messages = checkpointer && threadId
     ? [userMessage]
@@ -197,7 +203,7 @@ async function _execAgent(
   const agent = createAgent({ model: llm, tools, checkpointer: cp, middleware: mw })
   const rl = hasTools ? LANGGRAPH_RECURSION_LIMIT_WITH_TOOLS : LANGGRAPH_RECURSION_LIMIT_NO_TOOLS
   const tid = threadId || "thread-" + crypto.randomUUID()
-  console.log(`[LLM Agent] 执行开始，线程ID: ${tid}, 是否使用工具: ${hasTools}, 是否HITL: ${useHITL}`)
+  
   // HITL 模式：agent.invoke → 工具被拦截 → 等待用户审批 → resume 继续
   if (useHITL) {
     let stepCount = 0

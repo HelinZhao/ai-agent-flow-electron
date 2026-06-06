@@ -21,7 +21,7 @@ export const API_CONTENT_TYPE = 'application/json'
 // ========== 应用信息 ==========
 
 /** 应用版本号 */
-export const APP_VERSION = '2.4.0'
+export const APP_VERSION = '2.5.0'
 
 /** 应用名称 */
 export const APP_NAME = 'Agent Flow'
@@ -254,7 +254,7 @@ export const CODE_FILE_EXTENSIONS = [
 export const STORAGE_KEY = 'app-storage'
 
 /** Zustand persist 白名单字段 */
-export const STORAGE_PERSIST_FIELDS = ['pinnedAgentIds']
+export const STORAGE_PERSIST_FIELDS = ['pinnedAgentIds', 'currentPage']
 
 // ========== 触发器 ==========
 

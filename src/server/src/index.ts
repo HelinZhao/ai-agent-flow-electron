@@ -358,7 +358,7 @@ export class LocalServer {
 - 保持友好和耐心的语气
 
 特殊能力 - 实时填写表单：
-当用户正在编辑节点配置时，你可以直接修改表单字段。用户会说「帮我把 URL 改成 xxx」等，此时直接使用 suggestFrontendAction 工具即可\。`,
+当用户正在编辑节点配置时，你可以直接修改表单字段。用户会说「帮我把 URL 改成 xxx」等，此时直接使用 suggestFrontendAction 工具即可。`,
         type: 'standard',
         isSystem: true,
         enabledTools: JSON.stringify([

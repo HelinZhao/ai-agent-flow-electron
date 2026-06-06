@@ -2,6 +2,7 @@ import { Router } from 'express'
 import path from 'path'
 import fs from 'fs'
 import { teamExecutionTracker } from '../utils/teamExecutionTracker'
+import type { ChoiceResponse } from '../utils/hitl'
 import {
   LOG_DIR, safeFileName,
   findLatestExecutionByTeamId, listExecutionsByTeamId,
@@ -69,6 +70,31 @@ router.post('/approve-tool/:executionId', (req, res) => {
   const ok = teamExecutionTracker.approveToolCall(executionId, decisions)
   if (!ok) {
     return res.status(404).json({ error: '没有待审批的工具调用' })
+  }
+
+  return res.json({ success: true })
+})
+
+// ============================================================
+//  用户选择提交（单选/多选/取消）
+// ============================================================
+router.post('/submit-choice/:executionId', (req, res) => {
+  const { executionId } = req.params
+  const { selectedValue, selectedLabel, selectedValues, selectedLabels, cancelled } = req.body
+
+  if (!selectedValue && !selectedValues && !cancelled) {
+    return res.status(400).json({ error: '请提供 selectedValue(单选)、selectedValues(多选) 或 cancelled(取消)' })
+  }
+
+  const response: ChoiceResponse = cancelled
+    ? { cancelled: true }
+    : selectedValues
+      ? { selectedValues, selectedLabels }
+      : { selectedValue: selectedValue!, selectedLabel: selectedLabel || selectedValue }
+
+  const ok = teamExecutionTracker.submitChoice(executionId, response)
+  if (!ok) {
+    return res.status(404).json({ error: '没有待处理的选择请求' })
   }
 
   return res.json({ success: true })

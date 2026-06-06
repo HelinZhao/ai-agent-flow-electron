@@ -290,6 +290,10 @@ export const workflowExecutionApi = {
   ): Promise<{ success: boolean; message: string }> =>
     api.post(`/execute-workflow/approve-tool/${executionId}`, { decisions }),
 
+  // 提交用户选择（单选/多选/取消）
+  submitWorkflowChoice: (executionId: string, response: { selectedValue?: string; selectedLabel?: string; selectedValues?: string[]; selectedLabels?: string[]; cancelled?: boolean }): Promise<{ success: boolean; message: string }> =>
+    api.post(`/execute-workflow/submit-choice/${executionId}`, response),
+
   // 按工具类型设置会话级放权
   setAutoApprove: (
     executionId: string,
@@ -725,6 +729,10 @@ export const teamExecutionApi = {
   /** 批准/拒绝工具调用 */
   approveTool: (executionId: string, decisions: { type: 'approve' | 'reject'; message?: string }[]): Promise<any> =>
     api.post(`/team-execution/approve-tool/${executionId}`, { decisions }),
+
+  /** 提交用户选择（单选/多选/取消） */
+  submitChoice: (executionId: string, response: { selectedValue?: string; selectedLabel?: string; selectedValues?: string[]; selectedLabels?: string[]; cancelled?: boolean }): Promise<any> =>
+    api.post(`/team-execution/submit-choice/${executionId}`, response),
 
   /** 设置自动审批 */
   autoApprove: (executionId: string, toolName: string): Promise<any> =>

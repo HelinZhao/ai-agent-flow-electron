@@ -1,6 +1,8 @@
 import { useState, useEffect, useRef, useMemo, useCallback } from 'react'
 import MarkdownPreview from '@renderer/components/MarkdownPreview'
 import StatusIcon from '@renderer/components/ui/StatusIcon'
+import ChoiceCard from '@renderer/components/ui/ChoiceCard'
+import ApprovalCard from '@renderer/components/ui/ApprovalCard'
 import { useAppStore } from '@renderer/store/appStore'
 import { useTeamExecutionStore } from '@renderer/store/teamExecutionStore'
 import { teamExecutionApi } from '@renderer/lib/api'
@@ -33,8 +35,10 @@ export default function TeamMonitor() {
   const { teams, tasks } = useAppStore()
   const loadHistory = useTeamExecutionStore(s => s.loadHistory)
   const markToolApproved = useTeamExecutionStore(s => s.markToolApproved)
+  const markChoiceSubmitted = useTeamExecutionStore(s => s.markChoiceSubmitted)
   const clearTeamEvents = useTeamExecutionStore(s => s.clearTeamEvents)
   const pendingApprovalByExecution = useTeamExecutionStore(s => s.pendingApprovalByExecution)
+  const pendingChoiceByExecution = useTeamExecutionStore(s => s.pendingChoiceByExecution)
   const eventsByExecution = useTeamExecutionStore(s => s.eventsByExecution)
   const activeTeamIds = useTeamExecutionStore(s => s.activeTeamIds)
   const msgEndRef = useRef<HTMLDivElement>(null)
@@ -113,6 +117,9 @@ export default function TeamMonitor() {
       status: e.data?.status as string | undefined,
       toolName: e.data?.toolName as string | undefined,
       toolArgs: e.data?.toolArgs as Record<string, any> | undefined,
+      question: e.data?.question as string | undefined,
+      choiceOptions: e.data?.options as Array<{ label: string; value: string; description?: string }> | undefined,
+      allowMultiSelect: e.data?.allowMultiSelect as boolean | undefined,
       output: e.data?.output || e.data?.result,
       actionRequests: e.data?.actionRequests as Array<{ name: string; args: Record<string, any>; description: string }> | undefined,
       toolApproved: e.data?.approved as boolean | undefined,
@@ -130,6 +137,13 @@ export default function TeamMonitor() {
       markToolApproved(executionId, decision === 'approve' ? 'approved' : 'rejected')
     } catch { /* ignore */ }
   }, [markToolApproved])
+
+  const handleChoiceSubmit = useCallback(async (executionId: string, response: { selectedValue?: string; selectedLabel?: string; selectedValues?: string[]; selectedLabels?: string[]; cancelled?: boolean }) => {
+    try {
+      await teamExecutionApi.submitChoice(executionId, response)
+      markChoiceSubmitted(executionId)
+    } catch { /* ignore */ }
+  }, [markChoiceSubmitted])
 
   useEffect(() => {
     msgEndRef.current?.scrollIntoView({ behavior: 'smooth' })
@@ -338,26 +352,13 @@ export default function TeamMonitor() {
                         : 'bg-gray-50 dark:bg-gray-800/30 border-gray-200 dark:border-gray-700'
                         }`}>
                         {isLivePending ? (
-                          <>
-                            <div className="text-xs font-semibold text-amber-600 dark:text-amber-400 mb-2">🛡️ 工具调用待审批</div>
-                            {(actionRequests || []).map((a: any, i: number) => (
-                              <div key={i} className="mb-2 last:mb-0 p-2 bg-white/60 dark:bg-gray-900/40 rounded text-xs">
-                                <div className="font-medium text-gray-700 dark:text-gray-300">{a.name}</div>
-                                {a.description && <div className="text-gray-500 mt-0.5">{a.description}</div>}
-                                <pre className="mt-1 text-[10px] text-gray-400 overflow-x-auto">{JSON.stringify(a.args, null, 2)}</pre>
-                              </div>
-                            ))}
-                            <div className="flex gap-2 mt-2">
-                              <button
-                                onClick={() => handleApprove(msg.executionId, 'approve', actionReqCount)}
-                                className="px-3 py-1 text-xs font-medium rounded-md bg-emerald-50 text-emerald-600 hover:bg-emerald-100 border border-emerald-200 transition-colors"
-                              >批准</button>
-                              <button
-                                onClick={() => handleApprove(msg.executionId, 'reject', actionReqCount)}
-                                className="px-3 py-1 text-xs font-medium rounded-md bg-red-50 text-red-600 hover:bg-red-100 border border-red-200 transition-colors"
-                              >拒绝</button>
-                            </div>
-                          </>
+                          <ApprovalCard
+                            actionRequests={actionRequests || []}
+                            approveLabel="批准"
+                            rejectLabel="拒绝"
+                            onApprove={() => handleApprove(msg.executionId, 'approve', actionReqCount)}
+                            onReject={() => handleApprove(msg.executionId, 'reject', actionReqCount)}
+                          />
                         ) : isExpiredTool ? (
                           <div className="text-gray-400 dark:text-gray-500 font-medium">⏳ 已过期</div>
                         ) : msg.toolRejected ? (
@@ -379,6 +380,28 @@ export default function TeamMonitor() {
                         {msg.error && <p className="mt-1 text-red-600 dark:text-red-400">{msg.error}</p>}
                       </div>
                     )}
+
+                    {msg.type === 'user_choice_required' && msg.question && msg.choiceOptions && (() => {
+                      const isPending = msg.executionId in pendingChoiceByExecution
+                      return (
+                        <div className={`p-3 rounded-lg border text-xs ${isPending
+                          ? 'bg-blue-50 dark:bg-blue-900/10 border-blue-200 dark:border-blue-800/50'
+                          : 'bg-gray-50 dark:bg-gray-800/30 border-gray-200 dark:border-gray-700'
+                          }`}>
+                          {isPending ? (
+                            <ChoiceCard
+                              question={msg.question}
+                              options={msg.choiceOptions}
+                              allowMultiSelect={msg.allowMultiSelect}
+                              onSubmit={(resp) => handleChoiceSubmit(msg.executionId, resp)}
+                              onCancel={() => handleChoiceSubmit(msg.executionId, { cancelled: true })}
+                            />
+                          ) : (
+                            <div className="text-gray-400 dark:text-gray-500 font-medium">💬 已选择</div>
+                          )}
+                        </div>
+                      )
+                    })()}
                   </div>
                 )
               })}

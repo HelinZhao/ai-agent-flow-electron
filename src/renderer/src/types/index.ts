@@ -283,6 +283,18 @@ export interface ToolApprovalRequest {
   reviewConfigs: { actionName: string; allowedDecisions: string[] }[]
 }
 
+export interface UserChoiceOption {
+  label: string
+  value: string
+  description?: string
+}
+
+export interface UserChoiceRequest {
+  question: string
+  options: UserChoiceOption[]
+  allowMultiSelect?: boolean
+}
+
 export interface ToolApprovalDecision {
   type: 'approve' | 'reject'
   message?: string

@@ -1,5 +1,5 @@
 import { appendEvent } from './teamExecutionFileStore'
-import type { HITLRequest, HITLResponse, HITLDecision } from './hitl'
+import type { HITLRequest, HITLResponse, HITLDecision, ChoiceRequest, ChoiceResponse } from './hitl'
 
 // ============================================================
 //  Types
@@ -44,7 +44,18 @@ export interface ExecutionCompleteEvent {
   error?: string
 }
 
-export type TeamExecutionEvent = MemberStatusEvent | MemberOutputEvent | ToolApprovalRequiredEvent | ExecutionCompleteEvent
+export interface UserChoiceRequiredEvent {
+  type: 'user_choice_required'
+  executionId: string
+  question: string
+  options: { label: string; value: string; description?: string }[]
+  allowMultiSelect?: boolean
+  taskTitle?: string
+  teamName?: string
+  teamId?: string
+}
+
+export type TeamExecutionEvent = MemberStatusEvent | MemberOutputEvent | ToolApprovalRequiredEvent | UserChoiceRequiredEvent | ExecutionCompleteEvent
 
 /** SSE 事件携带服务端生成的唯一 seq，供前端去重 */
 export type SSEServerEvent = TeamExecutionEvent & { _seq: number }
@@ -59,6 +70,12 @@ interface PendingApproval {
   reject: (err: Error) => void
 }
 
+interface PendingChoice {
+  request: ChoiceRequest
+  resolve: (response: ChoiceResponse) => void
+  reject: (err: Error) => void
+}
+
 // ============================================================
 //  TeamExecutionTracker
 // ============================================================
@@ -68,6 +85,7 @@ class TeamExecutionTracker {
   /** 全局 SSE 客户端（订阅所有 execution 的事件） */
   private globalClients: SSEClient[] = []
   private pendingApprovals = new Map<string, PendingApproval>()
+  private pendingChoices = new Map<string, PendingChoice>()
   private autoApprovedTools = new Map<string, Set<string>>()
   /** executionId → { taskTitle, teamName, teamId } 的元信息 */
   private executionMeta = new Map<string, { taskTitle?: string; teamName?: string; teamId?: string }>()
@@ -216,10 +234,17 @@ class TeamExecutionTracker {
       pending.resolve({ decisions })
       this.persistEvent(executionId, 'tool_approved', { decisions, reason: 'execution_terminated' })
     }
+    // 清除待选择（任务已结束）
+    const pendingChoice = this.pendingChoices.get(executionId)
+    if (pendingChoice) {
+      this.pendingChoices.delete(executionId)
+      pendingChoice.reject(new Error('任务已终止'))
+    }
     // 清理资源（延时，给 SSE 客户端时间消费）
     setTimeout(() => {
       this.sseClients.delete(executionId)
       this.pendingApprovals.delete(executionId)
+      this.pendingChoices.delete(executionId)
       this.autoApprovedTools.delete(executionId)
       this.executionMeta.delete(executionId)
     }, 5_000)
@@ -270,6 +295,25 @@ class TeamExecutionTracker {
   /** 检查某工具是否已自动审批 */
   isToolAutoApproved(executionId: string, toolName: string): boolean {
     return this.autoApprovedTools.get(executionId)?.has(toolName) ?? false
+  }
+
+  /** 注册待用户选择的选项（被 CallLLM 的 choiceCallback 调用） */
+  registerPendingChoice(executionId: string, request: ChoiceRequest): Promise<ChoiceResponse> {
+    return new Promise((resolve, reject) => {
+      this.pendingChoices.set(executionId, { request, resolve, reject })
+      this.broadcast(executionId, { type: 'user_choice_required', executionId, question: request.question, options: request.options, allowMultiSelect: request.allowMultiSelect, ...this.metaForBroadcast(executionId) })
+      this.persistEvent(executionId, 'user_choice', { question: request.question, options: request.options })
+    })
+  }
+
+  /** 提交用户选择（单选/多选/取消） */
+  submitChoice(executionId: string, response: ChoiceResponse): boolean {
+    const pending = this.pendingChoices.get(executionId)
+    if (!pending) return false
+    this.pendingChoices.delete(executionId)
+    pending.resolve(response)
+    this.persistEvent(executionId, 'choice_submitted', response)
+    return true
   }
 
   /** 获取待审批数量（供前端徽标使用） */

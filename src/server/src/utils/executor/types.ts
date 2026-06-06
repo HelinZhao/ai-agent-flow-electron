@@ -1,7 +1,7 @@
 import type { BaseMessage } from '@langchain/core/messages'
 import type { CompiledStateGraph } from '@langchain/langgraph'
 import type { Workflow, LLMConfig } from '../../types'
-import type { HITLRequest, HITLResponse } from '../hitl'
+import type { HITLRequest, HITLResponse, ChoiceRequest, ChoiceResponse } from '../hitl'
 import type { AttachmentPayload } from '../shared'
 
 /** 执行状态存储 */
@@ -25,6 +25,7 @@ export interface ExecutionState {
   compiledGraph?: CompiledStateGraph<any, any>
   autoApprovedToolTypes: Set<string>
   pendingApproval: { resolve: (response: HITLResponse) => void; reject: (error: Error) => void; request: HITLRequest } | null
+  pendingChoice: { resolve: (response: ChoiceResponse) => void; reject: (error: Error) => void; request: ChoiceRequest } | null
   attachments?: AttachmentPayload[]
   abortController?: AbortController
   params?: Record<string, any>
