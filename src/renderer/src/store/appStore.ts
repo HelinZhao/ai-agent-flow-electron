@@ -16,12 +16,16 @@ interface AppState {
   tasks: Task[]
   llmConfigs: LLMConfig[]
   activeLLMConfig: LLMConfig | null
+  currentPage: string
   loading: boolean
   error: string | null
   pinnedAgentIds: string[]
 
   // 初始化数据
   initialize: () => Promise<void>
+
+  // 页面导航
+  setCurrentPage: (page: string) => void
 
   // Workflow actions
   togglePinAgent: (agentId: string) => void
@@ -125,6 +129,7 @@ export const useAppStore = create<AppState>()(
       envVars: [],
       projects: [],
       pinnedAgentIds: [],
+      currentPage: '/',
       loading: false,
       error: null,
 
@@ -319,6 +324,10 @@ export const useAppStore = create<AppState>()(
         } finally {
           state.setLoading(false)
         }
+      },
+
+      setCurrentPage: (page) => {
+        set({ currentPage: page })
       },
 
       togglePinAgent: (agentId: string) => {

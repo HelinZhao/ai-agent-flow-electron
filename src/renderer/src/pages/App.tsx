@@ -3,7 +3,6 @@ import Layout from "@renderer/components/layout/Layout";
 import '@renderer/assets/react-flow-custom.css';
 import '@renderer/assets/iconfont.css';
 import { useAppStore } from "@renderer/store/appStore";
-import { usePageStore } from "@renderer/store/pageStore";
 import { lazy, useEffect, useState } from "react";
 import { ollamaApi } from "@renderer/lib/api";
 import OllamaInstallDialog from "@renderer/components/OllamaInstallDialog";
@@ -54,8 +53,8 @@ let init = false
 
 export default function App(): React.JSX.Element {
   const initialize = useAppStore(state => state.initialize);
-  const currentPage = usePageStore(state => state.currentPage);
-  const setCurrentPage = usePageStore(state => state.setCurrentPage);
+  const currentPage = useAppStore(state => state.currentPage);
+  const setCurrentPage = useAppStore(state => state.setCurrentPage);
   const error = useAppStore(state => state.error);
   const [initializing, setInitializing] = useState(true);
   const [showModelDialog, setShowModelDialog] = useState(false);
