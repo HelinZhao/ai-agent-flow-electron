@@ -26,6 +26,7 @@ const SIZE_MAP: Record<string, { size: string; icon: string; initial: string; ro
   sm: { size: 'w-7 h-7', icon: 'text-sm', initial: 'text-sm', round: 'rounded-xl' },
   md: { size: 'w-9 h-9', icon: 'text-base', initial: 'text-base', round: 'rounded-lg' },
   lg: { size: 'w-14 h-14', icon: 'text-2xl', initial: 'text-xl', round: 'rounded-xl' },
+  xl: { size: 'w-16 h-16', icon: 'text-3xl', initial: 'text-2xl', round: 'rounded-xxl' },
 }
 
 export interface AvatarProps {

@@ -10,6 +10,8 @@ interface CustomFileUploadProps {
   multiple?: boolean;
   size?: CustomButtonProps['size'];
   variant?: CustomButtonProps['variant'];
+  icon?: React.ReactNode;
+  buttonClassName?: string;
 }
 
 const CustomFileUpload: React.FC<CustomFileUploadProps> = ({
@@ -20,7 +22,9 @@ const CustomFileUpload: React.FC<CustomFileUploadProps> = ({
   disabled = false,
   multiple = false,
   size,
-  variant = 'secondary'
+  variant = 'secondary',
+  icon = '📁',
+  buttonClassName = '',
 }) => {
   const fileInputRef = useRef<HTMLInputElement>(null);
 
@@ -37,10 +41,10 @@ const CustomFileUpload: React.FC<CustomFileUploadProps> = ({
         variant={variant}
         onClick={handleClick}
         disabled={disabled}
-        className="w-full"
         size={size}
+        className={`w-full ${buttonClassName}`}
       >
-        <span>📁</span>
+        {icon && <span>{icon}</span>}
         <span>{children}</span>
       </CustomButton>
       <input

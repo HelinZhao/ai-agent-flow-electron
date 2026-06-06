@@ -10,7 +10,7 @@ import CustomInput from '@renderer/components/ui/CustomInput';
 import CustomTextarea from '@renderer/components/ui/CustomTextarea';
 import CustomSelect from '@renderer/components/ui/CustomSelect';
 import CustomButton from '@renderer/components/ui/CustomButton';
-import CustomFileUpload from '@renderer/components/ui/CustomFileUpload';
+import ImageUpload from '@renderer/components/ui/ImageUpload';
 import ItemPickerModal from '@renderer/components/ui/ItemPickerModal';
 import AiAssistButton from '@renderer/components/AiAssistButton';
 import type { FrontendAction } from '@renderer/lib/frontendActionBus';
@@ -48,7 +48,7 @@ function Tags({ items, onRemove, emptyText, isMcpMap }: {
   if (items.length === 0) {
     return <span className="text-sm text-gray-400 dark:text-gray-500 italic">{emptyText}</span>;
   }
-  
+
   return (
     <div className="flex flex-wrap gap-1.5">
       {items.map((item) => {
@@ -73,27 +73,27 @@ export default function AgentForm({ agent, skills, workflows, onSave, onCancel, 
   const [formData, setFormData] = useState<AgentFormData>(
     agent
       ? {
-          name: agent.name,
-          description: agent.description,
-          instructions: agent.instructions,
-          type: agent.type || 'standard',
-          skillIds: agent.skillIds || [],
-          enabledTools: agent.enabledTools || [],
-          workflowId: agent.workflowId || '',
-          llmConfigId: agent.llmConfigId || '',
-          avatarUrl: agent.avatarUrl || '',
-        }
+        name: agent.name,
+        description: agent.description,
+        instructions: agent.instructions,
+        type: agent.type || 'standard',
+        skillIds: agent.skillIds || [],
+        enabledTools: agent.enabledTools || [],
+        workflowId: agent.workflowId || '',
+        llmConfigId: agent.llmConfigId || '',
+        avatarUrl: agent.avatarUrl || '',
+      }
       : {
-          name: '',
-          description: '',
-          instructions: '',
-          type: 'standard',
-          skillIds: [],
-          enabledTools: [],
-          workflowId: '',
-          llmConfigId: '',
-          avatarUrl: '',
-        },
+        name: '',
+        description: '',
+        instructions: '',
+        type: 'standard',
+        skillIds: [],
+        enabledTools: [],
+        workflowId: '',
+        llmConfigId: '',
+        avatarUrl: '',
+      },
   );
   const [isLoading, setIsLoading] = useState(false);
   const [pickerTarget, setPickerTarget] = useState<'skills' | 'tools' | null>(null);
@@ -185,55 +185,13 @@ export default function AgentForm({ agent, skills, workflows, onSave, onCancel, 
                 </div>
                 <div>
                   <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5">头像（可选）</label>
-                  <div className="flex items-center gap-4">
-                    {/* 头像预览 */}
-                    <div className="flex-shrink-0 w-14 h-14 rounded-xl overflow-hidden border border-gray-200 dark:border-gray-600 bg-gray-50 dark:bg-gray-800 flex items-center justify-center">
-                      {formData.avatarUrl ? (
-                        <img src={formData.avatarUrl} alt="头像" className="w-full h-full object-cover" />
-                      ) : (
-                        <svg className="w-6 h-6 text-gray-300 dark:text-gray-600" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5">
-                          <path d="M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z" />
-                        </svg>
-                      )}
-                    </div>
-                    <div className="flex items-center gap-2">
-                      <CustomFileUpload
-                        accept="image/*"
-                        onChange={async (e) => {
-                          const file = e.target.files?.[0]
-                          if (!file) return
-                          try {
-                            const dataUrl = await new Promise<string>((resolve, reject) => {
-                              const reader = new FileReader()
-                              reader.onload = () => resolve(reader.result as string)
-                              reader.onerror = () => reject(reader.error)
-                              reader.readAsDataURL(file)
-                            })
-                            updateField({ avatarUrl: dataUrl })
-                          } catch (err) {
-                            console.error('读取头像文件失败:', err)
-                          }
-                          e.target.value = ''
-                        }}
-                        size="sm"
-                        variant="secondary"
-                      >
-                        上传图片
-                      </CustomFileUpload>
-                      {formData.avatarUrl && (
-                        <button
-                          type="button"
-                          onClick={() => updateField({ avatarUrl: '' })}
-                          className="flex items-center justify-center w-8 h-8 rounded-lg text-gray-400 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors"
-                          title="移除头像"
-                        >
-                          <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                            <path d="M3 6h18" /><path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6" /><path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2" />
-                          </svg>
-                        </button>
-                      )}
-                    </div>
-                  </div>
+                  <ImageUpload
+                    value={formData.avatarUrl}
+                    onChange={(dataUrl) => updateField({ avatarUrl: dataUrl })}
+                    size="xl"
+                    fallbackIcon="🤖"
+                    name={formData.name || 'Agent'}
+                  />
                   <p className="text-xs text-gray-400 dark:text-gray-500 mt-1">支持 JPG、PNG、GIF 等常见图片格式，建议使用正方形图片</p>
                 </div>
               </div>
@@ -286,45 +244,45 @@ export default function AgentForm({ agent, skills, workflows, onSave, onCancel, 
 
         {/* ── Skills & Tools Section (仅标准 Agent) ── */}
         {formData.type === 'standard' && (
-        <section>
-          <div className="flex items-center justify-between mb-4">
-            <div className="flex items-center gap-2">
-              <div className="w-1 h-5 bg-amber-500 rounded-full" />
-              <h3 className="text-base font-semibold text-gray-800 dark:text-gray-200">技能</h3>
-            </div>
-            {hasSkills && (
-              <div onClick={() => setPickerTarget('skills')} className="inline-flex items-center gap-1.5 px-3 py-1.5 text-sm font-medium text-blue-600 dark:text-blue-400 bg-blue-50 dark:bg-blue-900/20 rounded-lg hover:bg-blue-100 dark:hover:bg-blue-900/40 cursor-pointer transition-colors border border-blue-200/50 dark:border-blue-800/50">
-                <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M12 4v16m8-8H4" /></svg>
-                <span>添加技能</span>
-              </div>
-            )}
-          </div>
-
-          <div className="mb-6">
-            {hasSkills ? (
-              <div className="p-3 bg-gray-50 dark:bg-gray-800/50 rounded-lg border border-gray-200/50 dark:border-gray-700/50">
-                {selectedSkills.length > 0 ? (
-                  <Tags items={selectedSkills.map((s) => ({ id: s.id, label: s.name }))} onRemove={(id) => updateField({ skillIds: formData.skillIds.filter((i) => i !== id) })} emptyText="" />
-                ) : (
-                  <p className="text-xs text-gray-400 dark:text-gray-500 text-center py-2">暂未绑定技能，点击上方「添加技能」按钮开始绑定</p>
-                )}
-              </div>
-            ) : (
-              <p className="text-xs text-gray-400 dark:text-gray-500 bg-gray-50 dark:bg-gray-800/50 p-3 rounded-lg border border-gray-200/50 dark:border-gray-700/50">暂无可用的技能，请先在技能管理页面创建</p>
-            )}
-          </div>
-
-          <div>
+          <section>
             <div className="flex items-center justify-between mb-4">
               <div className="flex items-center gap-2">
-                <div className="w-1 h-5 bg-blue-500 rounded-full" />
-                <h3 className="text-base font-semibold text-gray-800 dark:text-gray-200">工具</h3>
+                <div className="w-1 h-5 bg-amber-500 rounded-full" />
+                <h3 className="text-base font-semibold text-gray-800 dark:text-gray-200">技能</h3>
               </div>
-              <div onClick={() => setPickerTarget('tools')} className="inline-flex items-center gap-1.5 px-3 py-1.5 text-sm font-medium text-blue-600 dark:text-blue-400 bg-blue-50 dark:bg-blue-900/20 rounded-lg hover:bg-blue-100 dark:hover:bg-blue-900/40 cursor-pointer transition-colors border border-blue-200/50 dark:border-blue-800/50">
-                <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M12 4v16m8-8H4" /></svg>
-                <span>添加工具</span>
-              </div>
+              {hasSkills && (
+                <div onClick={() => setPickerTarget('skills')} className="inline-flex items-center gap-1.5 px-3 py-1.5 text-sm font-medium text-blue-600 dark:text-blue-400 bg-blue-50 dark:bg-blue-900/20 rounded-lg hover:bg-blue-100 dark:hover:bg-blue-900/40 cursor-pointer transition-colors border border-blue-200/50 dark:border-blue-800/50">
+                  <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M12 4v16m8-8H4" /></svg>
+                  <span>添加技能</span>
+                </div>
+              )}
             </div>
+
+            <div className="mb-6">
+              {hasSkills ? (
+                <div className="p-3 bg-gray-50 dark:bg-gray-800/50 rounded-lg border border-gray-200/50 dark:border-gray-700/50">
+                  {selectedSkills.length > 0 ? (
+                    <Tags items={selectedSkills.map((s) => ({ id: s.id, label: s.name }))} onRemove={(id) => updateField({ skillIds: formData.skillIds.filter((i) => i !== id) })} emptyText="" />
+                  ) : (
+                    <p className="text-xs text-gray-400 dark:text-gray-500 text-center py-2">暂未绑定技能，点击上方「添加技能」按钮开始绑定</p>
+                  )}
+                </div>
+              ) : (
+                <p className="text-xs text-gray-400 dark:text-gray-500 bg-gray-50 dark:bg-gray-800/50 p-3 rounded-lg border border-gray-200/50 dark:border-gray-700/50">暂无可用的技能，请先在技能管理页面创建</p>
+              )}
+            </div>
+
+            <div>
+              <div className="flex items-center justify-between mb-4">
+                <div className="flex items-center gap-2">
+                  <div className="w-1 h-5 bg-blue-500 rounded-full" />
+                  <h3 className="text-base font-semibold text-gray-800 dark:text-gray-200">工具</h3>
+                </div>
+                <div onClick={() => setPickerTarget('tools')} className="inline-flex items-center gap-1.5 px-3 py-1.5 text-sm font-medium text-blue-600 dark:text-blue-400 bg-blue-50 dark:bg-blue-900/20 rounded-lg hover:bg-blue-100 dark:hover:bg-blue-900/40 cursor-pointer transition-colors border border-blue-200/50 dark:border-blue-800/50">
+                  <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M12 4v16m8-8H4" /></svg>
+                  <span>添加工具</span>
+                </div>
+              </div>
               <div className="p-3 bg-gray-50 dark:bg-gray-800/50 rounded-lg border border-gray-200/50 dark:border-gray-700/50">
                 {selectedTools.length > 0 ? (
                   <Tags items={selectedTools.map((t) => ({ id: t.id, label: t.label }))} onRemove={(id) => updateField({ enabledTools: formData.enabledTools.filter((i) => i !== id) })} emptyText="" isMcpMap={isMcpToolMap} />
@@ -332,8 +290,8 @@ export default function AgentForm({ agent, skills, workflows, onSave, onCancel, 
                   <p className="text-xs text-gray-400 dark:text-gray-500 text-center py-2">暂未绑定工具，点击上方「添加工具」按钮开始绑定</p>
                 )}
               </div>
-          </div>
-        </section>
+            </div>
+          </section>
         )}
 
         {formData.type === 'workflow' && (
@@ -402,7 +360,7 @@ export default function AgentForm({ agent, skills, workflows, onSave, onCancel, 
         )}
       </div>
 
-{/* ── Form Actions ── */}
+      {/* ── Form Actions ── */}
       <div className="flex items-center justify-between gap-3 pt-6 mt-8 border-t border-gray-200 dark:border-gray-700">
         <AiAssistButton context={{
           contextType: 'agent-editor',
@@ -427,6 +385,7 @@ export default function AgentForm({ agent, skills, workflows, onSave, onCancel, 
       {pickerTarget === 'tools' && (
         <ItemPickerModal open title="选择工具" items={ALL_AVAILABLE_TOOLS.map((t) => ({ id: t.id, label: t.label, description: t.description }))} selected={formData.enabledTools} onApply={(ids) => updateField({ enabledTools: ids })} onClose={() => setPickerTarget(null)} />
       )}
+
     </>
   );
 }
