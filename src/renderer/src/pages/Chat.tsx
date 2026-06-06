@@ -9,6 +9,7 @@ import ChatMessage from '@renderer/components/chat/ChatMessage';
 import ChatInput from '@renderer/components/chat/ChatInput';
 import CustomButton from '@renderer/components/ui/CustomButton';
 import CustomInput from '@renderer/components/ui/CustomInput';
+import CustomFileUpload from '@renderer/components/ui/CustomFileUpload';
 import Avatar from '@renderer/components/ui/Avatar';
 import ChoiceCard from '@renderer/components/ui/ChoiceCard';
 import ApprovalCard from '@renderer/components/ui/ApprovalCard';
@@ -19,6 +20,7 @@ export default function Chat(): React.JSX.Element {
   const [showSearch, setShowSearch] = useState(false);
   const [messageSearch, setMessageSearch] = useState('');
   const [previewImage, setPreviewImage] = useState<AttachmentMetadata | null>(null);
+  const [workingDir, setWorkingDir] = useState<string | null>(null);
   const chatAreaRef = useRef<HTMLDivElement>(null);
   const inputWrapperRef = useRef<HTMLDivElement>(null);
   const messageListRef = useRef<HTMLDivElement>(null);
@@ -372,28 +374,58 @@ export default function Chat(): React.JSX.Element {
                   <div ref={convMessagesEndRef} />
                 </div>
 
+                {/* 拖拽缩放把手 */}
+                <div
+                  className="h-2 cursor-ns-resize relative flex items-center justify-center group hover:bg-blue-500/5 transition-colors shrink-0"
+                  onMouseDown={handleResizeStart}
+                >
+                  <div className="w-7 h-0.5 rounded-full bg-gray-300/70 dark:bg-gray-600/70 group-hover:bg-blue-400/60 transition-colors" />
+                </div>
+
+                {/* 可缩放区域：上下文栏 + 输入框 */}
+                <div ref={inputWrapperRef} className="shrink-0 flex flex-col" style={{ height: inputHeight, minHeight: 120 }}>
+                  <div className="flex items-center gap-2 px-4 py-1.5 border-t border-gray-200 dark:border-gray-700/50 bg-gray-50/30 dark:bg-gray-800/20">
+                    <CustomFileUpload onChange={handleFileSelect} multiple size="xs" variant="ghost">
+                      附件
+                    </CustomFileUpload>
+                    <span className="text-gray-200 dark:text-gray-600">|</span>
+                    <button
+                    onClick={async () => {
+                      if (!window.api?.dialog) return
+                      const dir = await window.api.dialog.showOpen()
+                      if (dir) setWorkingDir(dir)
+                    }}
+                    className="flex items-center gap-1.5 text-[11px] text-gray-500 dark:text-gray-400 hover:text-blue-600 dark:hover:text-blue-400 transition-colors"
+                    title="选择工作目录"
+                  >
+                    <svg className="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                      <path d="M22 19a2 2 0 01-2 2H4a2 2 0 01-2-2V5a2 2 0 012-2h5l2 3h9a2 2 0 012 2z" />
+                    </svg>
+                    {workingDir ? (
+                      <>
+                        <span className="max-w-[240px] truncate">{workingDir}</span>
+                        <span onClick={(e) => { e.stopPropagation(); setWorkingDir(null) }} className="ml-1 hover:text-red-500">×</span>
+                      </>
+                    ) : '工作目录'}
+                  </button>
+                </div>
+
                 <ChatInput
                   key={selectedAgent.id}
                   inputMessage={inputMessage}
                   onInputChange={setInputMessage}
                   onSend={() => sendMessage(
-                    inputMessage,
-                    pendingAttachments,
-                    agents,
-                    activeLLMConfig,
+                    inputMessage, pendingAttachments, agents, activeLLMConfig, workingDir || undefined,
                   )}
                   disabled={isLoading}
                   placeholder={`向 ${selectedAgent.name} 发送消息...`}
                   attachments={pendingAttachments}
                   onAttachmentsChange={setPendingAttachments}
-                  onFileSelect={handleFileSelect}
                   isLoading={isLoading}
                   onTerminate={handleTerminate}
-                  inputHeight={inputHeight}
-                  onResizeStart={handleResizeStart}
-                  inputWrapperRef={inputWrapperRef}
                   sentHistory={sentHistory}
                 />
+                </div>
               </>
             )
           })()}

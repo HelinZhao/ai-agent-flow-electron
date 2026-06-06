@@ -267,7 +267,8 @@ export const workflowExecutionApi = {
     input: string,
     threadId?: string,
     attachments?: any[],
-    autoApprovedTools?: string[]
+    autoApprovedTools?: string[],
+    workingDirectory?: string,
   ): Promise<{
     executionId: string
     success: boolean
@@ -281,6 +282,7 @@ export const workflowExecutionApi = {
       threadId,
       attachments,
       autoApprovedTools,
+      workingDirectory,
     }),
 
   // 用户审批工具调用

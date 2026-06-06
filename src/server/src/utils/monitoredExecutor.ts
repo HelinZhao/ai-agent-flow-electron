@@ -637,7 +637,7 @@ export class MonitoredLangGraphExecutor {
   async startDirectChat(
     input: string, llmConfig: LLMConfig, agent: { id: string; name: string; instructions: string },
     threadId?: string, attachments?: AttachmentPayload[], enabledTools?: string[],
-    autoApprovedTools?: string[], skillsContext?: string,
+    autoApprovedTools?: string[], skillsContext?: string, workingDirectory?: string,
   ): Promise<string> {
     const executionId = uuidv4()
     const effectiveThreadId = threadId || agent.id || 'default-thread'
@@ -673,7 +673,7 @@ export class MonitoredLangGraphExecutor {
     }
 
     this.executionStates.set(executionId, executionState)
-    this.executeDirectChatAsync(executionId, input, llmConfig, agent, effectiveThreadId, diskAttachments, enabledTools, skillsContext)
+    this.executeDirectChatAsync(executionId, input, llmConfig, agent, effectiveThreadId, diskAttachments, enabledTools, skillsContext, workingDirectory)
     return executionId
   }
 
@@ -681,12 +681,14 @@ export class MonitoredLangGraphExecutor {
     executionId: string, input: string, llmConfig: LLMConfig,
     agent: { id: string; name: string; instructions: string }, threadId: string,
     attachments?: AttachmentPayload[], enabledTools?: string[], skillsContext?: string,
+    workingDirectory?: string,
   ): Promise<void> {
     try {
       const state = this.executionStates.get(executionId)
 
       let prompt = agent.instructions
       if (skillsContext) prompt = `【技能参考】\n${skillsContext}\n\n${prompt}`
+      if (workingDirectory) prompt = `【工作目录】\n${workingDirectory}\n\n${prompt}`
       prompt += `\n\n用户输入: ${input}`
 
 const choiceCallback = async (request: ChoiceRequest): Promise<ChoiceResponse> => {

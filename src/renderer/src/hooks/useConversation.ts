@@ -37,6 +37,7 @@ export function useConversation() {
   // SSE 回调里需要最新值，用 ref 避免闭包陈旧
   const autoApprovedRef = useRef<Set<string>>(new Set())
   autoApprovedRef.current = autoApprovedTools
+  const workingDirRef = useRef<string | undefined>(undefined)
   // switchAgent 有 [] 依赖，闭包里的 pendingApproval/pendingChoice 永远是初始 null，必须用 ref 读取最新值
   const latestPendingApprovalRef = useRef<ToolApprovalRequest | null>(null)
   latestPendingApprovalRef.current = pendingApproval
@@ -202,6 +203,7 @@ export function useConversation() {
     attachments: AttachmentData[],
     agents: Agent[],
     activeLLMConfig: unknown,
+    workingDir?: string,
   ) => {
     const agent = agents.find(a => a.id === selectedAgent?.id) || selectedAgent
     if ((!text.trim() && attachments.length === 0) || !agent || !activeLLMConfig) {
@@ -243,9 +245,10 @@ export function useConversation() {
     }))
 
     try {
+      workingDirRef.current = workingDir
       const { executionId, success } = await workflowExecutionApi.agentChatMonitor(
         agent.id, userMessage.content, agent.id, attachmentsPayload,
-        Array.from(autoApprovedTools),
+        Array.from(autoApprovedTools), workingDir,
       )
       if (!success) throw new Error('AI Agent 对话启动失败')
 
@@ -471,7 +474,7 @@ export function useConversation() {
 
     // 截断后重新发送用户消息
     await chatRecordApi.saveRecord(agent.id, agent.name, truncated).catch(() => {})
-    await sendMessage(userMsg.content, userMsg.attachments || [], agents, activeLLMConfig)
+    await sendMessage(userMsg.content, userMsg.attachments || [], agents, activeLLMConfig, workingDirRef.current)
   }, [selectedAgent, messages, sendMessage])
 
   const sentHistory = selectedAgent ? sentHistoryRef.current[selectedAgent.id] || [] : []
