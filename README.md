@@ -481,6 +481,15 @@ this.app.use('/api/new-route', newRouter)
 
 ## 更新日志
 
+### v2.6.0
+
+- **修复 frameless 窗口输入框焦点穿透**：全局为 `input`/`textarea`/`select`/`button`/`a`/`[contenteditable]` 添加 `-webkit-app-region: no-drag`，防止无边框窗口中点击输入框被拖拽区域拦截导致无法聚焦
+- **UI 重构**：按钮图标化，CustomButton 新增 `text` / `link` 变体
+- **模型能力映射重构**：视觉检测改用 `capabilities` 字段，工具调用新增兜底逻辑
+- **提供商图标**：SVG 图标内联渲染 + 品牌色 + 服务器配置同步
+- **聊天体验优化**：工作目录 + 附件上下文栏 + 拖拽把手重构
+- **配置清理**：移除已废弃的 `CHAT_KEEP_LATEST` 常量
+
 ### v2.5.0
 
 - **交互式用户选择工具**：LLM 可通过 `askUserChoice` 工具向用户提问并等待选择，支持单选/多选/取消三种模式

@@ -10,6 +10,16 @@
   -webkit-app-region: no-drag;
 }
 
+/* 全局：所有可交互输入控件排除拖拽区域，防止 frameless 窗口焦点穿透 */
+input,
+textarea,
+select,
+button,
+a,
+[contenteditable="true"] {
+  -webkit-app-region: no-drag;
+}
+
 :root {
   --foreground-rgb: 0, 0, 0;
   --background-start-rgb: 214, 219, 220;
