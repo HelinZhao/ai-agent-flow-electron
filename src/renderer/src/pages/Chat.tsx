@@ -107,12 +107,15 @@ export default function Chat(): React.JSX.Element {
     loadMoreMessages(selectedAgent.id)
   }
 
+  const supportsVision = activeLLMConfig?.capabilities?.includes('vision') ?? false
+
   const handleFileSelect = async (e: React.ChangeEvent<HTMLInputElement>): Promise<void> => {
     const files = e.target.files;
     if (!files || files.length === 0) return;
 
     const newAttachments: AttachmentData[] = [];
     for (const file of Array.from(files)) {
+      if (!supportsVision && file.type.startsWith('image/')) continue
       try {
         newAttachments.push(await processFileAttachment(file));
       } catch (error) {
@@ -388,7 +391,13 @@ export default function Chat(): React.JSX.Element {
                 {/* 可缩放区域：上下文栏 + 输入框 */}
                 <div ref={inputWrapperRef} className="shrink-0 flex flex-col" style={{ height: inputHeight, minHeight: 120 }}>
                   <div className="flex items-center gap-2 px-4 py-1.5 border-t border-gray-200 dark:border-gray-700/50 bg-gray-50/30 dark:bg-gray-800/20">
-                    <CustomFileUpload onChange={handleFileSelect} multiple size="xs" variant="text">
+                    <CustomFileUpload
+                      onChange={handleFileSelect}
+                      multiple
+                      size="xs"
+                      variant="text"
+                      accept={supportsVision ? undefined : 'text/*,application/*,.md'}
+                    >
                       附件
                     </CustomFileUpload>
                     <span className="text-gray-200 dark:text-gray-600">|</span>

@@ -100,7 +100,7 @@ const migrateTeamColumns = () =>
 /** llm_configs 加 capabilities 字段（JSON 数组） */
 const migrateLLMCapabilities = () =>
   addMissingColumns('llm_configs', [
-    { name: 'capabilities', definition: "TEXT DEFAULT '[\"text\"]'" },
+    { name: 'capabilities', definition: "TEXT DEFAULT '[\"text\", \"tool_use\", \"streaming\"]'" },
   ])
 
 const migrateTriggerTable = () =>

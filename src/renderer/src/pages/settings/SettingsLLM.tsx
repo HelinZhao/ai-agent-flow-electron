@@ -56,7 +56,7 @@ export default function SettingsLLM(): React.JSX.Element {
       baseUrl: LLM_DEFAULTS.baseUrl,
       temperature: LLM_DEFAULTS.temperature,
       maxTokens: LLM_DEFAULTS.maxTokens,
-      capabilities: ['text'],
+      capabilities: ['text', 'tool_use', 'streaming'],
       isActive: false,
     }
   });
@@ -440,8 +440,8 @@ export default function SettingsLLM(): React.JSX.Element {
               size='sm'
             />
             {/* 模型能力：自动按 model+provider 勾选默认值，可手动修正 */}
-            <div>
-              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+            <div className="mt-4">
+              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5">
                 模型能力
               </label>
               <div className="grid grid-cols-2 gap-2.5">

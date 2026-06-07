@@ -125,13 +125,13 @@ const PROVIDER_DEFAULT_CAPABILITIES: Record<string, ModelCapability[]> = {
   'perplexity': ['text', 'tool_use', 'streaming'],
   'together': ['text', 'tool_use', 'streaming'],
   'groq': ['text', 'tool_use', 'streaming'],
-  'meta': ['text', 'streaming'],
+  'meta': ['text', 'tool_use', 'streaming'],
   // 本地 / 自托管
-  'ollama': ['text', 'streaming'],
-  'localai': ['text', 'streaming'],
-  'lmstudio': ['text', 'streaming'],
-  'vllm': ['text', 'streaming'],
-  'tgi': ['text', 'streaming'],
+  'ollama': ['text', 'tool_use', 'streaming'],
+  'localai': ['text', 'tool_use', 'streaming'],
+  'lmstudio': ['text', 'tool_use', 'streaming'],
+  'vllm': ['text', 'tool_use', 'streaming'],
+  'tgi': ['text', 'tool_use', 'streaming'],
   // 云平台
   'azure': ['text', 'tool_use', 'streaming'],
   'aws': ['text', 'tool_use', 'streaming'],
@@ -139,33 +139,33 @@ const PROVIDER_DEFAULT_CAPABILITIES: Record<string, ModelCapability[]> = {
   'vertex': ['text', 'vision', 'tool_use', 'streaming'],
   'gcp': ['text', 'vision', 'tool_use', 'streaming'],
   // 国内厂商
-  'bailian': ['text', 'streaming'],
-  'longcat': ['text', 'streaming'],
+  'bailian': ['text', 'tool_use', 'streaming'],
+  'longcat': ['text', 'tool_use', 'streaming'],
   'qwen': ['text', 'tool_use', 'streaming'],
   'tongyi': ['text', 'tool_use', 'streaming'],
   'zhipu': ['text', 'tool_use', 'streaming'],
   'glm': ['text', 'tool_use', 'streaming'],
-  'moonshot': ['text', 'streaming'],
-  'kimi': ['text', 'streaming'],
-  'baidu': ['text', 'streaming'],
-  'ernie': ['text', 'streaming'],
-  'doubao': ['text', 'streaming'],
-  'hunyuan': ['text', 'streaming'],
-  'tencent': ['text', 'streaming'],
-  'stepfun': ['text', 'streaming'],
-  'minimax': ['text', 'streaming'],
-  'sensetime': ['text', 'streaming'],
-  '01-ai': ['text', 'streaming'],
-  'yi': ['text', 'streaming'],
+  'moonshot': ['text', 'tool_use', 'streaming'],
+  'kimi': ['text', 'tool_use', 'streaming'],
+  'baidu': ['text', 'tool_use', 'streaming'],
+  'ernie': ['text', 'tool_use', 'streaming'],
+  'doubao': ['text', 'tool_use', 'streaming'],
+  'hunyuan': ['text', 'tool_use', 'streaming'],
+  'tencent': ['text', 'tool_use', 'streaming'],
+  'stepfun': ['text', 'tool_use', 'streaming'],
+  'minimax': ['text', 'tool_use', 'streaming'],
+  'sensetime': ['text', 'tool_use', 'streaming'],
+  '01-ai': ['text', 'tool_use', 'streaming'],
+  'yi': ['text', 'tool_use', 'streaming'],
   'deepinfra': ['text', 'tool_use', 'streaming'],
   'fireworks': ['text', 'tool_use', 'streaming'],
-  'replicate': ['text', 'streaming'],
+  'replicate': ['text', 'tool_use', 'streaming'],
 }
 
 /**
  * 根据模型名 + provider 返回默认能力列表
- * 精确匹配 → provider 兜底 → 仅 text
+ * 精确匹配 → provider 兜底 
  */
 export function getDefaultCapabilities(model: string, provider: string): ModelCapability[] {
-  return MODEL_CAPABILITIES[model] ?? PROVIDER_DEFAULT_CAPABILITIES[provider] ?? ['text']
+  return MODEL_CAPABILITIES[model] ?? PROVIDER_DEFAULT_CAPABILITIES[provider] ?? ['text', 'tool_use', 'streaming']
 }

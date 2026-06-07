@@ -21,12 +21,11 @@ export interface LLMConfigAttributes {
 export interface LLMConfigCreationAttributes extends Omit<
   LLMConfigAttributes,
   'id' | 'createdAt' | 'updatedAt'
-> {}
+> { }
 
 export class LLMConfigModel
   extends Model<LLMConfigAttributes, LLMConfigCreationAttributes>
-  implements LLMConfigAttributes
-{
+  implements LLMConfigAttributes {
   declare id: string
   declare name: string
   declare provider: string
@@ -79,11 +78,14 @@ LLMConfigModel.init(
       allowNull: true,
       defaultValue: 2000
     },
-    // 数据库中存 JSON 字符串，通过 toJSON 转换（见下方 hook）
+    // 数据库中存 JSON 字符串，通过 set() 自动序列化，toJSON 反序列化
     capabilities: {
       type: DataTypes.TEXT,
       allowNull: true,
       defaultValue: '["text"]',
+      set(value: any) {
+        this.setDataValue('capabilities', Array.isArray(value) ? JSON.stringify(value) : value)
+      },
     },
     isActive: {
       type: DataTypes.BOOLEAN,
@@ -105,14 +107,7 @@ LLMConfigModel.init(
     sequelize,
     tableName: 'llm_configs',
     timestamps: true,
-    hooks: {
-      beforeSave(instance) {
-        const caps = instance.getDataValue('capabilities')
-        if (caps && Array.isArray(caps)) {
-          instance.setDataValue('capabilities', JSON.stringify(caps) as any)
-        }
-      }
-    }
+    hooks: {}
   }
 )
 
@@ -121,7 +116,7 @@ const origToJSON = LLMConfigModel.prototype.toJSON
 LLMConfigModel.prototype.toJSON = function () {
   const json: Record<string, unknown> = origToJSON ? origToJSON.call(this) as Record<string, unknown> : { ...this.get() }
   if (typeof json.capabilities === 'string') {
-     json.capabilities = safeJsonParse(json.capabilities, ['text'])
+    json.capabilities = safeJsonParse(json.capabilities, ['text', 'tool_use', 'streaming'])
   }
   return json
 }

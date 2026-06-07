@@ -1,13 +1,12 @@
-import { VISION_MODEL_PATTERNS } from '../config'
 import { Worker } from 'worker_threads'
 import { SkillModel } from '../models'
 import { HumanMessage } from 'langchain'
+import { getDefaultCapabilities } from '../llm-capabilities'
 
 export const sleep = (ms: number) => new Promise(resolve => setTimeout(resolve, ms))
 
-export function isVisionModel(model: string): boolean {
-  const lowerModel = model.toLowerCase()
-  return VISION_MODEL_PATTERNS.some((pattern) => lowerModel.includes(pattern))
+export function isVisionModel(model: string, provider?: string): boolean {
+  return getDefaultCapabilities(model, provider || '').includes('vision')
 }
 
 export interface SkillsContextResult {

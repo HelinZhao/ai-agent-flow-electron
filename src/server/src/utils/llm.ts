@@ -151,7 +151,7 @@ async function _buildLLM(ctx: CallLLMCtx): Promise<ChatOpenAI> {
 /** 构建用户消息（支持纯文本和 vision 图片） */
 async function _buildUserMessage(ctx: CallLLMCtx): Promise<HumanMessage> {
   const { prompt, llmConfig, attachments } = ctx
-  const supportsVision = isVisionModel(llmConfig.model)
+  const supportsVision = isVisionModel(llmConfig.model, llmConfig.provider)
   const imageAttachments = attachments?.filter(a => a.category === "image") || []
   const imageDataUrls: Map<string, string> = new Map()
   for (const att of imageAttachments) {

@@ -161,5 +161,5 @@ export const ALL_CAPABILITIES = [
 ]
 
 export function getDefaultCapabilities(model: string, provider: string): string[] {
-  return MODEL_CAPABILITIES[model] ?? PROVIDER_DEFAULT_CAPABILITIES[provider] ?? ['text']
+  return MODEL_CAPABILITIES[model] ?? PROVIDER_DEFAULT_CAPABILITIES[provider] ?? ['text', 'tool_use', 'streaming']
 }

@@ -132,16 +132,6 @@ export const PROVIDER_API_KEY_PREFIXES: Record<string, string> = {
   longcat: 'ak_',
 }
 
-// ========== 视觉模型检测 ==========
-
-/** 模型名称中包含以下关键词则判定为支持图像/视觉输入 */
-export const VISION_MODEL_PATTERNS = [
-  '4o', '4-turbo', 'vision', 'gpt-4-vision', 'o1', 'o3', 'o4',
-  'claude-3', 'claude-3.5', 'claude-4',
-  'vl', 'qwen-vl', 'qwen2-vl',
-  'gemini', 'grok-2', 'qwen3.6-plus',
-]
-
 // ========== 人机协同审批（HITL） ==========
 
 /** 需要人工审批后才能执行的危险工具名称列表 */
