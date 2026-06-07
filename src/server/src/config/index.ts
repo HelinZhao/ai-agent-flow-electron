@@ -79,12 +79,40 @@ export const LLM_CACHE_TTL = 10 * 60 * 1000 // 10 分钟
 // ========== LLM 提供商默认 API 地址 ==========
 
 export const PROVIDER_DEFAULT_BASE_URLS: Record<string, string> = {
+  // 国际主流
   openai: 'https://api.openai.com/v1',
-  anthropic: 'https://api.anthropic.com/v1',
-  bailian: 'https://dashscope.aliyuncs.com/compatible-mode/v1',
-  longcat: 'https://api.longcat.chat/openai/v1',
+  anthropic: 'https://api.anthropic.com',
+  google: 'https://generativelanguage.googleapis.com/v1beta',
+  xai: 'https://api.x.ai',
   deepseek: 'https://api.deepseek.com',
+  mistral: 'https://api.mistral.ai/v1',
+  cohere: 'https://api.cohere.ai/v1',
+  perplexity: 'https://api.perplexity.ai',
+  together: 'https://api.together.xyz/v1',
+  groq: 'https://api.groq.com/openai/v1',
+  // 国内厂商
+  zhipu: 'https://open.bigmodel.cn/api/paas/v4',
+  qwen: 'https://dashscope.aliyuncs.com/compatible-mode/v1',
+  bailian: 'https://dashscope.aliyuncs.com/compatible-mode/v1',
+  moonshot: 'https://api.moonshot.cn/v1',
+  baidu: 'https://aip.baidubce.com',
+  doubao: 'https://ark.cn-beijing.volces.com/api/v3',
+  tencent: 'https://api.hunyuan.cloud.tencent.com/v1',
+  stepfun: 'https://api.stepfun.com/v1',
+  minimax: 'https://api.minimax.chat/v1',
+  sensetime: 'https://api.sense.com/v1',
+  yi: 'https://api.lingyiwanwu.com/v1',
+  longcat: 'https://api.longcat.ai',
+  // 本地 / 自托管
   ollama: 'http://127.0.0.1:11434',
+  localai: 'http://localhost:8080/v1',
+  vllm: 'http://localhost:8000/v1',
+  lmstudio: 'http://localhost:1234/v1',
+  tgi: 'http://localhost:3000/v1',
+  // 推理聚合
+  deepinfra: 'https://api.deepinfra.com/v1/openai',
+  fireworks: 'https://api.fireworks.ai/inference/v1',
+  replicate: 'https://api.replicate.com/v1',
 }
 
 /** Ollama 默认服务地址 */
@@ -98,8 +126,10 @@ export const PROVIDER_API_KEY_PREFIXES: Record<string, string> = {
   openai: 'sk-',
   anthropic: 'sk-ant-',
   bailian: 'sk-',
-  longcat: 'ak_',
+  qwen: 'sk-',
+  moonshot: 'sk-',
   deepseek: 'sk-',
+  longcat: 'ak_',
 }
 
 // ========== 视觉模型检测 ==========
@@ -150,7 +180,7 @@ export const EXTERNAL_KB_PROVIDERS: Record<string, {
 }> = {
   generic: {
     name: '通用 API',
-    buildBody: (query, topK, _config?) => ({ query, topK }),
+    buildBody: (query, topK) => ({ query, topK }),
     parseResponse: (data) => {
       if (Array.isArray(data.results)) return data.results.map((r: any) => r.content || r.text || String(r)).join('\n\n---\n\n')
       if (Array.isArray(data.documents)) return data.documents.map((d: any) => d.content || d.text || String(d)).join('\n\n---\n\n')
@@ -176,7 +206,7 @@ export const EXTERNAL_KB_PROVIDERS: Record<string, {
   },
   bailian: {
     name: '阿里百炼',
-    buildBody: (query, topK, _config?) => ({ query, top_k: topK }),
+    buildBody: (query, topK) => ({ query, top_k: topK }),
     parseResponse: (data) => {
       const chunks = data.data?.chunks || data.chunks || []
       return chunks.map((c: any) => c.content || String(c)).join('\n\n---\n\n')
@@ -184,7 +214,7 @@ export const EXTERNAL_KB_PROVIDERS: Record<string, {
   },
   qianfan: {
     name: '百度千帆',
-    buildBody: (query, topK, _config?) => ({ query, limit: topK }),
+    buildBody: (query, topK) => ({ query, limit: topK }),
     parseResponse: (data) => {
       const items = data.data || data.result || []
       return items.map((i: any) => i.content || i.text || String(i)).join('\n\n---\n\n')
@@ -192,7 +222,7 @@ export const EXTERNAL_KB_PROVIDERS: Record<string, {
   },
   anythingllm: {
     name: 'AnythingLLM',
-    buildBody: (query, topK, _config?) => ({ message: query, mode: 'query', topN: topK }),
+    buildBody: (query, topK) => ({ message: query, mode: 'query', topN: topK }),
     parseResponse: (data) => {
       if (data.textResponse) return data.textResponse
       if (data.context?.text) return data.context.text
@@ -201,7 +231,7 @@ export const EXTERNAL_KB_PROVIDERS: Record<string, {
   },
   fastgpt: {
     name: 'FastGPT',
-    buildBody: (query, topK, _config?) => ({ query, limit: topK }),
+    buildBody: (query, topK) => ({ query, limit: topK }),
     parseResponse: (data) => {
       const items = data.data || data.records || []
       return items.map((i: any) => i.content || i.text || String(i)).join('\n\n---\n\n')
@@ -209,7 +239,7 @@ export const EXTERNAL_KB_PROVIDERS: Record<string, {
   },
   ragflow: {
     name: 'RAGFlow',
-    buildBody: (query, topK, _config?) => ({ query, top_k: topK }),
+    buildBody: (query, topK) => ({ query, top_k: topK }),
     parseResponse: (data) => {
       const chunks = data.data?.chunks || data.records || data.chunks || []
       return chunks.map((c: any) => c.content || c.text || String(c)).join('\n\n---\n\n')

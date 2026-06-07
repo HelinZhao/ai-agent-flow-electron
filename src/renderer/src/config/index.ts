@@ -47,41 +47,52 @@ export const LLM_DEFAULTS = {
   baseUrl: '',
 }
 /** 提供商信息 */
-export const PROVIDER_MATES: Record<string, {
-  name: string, // 提供商显示名称
-  baseUrl: string, // 默认 API 地址（仅作 placeholder 提示）
-  prefix: string // 提供商 API Key 前缀校验规则
-}> = {
-  openai: {
-    name: 'OpenAI',
-    baseUrl: 'https://api.openai.com/v1',
-    prefix: 'sk-'
-  },
-  anthropic: {
-    name: 'Anthropic',
-    baseUrl: 'https://api.anthropic.com',
-    prefix: 'sk-ant-'
-  },
-  bailian: {
-    name: 'Bailian (阿里百炼)',
-    baseUrl: 'https://dashscope.aliyuncs.com/compatible-mode/v1',
-    prefix: 'sk-'
-  },
-  longcat: {
-    name: 'Longcat (美团龙猫)',
-    baseUrl: 'https://api.longcat.ai',
-    prefix: 'ak_'
-  },
-  deepseek: {
-    name: 'Deepseek (深度求索)',
-    baseUrl: 'https://api.deepseek.com',
-    prefix: 'sk-'
-  },
-  ollama: {
-    name: 'Ollama (本地模型)',
-    baseUrl: 'http://127.0.0.1:11434',
-    prefix: ''
-  },
+export interface ProviderMate {
+  name: string       // 显示名称
+  baseUrl: string    // 默认 API 地址（placeholder 提示）
+  prefix: string     // API Key 前缀校验规则
+  group?: string     // 分组（用于下拉菜单分组显示）
+}
+
+export const PROVIDER_MATES: Record<string, ProviderMate> = {
+  // ===== 国际主流 =====
+  openai: { name: 'OpenAI', baseUrl: 'https://api.openai.com/v1', prefix: 'sk-', group: '国际' },
+  anthropic: { name: 'Anthropic (Claude)', baseUrl: 'https://api.anthropic.com', prefix: 'sk-ant-', group: '国际' },
+  google: { name: 'Google (Gemini)', baseUrl: 'https://generativelanguage.googleapis.com/v1beta', prefix: '', group: '国际' },
+  xai: { name: 'xAI (Grok)', baseUrl: 'https://api.x.ai', prefix: '', group: '国际' },
+  deepseek: { name: 'DeepSeek (深度求索)', baseUrl: 'https://api.deepseek.com', prefix: 'sk-', group: '国际' },
+  mistral: { name: 'Mistral AI', baseUrl: 'https://api.mistral.ai/v1', prefix: '', group: '国际' },
+  cohere: { name: 'Cohere', baseUrl: 'https://api.cohere.ai/v1', prefix: '', group: '国际' },
+  perplexity: { name: 'Perplexity', baseUrl: 'https://api.perplexity.ai', prefix: '', group: '国际' },
+  together: { name: 'Together AI', baseUrl: 'https://api.together.xyz/v1', prefix: '', group: '国际' },
+  groq: { name: 'Groq', baseUrl: 'https://api.groq.com/openai/v1', prefix: '', group: '国际' },
+  meta: { name: 'Meta (Llama)', baseUrl: '', prefix: '', group: '国际' },
+  // ===== 国内厂商 =====
+  zhipu: { name: '智谱 (GLM)', baseUrl: 'https://open.bigmodel.cn/api/paas/v4', prefix: '', group: '国内' },
+  qwen: { name: '阿里通义千问', baseUrl: 'https://dashscope.aliyuncs.com/compatible-mode/v1', prefix: 'sk-', group: '国内' },
+  bailian: { name: '阿里百炼', baseUrl: 'https://dashscope.aliyuncs.com/compatible-mode/v1', prefix: 'sk-', group: '国内' },
+  moonshot: { name: '月之暗面 (Kimi)', baseUrl: 'https://api.moonshot.cn/v1', prefix: 'sk-', group: '国内' },
+  baidu: { name: '百度文心', baseUrl: 'https://aip.baidubce.com', prefix: '', group: '国内' },
+  doubao: { name: '字节豆包', baseUrl: 'https://ark.cn-beijing.volces.com/api/v3', prefix: '', group: '国内' },
+  tencent: { name: '腾讯混元', baseUrl: 'https://api.hunyuan.cloud.tencent.com/v1', prefix: '', group: '国内' },
+  stepfun: { name: '阶跃星辰', baseUrl: 'https://api.stepfun.com/v1', prefix: '', group: '国内' },
+  minimax: { name: 'MiniMax', baseUrl: 'https://api.minimax.chat/v1', prefix: '', group: '国内' },
+  sensetime: { name: '商汤日日新', baseUrl: 'https://api.sense.com/v1', prefix: '', group: '国内' },
+  yi: { name: '零一万物 (Yi)', baseUrl: 'https://api.lingyiwanwu.com/v1', prefix: '', group: '国内' },
+  longcat: { name: '美团龙猫', baseUrl: 'https://api.longcat.ai', prefix: 'ak_', group: '国内' },
+  // ===== 云平台 =====
+  azure: { name: 'Azure OpenAI', baseUrl: 'https://{resource}.openai.azure.com', prefix: '', group: '云平台' },
+  aws: { name: 'AWS Bedrock', baseUrl: '', prefix: '', group: '云平台' },
+  // ===== 本地 / 自托管 =====
+  ollama: { name: 'Ollama (本地)', baseUrl: 'http://127.0.0.1:11434', prefix: '', group: '本地' },
+  localai: { name: 'LocalAI', baseUrl: 'http://localhost:8080/v1', prefix: '', group: '本地' },
+  vllm: { name: 'vLLM', baseUrl: 'http://localhost:8000/v1', prefix: '', group: '本地' },
+  lmstudio: { name: 'LM Studio', baseUrl: 'http://localhost:1234/v1', prefix: '', group: '本地' },
+  tgi: { name: 'Text Generation Inference', baseUrl: 'http://localhost:3000/v1', prefix: '', group: '本地' },
+  // ===== 推理聚合 =====
+  deepinfra: { name: 'DeepInfra', baseUrl: 'https://api.deepinfra.com/v1/openai', prefix: '', group: '聚合' },
+  fireworks: { name: 'Fireworks AI', baseUrl: 'https://api.fireworks.ai/inference/v1', prefix: '', group: '聚合' },
+  replicate: { name: 'Replicate', baseUrl: 'https://api.replicate.com/v1', prefix: '', group: '聚合' },
 }
 
 /** Temperature 输入范围 */

@@ -85,6 +85,7 @@ export interface LLMConfig {
   baseUrl?: string
   temperature?: number
   maxTokens?: number
+  capabilities?: string[]
   isActive?: boolean
   createdAt?: Date
   updatedAt?: Date

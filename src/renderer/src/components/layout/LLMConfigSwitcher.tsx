@@ -1,9 +1,11 @@
 import { useAppStore } from '@renderer/store/appStore';
 import CustomSelect, { SelectOption } from '../ui/CustomSelect';
+import ProviderIcon from '../ui/ProviderIcon';
 
 function ConfigLabel({ name, provider, isActive }: { name: string; provider: string, isActive: boolean }) {
   return (
-    <div className="flex items-center space-x-2 mr-2">
+    <div className="flex items-center gap-2 mr-2">
+      <ProviderIcon provider={provider} className="w-4 h-4 shrink-0" />
       <span className="font-medium">{name}</span>
       {isActive
         ? <span className="text-xs text-blue-600 dark:text-blue-300 bg-blue-200 dark:bg-blue-800 px-2 py-0.5 rounded">

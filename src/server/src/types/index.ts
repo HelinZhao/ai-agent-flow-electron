@@ -66,12 +66,13 @@ export interface TokenUsage {
 }
 
 export interface LLMConfig {
-  provider: 'openai' | 'anthropic' | 'azure' | 'bailian' | 'longcat' | 'deepseek' | 'ollama'
+  provider: string
   apiKey: string
   model: string
   baseUrl?: string
   temperature?: number
   maxTokens?: number
+  capabilities?: string[]
 }
 
 export interface Agent {

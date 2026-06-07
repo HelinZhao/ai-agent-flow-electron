@@ -1,14 +1,16 @@
-import React, { useState, useRef } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import { useForm } from 'react-hook-form';
 import { useAppStore } from '@renderer/store/appStore';
 import { LLMConfig } from '@renderer/types';
 import { llmConfigApi } from '@renderer/lib/api';
-import CustomSelect from '@renderer/components/ui/CustomSelect';
+import CustomSelect, { SelectOption } from '@renderer/components/ui/CustomSelect';
 import CustomInput from '@renderer/components/ui/CustomInput';
 import Modal from '@renderer/components/ui/Modal';
 import CustomButton from '@renderer/components/ui/CustomButton';
 import { LLM_DEFAULTS, PROVIDER_MATES, TEMPERATURE_RANGE, MAX_TOKENS_RANGE, MIN_LLM_CONFIG_COUNT } from '@renderer/config';
 import MessageBanner from '@renderer/components/ui/MessageBanner';
+import { ALL_CAPABILITIES, getDefaultCapabilities } from '@renderer/lib/llmCapabilities';
+import ProviderIcon from '@renderer/components/ui/ProviderIcon';
 
 function TemperatureSlider({ value, onChange, min, max, step }: {
   value: number; onChange: (v: number) => void; min: number; max: number; step: number
@@ -54,10 +56,20 @@ export default function SettingsLLM(): React.JSX.Element {
       baseUrl: LLM_DEFAULTS.baseUrl,
       temperature: LLM_DEFAULTS.temperature,
       maxTokens: LLM_DEFAULTS.maxTokens,
+      capabilities: ['text'],
       isActive: false,
     }
   });
   const provider = watch('provider')
+  const model = watch('model')
+
+  // 模型/提供商变更时自动更新能力勾选（仅新建模式，编辑时保留用户选择）
+  useEffect(() => {
+    if (!editingConfig && showForm) {
+      const defaults = getDefaultCapabilities(model, provider)
+      setValue('capabilities', defaults)
+    }
+  }, [model, provider, editingConfig, showForm, setValue])
 
   const onSubmit = async (data: LLMConfig): Promise<void> => {
     setIsSaving(true);
@@ -92,7 +104,10 @@ export default function SettingsLLM(): React.JSX.Element {
 
   const handleEdit = (config: LLMConfig) => {
     setEditingConfig(config.id!);
-    reset(config);
+    reset({
+      ...config,
+      capabilities: config.capabilities ?? getDefaultCapabilities(config.model, config.provider),
+    });
     setShowForm(true);
   };
 
@@ -175,6 +190,7 @@ export default function SettingsLLM(): React.JSX.Element {
       baseUrl: LLM_DEFAULTS.baseUrl,
       temperature: LLM_DEFAULTS.temperature,
       maxTokens: LLM_DEFAULTS.maxTokens,
+      capabilities: getDefaultCapabilities(LLM_DEFAULTS.model, LLM_DEFAULTS.provider),
       isActive: false,
     });
     setEditingConfig(null);
@@ -227,7 +243,7 @@ export default function SettingsLLM(): React.JSX.Element {
                   </div>
                   <div className="flex items-center gap-2 mt-1.5 text-xs text-gray-500 dark:text-gray-400">
                     <span className="inline-flex items-center gap-1">
-                      <svg className="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4" /></svg>
+                      <ProviderIcon provider={config.provider} className="w-3.5 h-3.5" />
                       {config.provider}
                     </span>
                     <span className="text-gray-300 dark:text-gray-600">·</span>
@@ -350,8 +366,38 @@ export default function SettingsLLM(): React.JSX.Element {
               value={provider}
               onChange={(value) => {
                 setValue('provider', value as LLMConfig['provider'], { shouldValidate: true });
+                // 切换供应商时自动更新能力勾选（新建模式）
+                if (!editingConfig) {
+                  const defaults = getDefaultCapabilities(watch('model'), value)
+                  setValue('capabilities', defaults)
+                }
               }}
-              options={Object.entries(PROVIDER_MATES).map(([key, item]) => ({ value: key, label: item.name }))}
+              options={(() => {
+                const groupOrder = ['国际', '国内', '云平台', '本地', '聚合']
+                const groups: Record<string, [string, typeof PROVIDER_MATES[string]][]> = {}
+                for (const [k, v] of Object.entries(PROVIDER_MATES)) {
+                  const g = v.group || '其他'
+                  ;(groups[g] ??= []).push([k, v])
+                }
+                const opts: SelectOption[] = []
+                for (const g of groupOrder) {
+                  const items = groups[g]
+                  if (!items?.length) continue
+                  opts.push({ value: `__group_${g}`, label: <span className="text-[11px] font-semibold tracking-wide text-gray-400 dark:text-gray-500 uppercase">{g}</span>, disabled: true })
+                  for (const [key, mate] of items) {
+                    opts.push({
+                      value: key,
+                      label: (
+                        <span className="flex items-center gap-2.5">
+                          <ProviderIcon provider={key} className="w-4 h-4 shrink-0" />
+                          <span className="truncate">{mate.name}</span>
+                        </span>
+                      ),
+                    })
+                  }
+                }
+                return opts
+              })()}
               placeholder="选择提供商"
               error={!!errors.provider}
               size='sm'
@@ -393,6 +439,44 @@ export default function SettingsLLM(): React.JSX.Element {
               helper={provider === 'ollama' ? '先在终端运行 ollama pull <模型名> 下载模型' : undefined}
               size='sm'
             />
+            {/* 模型能力：自动按 model+provider 勾选默认值，可手动修正 */}
+            <div>
+              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                模型能力
+              </label>
+              <div className="grid grid-cols-2 gap-2.5">
+                {ALL_CAPABILITIES.map((cap) => {
+                  const checked = (watch('capabilities') ?? []).includes(cap.key)
+                  return (
+                    <label
+                      key={cap.key}
+                      className={`relative flex items-start gap-2.5 p-2.5 rounded-lg border cursor-pointer transition-all
+                        ${checked
+                          ? 'border-blue-300 dark:border-blue-600 bg-blue-50/60 dark:bg-blue-900/15'
+                          : 'border-gray-200 dark:border-gray-600 bg-transparent hover:border-gray-300 dark:hover:border-gray-500'
+                        }`}
+                    >
+                      <input
+                        type="checkbox"
+                        checked={checked}
+                        onChange={() => {
+                          const current = watch('capabilities') ?? []
+                          const next = checked
+                            ? current.filter(k => k !== cap.key)
+                            : [...current, cap.key]
+                          setValue('capabilities', next, { shouldDirty: true })
+                        }}
+                        className="mt-0.5 rounded"
+                      />
+                      <div className="flex-1 min-w-0">
+                        <div className="text-sm font-medium text-gray-800 dark:text-gray-200">{cap.label}</div>
+                        <div className="text-xs text-gray-500 dark:text-gray-400">{cap.description}</div>
+                      </div>
+                    </label>
+                  )
+                })}
+              </div>
+            </div>
           </div>
 
           {provider !== 'ollama' && (

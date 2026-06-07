@@ -13,113 +13,100 @@ const sequelize = new Sequelize({
   storage: datPath,
   logging: false // 禁用SQL日志，生产环境中可以设置为false
 })
+// ---------------------------------------------------------------------------
+// 通用迁移工具方法
+// ---------------------------------------------------------------------------
+
+type ColumnDef = { name: string; definition: string }
+
 /**
- * 执行增量迁移：给 knowledge_bases 表添加新列（如不存在）
+ * 给指定表批量添加缺失的列
+ * 自动检测列是否存在，只添加不存在的列
  */
-async function migrateKnowledgeBaseColumns(): Promise<void> {
+async function addMissingColumns(tableName: string, columns: ColumnDef[]): Promise<void> {
   try {
-    const queryInterface = sequelize.getQueryInterface()
-    const tableInfo = await queryInterface.describeTable('knowledge_bases') as Record<string, unknown>
-
-    if (!tableInfo.provider) {
-      console.log('[Migration] knowledge_bases 表缺少 provider 列，执行迁移...')
-      await sequelize.query(`ALTER TABLE knowledge_bases ADD COLUMN provider TEXT NOT NULL DEFAULT 'generic';`)
-      console.log('[Migration] provider 列添加成功')
-    }
-
-    if (!tableInfo.providerConfig) {
-      console.log('[Migration] knowledge_bases 表缺少 providerConfig 列，执行迁移...')
-      await sequelize.query(`ALTER TABLE knowledge_bases ADD COLUMN providerConfig TEXT;`)
-      console.log('[Migration] providerConfig 列添加成功')
-    }
-
-    if (!tableInfo.vectorStore) {
-      console.log('[Migration] knowledge_bases 表缺少 vectorStore 列，执行迁移...')
-      await sequelize.query(`ALTER TABLE knowledge_bases ADD COLUMN vectorStore TEXT NOT NULL DEFAULT 'sqlite-vec';`)
-      console.log('[Migration] vectorStore 列添加成功')
-    }
-
-    if (!tableInfo.vectorConfig) {
-      console.log('[Migration] knowledge_bases 表缺少 vectorConfig 列，执行迁移...')
-      await sequelize.query(`ALTER TABLE knowledge_bases ADD COLUMN vectorConfig TEXT;`)
-      console.log('[Migration] vectorConfig 列添加成功')
+    const q = sequelize.getQueryInterface()
+    const table = await q.describeTable(tableName) as Record<string, unknown>
+    for (const col of columns) {
+      if (!table[col.name]) {
+        console.log(`[Migration] ${tableName} 表缺少 ${col.name} 列，执行迁移...`)
+        await sequelize.query(`ALTER TABLE ${tableName} ADD COLUMN ${col.name} ${col.definition};`)
+        console.log(`[Migration] ${tableName}.${col.name} 列添加成功`)
+      }
     }
   } catch (error) {
-    console.log('[Migration] 跳过 knowledge_bases 列迁移:', (error as Error).message)
+    console.log(`[Migration] 跳过 ${tableName} 列迁移:`, (error as Error).message)
   }
 }
 
 /**
- * 执行增量迁移：给 llm_configs 表添加新列（如不存在）
+ * 创建表（如不存在）并在成功后执行额外回调（如建索引）
  */
-async function migrateLLMConfigColumns(): Promise<void> {
+async function createTableIfMissing(
+  tableName: string,
+  createSql: string,
+  after?: () => Promise<unknown>,
+): Promise<void> {
   try {
-    await sequelize.getQueryInterface().describeTable('llm_configs')
-  } catch (error) {
-    console.log('[Migration] 跳过 llm_configs 列迁移:', (error as Error).message)
-  }
-}
-
-/**
- * 执行增量迁移：给 workflows 表添加 layoutDirection 列（如不存在）
- */
-async function migrateWorkflowColumns(): Promise<void> {
-  try {
-    const queryInterface = sequelize.getQueryInterface()
-    const tableInfo = await queryInterface.describeTable('workflows') as Record<string, unknown>
-
-    if (!tableInfo.layoutDirection) {
-      console.log('[Migration] workflows 表缺少 layoutDirection 列，执行迁移...')
-      await sequelize.query(`ALTER TABLE workflows ADD COLUMN layoutDirection TEXT;`)
-      console.log('[Migration] layoutDirection 列添加成功')
-    }
-    if (!tableInfo.envVars) {
-      console.log('[Migration] workflows 表缺少 envVars 列，执行迁移...')
-      await sequelize.query(`ALTER TABLE workflows ADD COLUMN envVars TEXT;`)
-      console.log('[Migration] envVars 列添加成功')
-    }
-  } catch (error) {
-    console.log('[Migration] 跳过 workflows 列迁移:', (error as Error).message)
-  }
-}
-
-/**
- * 执行增量迁移：给 agents 表添加 isSystem 列（如不存在）
- */
-async function migrateAgentColumns(): Promise<void> {
-  try {
-    const queryInterface = sequelize.getQueryInterface()
-    const tableInfo = await queryInterface.describeTable('agents') as Record<string, unknown>
-    if (!tableInfo.isSystem) {
-      console.log('[Migration] agents 表缺少 isSystem 列，执行迁移...')
-      await sequelize.query(`ALTER TABLE agents ADD COLUMN isSystem INTEGER DEFAULT 0;`)
-      console.log('[Migration] isSystem 列添加成功')
-    }
-    if (!tableInfo.llmConfigId) {
-      console.log('[Migration] agents 表缺少 llmConfigId 列，执行迁移...')
-      await sequelize.query(`ALTER TABLE agents ADD COLUMN llmConfigId INTEGER DEFAULT 0;`)
-      console.log('[Migration] llmConfigId 列添加成功')
-    }
-    if (!tableInfo.avatarUrl) {
-      console.log('[Migration] agents 表缺少 avatarUrl 列，执行迁移...')
-      await sequelize.query(`ALTER TABLE agents ADD COLUMN avatarUrl TEXT;`)
-      console.log('[Migration] avatarUrl 列添加成功')
-    }
-  } catch (error) {
-    console.log('[Migration] 跳过 agents isSystem 列迁移:', (error as Error).message)
-  }
-}
-
-/**
- * 执行增量迁移：创建 triggers 表（如不存在）
- */
-async function migrateTriggerTable(): Promise<void> {
-  try {
-    const queryInterface = sequelize.getQueryInterface()
-    await queryInterface.describeTable('triggers')
+    await sequelize.getQueryInterface().describeTable(tableName)
   } catch {
-    console.log('[Migration] triggers 表不存在，创建中...')
-    await sequelize.query(`
+    console.log(`[Migration] ${tableName} 表不存在，创建中...`)
+    await sequelize.query(createSql)
+    if (after) await after()
+    console.log(`[Migration] ${tableName} 表创建成功`)
+  }
+}
+
+// ---------------------------------------------------------------------------
+// 具体迁移定义（纯声明式）
+// ---------------------------------------------------------------------------
+
+const migrateKnowledgeBaseColumns = () =>
+  addMissingColumns('knowledge_bases', [
+    { name: 'provider', definition: "TEXT NOT NULL DEFAULT 'generic'" },
+    { name: 'providerConfig', definition: 'TEXT' },
+    { name: 'vectorStore', definition: "TEXT NOT NULL DEFAULT 'sqlite-vec'" },
+    { name: 'vectorConfig', definition: 'TEXT' },
+  ])
+
+const migrateWorkflowColumns = () =>
+  addMissingColumns('workflows', [
+    { name: 'layoutDirection', definition: 'TEXT' },
+    { name: 'envVars', definition: 'TEXT' },
+  ])
+
+const migrateAgentColumns = () =>
+  addMissingColumns('agents', [
+    { name: 'isSystem', definition: 'INTEGER DEFAULT 0' },
+    { name: 'llmConfigId', definition: 'INTEGER DEFAULT 0' },
+    { name: 'avatarUrl', definition: 'TEXT' },
+  ])
+
+const migrateTaskColumns = () =>
+  addMissingColumns('tasks', [
+    { name: 'restartedFrom', definition: 'TEXT' },
+    { name: 'parentId', definition: 'TEXT' },
+    { name: 'reviewComment', definition: 'TEXT' },
+    { name: 'projectId', definition: 'TEXT' },
+  ])
+
+const migrateTeamColumns = () =>
+  addMissingColumns('teams', [
+    { name: 'autoClaimEnabled', definition: 'INTEGER DEFAULT 0' },
+    { name: 'autoClaimInterval', definition: 'INTEGER DEFAULT 60' },
+    { name: 'autoApproveTools', definition: 'INTEGER DEFAULT 0' },
+  ])
+
+/** llm_configs 加 capabilities 字段（JSON 数组） */
+const migrateLLMCapabilities = () =>
+  addMissingColumns('llm_configs', [
+    { name: 'capabilities', definition: "TEXT DEFAULT '[\"text\"]'" },
+  ])
+
+const migrateTriggerTable = () =>
+  createTableIfMissing(
+    'triggers',
+    `
       CREATE TABLE IF NOT EXISTS triggers (
         id TEXT PRIMARY KEY,
         name TEXT NOT NULL,
@@ -136,21 +123,13 @@ async function migrateTriggerTable(): Promise<void> {
         createdAt TEXT NOT NULL,
         updatedAt TEXT NOT NULL
       )
-    `)
-    console.log('[Migration] triggers 表创建成功')
-  }
-}
+    `,
+  )
 
-/**
- * 执行增量迁移：创建 mcp_servers 表（如不存在）
- */
-async function migrateMcpServersTable(): Promise<void> {
-  try {
-    const queryInterface = sequelize.getQueryInterface()
-    await queryInterface.describeTable('mcp_servers')
-  } catch {
-    console.log('[Migration] mcp_servers 表不存在，创建中...')
-    await sequelize.query(`
+const migrateMcpServersTable = () =>
+  createTableIfMissing(
+    'mcp_servers',
+    `
       CREATE TABLE IF NOT EXISTS mcp_servers (
         id TEXT PRIMARY KEY,
         name TEXT NOT NULL,
@@ -166,36 +145,15 @@ async function migrateMcpServersTable(): Promise<void> {
         createdAt TEXT NOT NULL,
         updatedAt TEXT NOT NULL
       )
-    `)
-    await sequelize.query(`
-      CREATE UNIQUE INDEX IF NOT EXISTS idx_mcp_servers_name ON mcp_servers(name)
-    `)
-    console.log('[Migration] mcp_servers 表创建成功')
-  }
-}
+    `,
+    () => sequelize.query('CREATE UNIQUE INDEX IF NOT EXISTS idx_mcp_servers_name ON mcp_servers(name)'),
+  )
 
-async function migrateTaskColumns(): Promise<void> {
-  try {
-    const q = sequelize.getQueryInterface()
-    const table = await q.describeTable('tasks') as Record<string, unknown>
-    if (!table.restartedFrom) {
-      await sequelize.query('ALTER TABLE tasks ADD COLUMN restartedFrom TEXT;')
-      console.log('[Migration] tasks.restartedFrom column added')
-    }
-    if (!table.parentId) {
-      await sequelize.query('ALTER TABLE tasks ADD COLUMN parentId TEXT;')
-      console.log('[Migration] tasks.parentId column added')
-    }
-    if (!table.reviewComment) {
-      await sequelize.query('ALTER TABLE tasks ADD COLUMN reviewComment TEXT;')
-      console.log('[Migration] tasks.reviewComment column added')
-    }
-    if (!table.projectId) {
-      await sequelize.query('ALTER TABLE tasks ADD COLUMN projectId TEXT;')
-      console.log('[Migration] tasks.projectId column added')
-    }
-  } catch { /* empty */ }
-}
+/** 给 triggers 表追加 params 列（在表创建后单独迁移） */
+const migrateParamsColumn = () =>
+  addMissingColumns('triggers', [
+    { name: 'params', definition: 'TEXT' },
+  ])
 
 async function resetStaleTasks(): Promise<void> {
   try {
@@ -208,36 +166,6 @@ async function resetStaleTasks(): Promise<void> {
       console.log(`[Startup] 已将 ${affected} 个未完成的任务重置为待处理状态`)
     }
   } catch { /* tasks 表可能还不存在 */ }
-}
-
-async function migrateTeamColumns(): Promise<void> {
-  try {
-    const q = sequelize.getQueryInterface()
-    const table = await q.describeTable('teams') as Record<string, unknown>
-    if (!table.autoClaimEnabled) {
-      await sequelize.query('ALTER TABLE teams ADD COLUMN autoClaimEnabled INTEGER DEFAULT 0;')
-      console.log('[Migration] teams.autoClaimEnabled column added')
-    }
-    if (!table.autoClaimInterval) {
-      await sequelize.query('ALTER TABLE teams ADD COLUMN autoClaimInterval INTEGER DEFAULT 60;')
-      console.log('[Migration] teams.autoClaimInterval column added')
-    }
-    if (!table.autoApproveTools) {
-      await sequelize.query('ALTER TABLE teams ADD COLUMN autoApproveTools INTEGER DEFAULT 0;')
-      console.log('[Migration] teams.autoApproveTools column added')
-    }
-  } catch { /* empty */ }
-}
-
-async function migrateParamsColumn(): Promise<void> {
-  try {
-    const q = sequelize.getQueryInterface()
-    const table = await q.describeTable('triggers') as Record<string, unknown>
-    if (!table.params) {
-      await sequelize.query('ALTER TABLE triggers ADD COLUMN params TEXT;')
-      console.log('[Migration] triggers.params column added')
-    }
-  } catch { /* empty */ }
 }
 
 // 测试数据库连接
@@ -263,8 +191,8 @@ export const initDatabase = async (): Promise<void> => {
     console.log('数据库同步成功')
     // 执行增量迁移
     await migrateKnowledgeBaseColumns()
-    await migrateLLMConfigColumns()
     await migrateWorkflowColumns()
+    await migrateLLMCapabilities()
     await migrateAgentColumns()
     await migrateTriggerTable()
     await seedTemplates()

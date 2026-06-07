@@ -4,6 +4,7 @@ import { LLMConfig } from '../types'
 import { Op } from 'sequelize'
 import { callLLM } from '../utils'
 import { PROVIDER_API_KEY_PREFIXES, TEST_TEMPERATURE, TEST_MAX_TOKENS } from '../config'
+import { getDefaultCapabilities } from '../llm-capabilities'
 
 const router = Router()
 
@@ -79,6 +80,8 @@ router.post('/', async (req, res) => {
     }
 
     // 创建新的配置记录
+    const capabilities = req.body.capabilities ?? getDefaultCapabilities(model, provider)
+
     const newConfig = await LLMConfigModel.create({
       name,
       provider,
@@ -87,6 +90,7 @@ router.post('/', async (req, res) => {
       baseUrl,
       temperature: temperature || 0.7,
       maxTokens: maxTokens || 2000,
+      capabilities,
       isActive: isActive || false
     })
 
@@ -116,7 +120,8 @@ router.put('/:id', async (req, res) => {
       model,
       baseUrl,
       temperature,
-      maxTokens
+      maxTokens,
+      capabilities: req.body.capabilities ?? config.capabilities
     })
 
     return res.status(200).json(config)

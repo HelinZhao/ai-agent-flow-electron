@@ -1,15 +1,18 @@
 import { DataTypes, Model } from 'sequelize'
 import sequelize from '../database'
+import type { ModelCapability } from '../llm-capabilities'
+import { safeJsonParse } from '../utils/shared'
 
 export interface LLMConfigAttributes {
   id: string
   name: string
-  provider: 'openai' | 'anthropic' | 'azure' | 'bailian' | 'longcat' | 'deepseek' | 'ollama'
+  provider: string
   apiKey: string
   model: string
   baseUrl?: string
   temperature?: number
   maxTokens?: number
+  capabilities?: ModelCapability[]
   isActive: boolean
   createdAt: Date
   updatedAt: Date
@@ -26,12 +29,13 @@ export class LLMConfigModel
 {
   declare id: string
   declare name: string
-  declare provider: 'openai' | 'anthropic' | 'azure' | 'bailian' | 'longcat' | 'deepseek' | 'ollama'
+  declare provider: string
   declare apiKey: string
   declare model: string
   declare baseUrl?: string
   declare temperature?: number
   declare maxTokens?: number
+  declare capabilities?: ModelCapability[]
   declare isActive: boolean
   declare createdAt: Date
   declare updatedAt: Date
@@ -75,6 +79,12 @@ LLMConfigModel.init(
       allowNull: true,
       defaultValue: 2000
     },
+    // 数据库中存 JSON 字符串，通过 toJSON 转换（见下方 hook）
+    capabilities: {
+      type: DataTypes.TEXT,
+      allowNull: true,
+      defaultValue: '["text"]',
+    },
     isActive: {
       type: DataTypes.BOOLEAN,
       allowNull: false,
@@ -94,6 +104,24 @@ LLMConfigModel.init(
   {
     sequelize,
     tableName: 'llm_configs',
-    timestamps: true
+    timestamps: true,
+    hooks: {
+      beforeSave(instance) {
+        const caps = instance.getDataValue('capabilities')
+        if (caps && Array.isArray(caps)) {
+          instance.setDataValue('capabilities', JSON.stringify(caps) as any)
+        }
+      }
+    }
   }
 )
+
+// 返回给客户端时自动反序列化 capabilities JSON 字符串
+const origToJSON = LLMConfigModel.prototype.toJSON
+LLMConfigModel.prototype.toJSON = function () {
+  const json: Record<string, unknown> = origToJSON ? origToJSON.call(this) as Record<string, unknown> : { ...this.get() }
+  if (typeof json.capabilities === 'string') {
+     json.capabilities = safeJsonParse(json.capabilities, ['text'])
+  }
+  return json
+}
